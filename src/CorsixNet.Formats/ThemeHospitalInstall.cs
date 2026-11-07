@@ -165,6 +165,13 @@ public sealed class ThemeHospitalInstall
         return path is not null && File.Exists(path) ? path : null;
     }
 
+    /// <summary>Returns the actual full path of a folder below <see cref="RootPath"/>, or null if it does not exist.</summary>
+    public string? FindDirectory(params string[] segments)
+    {
+        var path = ResolvePath(RootPath, segments);
+        return path is not null && Directory.Exists(path) ? path : null;
+    }
+
     /// <summary>Whether a file exists below <see cref="RootPath"/>.</summary>
     public bool FileExists(params string[] segments) => FindFile(segments) is not null;
 
@@ -180,6 +187,32 @@ public sealed class ThemeHospitalInstall
     public byte[] ReadAllBytes(params string[] segments)
     {
         return File.ReadAllBytes(FindFile(segments) ?? throw NotFound(segments));
+    }
+
+    /// <summary>Reads a whole file, decompressing it if it is RNC compressed.</summary>
+    /// <exception cref="FileNotFoundException">The file does not exist.</exception>
+    /// <exception cref="InvalidDataException">The file is RNC compressed but corrupt.</exception>
+    public byte[] ReadDataFile(params string[] segments)
+    {
+        return Rnc.DecompressIfNeeded(ReadAllBytes(segments));
+    }
+
+    /// <summary>Loads a palette file such as <c>DATA/MPALETTE.DAT</c> or <c>QDATA/BANK01V.PAL</c>.</summary>
+    public Palette LoadPalette(string folder, string fileName)
+    {
+        return Palette.Parse(ReadDataFile(folder, fileName));
+    }
+
+    /// <summary>Loads the sprite sheet <c>{name}.TAB</c> / <c>{name}.DAT</c> from <paramref name="folder"/>.</summary>
+    public SpriteSheet LoadSpriteSheet(string folder, string name, bool complex)
+    {
+        return SpriteSheet.Parse(ReadDataFile(folder, name + ".TAB"), ReadDataFile(folder, name + ".DAT"), complex);
+    }
+
+    /// <summary>Loads an uncompressed full-screen bitmap <c>{name}.DAT</c>.</summary>
+    public IndexedImage LoadRawBitmap(string folder, string name, int width = 640, int height = 480)
+    {
+        return IndexedImage.FromRaw(ReadDataFile(folder, name + ".DAT"), width, height);
     }
 
     private FileNotFoundException NotFound(string[] segments)

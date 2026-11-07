@@ -11,14 +11,14 @@ public class RealGameDataTests
     }
 
     [Fact]
-    public void SpriteTableHasWholeEntries()
+    public void ReadDataFileDecompressesRncFiles()
     {
         var install = RealGameData.Require();
 
-        // Sprite tables are arrays of 6-byte entries: 32-bit offset, width, height.
-        var table = install.ReadAllBytes("DATA", "VBLK-0.TAB");
+        Assert.True(Rnc.IsCompressed(install.ReadAllBytes("DATA", "VBLK-0.TAB")));
+        var table = install.ReadDataFile("DATA", "VBLK-0.TAB");
 
-        Assert.NotEmpty(table);
-        Assert.Equal(0, table.Length % 6);
+        Assert.False(Rnc.IsCompressed(table));
+        Assert.Equal(0, table.Length % SpriteSheet.TableEntrySize);
     }
 }

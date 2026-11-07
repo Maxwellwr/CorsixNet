@@ -91,10 +91,26 @@ The same serializer feeds network joins and state hashing.
 `data\Game` layout, GOG) or uses the `CORSIXNET_TH_PATH` environment variable. File names
 are resolved case-insensitively. Tests that need the data skip themselves when it is absent.
 
+Format readers in `CorsixNet.Formats`:
+
+| Type | Reads |
+|---|---|
+| `Rnc` | RNC method 1 compression, which covers most data files. `ThemeHospitalInstall.ReadDataFile` decompresses transparently |
+| `Palette` | 256-colour palettes (`MPALETTE.DAT`, `QDATA/*.PAL`). 6-bit VGA components; magenta and index 255 are transparent |
+| `SpriteSheet` | `.TAB` + `.DAT` sprite sheets in the simple (world) or complex (UI) chunk encoding, decoded to `IndexedImage` |
+| `IndexedImage.FromRaw` | Uncompressed 640x480 backgrounds (`QDATA/*01V.DAT`) |
+| `BitmapFont`, `Cp437` | Bitmap fonts: sprite `i` draws character `31 + i` in the game's code page |
+
+Images stay as palette indices so that the renderer can apply palette effects.
+The client converts them to textures.
+
+The sprite viewer (currently the client's only screen) browses every sheet and
+background with its palette. Run `CorsixNet --sheet DATA/VBLK-0` to open a given item.
+
 ## Roadmap
 
 1. **M0** Solution, CI, determinism analyzer, install detection, `SimRandom`. *(done)*
-2. **M1** Format readers (RNC, palettes, sprite sheets, fonts) and a sprite viewer.
+2. **M1** Format readers (RNC, palettes, sprite sheets, fonts) and a sprite viewer. *(done)*
 3. **M2** Level loading, isometric renderer, camera and zoom.
 4. **M3** Simulation core: tick loop, entities, commands, save/load, state hash. Pathfinding
    ported from CorsixTH; humanoids walking.
