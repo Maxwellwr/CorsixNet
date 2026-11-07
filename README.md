@@ -25,8 +25,23 @@ checks common install folders. Set `CORSIXNET_TH_PATH` to point at a copy explic
 dotnet run --project src/CorsixNet.Client
 ```
 
-Optionally pass the game folder as an argument. The client currently opens the
-sprite viewer, which browses every sprite sheet and background in the game data:
+Optionally pass the game folder as an argument. The client opens the map view on the
+first original level:
+
+| Key | Action |
+|---|---|
+| Arrows / WASD, right or middle drag | Pan |
+| Mouse wheel | Zoom |
+| PgUp / PgDn | Previous / next level |
+| O | Cycle overlay (passable, hospital, parcels) |
+| Home | Reset camera |
+| Esc | Quit |
+
+Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
+a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
+initial view.
+
+`--sprite-viewer` browses every sprite sheet and background in the game data instead:
 
 | Key | Action |
 |---|---|
@@ -37,7 +52,7 @@ sprite viewer, which browses every sprite sheet and background in the game data:
 | C | Toggle chunk encoding |
 | Esc | Quit |
 
-`--sheet QDATA/BANK02V` opens a given sheet.
+`--sheet QDATA/BANK02V` opens the viewer on a given sheet.
 
 ## License
 

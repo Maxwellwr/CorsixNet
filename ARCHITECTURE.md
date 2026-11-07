@@ -20,11 +20,11 @@ graphics, sounds and levels of an original copy of the game, which the player su
 |---|---|---|
 | `CorsixNet.Formats` | Readers for original data files: install detection, RNC, palettes, sprite sheets, fonts, maps, sounds, music, video, strings | — |
 | `CorsixNet.Sim` | Deterministic simulation: ticks, RNG, entities, commands, saving, state hashing. No engine dependencies | — |
-| `CorsixNet.Client` | MonoGame (DesktopGL) front end: isometric renderer, sprite-based UI, audio, input | Formats, Sim |
+| `CorsixNet.Content` | Builds simulation state from game data: level maps now, content definitions and mods later | Formats, Sim |
+| `CorsixNet.Client` | MonoGame (DesktopGL) front end: isometric renderer, sprite-based UI, audio, input | Content, Formats, Sim |
 | `CorsixNet.Analyzers` | Roslyn analyzer enforcing the determinism rules below | — |
 
-Planned, added when their milestone starts: `CorsixNet.Content` (definitions and mod
-loading), `CorsixNet.Net` (lockstep protocol and transport), `CorsixNet.Server`
+Planned, added when their milestone starts: `CorsixNet.Net` (lockstep protocol and transport), `CorsixNet.Server`
 (headless dedicated server), `CorsixNet.Tools` (sprite viewer, converters).
 
 The simulation never references the client. The client reads simulation state and
@@ -85,6 +85,27 @@ The same serializer feeds network joins and state hashing.
    set (checked by hash at join). Code mods are trusted code. There is no sandbox, and
    the UI says so.
 
+## Maps and rendering
+
+A level map flows through three layers:
+
+1. `Formats.MapFile` parses the binary map: the original `LEVELS/LEVEL.L*` files and
+   CorsixTH `.map` files. It does not interpret the data.
+2. `Content.LevelMapLoader` turns it into a `Sim.Maps.LevelMap`, following CorsixTH's
+   rules. Block codes become `VBLK-0` sprite numbers. Walls block travel. Pond foliage
+   moves to the wall layer. Build flags, parcels, objects, cameras and heliports are read.
+3. `LevelMap` is simulation state: floors, walls and tile flags. It also computes wall
+   shadows (`UpdateShadows`). Building rooms will change it.
+
+The client's `MapRenderer` draws the map in CorsixTH's order. First every floor and floor
+shadow. Then, scanline by scanline, north walls right to left and west walls left to right.
+The map is drawn 1:1 into an off-screen target, which is then scaled to the window. This
+keeps fractional zoom free of seams between tiles.
+
+Not yet handled: objects placed by the map file (doors, benches; they are collected in
+`LoadedLevelMap.Objects`), the original divider walls between parcels for multiplayer, and
+the UI layer.
+
 ## Original data
 
 `ThemeHospitalInstall` finds the game automatically (common install folders, the EA/Origin
@@ -104,14 +125,14 @@ Format readers in `CorsixNet.Formats`:
 Images stay as palette indices so that the renderer can apply palette effects.
 The client converts them to textures.
 
-The sprite viewer (currently the client's only screen) browses every sheet and
-background with its palette. Run `CorsixNet --sheet DATA/VBLK-0` to open a given item.
+The sprite viewer (`CorsixNet --sprite-viewer`) browses every sheet and background with
+its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
 
 ## Roadmap
 
 1. **M0** Solution, CI, determinism analyzer, install detection, `SimRandom`. *(done)*
 2. **M1** Format readers (RNC, palettes, sprite sheets, fonts) and a sprite viewer. *(done)*
-3. **M2** Level loading, isometric renderer, camera and zoom.
+3. **M2** Level loading, isometric renderer, camera and zoom. *(done)*
 4. **M3** Simulation core: tick loop, entities, commands, save/load, state hash. Pathfinding
    ported from CorsixTH; humanoids walking.
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows.

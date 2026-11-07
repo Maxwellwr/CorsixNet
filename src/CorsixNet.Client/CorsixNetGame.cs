@@ -1,24 +1,18 @@
-using CorsixNet.Client.SpriteViewer;
-using CorsixNet.Formats;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client;
 
-/// <summary>
-/// Client shell. Until the game itself exists, it hosts the sprite viewer.
-/// </summary>
+/// <summary>Client shell hosting one full-window screen.</summary>
 internal sealed class CorsixNetGame : Game
 {
-    private readonly ThemeHospitalInstall _install;
-    private readonly string? _initialSheet;
+    private readonly Func<GraphicsDevice, IScreen> _createScreen;
     private SpriteBatch? _batch;
-    private SpriteViewerScreen? _viewer;
+    private IScreen? _screen;
 
-    public CorsixNetGame(ThemeHospitalInstall install, string? initialSheet = null)
+    public CorsixNetGame(string title, Func<GraphicsDevice, IScreen> createScreen)
     {
-        _install = install;
-        _initialSheet = initialSheet;
+        _createScreen = createScreen;
         _ = new GraphicsDeviceManager(this)
         {
             PreferredBackBufferWidth = 1280,
@@ -26,18 +20,18 @@ internal sealed class CorsixNetGame : Game
         };
         IsMouseVisible = true;
         Window.AllowUserResizing = true;
-        Window.Title = $"CorsixNet - {_install.RootPath}";
+        Window.Title = title;
     }
 
     protected override void LoadContent()
     {
         _batch = new SpriteBatch(GraphicsDevice);
-        _viewer = new SpriteViewerScreen(_install, GraphicsDevice, _initialSheet);
+        _screen = _createScreen(GraphicsDevice);
     }
 
     protected override void UnloadContent()
     {
-        _viewer?.Dispose();
+        _screen?.Dispose();
         _batch?.Dispose();
     }
 
@@ -45,10 +39,10 @@ internal sealed class CorsixNetGame : Game
     {
         if (IsActive)
         {
-            _viewer?.Update();
+            _screen?.Update(gameTime);
         }
 
-        if (_viewer?.ExitRequested == true)
+        if (_screen?.ExitRequested == true)
         {
             Exit();
         }
@@ -58,9 +52,9 @@ internal sealed class CorsixNetGame : Game
 
     protected override void Draw(GameTime gameTime)
     {
-        if (_viewer is not null && _batch is not null)
+        if (_screen is not null && _batch is not null)
         {
-            _viewer.Draw(_batch);
+            _screen.Draw(_batch);
         }
 
         base.Draw(gameTime);

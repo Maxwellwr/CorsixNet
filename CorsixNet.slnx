@@ -2,11 +2,13 @@
   <Folder Name="/src/">
     <Project Path="src/CorsixNet.Analyzers/CorsixNet.Analyzers.csproj" />
     <Project Path="src/CorsixNet.Client/CorsixNet.Client.csproj" />
+    <Project Path="src/CorsixNet.Content/CorsixNet.Content.csproj" />
     <Project Path="src/CorsixNet.Formats/CorsixNet.Formats.csproj" />
     <Project Path="src/CorsixNet.Sim/CorsixNet.Sim.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CorsixNet.Analyzers.Tests/CorsixNet.Analyzers.Tests.csproj" />
+    <Project Path="tests/CorsixNet.Content.Tests/CorsixNet.Content.Tests.csproj" />
     <Project Path="tests/CorsixNet.Formats.Tests/CorsixNet.Formats.Tests.csproj" />
     <Project Path="tests/CorsixNet.Sim.Tests/CorsixNet.Sim.Tests.csproj" />
   </Folder>

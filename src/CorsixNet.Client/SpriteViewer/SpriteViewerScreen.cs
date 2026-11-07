@@ -13,7 +13,7 @@ namespace CorsixNet.Client.SpriteViewer;
 /// Keys: Left/Right switch item, Up/Down/PageUp/PageDown/mouse wheel scroll,
 /// +/- zoom, P/Shift+P cycle palette, C toggle chunk encoding, Esc quit.
 /// </remarks>
-internal sealed class SpriteViewerScreen : IDisposable
+internal sealed class SpriteViewerScreen : IScreen
 {
     private const int HeaderHeight = 54;
     private const int Margin = 8;
@@ -69,7 +69,7 @@ internal sealed class SpriteViewerScreen : IDisposable
 
     private ViewerItem? Current => _items.Count > 0 ? _items[_itemIndex] : null;
 
-    public void Update()
+    public void Update(GameTime gameTime)
     {
         var keys = Keyboard.GetState();
         var mouse = Mouse.GetState();

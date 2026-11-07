@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Builds simulation state from game data: levels, and later content definitions and mods.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CorsixNet.Content.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CorsixNet.Formats/CorsixNet.Formats.csproj" />
+    <ProjectReference Include="../CorsixNet.Sim/CorsixNet.Sim.csproj" />
+  </ItemGroup>
+
+</Project>

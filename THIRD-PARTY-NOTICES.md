@@ -8,7 +8,9 @@ code names its origin in a header comment.
 Source: https://github.com/CorsixTH/CorsixTH
 
 Ported: sprite chunk decoding (`ChunkDecoder.cs`, from `CorsixTH/Src/th_gfx.cpp`),
-the font code page table (`Cp437.cs`, from `CorsixTH/Src/cp437_table.h`), and
+the font code page table (`Cp437.cs`, from `CorsixTH/Src/cp437_table.h`),
+the map block table and tile rules (`MapFile.cs`, `LevelMapLoader.cs`, `LevelMap.cs`,
+from `CorsixTH/Src/th_map.cpp`), the map drawing order (`MapRenderer.cs`), and
 the RNC decompressor modifications (`Rnc.cs`).
 
 ```text
