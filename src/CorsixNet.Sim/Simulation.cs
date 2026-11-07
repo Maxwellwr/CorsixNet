@@ -1,6 +1,7 @@
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Pathfinding;
 using CorsixNet.Sim.Serialization;
 
@@ -26,6 +27,10 @@ public sealed class Simulation
 
     private readonly List<Entity> _entities = [];
     private readonly List<ScheduledCommand> _pending = [];
+    private readonly List<MapObjectPlacement> _delayedObjects = [];
+
+    /// <summary>Entity to tell when someone walks onto or off a tile. Derived from the entities; not saved.</summary>
+    private readonly Dictionary<TilePosition, int> _occupantObservers = [];
 
     public Simulation(LevelMap map, ulong seed)
         : this(map, new SimRandom(seed))
@@ -48,6 +53,9 @@ public sealed class Simulation
 
     /// <summary>All entities, in increasing id order.</summary>
     public IReadOnlyList<Entity> Entities => _entities;
+
+    /// <summary>Map objects waiting for their parcel to get an owner, in map order.</summary>
+    public IReadOnlyList<MapObjectPlacement> DelayedMapObjects => _delayedObjects;
 
     /// <summary>Commands scheduled but not yet executed, in execution order.</summary>
     public IReadOnlyList<ScheduledCommand> PendingCommands => _pending;
@@ -118,7 +126,69 @@ public sealed class Simulation
 
         NextEntityId++;
         _entities.Add(entity);
+        RegisterObserver(entity);
         return entity;
+    }
+
+    /// <summary>
+    /// Places the objects of a map file, as CorsixTH does at level start: objects on parcels
+    /// without an owner wait until the parcel gets one.
+    /// </summary>
+    public void PlaceMapObjects(IEnumerable<MapObjectPlacement> placements)
+    {
+        foreach (var placement in placements)
+        {
+            var parcel = Map[placement.Tile.X, placement.Tile.Y].Parcel;
+            if (parcel != 0 && Map.GetParcelOwner(parcel) == 0)
+            {
+                _delayedObjects.Add(placement);
+            }
+            else
+            {
+                CreateMapObject(placement);
+            }
+        }
+
+        LinkEntranceDoors();
+        Map.UpdateShadows();
+    }
+
+    /// <summary>Gives a parcel to a player (1-based; 0 for nobody) and places objects that were waiting for it.</summary>
+    public void SetParcelOwner(int parcel, int owner)
+    {
+        Map.SetParcelOwner(parcel, owner);
+        if (owner == 0)
+        {
+            return;
+        }
+
+        var ready = new List<MapObjectPlacement>();
+        for (var i = 0; i < _delayedObjects.Count; i++)
+        {
+            var placement = _delayedObjects[i];
+            if (Map[placement.Tile.X, placement.Tile.Y].Parcel == parcel)
+            {
+                ready.Add(placement);
+                _delayedObjects.RemoveAt(i--);
+            }
+        }
+
+        foreach (var placement in ready)
+        {
+            CreateMapObject(placement);
+        }
+
+        LinkEntranceDoors();
+        Map.UpdateShadows();
+    }
+
+    /// <summary>Tells the entity watching <paramref name="tile"/>, if any, that its occupant count changed.</summary>
+    internal void NotifyOccupantChange(TilePosition tile, int delta)
+    {
+        if (_occupantObservers.TryGetValue(tile, out var id) && FindEntity(id) is EntranceDoor door)
+        {
+            door.OnOccupantChange(this, delta);
+        }
     }
 
     public Entity? FindEntity(int id)
@@ -135,7 +205,19 @@ public sealed class Simulation
             return false;
         }
 
+        var entity = _entities[index];
         _entities.RemoveAt(index);
+        if (entity is EntranceDoor door)
+        {
+            foreach (var tile in door.ObservedTiles)
+            {
+                if (_occupantObservers.TryGetValue(tile, out var observer) && observer == id)
+                {
+                    _occupantObservers.Remove(tile);
+                }
+            }
+        }
+
         return true;
     }
 
@@ -181,12 +263,19 @@ public sealed class Simulation
             }
 
             simulation._entities.Add(entity);
+            simulation.RegisterObserver(entity);
         }
 
         var commandCount = reader.ReadCount(MaxPendingCommands);
         for (var i = 0; i < commandCount; i++)
         {
             simulation.Schedule(ScheduledCommand.Read(reader));
+        }
+
+        var delayedCount = reader.ReadCount(map.Width * map.Height);
+        for (var i = 0; i < delayedCount; i++)
+        {
+            simulation._delayedObjects.Add(MapObjectPlacement.Read(reader));
         }
 
         return simulation;
@@ -221,6 +310,56 @@ public sealed class Simulation
         foreach (var command in _pending)
         {
             command.Write(writer);
+        }
+
+        writer.WriteInt32(_delayedObjects.Count);
+        foreach (var placement in _delayedObjects)
+        {
+            placement.Write(writer);
+        }
+    }
+
+    private void CreateMapObject(MapObjectPlacement placement)
+    {
+        if (placement.ObjectType is not (EntranceDoor.LeftObjectType or EntranceDoor.RightObjectType))
+        {
+            // CorsixTH only creates entrance doors from map files and ignores other types.
+            return;
+        }
+
+        var orientation = placement.Direction % 2 == 0 ? EdgeOrientation.North : EdgeOrientation.West;
+        var door = AddEntity(id => new EntranceDoor(id, placement.Tile, orientation, placement.ObjectType == EntranceDoor.RightObjectType));
+        door.Place(Map);
+    }
+
+    /// <summary>Pairs each unpaired left door half with the right half east or south of it.</summary>
+    private void LinkEntranceDoors()
+    {
+        foreach (var entity in _entities)
+        {
+            if (entity is not EntranceDoor { IsRight: false, PartnerId: 0 } left)
+            {
+                continue;
+            }
+
+            var right = _entities.OfType<EntranceDoor>().FirstOrDefault(d =>
+                d is { IsRight: true, PartnerId: 0 } && (d.Tile == left.Tile with { X = left.Tile.X + 1 } || d.Tile == left.Tile with { Y = left.Tile.Y + 1 }));
+            if (right is not null)
+            {
+                left.PartnerId = right.Id;
+                right.PartnerId = left.Id;
+            }
+        }
+    }
+
+    private void RegisterObserver(Entity entity)
+    {
+        if (entity is EntranceDoor door)
+        {
+            foreach (var tile in door.ObservedTiles)
+            {
+                _occupantObservers[tile] = door.Id;
+            }
         }
     }
 

@@ -10,7 +10,7 @@ const string Usage = """
       --map PATH        Show a map file from disk, e.g. a CorsixTH .map file
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
-      --demo            Start with twenty patients wandering around the hospital
+      --demo            Start with twenty patients wandering into and around the hospital
       --sprite-viewer   Browse sprite sheets instead of maps
       --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
     """;

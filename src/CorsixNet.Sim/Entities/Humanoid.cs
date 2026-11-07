@@ -141,6 +141,11 @@ public sealed class Humanoid : Entity
         Facing = direction;
         IsStepping = true;
         StepProgress = 0;
+
+        // As in CorsixTH's walk action, objects watching the tiles (entrance doors) learn of
+        // the move when the step starts: first the tile entered, then the tile left.
+        simulation.NotifyOccupantChange(next, 1);
+        simulation.NotifyOccupantChange(Tile, -1);
     }
 
     internal static Humanoid ReadState(int id, SimReader reader)

@@ -13,7 +13,10 @@ the map block table and tile rules (`MapFile.cs`, `LevelMapLoader.cs`, `LevelMap
 from `CorsixTH/Src/th_map.cpp`), the map drawing order (`MapRenderer.cs`),
 the pathfinder (`Pathfinder.cs`, from `CorsixTH/Src/th_pathfind.cpp`), animation
 loading and drawing (`AnimationSet.cs`, `AnimationRenderer.cs`, from `CorsixTH/Src/th_gfx.cpp`),
-walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
+entrance doors (`EntranceDoor.cs`, `EntranceDoorDrawing.cs`, from
+`CorsixTH/Lua/objects/doors/entrance_*_door.lua`), map object placement and parcel
+ownership (`Simulation.cs`, `LevelMapLoader.cs`, from `CorsixTH/Lua/world.lua` and
+`CorsixTH/Lua/map.lua`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
 `CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and
 the RNC decompressor modifications (`Rnc.cs`).
 

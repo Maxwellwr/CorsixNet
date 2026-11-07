@@ -2,15 +2,26 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Formats;
+using CorsixNet.Sim;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 
 namespace CorsixNet.Content.Levels;
 
-/// <summary>An object that a map file places on a tile, such as a bench or a plant.</summary>
-public readonly record struct MapObjectPlacement(TilePosition Tile, byte ObjectType, byte Direction);
-
 /// <summary>A level map ready for the simulation, plus the objects its file places.</summary>
-public sealed record LoadedLevelMap(LevelMap Map, IReadOnlyList<MapObjectPlacement> Objects);
+public sealed record LoadedLevelMap(LevelMap Map, IReadOnlyList<MapObjectPlacement> Objects)
+{
+    /// <summary>
+    /// Starts a simulation on this map and places the map's objects. Use a freshly loaded map:
+    /// the simulation takes ownership of it and changes it.
+    /// </summary>
+    public Simulation StartSimulation(ulong seed)
+    {
+        var simulation = new Simulation(Map, seed);
+        simulation.PlaceMapObjects(Objects);
+        return simulation;
+    }
+}
 
 /// <summary>Builds a <see cref="LevelMap"/> from a <see cref="MapFile"/>, following CorsixTH's rules.</summary>
 public static class LevelMapLoader
@@ -139,6 +150,14 @@ public static class LevelMapLoader
         }
 
         map.ParcelCount = maxParcel + 1;
+
+        // As in CorsixTH's Map:load, parcel N starts out owned by player N if there is one;
+        // the remaining parcels are for sale.
+        for (var parcel = 1; parcel < map.ParcelCount; parcel++)
+        {
+            map.SetParcelOwner(parcel, parcel <= map.PlayerCount ? parcel : 0);
+        }
+
         map.UpdateShadows();
         return new LoadedLevelMap(map, objects);
     }

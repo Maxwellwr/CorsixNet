@@ -6,6 +6,7 @@ namespace CorsixNet.Sim.Entities;
 public enum EntityKind : byte
 {
     Humanoid = 1,
+    EntranceDoor = 2,
 }
 
 /// <summary>
@@ -43,6 +44,7 @@ public abstract class Entity
         return kind switch
         {
             EntityKind.Humanoid => Humanoid.ReadState(id, reader),
+            EntityKind.EntranceDoor => EntranceDoor.ReadState(id, reader),
             _ => throw new InvalidDataException($"Unknown entity kind {(byte)kind}."),
         };
     }

@@ -132,9 +132,19 @@ shadow. Then, scanline by scanline, north walls right to left and west walls lef
 The map is drawn 1:1 into an off-screen target, which is then scaled to the window. This
 keeps fractional zoom free of seams between tiles.
 
-Not yet handled: objects placed by the map file (doors, benches; they are collected in
-`LoadedLevelMap.Objects`), the original divider walls between parcels for multiplayer, and
-the UI layer.
+Objects placed by map files are only entrance doors in practice. The original levels contain
+nothing else, and CorsixTH ignores other types. `LoadedLevelMap.StartSimulation` places
+them. As in CorsixTH, parcel N starts out owned by player N (if that player exists).
+Objects on parcels without an owner wait in `Simulation.DelayedMapObjects` until
+`SetParcelOwner` gives the parcel to someone.
+
+An `EntranceDoor` is half of a sliding door pair. The right half counts people stepping
+onto its tile and the tile in front of it, and passes the count to the left half. A step
+reports the move when it starts, as in CorsixTH's walk action. Which frame a door shows while
+sliding is tracked by the client.
+
+Not yet handled: the original divider walls between parcels for multiplayer, and the UI
+layer.
 
 Animations come from `Formats.AnimationSet` (`VSTART-1`, `VFRA-1`, `VLIST-1`, `VELE-1` with
 the `VSPR-0` sprites). A frame is a list of sprite elements. Elements belong to layers, and
@@ -170,8 +180,7 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
 2. **M1** Format readers (RNC, palettes, sprite sheets, fonts) and a sprite viewer. *(done)*
 3. **M2** Level loading, isometric renderer, camera and zoom. *(done)*
 4. **M3** Simulation core: tick loop, entities, commands, save/load, state hash. Pathfinding
-   ported from CorsixTH; humanoids walking. *(core, pathfinding and walking done; objects
-   placed by map files still to draw)*
+   ported from CorsixTH; humanoids walking; entrance doors from map files. *(done)*
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows.
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,

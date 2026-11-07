@@ -50,7 +50,8 @@ internal sealed class MapViewScreen : IScreen
     private readonly Camera _camera = new();
     private readonly AnimationRenderer _animations;
     private readonly HumanoidDrawing _humanoids;
-    private readonly Dictionary<TilePosition, List<Humanoid>> _humanoidsByTile = [];
+    private readonly EntranceDoorDrawing _doors;
+    private readonly Dictionary<TilePosition, List<Entity>> _entitiesByTile = [];
     private readonly List<TilePosition> _hospitalTiles = [];
 
     // Test controls choose targets at random; the choices reach the simulation as commands.
@@ -87,6 +88,7 @@ internal sealed class MapViewScreen : IScreen
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
         _animations = new AnimationRenderer(device, AnimationSet.Load(install), install.LoadSpriteSheet("DATA", "VSPR-0", complex: false), palette);
         _humanoids = new HumanoidDrawing(_animations);
+        _doors = new EntranceDoorDrawing(_animations);
         _diamond = CreateDiamond(device);
         _pixel = new Texture2D(device, 1, 1);
         _pixel.SetData([Color.White]);
@@ -95,11 +97,27 @@ internal sealed class MapViewScreen : IScreen
         SelectLevel(0);
         _camera.ZoomAt(zoom, new Point(ViewSize.X / 2, ViewSize.Y / 2), ViewSize);
 
-        if (demo && _simulation is not null && _hospitalTiles.Count > 0)
+        if (demo && _simulation is not null && _level is not null && _hospitalTiles.Count > 0)
         {
+            // Half start inside; half start outside near the camera and walk in through the entrance.
+            var start = _level.Map.GetCameraTile(0);
+            var outside = new List<TilePosition>();
+            for (var y = Math.Max(0, start.Y - 12); y <= Math.Min(_level.Map.Height - 1, start.Y + 12); y++)
+            {
+                for (var x = Math.Max(0, start.X - 12); x <= Math.Min(_level.Map.Width - 1, start.X + 12); x++)
+                {
+                    var tile = _level.Map[x, y];
+                    if (tile.Has(TileFlags.Passable) && !tile.Has(TileFlags.Hospital))
+                    {
+                        outside.Add(new TilePosition(x, y));
+                    }
+                }
+            }
+
             for (var i = 0; i < 20; i++)
             {
-                _simulation.Schedule(0, new SpawnHumanoidCommand(_hospitalTiles[_random.Next(_hospitalTiles.Count)]));
+                var pool = i % 2 == 0 || outside.Count == 0 ? _hospitalTiles : outside;
+                _simulation.Schedule(0, new SpawnHumanoidCommand(pool[_random.Next(pool.Count)]));
             }
 
             _wander = true;
@@ -225,8 +243,8 @@ internal sealed class MapViewScreen : IScreen
             var view = new Rectangle(topLeft, worldSize);
             var toTarget = Matrix.CreateTranslation(-topLeft.X, -topLeft.Y, 0);
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
-            CollectHumanoidsByTile();
-            _renderer.Draw(batch, _level.Map, view, (tile, anchorX, anchorY) => DrawHumanoids(batch, tile, anchorX, anchorY));
+            CollectEntitiesByTile();
+            _renderer.Draw(batch, _level.Map, view, (tile, anchorX, anchorY) => DrawEntities(batch, tile, anchorX, anchorY));
             DrawOverlay(batch, _level.Map, view);
             batch.End();
         }
@@ -275,6 +293,7 @@ internal sealed class MapViewScreen : IScreen
         _simulation = null;
         _selected = null;
         _humanoids.Reset();
+        _doors.Reset();
         _hospitalTiles.Clear();
         try
         {
@@ -289,7 +308,7 @@ internal sealed class MapViewScreen : IScreen
 
         if (_level is not null)
         {
-            _simulation = new Simulation(_level.Map, seed: 1);
+            _simulation = _level.StartSimulation(seed: 1);
             for (var y = 0; y < _level.Map.Height; y++)
             {
                 for (var x = 0; x < _level.Map.Width; x++)
@@ -414,9 +433,9 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
-    private void CollectHumanoidsByTile()
+    private void CollectEntitiesByTile()
     {
-        foreach (var list in _humanoidsByTile.Values)
+        foreach (var list in _entitiesByTile.Values)
         {
             list.Clear();
         }
@@ -426,29 +445,47 @@ internal sealed class MapViewScreen : IScreen
             return;
         }
 
-        foreach (var humanoid in _simulation.Entities.OfType<Humanoid>())
+        foreach (var entity in _simulation.Entities)
         {
-            var tile = HumanoidDrawing.DrawTile(humanoid);
-            if (!_humanoidsByTile.TryGetValue(tile, out var list))
+            TilePosition? tile = entity switch
             {
-                list = [];
-                _humanoidsByTile[tile] = list;
+                Humanoid humanoid => HumanoidDrawing.DrawTile(humanoid),
+                EntranceDoor door => door.Tile,
+                _ => null,
+            };
+            if (tile is not { } position)
+            {
+                continue;
             }
 
-            list.Add(humanoid);
+            if (!_entitiesByTile.TryGetValue(position, out var list))
+            {
+                list = [];
+                _entitiesByTile[position] = list;
+            }
+
+            list.Add(entity);
         }
     }
 
-    private void DrawHumanoids(SpriteBatch batch, TilePosition tile, int anchorX, int anchorY)
+    private void DrawEntities(SpriteBatch batch, TilePosition tile, int anchorX, int anchorY)
     {
-        if (_simulation is null || !_humanoidsByTile.TryGetValue(tile, out var list))
+        if (_simulation is null || !_entitiesByTile.TryGetValue(tile, out var list))
         {
             return;
         }
 
-        foreach (var humanoid in list)
+        foreach (var entity in list)
         {
-            _humanoids.Draw(batch, humanoid, anchorX, anchorY, _simulation.Tick);
+            switch (entity)
+            {
+                case EntranceDoor door:
+                    _doors.Draw(batch, door, anchorX, anchorY, _simulation.Tick);
+                    break;
+                case Humanoid humanoid:
+                    _humanoids.Draw(batch, humanoid, anchorX, anchorY, _simulation.Tick);
+                    break;
+            }
         }
     }
 
@@ -510,7 +547,7 @@ internal sealed class MapViewScreen : IScreen
     {
         var name = _levels.Count > 0 ? _levels[_levelIndex].Name : "-";
         var tick = _simulation?.Tick ?? 0;
-        var people = _simulation?.Entities.Count ?? 0;
+        var people = _simulation?.Entities.OfType<Humanoid>().Count() ?? 0;
         var state = _paused ? "paused" : "running";
         return string.Create(
             CultureInfo.InvariantCulture,

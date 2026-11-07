@@ -22,6 +22,7 @@ public sealed class LevelMap
     private readonly MapTile[] _tiles;
     private readonly TilePosition[] _cameraTiles;
     private readonly TilePosition[] _heliportTiles;
+    private int[] _parcelOwners = [0];
 
     public LevelMap(int width, int height, int playerCount)
     {
@@ -44,7 +45,29 @@ public sealed class LevelMap
     public int PlayerCount { get; }
 
     /// <summary>Number of land parcels, including parcel 0 (outside every parcel).</summary>
-    public int ParcelCount { get; set; } = 1;
+    /// <remarks>Changing it keeps the owners of parcels that still exist; new parcels have no owner.</remarks>
+    public int ParcelCount
+    {
+        get => _parcelOwners.Length;
+        set
+        {
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(value);
+            var owners = new int[value];
+            Array.Copy(_parcelOwners, owners, Math.Min(value, _parcelOwners.Length));
+            _parcelOwners = owners;
+        }
+    }
+
+    /// <summary>The player (1-based) owning <paramref name="parcel"/>, or 0 if nobody owns it.</summary>
+    public int GetParcelOwner(int parcel) => _parcelOwners[parcel];
+
+    /// <summary>Sets the owner of a parcel. Use <see cref="Simulation.SetParcelOwner"/> during a game.</summary>
+    public void SetParcelOwner(int parcel, int owner)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(owner);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(owner, PlayerCount);
+        _parcelOwners[parcel] = owner;
+    }
 
     public bool Contains(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
@@ -122,6 +145,10 @@ public sealed class LevelMap
         writer.WriteInt32(Height);
         writer.WriteInt32(PlayerCount);
         writer.WriteInt32(ParcelCount);
+        foreach (var owner in _parcelOwners)
+        {
+            writer.WriteInt32(owner);
+        }
         for (var player = 0; player < PlayerCount; player++)
         {
             writer.WriteTile(_cameraTiles[player]);
@@ -155,6 +182,10 @@ public sealed class LevelMap
         {
             ParcelCount = reader.ReadCount(ushort.MaxValue + 1),
         };
+        for (var parcel = 0; parcel < map.ParcelCount; parcel++)
+        {
+            map._parcelOwners[parcel] = reader.ReadCount(playerCount);
+        }
         for (var player = 0; player < playerCount; player++)
         {
             map._cameraTiles[player] = reader.ReadTile();

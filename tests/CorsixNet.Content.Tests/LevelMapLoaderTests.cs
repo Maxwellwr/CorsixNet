@@ -1,7 +1,9 @@
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
+using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 
 namespace CorsixNet.Content.Tests;
 
@@ -132,7 +134,42 @@ public class LevelMapLoaderTests
             Assert.True(map[camera.X, camera.Y].Has(TileFlags.Passable), $"{path}: camera on impassable tile");
             Assert.True(map.ParcelCount > 1, $"{path}: no parcels");
             Assert.NotEmpty(loaded.Objects);
+
+            // Every player starts with a hospital entrance: one linked pair of door halves.
+            var simulation = loaded.StartSimulation(seed: 1);
+            var doors = simulation.Entities.OfType<EntranceDoor>().ToList();
+            Assert.True(doors.Count >= 2 * map.PlayerCount, $"{path}: {doors.Count} door halves for {map.PlayerCount} players");
+            Assert.All(doors, door => Assert.NotEqual(0, door.PartnerId));
         }
+    }
+
+    [Fact]
+    public void GivesEachPlayerTheParcelWithTheirNumber()
+    {
+        var map = Load(new MapFileBuilder(playerCount: 2)
+            .Tile(1, 1, parcel: 1)
+            .Tile(2, 1, parcel: 2)
+            .Tile(3, 1, parcel: 3)).Map;
+
+        Assert.Equal(0, map.GetParcelOwner(0));
+        Assert.Equal(1, map.GetParcelOwner(1));
+        Assert.Equal(2, map.GetParcelOwner(2));
+        Assert.Equal(0, map.GetParcelOwner(3));
+    }
+
+    [Fact]
+    public void StartSimulationPlacesDoorsOnOwnedParcelsOnly()
+    {
+        var loaded = Load(new MapFileBuilder()
+            .Tile(10, 10, objectType: EntranceDoor.LeftObjectType, parcel: 1)
+            .Tile(11, 10, objectType: EntranceDoor.RightObjectType, parcel: 1)
+            .Tile(30, 30, objectType: EntranceDoor.LeftObjectType, parcel: 2)
+            .Tile(31, 30, objectType: EntranceDoor.RightObjectType, parcel: 2));
+
+        var simulation = loaded.StartSimulation(seed: 1);
+
+        Assert.Equal(2, simulation.Entities.OfType<EntranceDoor>().Count());
+        Assert.Equal(2, simulation.DelayedMapObjects.Count);
     }
 
     private static LoadedLevelMap Load(MapFileBuilder builder) => LevelMapLoader.Load(MapFile.Parse(builder.Build()));

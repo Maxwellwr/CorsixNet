@@ -44,7 +44,8 @@ first original level:
 
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
-initial view. `--demo` starts with twenty patients wandering around the hospital.
+initial view. `--demo` starts with twenty patients, half of them outside, wandering into and around the
+hospital.
 
 `--sprite-viewer` browses every sprite sheet and background in the game data instead:
 
