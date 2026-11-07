@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Deterministic, engine-independent game simulation.</Description>
+    <CorsixNetDeterministic>true</CorsixNetDeterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CorsixNet.Sim.Tests" />
+  </ItemGroup>
+
+</Project>

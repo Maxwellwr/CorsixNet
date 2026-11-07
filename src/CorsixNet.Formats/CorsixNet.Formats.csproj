@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Readers for the original Theme Hospital data files.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CorsixNet.Formats.Tests" />
+  </ItemGroup>
+
+</Project>
