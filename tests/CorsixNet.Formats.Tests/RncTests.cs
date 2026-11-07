@@ -4,6 +4,7 @@ namespace CorsixNet.Formats.Tests;
 
 public class RncTests
 {
+    private const int HeaderUnpackedCrcOffset = 12;
     private const int HeaderPackedCrcOffset = 14;
 
     [Fact]
@@ -69,6 +70,28 @@ public class RncTests
         Assert.Empty(Rnc.Decompress(Header(packed: [], unpackedSize: 0)));
     }
 
+    [Theory]
+    [InlineData("short")]
+    [InlineData("repeats")]
+    [InlineData("mixed")]
+    public void DecompressesFixture(string name)
+    {
+        var (packed, original) = Fixture(name);
+
+        Assert.True(Rnc.IsCompressed(packed));
+        Assert.Equal(original, Rnc.Decompress(packed));
+    }
+
+    [Fact]
+    public void RejectsUnpackedChecksumMismatch()
+    {
+        var (packed, _) = Fixture("repeats");
+        packed[HeaderUnpackedCrcOffset] ^= 0xFF;
+
+        var error = Assert.Throws<InvalidDataException>(() => Rnc.Decompress(packed));
+        Assert.Contains("unpacked data checksum", error.Message);
+    }
+
     [Fact]
     public void DecompressesEveryCompressedGameFile()
     {
@@ -85,6 +108,13 @@ public class RncTests
             var unpacked = Rnc.Decompress(data);
             Assert.Equal(BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(4)), (uint)unpacked.Length);
         }
+    }
+
+    /// <summary>Reads a packed fixture and its original bytes; see Fixtures/Rnc/generate.py.</summary>
+    private static (byte[] Packed, byte[] Original) Fixture(string name)
+    {
+        var folder = Path.Combine(AppContext.BaseDirectory, "Fixtures", "Rnc");
+        return (File.ReadAllBytes(Path.Combine(folder, name + ".rnc")), File.ReadAllBytes(Path.Combine(folder, name + ".bin")));
     }
 
     /// <summary>Builds RNC data with correct sizes and packed checksum around <paramref name="packed"/>.</summary>
