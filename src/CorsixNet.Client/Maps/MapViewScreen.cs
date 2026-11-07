@@ -2,6 +2,9 @@ using System.Globalization;
 using CorsixNet.Client.Rendering;
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
+using CorsixNet.Sim;
+using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -13,17 +16,26 @@ namespace CorsixNet.Client.Maps;
 internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 
 /// <summary>
-/// Shows a level map with a movable, zoomable camera.
+/// Shows a level map with a movable, zoomable camera, and runs a simulation on it.
 /// </summary>
 /// <remarks>
 /// Keys: arrows/WASD or right/middle-drag pan, wheel zoom, Home reset camera,
 /// PgUp/PgDn previous/next level, O cycle overlay, Esc quit.
+/// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
+/// left click select a patient or send the selected one walking, R toggle random wandering,
+/// Space pause.
 /// </remarks>
 internal sealed class MapViewScreen : IScreen
 {
     private const float PanSpeed = 900f;
     private const float ZoomStep = 1.25f;
     private const int StatusHeight = 36;
+
+    /// <summary>Real time per simulation tick at CorsixTH's "Normal" speed (3 frames of 18 ms).</summary>
+    private const double SecondsPerTick = 0.054;
+
+    /// <summary>Upper bound on ticks per frame, so a long stall does not freeze the client.</summary>
+    private const int MaxTicksPerFrame = 10;
 
     private static readonly Color Background = Color.Black;
     private static readonly Color HoverTint = new Color(255, 255, 255) * 0.35f;
@@ -36,6 +48,13 @@ internal sealed class MapViewScreen : IScreen
     private readonly Texture2D _diamond;
     private readonly Texture2D _pixel;
     private readonly Camera _camera = new();
+    private readonly AnimationRenderer _animations;
+    private readonly HumanoidDrawing _humanoids;
+    private readonly Dictionary<TilePosition, List<Humanoid>> _humanoidsByTile = [];
+    private readonly List<TilePosition> _hospitalTiles = [];
+
+    // Test controls choose targets at random; the choices reach the simulation as commands.
+    private readonly Random _random = new();
 
     private int _levelIndex;
     private LoadedLevelMap? _level;
@@ -45,13 +64,19 @@ internal sealed class MapViewScreen : IScreen
     private KeyboardState _previousKeys;
     private MouseState _previousMouse;
     private Point? _hoveredTile;
+    private Simulation? _simulation;
+    private double _tickTime;
+    private bool _paused;
+    private bool _wander;
+    private int? _selected;
 
     public MapViewScreen(
         ThemeHospitalInstall install,
         GraphicsDevice device,
         IReadOnlyList<LevelSource> levels,
         float zoom = 1f,
-        MapOverlay overlay = MapOverlay.None)
+        MapOverlay overlay = MapOverlay.None,
+        bool demo = false)
     {
         _device = device;
         _levels = levels;
@@ -60,6 +85,8 @@ internal sealed class MapViewScreen : IScreen
         _blocks = new SpriteAtlas(device, install.LoadSpriteSheet("DATA", "VBLK-0", complex: false), palette);
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
+        _animations = new AnimationRenderer(device, AnimationSet.Load(install), install.LoadSpriteSheet("DATA", "VSPR-0", complex: false), palette);
+        _humanoids = new HumanoidDrawing(_animations);
         _diamond = CreateDiamond(device);
         _pixel = new Texture2D(device, 1, 1);
         _pixel.SetData([Color.White]);
@@ -67,6 +94,16 @@ internal sealed class MapViewScreen : IScreen
         _overlay = overlay;
         SelectLevel(0);
         _camera.ZoomAt(zoom, new Point(ViewSize.X / 2, ViewSize.Y / 2), ViewSize);
+
+        if (demo && _simulation is not null && _hospitalTiles.Count > 0)
+        {
+            for (var i = 0; i < 20; i++)
+            {
+                _simulation.Schedule(0, new SpawnHumanoidCommand(_hospitalTiles[_random.Next(_hospitalTiles.Count)]));
+            }
+
+            _wander = true;
+        }
     }
 
     public bool ExitRequested { get; private set; }
@@ -166,6 +203,8 @@ internal sealed class MapViewScreen : IScreen
         var tile = Camera.WorldToTile(_camera.ScreenToWorld(new Point(mouse.X, mouse.Y - StatusHeight), viewSize));
         _hoveredTile = inView && _level is not null && _level.Map.Contains(tile.X, tile.Y) ? tile : null;
 
+        UpdateSimulation(gameTime, mouse, Pressed);
+
         _previousKeys = keys;
         _previousMouse = mouse;
     }
@@ -186,7 +225,8 @@ internal sealed class MapViewScreen : IScreen
             var view = new Rectangle(topLeft, worldSize);
             var toTarget = Matrix.CreateTranslation(-topLeft.X, -topLeft.Y, 0);
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
-            _renderer.Draw(batch, _level.Map, view);
+            CollectHumanoidsByTile();
+            _renderer.Draw(batch, _level.Map, view, (tile, anchorX, anchorY) => DrawHumanoids(batch, tile, anchorX, anchorY));
             DrawOverlay(batch, _level.Map, view);
             batch.End();
         }
@@ -214,6 +254,7 @@ internal sealed class MapViewScreen : IScreen
     public void Dispose()
     {
         _target?.Dispose();
+        _animations.Dispose();
         _blocks.Dispose();
         _text.Dispose();
         _diamond.Dispose();
@@ -231,6 +272,10 @@ internal sealed class MapViewScreen : IScreen
         }
 
         _levelIndex = index;
+        _simulation = null;
+        _selected = null;
+        _humanoids.Reset();
+        _hospitalTiles.Clear();
         try
         {
             _level = _levels[index].Load();
@@ -240,6 +285,21 @@ internal sealed class MapViewScreen : IScreen
         {
             _level = null;
             _error = $"Cannot load {_levels[index].Name}: {e.Message}";
+        }
+
+        if (_level is not null)
+        {
+            _simulation = new Simulation(_level.Map, seed: 1);
+            for (var y = 0; y < _level.Map.Height; y++)
+            {
+                for (var x = 0; x < _level.Map.Width; x++)
+                {
+                    if (_level.Map[x, y].Has(TileFlags.Passable | TileFlags.Hospital))
+                    {
+                        _hospitalTiles.Add(new TilePosition(x, y));
+                    }
+                }
+            }
         }
 
         ResetCamera();
@@ -276,6 +336,120 @@ internal sealed class MapViewScreen : IScreen
 
         _target?.Dispose();
         _target = new RenderTarget2D(_device, size.X, size.Y);
+    }
+
+    private void UpdateSimulation(GameTime gameTime, MouseState mouse, Func<Keys, bool> pressed)
+    {
+        if (_simulation is null)
+        {
+            return;
+        }
+
+        if (pressed(Keys.Space))
+        {
+            _paused = !_paused;
+        }
+
+        if (pressed(Keys.R))
+        {
+            _wander = !_wander;
+        }
+
+        if (pressed(Keys.H) && _hoveredTile is { } spawnAt)
+        {
+            _simulation.Schedule(0, new SpawnHumanoidCommand(new TilePosition(spawnAt.X, spawnAt.Y)));
+        }
+
+        if (pressed(Keys.G) && _hospitalTiles.Count > 0)
+        {
+            for (var i = 0; i < 10; i++)
+            {
+                _simulation.Schedule(0, new SpawnHumanoidCommand(_hospitalTiles[_random.Next(_hospitalTiles.Count)]));
+            }
+        }
+
+        var clicked = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released;
+        if (clicked && _hoveredTile is { } target)
+        {
+            var tile = new TilePosition(target.X, target.Y);
+            var here = _simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
+            if (here is not null)
+            {
+                _selected = here.Id;
+            }
+            else if (_selected is { } id)
+            {
+                _simulation.Schedule(0, new WalkToCommand(id, tile));
+            }
+        }
+
+        if (_wander && _hospitalTiles.Count > 0)
+        {
+            foreach (var humanoid in _simulation.Entities.OfType<Humanoid>())
+            {
+                if (humanoid.Destination is null && humanoid.Id != _selected && _random.Next(60) == 0)
+                {
+                    _simulation.Schedule(0, new WalkToCommand(humanoid.Id, _hospitalTiles[_random.Next(_hospitalTiles.Count)]));
+                }
+            }
+        }
+
+        if (_paused)
+        {
+            return;
+        }
+
+        _tickTime += gameTime.ElapsedGameTime.TotalSeconds;
+        var ticks = 0;
+        while (_tickTime >= SecondsPerTick && ticks < MaxTicksPerFrame)
+        {
+            _simulation.Step();
+            _tickTime -= SecondsPerTick;
+            ticks++;
+        }
+
+        if (ticks == MaxTicksPerFrame)
+        {
+            _tickTime = 0;
+        }
+    }
+
+    private void CollectHumanoidsByTile()
+    {
+        foreach (var list in _humanoidsByTile.Values)
+        {
+            list.Clear();
+        }
+
+        if (_simulation is null)
+        {
+            return;
+        }
+
+        foreach (var humanoid in _simulation.Entities.OfType<Humanoid>())
+        {
+            var tile = HumanoidDrawing.DrawTile(humanoid);
+            if (!_humanoidsByTile.TryGetValue(tile, out var list))
+            {
+                list = [];
+                _humanoidsByTile[tile] = list;
+            }
+
+            list.Add(humanoid);
+        }
+    }
+
+    private void DrawHumanoids(SpriteBatch batch, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (_simulation is null || !_humanoidsByTile.TryGetValue(tile, out var list))
+        {
+            return;
+        }
+
+        foreach (var humanoid in list)
+        {
+            _humanoids.Draw(batch, humanoid, anchorX, anchorY, _simulation.Tick);
+        }
     }
 
     private void DrawOverlay(SpriteBatch batch, LevelMap map, Rectangle view)
@@ -335,23 +509,25 @@ internal sealed class MapViewScreen : IScreen
     private string StatusLine()
     {
         var name = _levels.Count > 0 ? _levels[_levelIndex].Name : "-";
-        var objects = _level?.Objects.Count ?? 0;
+        var tick = _simulation?.Tick ?? 0;
+        var people = _simulation?.Entities.Count ?? 0;
+        var state = _paused ? "paused" : "running";
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{name}   ({_levelIndex + 1} of {_levels.Count})   {objects} objects   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   PgUp PgDn: level   O: overlay   Home: reset   Esc: quit");
+            $"{name}   ({_levelIndex + 1} of {_levels.Count})   tick {tick} {state}   {people} people{(_wander ? " wandering" : "")}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   PgUp PgDn: level   O: overlay   Esc: quit");
     }
 
     private string TileLine()
     {
         if (_hoveredTile is not { } position || _level is null)
         {
-            return "Arrows or WASD or right drag: pan   Wheel: zoom";
+            return "Pan: arrows WASD right drag   Wheel: zoom   H: spawn   G: spawn 10   Click: select or walk   R: wander   Space: pause";
         }
 
         var tile = _level.Map[position.X, position.Y];
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"Tile {position.X} {position.Y}   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}   {DescribeFlags(tile)}");
+            $"Tile {position.X} {position.Y}   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}   {DescribeFlags(tile)}{(_selected is { } id ? $"   selected {id}" : "")}");
     }
 
     private static string DescribeFlags(MapTile tile)

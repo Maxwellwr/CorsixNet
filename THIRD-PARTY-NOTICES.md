@@ -10,7 +10,11 @@ Source: https://github.com/CorsixTH/CorsixTH
 Ported: sprite chunk decoding (`ChunkDecoder.cs`, from `CorsixTH/Src/th_gfx.cpp`),
 the font code page table (`Cp437.cs`, from `CorsixTH/Src/cp437_table.h`),
 the map block table and tile rules (`MapFile.cs`, `LevelMapLoader.cs`, `LevelMap.cs`,
-from `CorsixTH/Src/th_map.cpp`), the map drawing order (`MapRenderer.cs`), and
+from `CorsixTH/Src/th_map.cpp`), the map drawing order (`MapRenderer.cs`),
+the pathfinder (`Pathfinder.cs`, from `CorsixTH/Src/th_pathfind.cpp`), animation
+loading and drawing (`AnimationSet.cs`, `AnimationRenderer.cs`, from `CorsixTH/Src/th_gfx.cpp`),
+walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
+`CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and
 the RNC decompressor modifications (`Rnc.cs`).
 
 ```text

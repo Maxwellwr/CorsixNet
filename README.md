@@ -35,11 +35,16 @@ first original level:
 | PgUp / PgDn | Previous / next level |
 | O | Cycle overlay (passable, hospital, parcels) |
 | Home | Reset camera |
+| H | Spawn a patient at the cursor |
+| G | Spawn ten patients in the hospital |
+| Left click | Select a patient, or send the selected one walking |
+| R | Toggle random wandering |
+| Space | Pause or resume the simulation |
 | Esc | Quit |
 
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
-initial view.
+initial view. `--demo` starts with twenty patients wandering around the hospital.
 
 `--sprite-viewer` browses every sprite sheet and background in the game data instead:
 

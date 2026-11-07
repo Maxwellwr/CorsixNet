@@ -36,7 +36,14 @@ internal sealed class MapRenderer
     }
 
     /// <summary>Draws the part of the map inside <paramref name="view"/> (world pixels). The batch must be begun.</summary>
-    public void Draw(SpriteBatch batch, LevelMap map, Rectangle view)
+    /// <param name="batch">A begun sprite batch.</param>
+    /// <param name="map">The map to draw.</param>
+    /// <param name="view">Visible area in world pixels.</param>
+    /// <param name="drawEntities">
+    /// Called for each tile after its west wall, with the tile and its anchor (the top corner of
+    /// the floor diamond), to draw the entities standing there.
+    /// </param>
+    public void Draw(SpriteBatch batch, LevelMap map, Rectangle view, Action<TilePosition, int, int>? drawEntities = null)
     {
         var (firstScanline, lastScanline) = VisibleScanlines(map, view);
 
@@ -59,8 +66,9 @@ internal sealed class MapRenderer
 
             for (var x = firstX; x <= lastX; x++)
             {
-                var tile = map[x, s - x];
-                DrawLayer(batch, tile.WestWall, x, s - x);
+                var y = s - x;
+                DrawLayer(batch, map[x, y].WestWall, x, y);
+                drawEntities?.Invoke(new TilePosition(x, y), 32 * (x - y), 16 * (x + y));
             }
         }
     }

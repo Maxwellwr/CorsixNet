@@ -10,6 +10,7 @@ const string Usage = """
       --map PATH        Show a map file from disk, e.g. a CorsixTH .map file
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
+      --demo            Start with twenty patients wandering around the hospital
       --sprite-viewer   Browse sprite sheets instead of maps
       --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
     """;
@@ -21,6 +22,7 @@ string? initialSheet = null;
 var spriteViewer = false;
 var zoom = 1f;
 var overlay = MapOverlay.None;
+var demo = false;
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -42,6 +44,9 @@ for (var i = 0; i < args.Length; i++)
         case "--sheet" when i + 1 < args.Length:
             initialSheet = args[++i];
             spriteViewer = true;
+            break;
+        case "--demo":
+            demo = true;
             break;
         case "--sprite-viewer":
             spriteViewer = true;
@@ -106,7 +111,7 @@ else
         levels = [.. levels[index..], .. levels[..index]];
     }
 
-    createScreen = device => new MapViewScreen(install, device, levels, zoom, overlay);
+    createScreen = device => new MapViewScreen(install, device, levels, zoom, overlay, demo);
 }
 
 using var game = new CorsixNetGame($"CorsixNet - {install.RootPath}", createScreen);

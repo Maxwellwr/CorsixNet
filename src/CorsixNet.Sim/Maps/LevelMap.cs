@@ -1,6 +1,8 @@
 // Shadow rules ported from CorsixTH CorsixTH/Src/th_map.cpp (level_map::update_shadows).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using CorsixNet.Sim.Serialization;
+
 namespace CorsixNet.Sim.Maps;
 
 /// <summary>
@@ -111,6 +113,67 @@ public sealed class LevelMap
                 }
             }
         }
+    }
+
+    /// <summary>Writes the whole map, tile by tile in row order.</summary>
+    public void Write(SimWriter writer)
+    {
+        writer.WriteInt32(Width);
+        writer.WriteInt32(Height);
+        writer.WriteInt32(PlayerCount);
+        writer.WriteInt32(ParcelCount);
+        for (var player = 0; player < PlayerCount; player++)
+        {
+            writer.WriteTile(_cameraTiles[player]);
+            writer.WriteTile(_heliportTiles[player]);
+        }
+
+        foreach (var tile in _tiles)
+        {
+            writer.WriteUInt16(tile.Floor);
+            writer.WriteUInt16(tile.NorthWall);
+            writer.WriteUInt16(tile.WestWall);
+            writer.WriteUInt32((uint)tile.Flags);
+            writer.WriteUInt16(tile.Parcel);
+        }
+    }
+
+    /// <summary>Reads a map written by <see cref="Write"/>.</summary>
+    public static LevelMap Read(SimReader reader)
+    {
+        const int maxSize = 1024;
+        const int maxPlayers = 16;
+        var width = reader.ReadCount(maxSize);
+        var height = reader.ReadCount(maxSize);
+        var playerCount = reader.ReadCount(maxPlayers);
+        if (width == 0 || height == 0 || playerCount == 0)
+        {
+            throw new InvalidDataException($"Invalid map dimensions {width}x{height} for {playerCount} players.");
+        }
+
+        var map = new LevelMap(width, height, playerCount)
+        {
+            ParcelCount = reader.ReadCount(ushort.MaxValue + 1),
+        };
+        for (var player = 0; player < playerCount; player++)
+        {
+            map._cameraTiles[player] = reader.ReadTile();
+            map._heliportTiles[player] = reader.ReadTile();
+        }
+
+        for (var i = 0; i < map._tiles.Length; i++)
+        {
+            map._tiles[i] = new MapTile
+            {
+                Floor = reader.ReadUInt16(),
+                NorthWall = reader.ReadUInt16(),
+                WestWall = reader.ReadUInt16(),
+                Flags = (TileFlags)reader.ReadUInt32(),
+                Parcel = reader.ReadUInt16(),
+            };
+        }
+
+        return map;
     }
 
     private static bool IsWall(ushort wallSprite, bool tall)

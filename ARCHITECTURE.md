@@ -67,11 +67,41 @@ Deterministic lockstep, as in OpenTTD and Factorio:
 Transport: reliable ordered UDP (LiteNetLib). A Steam transport can be added later.
 UI state never enters the simulation.
 
+## Simulation core
+
+`Simulation` holds the complete game state: tick counter, `SimRandom`, the `LevelMap`,
+entities and pending commands.
+
+- **Tick.** One tick is one game "hour", as in CorsixTH. At CorsixTH's Normal speed a tick
+  lasts 54 ms of real time (about 18.5 ticks per second). The client decides how many ticks
+  to run. The simulation knows nothing about real time.
+- **Step order.** Commands scheduled for the current tick run first, in sequence order. Then
+  every entity updates in id order. Entity ids are assigned sequentially and never reused.
+- **Commands** (`Sim.Commands`) are the only input. A `ScheduledCommand` carries the tick,
+  a sequence number and the player. For now the commands are debug ones: spawn a patient and
+  walk to a tile.
+- **Pathfinding** (`Sim.Pathfinding.Pathfinder`) is a faithful port of CorsixTH's A*,
+  including the order neighbours are tried and the heap behaviour. Ties between equally
+  short paths are therefore broken the same way.
+- **Humanoids** walk one tile per 8 ticks, as in CorsixTH. During a step, `Tile` is the tile
+  being left; it changes when the step completes. When the map changes under a planned path,
+  the humanoid plans again.
+
+Presentation details are derived in the client, not stored in the simulation. Examples are
+pixel offsets during a step and which tile a walking humanoid is drawn with. Animation timing
+is too: CorsixTH restarts an animation only when it changes, so the 6-frame walk cycle runs on
+across 8-tick steps.
+
 ## Saves
 
 Saves are explicit, versioned serialization of simulation state. CorsixTH saves by
 persisting the entire Lua heap, which ties saves to code structure. We avoid that.
 The same serializer feeds network joins and state hashing.
+
+`Simulation.Save` and `Simulation.Load` write and read the whole state through
+`SimWriter`/`SimReader`: a fixed little-endian layout with a magic number and format version.
+`ComputeStateHash` streams the same bytes into a 64-bit FNV-1a hash without buffering them.
+Tests check that a saved and reloaded simulation continues to produce identical hashes.
 
 ## Content and mods
 
@@ -106,6 +136,12 @@ Not yet handled: objects placed by the map file (doors, benches; they are collec
 `LoadedLevelMap.Objects`), the original divider walls between parcels for multiplayer, and
 the UI layer.
 
+Animations come from `Formats.AnimationSet` (`VSTART-1`, `VFRA-1`, `VLIST-1`, `VELE-1` with
+the `VSPR-0` sprites). A frame is a list of sprite elements. Elements belong to layers, and
+the humanoid's chosen variant per layer (head, clothes and so on) selects which ones are
+drawn. Entities are drawn in the second map pass, after the west wall of the tile they are
+attached to.
+
 ## Original data
 
 `ThemeHospitalInstall` finds the game automatically (common install folders, the EA/Origin
@@ -134,7 +170,8 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
 2. **M1** Format readers (RNC, palettes, sprite sheets, fonts) and a sprite viewer. *(done)*
 3. **M2** Level loading, isometric renderer, camera and zoom. *(done)*
 4. **M3** Simulation core: tick loop, entities, commands, save/load, state hash. Pathfinding
-   ported from CorsixTH; humanoids walking.
+   ported from CorsixTH; humanoids walking. *(core, pathfinding and walking done; objects
+   placed by map files still to draw)*
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows.
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
