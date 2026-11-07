@@ -138,6 +138,66 @@ public sealed class LevelMap
         }
     }
 
+    /// <summary>
+    /// Recomputes which neighbours can be reached from each tile: walls and the map edge block
+    /// travel, in both directions. Ported from CorsixTH's <c>level_map::update_pathfinding</c>.
+    /// </summary>
+    public void UpdatePathfinding()
+    {
+        for (var y = 0; y < Height; y++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                ref var tile = ref this[x, y];
+                var travel = TileFlags.CanTravelAll;
+                if (x == 0)
+                {
+                    travel &= ~TileFlags.CanTravelWest;
+                }
+                else if (x == Width - 1)
+                {
+                    travel &= ~TileFlags.CanTravelEast;
+                }
+
+                if (y == 0)
+                {
+                    travel &= ~TileFlags.CanTravelNorth;
+                }
+                else if (y == Height - 1)
+                {
+                    travel &= ~TileFlags.CanTravelSouth;
+                }
+
+                tile.Flags = (tile.Flags & ~TileFlags.CanTravelAll) | travel;
+            }
+        }
+
+        for (var y = 0; y < Height; y++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                ref var tile = ref this[x, y];
+                if (tile.NorthWall != 0)
+                {
+                    tile.Set(TileFlags.CanTravelNorth, false);
+                    if (y != 0)
+                    {
+                        this[x, y - 1].Set(TileFlags.CanTravelSouth, false);
+                    }
+                }
+
+                if (tile.WestWall != 0)
+                {
+                    tile.Set(TileFlags.CanTravelWest, false);
+                    if (x != 0)
+                    {
+                        this[x - 1, y].Set(TileFlags.CanTravelEast, false);
+                    }
+                }
+            }
+        }
+    }
+
     /// <summary>Writes the whole map, tile by tile in row order.</summary>
     public void Write(SimWriter writer)
     {
@@ -162,6 +222,7 @@ public sealed class LevelMap
             writer.WriteUInt16(tile.WestWall);
             writer.WriteUInt32((uint)tile.Flags);
             writer.WriteUInt16(tile.Parcel);
+            writer.WriteInt32(tile.RoomId);
         }
     }
 
@@ -201,6 +262,7 @@ public sealed class LevelMap
                 WestWall = reader.ReadUInt16(),
                 Flags = (TileFlags)reader.ReadUInt32(),
                 Parcel = reader.ReadUInt16(),
+                RoomId = reader.ReadInt32(),
             };
         }
 

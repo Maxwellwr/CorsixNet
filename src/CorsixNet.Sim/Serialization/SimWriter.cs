@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 using CorsixNet.Sim.Maps;
 
 namespace CorsixNet.Sim.Serialization;
@@ -61,4 +62,12 @@ public sealed class SimWriter
     }
 
     public void WriteBytes(ReadOnlySpan<byte> bytes) => _stream.Write(bytes);
+
+    /// <summary>Writes a UTF-8 string preceded by its byte length.</summary>
+    public void WriteString(string value)
+    {
+        var bytes = Encoding.UTF8.GetBytes(value);
+        WriteInt32(bytes.Length);
+        WriteBytes(bytes);
+    }
 }

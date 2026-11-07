@@ -4,6 +4,7 @@ using CorsixNet.Client;
 using CorsixNet.Client.Maps;
 using CorsixNet.Client.Sessions;
 using CorsixNet.Client.SpriteViewer;
+using CorsixNet.Content;
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Net.Lockstep;
@@ -16,7 +17,7 @@ const string Usage = """
       --map PATH        Show a map file from disk, e.g. a CorsixTH .map file
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
-      --demo            Start with twenty patients wandering into and around the hospital
+      --demo            Build a GP's office and add twenty patients wandering around the hospital
       --sprite-viewer   Browse sprite sheets instead of maps
       --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
 
@@ -171,14 +172,14 @@ else
             var runner = new ServerRunner(server, listener, LocalSession.TickInterval);
             Console.WriteLine($"Hosting {level.Name} on port {runner.Port}{(publicHost ? " for all network interfaces" : " (this machine only; add --public for others)")}.");
             var connection = TcpConnection.ConnectAsync("127.0.0.1", runner.Port).GetAwaiter().GetResult();
-            networkSession = new NetworkSession(level.Name, new LockstepClient(connection, playerName), runner);
+            networkSession = new NetworkSession(level.Name, new LockstepClient(connection, playerName, BaseGameContent.Create()), runner);
         }
         else if (connectTo is not null)
         {
             var (host, remotePort) = ParseAddress(connectTo, DefaultPort);
             Console.WriteLine($"Connecting to {host}:{remotePort}...");
             var connection = TcpConnection.ConnectAsync(host, remotePort).GetAwaiter().GetResult();
-            networkSession = new NetworkSession($"{host}:{remotePort}", new LockstepClient(connection, playerName));
+            networkSession = new NetworkSession($"{host}:{remotePort}", new LockstepClient(connection, playerName, BaseGameContent.Create()));
         }
     }
     catch (System.Net.Sockets.SocketException e)

@@ -35,6 +35,7 @@ first original level:
 | PgUp / PgDn | Previous / next level |
 | O | Cycle overlay (passable, hospital, parcels) |
 | Home | Reset camera |
+| B | Build a GP's office: drag out the area, then click a wall for the door (Esc steps back) |
 | H | Spawn a patient at the cursor |
 | G | Spawn ten patients in the hospital |
 | Left click | Select a patient, or send the selected one walking |
@@ -44,8 +45,8 @@ first original level:
 
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
-initial view. `--demo` starts with twenty patients, half of them outside, wandering into and around the
-hospital.
+initial view. `--demo` builds a GP's office near the start and adds twenty patients, half of them outside,
+wandering into and around the hospital.
 
 ### Multiplayer
 

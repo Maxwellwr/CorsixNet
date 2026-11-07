@@ -1,5 +1,7 @@
 using CorsixNet.Net.Protocol;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Rooms;
 
 namespace CorsixNet.Net.Tests;
 
@@ -10,6 +12,7 @@ public class MessageCodecTests
         new HelloMessage(MessageCodec.ProtocolVersion, "Dr. Ñandú"),
         new RejectMessage("full"),
         new CommandRequestMessage(new WalkToCommand(3, new(4, 5))),
+        new CommandRequestMessage(new BuildRoomCommand(new RoomPlan("gp", new TileRect(1, 2, 4, 5), new DoorPlacement(new(3, 7), EdgeOrientation.North)))),
         new ScheduledCommandMessage(new ScheduledCommand(10, 2, 1, new SpawnHumanoidCommand(new(1, 2)))),
         new AdvanceMessage(123),
         new StateHashMessage(64, 0xDEADBEEFCAFEF00D),

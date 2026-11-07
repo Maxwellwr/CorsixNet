@@ -16,7 +16,9 @@ loading and drawing (`AnimationSet.cs`, `AnimationRenderer.cs`, from `CorsixTH/S
 entrance doors (`EntranceDoor.cs`, `EntranceDoorDrawing.cs`, from
 `CorsixTH/Lua/objects/doors/entrance_*_door.lua`), map object placement and parcel
 ownership (`Simulation.cs`, `LevelMapLoader.cs`, from `CorsixTH/Lua/world.lua` and
-`CorsixTH/Lua/map.lua`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
+`CorsixTH/Lua/map.lua`), room building rules and wall sets (`RoomPlan.cs`, `BaseGameContent.cs`, `LevelMap.cs`, from
+`CorsixTH/Lua/dialogs/edit_room.lua`, `CorsixTH/Lua/rooms/*.lua`, `CorsixTH/Lua/walls/*.lua`
+and `CorsixTH/Src/th_map.cpp`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
 `CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and
 the RNC decompressor modifications (`Rnc.cs`).
 

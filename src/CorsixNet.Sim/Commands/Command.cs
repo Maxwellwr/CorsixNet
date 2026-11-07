@@ -1,5 +1,6 @@
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.Commands;
@@ -9,6 +10,7 @@ public enum CommandKind : ushort
 {
     SpawnHumanoid = 1,
     WalkTo = 2,
+    BuildRoom = 3,
 }
 
 /// <summary>
@@ -35,6 +37,7 @@ public abstract record Command
         {
             CommandKind.SpawnHumanoid => new SpawnHumanoidCommand(reader.ReadTile()),
             CommandKind.WalkTo => new WalkToCommand(reader.ReadInt32(), reader.ReadTile()),
+            CommandKind.BuildRoom => BuildRoomCommand.ReadArguments(reader),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -75,6 +78,39 @@ public sealed record WalkToCommand(int HumanoidId, TilePosition Target) : Comman
     {
         writer.WriteInt32(HumanoidId);
         writer.WriteTile(Target);
+    }
+}
+
+/// <summary>Builds a room, if the plan is valid for the issuing player when the command executes.</summary>
+public sealed record BuildRoomCommand(RoomPlan Plan) : Command
+{
+    public override CommandKind Kind => CommandKind.BuildRoom;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) == RoomPlanProblem.None)
+        {
+            RoomBuilder.Build(simulation, Plan, simulation.Content.FindRoom(Plan.RoomType)!);
+        }
+    }
+
+    internal static BuildRoomCommand ReadArguments(SimReader reader)
+    {
+        var roomType = reader.ReadString();
+        var area = new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        var door = new DoorPlacement(reader.ReadTile(), (EdgeOrientation)reader.ReadByte());
+        return new BuildRoomCommand(new RoomPlan(roomType, area, door));
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteString(Plan.RoomType);
+        writer.WriteInt32(Plan.Area.X);
+        writer.WriteInt32(Plan.Area.Y);
+        writer.WriteInt32(Plan.Area.Width);
+        writer.WriteInt32(Plan.Area.Height);
+        writer.WriteTile(Plan.Door.Tile);
+        writer.WriteByte((byte)Plan.Door.Edge);
     }
 }
 

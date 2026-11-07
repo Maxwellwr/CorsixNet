@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -32,16 +33,23 @@ public sealed class Simulation
     /// <summary>Entity to tell when someone walks onto or off a tile. Derived from the entities; not saved.</summary>
     private readonly Dictionary<TilePosition, int> _occupantObservers = [];
 
-    public Simulation(LevelMap map, ulong seed)
-        : this(map, new SimRandom(seed))
+    /// <param name="map">The level map; the simulation takes ownership and changes it.</param>
+    /// <param name="seed">Seed for <see cref="Random"/>.</param>
+    /// <param name="content">Content definitions; every machine in a game must use the same.</param>
+    public Simulation(LevelMap map, ulong seed, GameContent? content = null)
+        : this(map, new SimRandom(seed), content ?? GameContent.Empty)
     {
     }
 
-    private Simulation(LevelMap map, SimRandom random)
+    private Simulation(LevelMap map, SimRandom random, GameContent content)
     {
         Map = map;
         Random = random;
+        Content = content;
     }
+
+    /// <summary>The content definitions the rules refer to. Not part of the saved state.</summary>
+    public GameContent Content { get; }
 
     /// <summary>Number of ticks completed since the game started.</summary>
     public long Tick { get; private set; }
@@ -224,9 +232,9 @@ public sealed class Simulation
     /// <summary>Writes the complete state.</summary>
     public void Save(Stream stream) => Write(new SimWriter(stream), includeInputs: true);
 
-    /// <summary>Restores a simulation written by <see cref="Save"/>.</summary>
+    /// <summary>Restores a simulation written by <see cref="Save"/>, using the given content definitions.</summary>
     /// <exception cref="InvalidDataException">The data is not a valid simulation state.</exception>
-    public static Simulation Load(Stream stream)
+    public static Simulation Load(Stream stream, GameContent? content = null)
     {
         var reader = new SimReader(stream);
         if (reader.ReadUInt32() != Magic)
@@ -246,7 +254,7 @@ public sealed class Simulation
         var nextSequence = reader.ReadInt64();
         var map = LevelMap.Read(reader);
 
-        var simulation = new Simulation(map, random)
+        var simulation = new Simulation(map, random, content ?? GameContent.Empty)
         {
             Tick = tick,
             NextEntityId = nextEntityId,

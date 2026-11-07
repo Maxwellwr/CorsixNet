@@ -118,6 +118,33 @@ pixel offsets during a step and which tile a walking humanoid is drawn with. Ani
 is too: CorsixTH restarts an animation only when it changes, so the 6-frame walk cycle runs on
 across 8-tick steps.
 
+## Content definitions and rooms
+
+`Sim.Definitions.GameContent` holds the definitions the rules refer to by id. For now that
+is room types (`RoomDefinition`: minimum size, floor sprite, wall set) and the sprites of
+the hospital's outer walls. The simulation receives it at construction and on load. It is
+not part of the saved state, so every machine in a game must use the same content; checking
+this when joining is still to do. `Content.BaseGameContent` describes the original game, in
+code for now, taken from CorsixTH's `rooms/*.lua` and `walls/*.lua`.
+
+Building a room is a command, `BuildRoomCommand(RoomPlan)`. A plan is a room type, an area
+and a door placement on the area's perimeter. `RoomBuilder.Check` applies CorsixTH's rules:
+
+- at least the minimum size;
+- only buildable hospital tiles, on a parcel the player owns, outside other rooms and with no
+  walls inside the area;
+- a door on the perimeter, not cut into an outer wall or a wall outside the room, and opening
+  onto a passable hospital tile.
+
+The client's build tool calls the same check for its preview. Building follows CorsixTH's
+`UIEditRoom:_finishRoomFoundation`:
+
+- inside walls on the north and west sides, outside walls on the south and east sides;
+- outer walls and walls of neighbouring rooms stay;
+- the room's floor and id go on its tiles;
+- a `RoomDoor` entity opens the wall at the door;
+- travel flags and shadows are recomputed (`LevelMap.UpdatePathfinding`, `UpdateShadows`).
+
 ## Saves
 
 Saves are explicit, versioned serialization of simulation state. CorsixTH saves by
@@ -209,6 +236,7 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
    ported from CorsixTH; humanoids walking; entrance doors from map files. *(done)*
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows. *(done)*
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
+   *(in progress: room building done; objects, staff and patient flow to come)*
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
    music and video.
 

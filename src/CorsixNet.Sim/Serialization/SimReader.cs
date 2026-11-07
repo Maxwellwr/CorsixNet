@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Text;
 using CorsixNet.Sim.Maps;
 
 namespace CorsixNet.Sim.Serialization;
@@ -42,6 +43,20 @@ public sealed class SimReader
     public ulong ReadUInt64() => BinaryPrimitives.ReadUInt64LittleEndian(Fill(8));
 
     public TilePosition ReadTile() => new(ReadInt32(), ReadInt32());
+
+    /// <summary>Reads a string written by <see cref="SimWriter.WriteString"/>, rejecting ones longer than <paramref name="maxBytes"/>.</summary>
+    public string ReadString(int maxBytes = 256)
+    {
+        var bytes = ReadBytes(ReadCount(maxBytes));
+        try
+        {
+            return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true).GetString(bytes);
+        }
+        catch (DecoderFallbackException e)
+        {
+            throw new InvalidDataException("Invalid UTF-8 string in simulation data.", e);
+        }
+    }
 
     public byte[] ReadBytes(int count)
     {

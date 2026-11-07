@@ -5,8 +5,10 @@ using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Rooms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -24,7 +26,8 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// PgUp/PgDn previous/next level (local games), O cycle overlay, Esc quit.
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
-/// Space pause (local games). In a network game, commands go through the server.
+/// Space pause (local games). B builds a GP's office. In a network game, commands go through
+/// the server.
 /// </remarks>
 internal sealed class MapViewScreen : IScreen
 {
@@ -34,6 +37,11 @@ internal sealed class MapViewScreen : IScreen
 
     private static readonly Color Background = Color.Black;
     private static readonly Color HoverTint = new Color(255, 255, 255) * 0.35f;
+    private static readonly byte[] NoLayers = [];
+
+    /// <summary>Room door animations from CorsixTH's <c>objects/door.lua</c>.</summary>
+    private const int RoomDoorNorth = 104;
+    private const int RoomDoorWest = 106;
 
     private readonly GraphicsDevice _device;
     private readonly IReadOnlyList<LevelSource> _levels;
@@ -47,6 +55,7 @@ internal sealed class MapViewScreen : IScreen
     private readonly HumanoidDrawing _humanoids;
     private readonly EntranceDoorDrawing _doors;
     private readonly Dictionary<TilePosition, List<Entity>> _entitiesByTile = [];
+    private readonly BuildRoomTool _buildTool = new();
     private readonly List<TilePosition> _hospitalTiles = [];
 
     // Test controls choose targets at random; the choices reach the simulation as commands.
@@ -145,7 +154,14 @@ internal sealed class MapViewScreen : IScreen
 
         if (Pressed(Keys.Escape))
         {
-            ExitRequested = true;
+            if (_buildTool.IsActive)
+            {
+                _buildTool.Back();
+            }
+            else
+            {
+                ExitRequested = true;
+            }
         }
 
         if (_levels.Count > 0 && Pressed(Keys.PageDown))
@@ -237,6 +253,7 @@ internal sealed class MapViewScreen : IScreen
             CollectEntitiesByTile();
             _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) => DrawEntities(batch, tile, anchorX, anchorY));
             DrawOverlay(batch, map, view);
+            _buildTool.DrawPreview(batch, _diamond, _hoveredTile is { } hovered ? new TilePosition(hovered.X, hovered.Y) : null);
             batch.End();
         }
 
@@ -355,6 +372,12 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
+        // Build a GP's office first, so that spawned patients cannot appear inside its walls.
+        if (Simulation?.Content.FindRoom("gp") is { } gp && FindRoomSpot(map, gp, start) is { } plan)
+        {
+            _session.Submit(new BuildRoomCommand(plan));
+        }
+
         for (var i = 0; i < 20; i++)
         {
             var pool = i % 2 == 0 || outside.Count == 0 ? _hospitalTiles : outside;
@@ -362,6 +385,52 @@ internal sealed class MapViewScreen : IScreen
         }
 
         _wander = true;
+    }
+
+    /// <summary>Finds the valid room plan closest to <paramref name="near"/>, trying a few sizes and every door position.</summary>
+    private RoomPlan? FindRoomSpot(LevelMap map, RoomDefinition room, TilePosition near)
+    {
+        var size = room.MinimumSize + 1;
+        for (var radius = 0; radius < 20; radius++)
+        {
+            for (var dy = -radius; dy <= radius; dy++)
+            {
+                for (var dx = -radius; dx <= radius; dx++)
+                {
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != radius)
+                    {
+                        continue;
+                    }
+
+                    var area = new TileRect(near.X + dx, near.Y + dy, size, size);
+                    if (RoomBuilder.CheckArea(map, room, area, _session!.Player) != RoomPlanProblem.None)
+                    {
+                        continue;
+                    }
+
+                    for (var i = 0; i < size; i++)
+                    {
+                        DoorPlacement[] doors =
+                        [
+                            new(new TilePosition(area.X + i, area.Bottom), EdgeOrientation.North),
+                            new(new TilePosition(area.Right, area.Y + i), EdgeOrientation.West),
+                            new(new TilePosition(area.X + i, area.Y), EdgeOrientation.North),
+                            new(new TilePosition(area.X, area.Y + i), EdgeOrientation.West),
+                        ];
+                        foreach (var door in doors)
+                        {
+                            var plan = new RoomPlan(room.Id, area, door);
+                            if (RoomBuilder.Check(map, Simulation!.Content, plan, _session.Player) == RoomPlanProblem.None)
+                            {
+                                return plan;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     private void ResetCamera()
@@ -439,6 +508,25 @@ internal sealed class MapViewScreen : IScreen
             _wander = !_wander;
         }
 
+        if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom("gp") is { } gp)
+        {
+            _buildTool.Start(gp);
+        }
+
+        if (_buildTool.IsActive)
+        {
+            // While building, the left mouse button belongs to the build tool.
+            var hovered = _hoveredTile is { } point ? new TilePosition(point.X, point.Y) : (TilePosition?)null;
+            var leftDown = mouse.LeftButton == ButtonState.Pressed;
+            var leftWasDown = _previousMouse.LeftButton == ButtonState.Pressed;
+            if (_buildTool.Update(simulation, _session.Player, hovered, leftDown, leftDown && !leftWasDown, !leftDown && leftWasDown) is { } build)
+            {
+                _session.Submit(build);
+            }
+
+            return;
+        }
+
         if (pressed(Keys.H) && _hoveredTile is { } spawnAt)
         {
             _session.Submit(new SpawnHumanoidCommand(new TilePosition(spawnAt.X, spawnAt.Y)));
@@ -486,6 +574,7 @@ internal sealed class MapViewScreen : IScreen
             {
                 Humanoid humanoid => HumanoidDrawing.DrawTile(humanoid),
                 EntranceDoor door => door.Tile,
+                RoomDoor door => door.Tile,
                 _ => null,
             };
             if (tile is not { } position)
@@ -519,6 +608,10 @@ internal sealed class MapViewScreen : IScreen
                     break;
                 case Humanoid humanoid:
                     _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
+                    break;
+                case RoomDoor roomDoor:
+                    var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
+                    _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
                     break;
             }
         }
@@ -595,16 +688,21 @@ internal sealed class MapViewScreen : IScreen
 
     private string TileLine()
     {
+        if (_buildTool.IsActive)
+        {
+            return _buildTool.Status;
+        }
+
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanPause == true ? "   Space: pause" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   H: spawn   G: spawn 10   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"Tile {position.X} {position.Y}   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}   {DescribeFlags(tile)}{(_selected is { } id ? $"   selected {id}" : string.Empty)}");
+            $"Tile {position.X} {position.Y}   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}{(tile.RoomId != 0 ? $"   room {tile.RoomId}" : string.Empty)}   {DescribeFlags(tile)}{(_selected is { } id ? $"   selected {id}" : string.Empty)}");
     }
 
     private static string DescribeFlags(MapTile tile)

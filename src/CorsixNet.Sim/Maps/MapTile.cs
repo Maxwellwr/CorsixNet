@@ -45,6 +45,15 @@ public enum TileFlags : uint
     /// <summary>The north wall is shaded by the west wall.</summary>
     ShadowWall = 1 << 15,
 
+    /// <summary>The tile belongs to a room; <see cref="MapTile.RoomId"/> says which.</summary>
+    Room = 1 << 16,
+
+    /// <summary>A room door stands on the north edge.</summary>
+    DoorNorth = 1 << 17,
+
+    /// <summary>A room door stands on the west edge.</summary>
+    DoorWest = 1 << 18,
+
     CanTravelAll = CanTravelNorth | CanTravelEast | CanTravelSouth | CanTravelWest,
 }
 
@@ -64,6 +73,9 @@ public struct MapTile
 
     /// <summary>Land parcel the tile belongs to; 0 is outside every parcel.</summary>
     public ushort Parcel { get; set; }
+
+    /// <summary>Entity id of the room the tile belongs to, or 0.</summary>
+    public int RoomId { get; set; }
 
     public readonly bool Has(TileFlags flags) => (Flags & flags) == flags;
 

@@ -17,7 +17,7 @@ public sealed record LoadedLevelMap(LevelMap Map, IReadOnlyList<MapObjectPlaceme
     /// </summary>
     public Simulation StartSimulation(ulong seed)
     {
-        var simulation = new Simulation(Map, seed);
+        var simulation = new Simulation(Map, seed, BaseGameContent.Create());
         simulation.PlaceMapObjects(Objects);
         return simulation;
     }

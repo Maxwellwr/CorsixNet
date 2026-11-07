@@ -2,6 +2,7 @@ using CorsixNet.Net.Protocol;
 using CorsixNet.Net.Transport;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Definitions;
 
 namespace CorsixNet.Net.Lockstep;
 
@@ -13,11 +14,16 @@ namespace CorsixNet.Net.Lockstep;
 public sealed class LockstepClient : IDisposable
 {
     private readonly IConnection _connection;
+    private readonly GameContent _content;
 
     /// <summary>Connects as <paramref name="playerName"/>; the client joins when the server welcomes it.</summary>
-    public LockstepClient(IConnection connection, string playerName)
+    /// <param name="connection">Connection to the server; the client owns it.</param>
+    /// <param name="playerName">Name shown to the server.</param>
+    /// <param name="content">Content definitions; they must match the server's.</param>
+    public LockstepClient(IConnection connection, string playerName, GameContent? content = null)
     {
         _connection = connection;
+        _content = content ?? GameContent.Empty;
         _connection.Send(new HelloMessage(MessageCodec.ProtocolVersion, playerName));
     }
 
@@ -50,7 +56,7 @@ public sealed class LockstepClient : IDisposable
                 case WelcomeMessage welcome:
                     using (var state = new MemoryStream(welcome.State, writable: false))
                     {
-                        Simulation = Simulation.Load(state);
+                        Simulation = Simulation.Load(state, _content);
                     }
 
                     Player = welcome.Player;
