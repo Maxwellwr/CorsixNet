@@ -21,11 +21,12 @@ graphics, sounds and levels of an original copy of the game, which the player su
 | `CorsixNet.Formats` | Readers for original data files: install detection, RNC, palettes, sprite sheets, fonts, maps, sounds, music, video, strings | — |
 | `CorsixNet.Sim` | Deterministic simulation: ticks, RNG, entities, commands, saving, state hashing. No engine dependencies | — |
 | `CorsixNet.Content` | Builds simulation state from game data: level maps now, content definitions and mods later | Formats, Sim |
-| `CorsixNet.Client` | MonoGame (DesktopGL) front end: isometric renderer, sprite-based UI, audio, input | Content, Formats, Sim |
+| `CorsixNet.Net` | Lockstep multiplayer: message protocol, TCP transport, server and client logic | Sim |
+| `CorsixNet.Server` | Headless dedicated server | Content, Net |
+| `CorsixNet.Client` | MonoGame (DesktopGL) front end: isometric renderer, sprite-based UI, audio, input | Content, Formats, Net, Sim |
 | `CorsixNet.Analyzers` | Roslyn analyzer enforcing the determinism rules below | — |
 
-Planned, added when their milestone starts: `CorsixNet.Net` (lockstep protocol and transport), `CorsixNet.Server`
-(headless dedicated server), `CorsixNet.Tools` (sprite viewer, converters).
+Planned, added when needed: `CorsixNet.Tools` (converters and other offline tools).
 
 The simulation never references the client. The client reads simulation state and
 submits commands. This split is what makes headless servers, replays, automated tests
@@ -57,15 +58,40 @@ hash comparison is added together with the first simulation scenarios.
 Deterministic lockstep, as in OpenTTD and Factorio:
 
 1. Clients send **commands** only (build room, hire staff, change a price, pause, change speed).
-2. The server stamps each command with the tick it executes on (a few ticks ahead) and
+2. The server stamps each command with the tick it executes on and a sequence number, and
    broadcasts it. Every client executes the same commands on the same ticks.
-3. Every N ticks clients exchange a **hash of the simulation state**. A mismatch is a
-   desync and produces a diagnostic dump.
+3. Every N ticks clients report a **hash of the simulation state**. A mismatch is a desync.
 4. Joining a running game, and recovering from a desync, means transferring a save.
 5. A replay is an initial save plus the command log.
 
-Transport: reliable ordered UDP (LiteNetLib). A Steam transport can be added later.
 UI state never enters the simulation.
+
+### Implementation (M4)
+
+`CorsixNet.Net` implements this with the **server always ahead**:
+
+- `LockstepServer` runs its own copy of the simulation. When a client's
+  `CommandRequestMessage` arrives, the server schedules it (current tick plus
+  `CommandDelay`, default 0) and broadcasts a `ScheduledCommandMessage`. After executing a
+  tick, it broadcasts `AdvanceMessage(tick)`.
+- `LockstepClient` may only run ticks below the last allowed tick. The connection is ordered,
+  so every command of a tick arrives before permission to run that tick. Clients never wait
+  for missing commands and never roll back.
+- **Joining** sends `Hello` with the protocol version. The server replies with `Welcome`:
+  the player number, the full `Simulation.Save` output and the allowed tick. Players get the
+  lowest free number below the map's player count; a full game rejects the client.
+- **Desyncs.** Every 16 ticks the server records its state hash, and clients send theirs.
+  A mismatch is logged and broadcast as `DesyncMessage`. The state hash excludes pending
+  commands and the sequence counter: they are inputs, and a client behind the server may
+  already hold commands for future ticks.
+- **Transport** is TCP with length-prefixed frames (`TcpConnection`). Lockstep needs
+  reliable ordered delivery anyway, and TCP provides it without dependencies. A UDP
+  transport (LiteNetLib) or Steam can be added behind `IConnection` if latency demands it.
+  `InMemoryConnection` runs the same code in tests, through the real codec.
+- `ServerRunner` drives a server on its own thread at the tick rate. Game time stands still
+  while nobody is connected. The client can host in-process (`--host`), or the headless
+  `CorsixNet.Server` can host.
+- Clients keep running when their window loses focus; only input is ignored.
 
 ## Simulation core
 
@@ -181,7 +207,7 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
 3. **M2** Level loading, isometric renderer, camera and zoom. *(done)*
 4. **M3** Simulation core: tick loop, entities, commands, save/load, state hash. Pathfinding
    ported from CorsixTH; humanoids walking; entrance doors from map files. *(done)*
-5. **M4** Two-client lockstep prototype. This validates the architecture before content grows.
+5. **M4** Two-client lockstep prototype. This validates the architecture before content grows. *(done)*
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
    music and video.

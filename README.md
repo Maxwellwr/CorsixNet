@@ -47,6 +47,33 @@ a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels
 initial view. `--demo` starts with twenty patients, half of them outside, wandering into and around the
 hospital.
 
+### Multiplayer
+
+Host a game on the two-player map `LEVEL.L20` and join it yourself:
+
+```bash
+dotnet run --project src/CorsixNet.Client -- --host --demo
+```
+
+Join from a second window:
+
+```bash
+dotnet run --project src/CorsixNet.Client -- --connect 127.0.0.1
+```
+
+`--host PORT` and `--connect HOST:PORT` choose another port (default 7777). `--name` sets
+the player name. Hosting accepts only local connections unless you add `--public`. A
+headless server is available too:
+
+```bash
+dotnet run --project src/CorsixNet.Server -- --level LEVEL.L20
+```
+
+Each player's camera starts at their own hospital. The status bar shows the tick, the player
+number, and any desync the server detects.
+
+### Sprite viewer
+
 `--sprite-viewer` browses every sprite sheet and background in the game data instead:
 
 | Key | Action |

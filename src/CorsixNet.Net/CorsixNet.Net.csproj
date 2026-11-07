@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Lockstep multiplayer: protocol, transport, server and client.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CorsixNet.Net.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CorsixNet.Sim/CorsixNet.Sim.csproj" />
+  </ItemGroup>
+
+</Project>

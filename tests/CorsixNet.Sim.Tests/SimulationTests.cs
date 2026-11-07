@@ -142,6 +142,16 @@ public class SimulationTests
     }
 
     [Fact]
+    public void StateHashIgnoresCommandsNotYetExecuted()
+    {
+        var a = Scripted();
+        var b = Scripted();
+        b.Schedule(0, new SpawnHumanoidCommand(new(2, 2)), tick: b.Tick + 10);
+
+        Assert.Equal(a.ComputeStateHash(), b.ComputeStateHash());
+    }
+
+    [Fact]
     public void SaveAndLoadRoundTripsMidWalk()
     {
         var original = Scripted();
@@ -180,7 +190,7 @@ public class SimulationTests
         Scripted().Save(full);
         using var truncated = new MemoryStream(full.ToArray()[..^3]);
 
-        Assert.ThrowsAny<Exception>(() => Simulation.Load(truncated));
+        Assert.Throws<InvalidDataException>(() => Simulation.Load(truncated));
     }
 
     private static Simulation NewSimulation()

@@ -8,7 +8,10 @@ internal interface IScreen : IDisposable
 {
     bool ExitRequested { get; }
 
-    void Update(GameTime gameTime);
+    /// <summary>Advances the screen.</summary>
+    /// <param name="gameTime">Time since the last update.</param>
+    /// <param name="hasFocus">Whether the window has focus; input is ignored without it, but games keep running.</param>
+    void Update(GameTime gameTime, bool hasFocus);
 
     void Draw(SpriteBatch batch);
 }

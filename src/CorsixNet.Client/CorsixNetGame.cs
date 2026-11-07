@@ -37,10 +37,8 @@ internal sealed class CorsixNetGame : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (IsActive)
-        {
-            _screen?.Update(gameTime);
-        }
+        // Keep updating without focus: a network game must keep up with the server.
+        _screen?.Update(gameTime, IsActive);
 
         if (_screen?.ExitRequested == true)
         {

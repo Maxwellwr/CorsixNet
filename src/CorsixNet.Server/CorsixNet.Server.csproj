@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>Headless lockstep game server.</Description>
+    <AssemblyName>CorsixNet.Server</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../CorsixNet.Content/CorsixNet.Content.csproj" />
+    <ProjectReference Include="../CorsixNet.Net/CorsixNet.Net.csproj" />
+  </ItemGroup>
+
+</Project>

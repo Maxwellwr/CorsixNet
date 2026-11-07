@@ -43,6 +43,21 @@ public sealed class SimReader
 
     public TilePosition ReadTile() => new(ReadInt32(), ReadInt32());
 
+    public byte[] ReadBytes(int count)
+    {
+        var bytes = new byte[count];
+        try
+        {
+            _stream.ReadExactly(bytes);
+        }
+        catch (EndOfStreamException e)
+        {
+            throw new InvalidDataException("Unexpected end of simulation data.", e);
+        }
+
+        return bytes;
+    }
+
     /// <summary>Reads a non-negative count, rejecting values above <paramref name="max"/>.</summary>
     public int ReadCount(int max)
     {
@@ -57,7 +72,15 @@ public sealed class SimReader
 
     private ReadOnlySpan<byte> Fill(int count)
     {
-        _stream.ReadExactly(_buffer, 0, count);
+        try
+        {
+            _stream.ReadExactly(_buffer, 0, count);
+        }
+        catch (EndOfStreamException e)
+        {
+            throw new InvalidDataException("Unexpected end of simulation data.", e);
+        }
+
         return _buffer.AsSpan(0, count);
     }
 }

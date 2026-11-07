@@ -69,8 +69,13 @@ internal sealed class SpriteViewerScreen : IScreen
 
     private ViewerItem? Current => _items.Count > 0 ? _items[_itemIndex] : null;
 
-    public void Update(GameTime gameTime)
+    public void Update(GameTime gameTime, bool hasFocus)
     {
+        if (!hasFocus)
+        {
+            return;
+        }
+
         var keys = Keyboard.GetState();
         var mouse = Mouse.GetState();
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_previousKeys.IsKeyDown(key);

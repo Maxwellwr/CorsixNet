@@ -222,7 +222,7 @@ public sealed class Simulation
     }
 
     /// <summary>Writes the complete state.</summary>
-    public void Save(Stream stream) => Write(new SimWriter(stream));
+    public void Save(Stream stream) => Write(new SimWriter(stream), includeInputs: true);
 
     /// <summary>Restores a simulation written by <see cref="Save"/>.</summary>
     /// <exception cref="InvalidDataException">The data is not a valid simulation state.</exception>
@@ -281,15 +281,22 @@ public sealed class Simulation
         return simulation;
     }
 
-    /// <summary>Hash of the complete serialized state, for detecting desyncs between machines.</summary>
+    /// <summary>
+    /// Hash of the game state, for detecting desyncs between machines.
+    /// </summary>
+    /// <remarks>
+    /// Pending commands and the next sequence number are inputs, not state: a client behind the
+    /// server may already hold commands for future ticks. They are left out, so machines at the
+    /// same tick agree however far ahead their command queues reach.
+    /// </remarks>
     public ulong ComputeStateHash()
     {
         using var hash = new StateHash();
-        Write(new SimWriter(hash));
+        Write(new SimWriter(hash), includeInputs: false);
         return hash.Value;
     }
 
-    private void Write(SimWriter writer)
+    private void Write(SimWriter writer, bool includeInputs)
     {
         writer.WriteUInt32(Magic);
         writer.WriteInt32(FormatVersion);
@@ -297,7 +304,11 @@ public sealed class Simulation
         writer.WriteUInt64(Random.State);
         writer.WriteUInt64(Random.Increment);
         writer.WriteInt32(NextEntityId);
-        writer.WriteInt64(NextSequence);
+        if (includeInputs)
+        {
+            writer.WriteInt64(NextSequence);
+        }
+
         Map.Write(writer);
 
         writer.WriteInt32(_entities.Count);
@@ -306,10 +317,13 @@ public sealed class Simulation
             entity.Write(writer);
         }
 
-        writer.WriteInt32(_pending.Count);
-        foreach (var command in _pending)
+        if (includeInputs)
         {
-            command.Write(writer);
+            writer.WriteInt32(_pending.Count);
+            foreach (var command in _pending)
+            {
+                command.Write(writer);
+            }
         }
 
         writer.WriteInt32(_delayedObjects.Count);

@@ -1,0 +1,53 @@
+using CorsixNet.Net.Protocol;
+using CorsixNet.Sim.Commands;
+
+namespace CorsixNet.Net.Tests;
+
+public class MessageCodecTests
+{
+    public static TheoryData<Message> Messages() =>
+    [
+        new HelloMessage(MessageCodec.ProtocolVersion, "Dr. Ñandú"),
+        new RejectMessage("full"),
+        new CommandRequestMessage(new WalkToCommand(3, new(4, 5))),
+        new ScheduledCommandMessage(new ScheduledCommand(10, 2, 1, new SpawnHumanoidCommand(new(1, 2)))),
+        new AdvanceMessage(123),
+        new StateHashMessage(64, 0xDEADBEEFCAFEF00D),
+        new DesyncMessage(64, 1, 1, 2),
+    ];
+
+    [Theory]
+    [MemberData(nameof(Messages))]
+    public void RoundTripsMessages(Message message)
+    {
+        Assert.Equal(message, MessageCodec.Decode(MessageCodec.Encode(message)));
+    }
+
+    [Fact]
+    public void RoundTripsWelcomeState()
+    {
+        var welcome = new WelcomeMessage(1, [1, 2, 3, 4], 77);
+
+        var decoded = Assert.IsType<WelcomeMessage>(MessageCodec.Decode(MessageCodec.Encode(welcome)));
+
+        Assert.Equal((1, 77L), (decoded.Player, decoded.AllowedTick));
+        Assert.Equal(welcome.State, decoded.State);
+    }
+
+    [Fact]
+    public void RejectsUnknownTypeAndTrailingBytes()
+    {
+        Assert.Throws<InvalidDataException>(() => MessageCodec.Decode([200]));
+
+        byte[] withExtra = [.. MessageCodec.Encode(new AdvanceMessage(1)), 0];
+        Assert.Throws<InvalidDataException>(() => MessageCodec.Decode(withExtra));
+    }
+
+    [Fact]
+    public void RejectsTruncatedMessages()
+    {
+        var bytes = MessageCodec.Encode(new StateHashMessage(1, 2));
+
+        Assert.Throws<InvalidDataException>(() => MessageCodec.Decode(bytes.AsSpan(0, bytes.Length - 1)));
+    }
+}

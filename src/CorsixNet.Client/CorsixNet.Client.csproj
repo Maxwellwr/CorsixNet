@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="../CorsixNet.Content/CorsixNet.Content.csproj" />
     <ProjectReference Include="../CorsixNet.Formats/CorsixNet.Formats.csproj" />
+    <ProjectReference Include="../CorsixNet.Net/CorsixNet.Net.csproj" />
     <ProjectReference Include="../CorsixNet.Sim/CorsixNet.Sim.csproj" />
   </ItemGroup>
 
