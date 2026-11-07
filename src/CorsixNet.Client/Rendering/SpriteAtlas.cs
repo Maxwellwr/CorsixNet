@@ -5,101 +5,193 @@ using Microsoft.Xna.Framework.Graphics;
 namespace CorsixNet.Client.Rendering;
 
 /// <summary>
-/// All sprites of a sheet packed into one texture, so that drawing them does not switch textures.
+/// All sprites of a sheet packed into a few textures, so that drawing them rarely switches
+/// textures. Sprites can be stored enlarged with <see cref="PixelArtScaler"/>; drawing still
+/// takes world coordinates (original pixels), so callers draw with a matching transform.
 /// </summary>
 internal sealed class SpriteAtlas : IDisposable
 {
-    private const int AtlasWidth = 2048;
+    /// <summary>Texture size; 2048 is safe on every GPU MonoGame supports.</summary>
+    private const int PageSize = 2048;
 
     /// <summary>Transparent border around each sprite so that filtering never samples a neighbour.</summary>
     private const int Padding = 1;
 
-    private readonly Rectangle[] _sources;
+    private readonly GraphicsDevice _device;
+    private readonly Palette _palette;
+    private readonly Func<IndexedImage, bool> _isFloorTile;
+    private readonly List<Texture2D> _pages = [];
+    private (int Page, Rectangle Source)[] _entries = [];
 
-    public SpriteAtlas(GraphicsDevice device, SpriteSheet sheet, Palette palette)
+    /// <param name="device">Graphics device.</param>
+    /// <param name="sheet">Sprites to pack.</param>
+    /// <param name="palette">Palette to draw them with.</param>
+    /// <param name="scale">Initial scale: 1, 2 or 4.</param>
+    /// <param name="isFloorTile">
+    /// Picks the sprites that tile the floor; they are enlarged with <see cref="PixelArtScaler.ScaleTile"/>
+    /// so that no seams open between them.
+    /// </param>
+    public SpriteAtlas(GraphicsDevice device, SpriteSheet sheet, Palette palette, int scale = 1, Func<IndexedImage, bool>? isFloorTile = null)
     {
+        _device = device;
+        _palette = palette;
+        _isFloorTile = isFloorTile ?? (_ => false);
         Sheet = sheet;
-        _sources = new Rectangle[sheet.Count];
+        SetScale(scale);
+    }
 
-        // Shelf packing in sheet order.
-        int x = 0, y = 0, rowHeight = 0;
-        for (var i = 0; i < sheet.Count; i++)
+    public SpriteSheet Sheet { get; }
+
+    /// <summary>How many texture pixels each original pixel has along each axis: 1, 2 or 4.</summary>
+    public int Scale { get; private set; }
+
+    public int Count => _entries.Length;
+
+    /// <summary>Rebuilds the textures for another scale. Enlarging takes a moment for big sheets.</summary>
+    public void SetScale(int scale)
+    {
+        if (scale is not (1 or 2 or 4))
         {
-            var sprite = sheet[i];
-            if (sprite.IsEmpty)
+            throw new ArgumentOutOfRangeException(nameof(scale), scale, "Scale must be 1, 2 or 4.");
+        }
+
+        Scale = scale;
+        var passes = scale switch { 1 => 0, 2 => 1, _ => 2 };
+        var images = new IndexedImage[Sheet.Count];
+        Parallel.For(0, images.Length, i => images[i] = _isFloorTile(Sheet[i])
+            ? PixelArtScaler.ScaleTile(Sheet[i], _palette, passes)
+            : PixelArtScaler.Scale(Sheet[i], _palette, passes));
+
+        DisposePages();
+        _entries = new (int, Rectangle)[images.Length];
+        var placements = Pack(images);
+        foreach (var page in placements.GroupBy(p => p.Page))
+        {
+            var height = page.Max(p => p.Source.Bottom + Padding);
+            var pixels = new Color[PageSize * height];
+            foreach (var (index, _, source) in page)
+            {
+                var image = images[index];
+                for (var row = 0; row < image.Height; row++)
+                {
+                    for (var column = 0; column < image.Width; column++)
+                    {
+                        var c = _palette[image[column, row]];
+                        pixels[((source.Y + row) * PageSize) + source.X + column] =
+                            new Color(c.R * c.A / 255, c.G * c.A / 255, c.B * c.A / 255, (int)c.A);
+                    }
+                }
+            }
+
+            var texture = new Texture2D(_device, PageSize, height);
+            texture.SetData(pixels);
+            _pages.Add(texture);
+        }
+
+        foreach (var (index, page, source) in placements)
+        {
+            _entries[index] = (page, source);
+        }
+    }
+
+    /// <summary>Width of sprite <paramref name="index"/> in original pixels, or 0 if it is empty or out of range.</summary>
+    public int WidthOf(int index) => IsValid(index) ? Sheet[index].Width : 0;
+
+    /// <summary>Height of sprite <paramref name="index"/> in original pixels, or 0 if it is empty or out of range.</summary>
+    public int HeightOf(int index) => IsValid(index) ? Sheet[index].Height : 0;
+
+    public void Draw(SpriteBatch batch, int index, int x, int y, Color tint) => Draw(batch, index, new Vector2(x, y), tint, SpriteEffects.None);
+
+    /// <summary>Draws sprite <paramref name="index"/> with its top-left corner at <paramref name="position"/> (world coordinates).</summary>
+    public void Draw(SpriteBatch batch, int index, Vector2 position, Color tint, SpriteEffects effects)
+    {
+        if (!IsValid(index) || Sheet[index].IsEmpty)
+        {
+            return;
+        }
+
+        var (page, source) = _entries[index];
+        batch.Draw(_pages[page], position, source, tint, 0, Vector2.Zero, 1f / Scale, effects, 0);
+    }
+
+    /// <summary>Draws the part of a sprite placed at (<paramref name="x"/>, <paramref name="y"/>) that lies inside <paramref name="clip"/> (world coordinates).</summary>
+    public void DrawClipped(SpriteBatch batch, int index, int x, int y, Rectangle clip, Color tint)
+    {
+        if (!IsValid(index) || Sheet[index].IsEmpty)
+        {
+            return;
+        }
+
+        var sprite = Sheet[index];
+        var visible = Rectangle.Intersect(new Rectangle(x, y, sprite.Width, sprite.Height), clip);
+        if (visible.IsEmpty)
+        {
+            return;
+        }
+
+        var (page, source) = _entries[index];
+        var part = new Rectangle(
+            source.X + ((visible.X - x) * Scale),
+            source.Y + ((visible.Y - y) * Scale),
+            visible.Width * Scale,
+            visible.Height * Scale);
+        batch.Draw(_pages[page], new Vector2(visible.X, visible.Y), part, tint, 0, Vector2.Zero, 1f / Scale, SpriteEffects.None, 0);
+    }
+
+    public void Dispose() => DisposePages();
+
+    private bool IsValid(int index) => index >= 0 && index < _entries.Length;
+
+    /// <summary>Shelf packing in sheet order, starting a new page when one fills up.</summary>
+    private static List<(int Index, int Page, Rectangle Source)> Pack(IndexedImage[] images)
+    {
+        var placements = new List<(int, int, Rectangle)>();
+        int page = 0, x = 0, y = 0, rowHeight = 0;
+        for (var i = 0; i < images.Length; i++)
+        {
+            var image = images[i];
+            if (image.IsEmpty)
             {
                 continue;
             }
 
-            var cellWidth = sprite.Width + (2 * Padding);
-            var cellHeight = sprite.Height + (2 * Padding);
-            if (x + cellWidth > AtlasWidth)
+            var cellWidth = image.Width + (2 * Padding);
+            var cellHeight = image.Height + (2 * Padding);
+            if (cellWidth > PageSize || cellHeight > PageSize)
+            {
+                throw new InvalidOperationException($"Sprite {i} ({image.Width}x{image.Height}) does not fit in a {PageSize} texture.");
+            }
+
+            if (x + cellWidth > PageSize)
             {
                 x = 0;
                 y += rowHeight;
                 rowHeight = 0;
             }
 
-            _sources[i] = new Rectangle(x + Padding, y + Padding, sprite.Width, sprite.Height);
+            if (y + cellHeight > PageSize)
+            {
+                page++;
+                x = 0;
+                y = 0;
+                rowHeight = 0;
+            }
+
+            placements.Add((i, page, new Rectangle(x + Padding, y + Padding, image.Width, image.Height)));
             x += cellWidth;
             rowHeight = Math.Max(rowHeight, cellHeight);
         }
 
-        var height = Math.Max(1, y + rowHeight);
-        var pixels = new Color[AtlasWidth * height];
-        for (var i = 0; i < sheet.Count; i++)
-        {
-            var sprite = sheet[i];
-            var source = _sources[i];
-            for (var row = 0; row < sprite.Height; row++)
-            {
-                for (var column = 0; column < sprite.Width; column++)
-                {
-                    var c = palette[sprite[column, row]];
-                    pixels[((source.Y + row) * AtlasWidth) + source.X + column] =
-                        new Color(c.R * c.A / 255, c.G * c.A / 255, c.B * c.A / 255, (int)c.A);
-                }
-            }
-        }
-
-        Texture = new Texture2D(device, AtlasWidth, height);
-        Texture.SetData(pixels);
+        return placements;
     }
 
-    public SpriteSheet Sheet { get; }
-
-    public Texture2D Texture { get; }
-
-    public int Count => _sources.Length;
-
-    /// <summary>Area of sprite <paramref name="index"/> in <see cref="Texture"/>; empty for empty sprites.</summary>
-    public Rectangle Source(int index) => index >= 0 && index < _sources.Length ? _sources[index] : Rectangle.Empty;
-
-    /// <summary>Height of sprite <paramref name="index"/>, or 0 if it is empty or out of range.</summary>
-    public int HeightOf(int index) => Source(index).Height;
-
-    public void Draw(SpriteBatch batch, int index, int x, int y, Color tint)
+    private void DisposePages()
     {
-        var source = Source(index);
-        if (!source.IsEmpty)
+        foreach (var page in _pages)
         {
-            batch.Draw(Texture, new Vector2(x, y), source, tint);
-        }
-    }
-
-    /// <summary>Draws the part of a sprite placed at (<paramref name="x"/>, <paramref name="y"/>) that lies inside <paramref name="clip"/>.</summary>
-    public void DrawClipped(SpriteBatch batch, int index, int x, int y, Rectangle clip, Color tint)
-    {
-        var source = Source(index);
-        var visible = Rectangle.Intersect(new Rectangle(x, y, source.Width, source.Height), clip);
-        if (source.IsEmpty || visible.IsEmpty)
-        {
-            return;
+            page.Dispose();
         }
 
-        var part = new Rectangle(source.X + visible.X - x, source.Y + visible.Y - y, visible.Width, visible.Height);
-        batch.Draw(Texture, new Vector2(visible.X, visible.Y), part, tint);
+        _pages.Clear();
     }
-
-    public void Dispose() => Texture.Dispose();
 }

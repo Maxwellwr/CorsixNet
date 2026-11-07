@@ -20,13 +20,18 @@ internal sealed class AnimationRenderer : IDisposable
 
     private readonly SpriteAtlas _sprites;
 
-    public AnimationRenderer(GraphicsDevice device, AnimationSet animations, SpriteSheet sprites, Palette palette)
+    public AnimationRenderer(GraphicsDevice device, AnimationSet animations, SpriteSheet sprites, Palette palette, int scale = 1)
     {
         Animations = animations;
-        _sprites = new SpriteAtlas(device, sprites, palette);
+        _sprites = new SpriteAtlas(device, sprites, palette, scale);
     }
 
     public AnimationSet Animations { get; }
+
+    /// <summary>Texture pixels per original pixel; see <see cref="SpriteAtlas.Scale"/>.</summary>
+    public int Scale => _sprites.Scale;
+
+    public void SetScale(int scale) => _sprites.SetScale(scale);
 
     /// <summary>
     /// Draws <paramref name="frame"/> with its anchor at (<paramref name="x"/>, <paramref name="y"/>).
@@ -46,8 +51,8 @@ internal sealed class AnimationRenderer : IDisposable
                 continue;
             }
 
-            var source = _sprites.Source(element.Sprite);
-            if (source.IsEmpty)
+            var width = _sprites.WidthOf(element.Sprite);
+            if (width == 0)
             {
                 continue;
             }
@@ -59,7 +64,7 @@ internal sealed class AnimationRenderer : IDisposable
                 continue;
             }
 
-            var left = flipHorizontally ? x - element.X - source.Width : x + element.X;
+            var left = flipHorizontally ? x - element.X - width : x + element.X;
             var effects = SpriteEffects.None;
             if ((flags & FlipHorizontal) != 0)
             {
@@ -74,7 +79,7 @@ internal sealed class AnimationRenderer : IDisposable
             var tint = (flags & Alpha50) != 0 ? Color.White * 0.5f
                 : (flags & Alpha75) != 0 ? Color.White * 0.25f
                 : Color.White;
-            batch.Draw(_sprites.Texture, new Vector2(left, y + element.Y), source, tint, 0, Vector2.Zero, 1, effects, 0);
+            _sprites.Draw(batch, element.Sprite, new Vector2(left, y + element.Y), tint, effects);
         }
     }
 

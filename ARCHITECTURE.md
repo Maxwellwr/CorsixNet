@@ -199,6 +199,19 @@ sliding is tracked by the client.
 Not yet handled: the original divider walls between parcels for multiplayer, and the UI
 layer.
 
+**Optional sprite smoothing.** `Formats.PixelArtScaler` ports MMPX, a pixel art
+magnification filter. It smooths diagonals but keeps straight edges, corners and the original
+palette, because it only copies existing pixels. The client can store sprites enlarged 2x or
+4x (`SpriteAtlas.Scale`, key U, `--upscale`). It then draws the map into a correspondingly
+larger buffer. World coordinates stay in original pixels.
+
+Floor tiles cannot be filtered one by one: the filter rounds off a tile's edge into the
+transparency around it, which leaves seams between tiles. `ScaleTile` therefore surrounds a
+floor tile with copies of itself along the isometric lattice before filtering. It then cuts
+the result back to the tile's outline, enlarged pixel for pixel, so neighbouring tiles fit
+exactly as the originals do. The original pixels remain the default, since the project is a
+faithful reimplementation.
+
 Animations come from `Formats.AnimationSet` (`VSTART-1`, `VFRA-1`, `VLIST-1`, `VELE-1` with
 the `VSPR-0` sprites). A frame is a list of sprite elements. Elements belong to layers, and
 the humanoid's chosen variant per layer (head, clothes and so on) selects which ones are

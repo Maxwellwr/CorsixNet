@@ -18,6 +18,7 @@ const string Usage = """
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
       --demo            Build a GP's office and add twenty patients wandering around the hospital
+      --upscale N       Smooth sprites with the MMPX pixel art filter: 1 (original), 2 or 4 (key U)
       --sprite-viewer   Browse sprite sheets instead of maps
       --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
 
@@ -40,6 +41,7 @@ var spriteViewer = false;
 var zoom = 1f;
 var overlay = MapOverlay.None;
 var demo = false;
+var upscale = 1;
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -60,6 +62,10 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--demo":
             demo = true;
+            break;
+        case "--upscale" when i + 1 < args.Length && int.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var u) && u is 1 or 2 or 4:
+            upscale = u;
+            i++;
             break;
         case "--host":
             if (i + 1 < args.Length && int.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var p))
@@ -188,7 +194,7 @@ else
         return 1;
     }
 
-    createScreen = device => new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession);
+    createScreen = device => new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale);
 }
 
 using var game = new CorsixNetGame($"CorsixNet - {install.RootPath}", createScreen);

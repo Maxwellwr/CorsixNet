@@ -23,7 +23,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// </summary>
 /// <remarks>
 /// Keys: arrows/WASD or right/middle-drag pan, wheel zoom, Home reset camera,
-/// PgUp/PgDn previous/next level (local games), O cycle overlay, Esc quit.
+/// PgUp/PgDn previous/next level (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space pause (local games). B builds a GP's office. In a network game, commands go through
@@ -82,16 +82,18 @@ internal sealed class MapViewScreen : IScreen
         float zoom = 1f,
         MapOverlay overlay = MapOverlay.None,
         bool demo = false,
-        IGameSession? networkSession = null)
+        IGameSession? networkSession = null,
+        int upscale = 1)
     {
         _device = device;
         _levels = networkSession is null ? levels : [];
 
         var palette = install.LoadPalette("DATA", "MPALETTE.DAT");
-        _blocks = new SpriteAtlas(device, install.LoadSpriteSheet("DATA", "VBLK-0", complex: false), palette);
+        // Floor tiles are the 64x32 diamonds of the block sheet.
+        _blocks = new SpriteAtlas(device, install.LoadSpriteSheet("DATA", "VBLK-0", complex: false), palette, upscale, sprite => sprite.Width == 64 && sprite.Height == 32);
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
-        _animations = new AnimationRenderer(device, AnimationSet.Load(install), install.LoadSpriteSheet("DATA", "VSPR-0", complex: false), palette);
+        _animations = new AnimationRenderer(device, AnimationSet.Load(install), install.LoadSpriteSheet("DATA", "VSPR-0", complex: false), palette, upscale);
         _humanoids = new HumanoidDrawing(_animations);
         _doors = new EntranceDoorDrawing(_animations);
         _diamond = CreateDiamond(device);
@@ -184,6 +186,14 @@ internal sealed class MapViewScreen : IScreen
             _overlay = (MapOverlay)(((int)_overlay + 1) % Enum.GetValues<MapOverlay>().Length);
         }
 
+        if (Pressed(Keys.U))
+        {
+            // Original pixels, then MMPX-smoothed sprites at 2x and 4x.
+            var scale = _blocks.Scale switch { 1 => 2, 2 => 4, _ => 1 };
+            _blocks.SetScale(scale);
+            _animations.SetScale(scale);
+        }
+
         var pan = Vector2.Zero;
         if (keys.IsKeyDown(Keys.Left) || keys.IsKeyDown(Keys.A))
         {
@@ -239,16 +249,18 @@ internal sealed class MapViewScreen : IScreen
         var viewSize = ViewSize;
         var worldSize = _camera.WorldSize(viewSize);
         var topLeft = _camera.TopLeft(viewSize);
-        EnsureTarget(worldSize);
+        var scale = _blocks.Scale;
+        EnsureTarget(new Point(worldSize.X * scale, worldSize.Y * scale));
 
-        // Draw the map 1:1 into an off-screen target, then scale it to the window.
-        // Scaling the finished image avoids seams between tiles at fractional zoom levels.
+        // Draw the map into an off-screen target at the sprites' scale (1:1 for original sprites),
+        // then scale it to the window. Scaling the finished image avoids seams between tiles at
+        // fractional zoom levels.
         _device.SetRenderTarget(_target);
         _device.Clear(Background);
         if (Map is { } map)
         {
             var view = new Rectangle(topLeft, worldSize);
-            var toTarget = Matrix.CreateTranslation(-topLeft.X, -topLeft.Y, 0);
+            var toTarget = Matrix.CreateTranslation(-topLeft.X, -topLeft.Y, 0) * Matrix.CreateScale(scale, scale, 1);
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
             CollectEntitiesByTile();
             _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) => DrawEntities(batch, tile, anchorX, anchorY));
@@ -260,7 +272,7 @@ internal sealed class MapViewScreen : IScreen
         _device.SetRenderTarget(null);
         _device.Clear(Background);
 
-        var sampler = _camera.Zoom >= 1 ? SamplerState.PointClamp : SamplerState.LinearClamp;
+        var sampler = _camera.Zoom >= scale ? SamplerState.PointClamp : SamplerState.LinearClamp;
         batch.Begin(SpriteSortMode.Deferred, BlendState.Opaque, sampler);
         var destination = new Rectangle(
             0,
@@ -683,7 +695,7 @@ internal sealed class MapViewScreen : IScreen
         var levelKeys = _levels.Count > 0 ? "   PgUp PgDn: level" : string.Empty;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{_session.Name}{levels}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}{levelKeys}   O: overlay   Esc: quit");
+            $"{_session.Name}{levels}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
     }
 
     private string TileLine()
