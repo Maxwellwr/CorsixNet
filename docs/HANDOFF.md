@@ -58,10 +58,11 @@ Done and committed:
 - Staff hiring (see ARCHITECTURE.md, "Staff"): `StaffProfile` (skill in thousandths), `StaffRules`
   from the level files, candidates for hire at game start, `HireStaffCommand` with CorsixTH's
   placement check, one month's salary paid on hiring, staff types and walk animations in the client.
-  Debug keys 1-4 hire the first doctor, nurse, handyman or receptionist onto the hovered tile;
+  Debug keys Ctrl+1-4 hire the first doctor, nurse, handyman or receptionist onto the hovered tile;
   `--demo` hires one of each. Save format version 4.
 - Game calendar (`GameDate`, from the tick, as CorsixTH's date.lua): monthly wages and new
-  candidates for hire at the end of each month. Date in the client's top line.
+  candidates for hire at the end of each month. Game speeds as CorsixTH's (keys 1-5, Space/P,
+  Z held), local games only; date and speed in a box at the top right.
 
 Not done yet:
 

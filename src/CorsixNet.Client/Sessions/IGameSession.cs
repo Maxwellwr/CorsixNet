@@ -18,10 +18,19 @@ internal interface IGameSession : IDisposable
     /// <summary>The local player's number (0-based).</summary>
     int Player { get; }
 
-    /// <summary>Whether the player can pause; only local games can.</summary>
-    bool CanPause { get; }
+    /// <summary>Whether the player can pause and change the game speed; only local games can.</summary>
+    bool CanChangeSpeed { get; }
 
-    bool IsPaused { get; set; }
+    /// <summary>The current game speed; a network game runs at the server's Normal speed.</summary>
+    GameSpeed Speed { get; }
+
+    bool IsPaused => Speed == GameSpeed.Pause;
+
+    /// <summary>Changes the game speed, if <see cref="CanChangeSpeed"/>.</summary>
+    void SetSpeed(GameSpeed speed);
+
+    /// <summary>Ends a pause or a speed-up: back to the speed before it.</summary>
+    void ResumeSpeed();
 
     /// <summary>One line describing the session's state for the status bar.</summary>
     string Status { get; }

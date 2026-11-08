@@ -41,7 +41,10 @@ first original level:
 | G | Spawn ten patients in the hospital |
 | Left click | Select a patient, or send the selected one walking |
 | R | Toggle random wandering |
-| Space | Pause or resume the simulation |
+| Space / P | Pause or resume the game (P picks up while building) |
+| 1-5 | Game speed: slowest, slower, normal, max speed, and then some more |
+| Z (hold) | Speed up, eight game hours per tick |
+| Ctrl+1-4 | Hire the first doctor, nurse, handyman or receptionist onto the hovered tile |
 | Esc | Quit |
 
 Building a room goes through the original game's steps:
@@ -57,7 +60,7 @@ Esc steps back. In the furniture step it takes the room down again and returns t
 
 Rooms cost money, at the prices of the level's files: you need the whole cost in the bank to
 start one. The furniture is paid for when it comes to the cursor and the room when you confirm
-it; taking an unfinished room down sells the furniture back. The balance is in the top line.
+it; taking an unfinished room down sells the furniture back. The balance is in the top line; the date and the game speed are in the box on its right.
 
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the

@@ -100,7 +100,9 @@ entities and pending commands.
 
 - **Tick.** One tick is one game "hour", as in CorsixTH. At CorsixTH's Normal speed a tick
   lasts 54 ms of real time (about 18.5 ticks per second). The client decides how many ticks
-  to run. The simulation knows nothing about real time.
+  to run: a local game follows CorsixTH's game speeds (`GameClock` in the client, from Slowest,
+  one tick per 56 frames of 18 ms, to Speed up, eight ticks per frame). A network game runs at
+  the server's Normal speed for now. The simulation knows nothing about real time.
 - **Calendar.** `Simulation.Date` (`Sim.Calendar.GameDate`, a port of CorsixTH's `date.lua`) follows
   from the tick: days of 50 hours, months of the usual lengths, no leap years, the game starting at
   hour 0 of 1 January of year 1. It needs no saved state of its own.

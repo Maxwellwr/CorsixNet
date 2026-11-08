@@ -8,12 +8,9 @@ namespace CorsixNet.Client.Sessions;
 internal sealed class LocalSession : IGameSession
 {
     /// <summary>Real time per tick at CorsixTH's "Normal" speed (3 frames of 18 ms).</summary>
-    public static readonly TimeSpan TickInterval = TimeSpan.FromMilliseconds(54);
+    public static readonly TimeSpan TickInterval = GameSpeeds.Interval(GameSpeed.Normal);
 
-    /// <summary>Upper bound on ticks per update, so a long stall does not freeze the client.</summary>
-    private const int MaxTicksPerUpdate = 10;
-
-    private TimeSpan _pending;
+    private readonly GameClock _clock = new();
 
     public LocalSession(string name, Simulation simulation)
     {
@@ -29,33 +26,24 @@ internal sealed class LocalSession : IGameSession
 
     public int Player => 0;
 
-    public bool CanPause => true;
+    public bool CanChangeSpeed => true;
 
-    public bool IsPaused { get; set; }
+    public GameSpeed Speed => _clock.Speed;
 
-    public string Status => string.Create(CultureInfo.InvariantCulture, $"tick {Simulation.Tick} {(IsPaused ? "paused" : "running")}");
+    public string Status => string.Create(CultureInfo.InvariantCulture, $"tick {Simulation.Tick}");
+
+    public void SetSpeed(GameSpeed speed) => _clock.SetSpeed(speed);
+
+    public void ResumeSpeed() => _clock.Resume();
 
     public void Submit(Command command) => Simulation.Schedule(Player, command);
 
     public void Update(TimeSpan elapsed)
     {
-        if (IsPaused)
-        {
-            return;
-        }
-
-        _pending += elapsed;
-        var ticks = 0;
-        while (_pending >= TickInterval && ticks < MaxTicksPerUpdate)
+        var ticks = _clock.Advance(elapsed);
+        for (var i = 0; i < ticks; i++)
         {
             Simulation.Step();
-            _pending -= TickInterval;
-            ticks++;
-        }
-
-        if (ticks == MaxTicksPerUpdate)
-        {
-            _pending = TimeSpan.Zero;
         }
     }
 
