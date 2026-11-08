@@ -862,6 +862,22 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(shift ? new RepayCommand(ctrl) : new BorrowCommand(ctrl));
         }
 
+        // Until the town map exists, T and Shift+T turn the heating up and down.
+        if (pressed(Keys.T))
+        {
+            var hospital = simulation.Hospitals[_session.Player];
+            if (hospital.IsHeatingBroken)
+            {
+                ShowNotice("The boiler is broken: the heating cannot be set until it is repaired");
+            }
+            else
+            {
+                var heat = Math.Clamp(hospital.RadiatorHeat + (shift ? -1 : 1), Hospital.MinRadiatorHeat, Hospital.MaxRadiatorHeat);
+                _session.Submit(new SetRadiatorHeatCommand(heat));
+                ShowNotice($"Heating: {heat * 10} %");
+            }
+        }
+
         // Until the town map exists, N buys the parcel under the cursor.
         if (pressed(Keys.N) && _hoveredTile is { } landAt)
         {

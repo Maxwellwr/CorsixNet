@@ -27,12 +27,15 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 17;
+    private const int FormatVersion = 18;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
     private const int MaxPendingCommands = 1 << 20;
     private const int MaxAvailableStaff = 1 << 16;
+
+    /// <summary>The object type whose number the heating bill goes by.</summary>
+    private const string Radiator = "radiator";
 
     private readonly List<Entity> _entities = [];
     private readonly List<ScheduledCommand> _pending = [];
@@ -63,6 +66,8 @@ public sealed class Simulation
             // CorsixTH's Hospital:Hospital prices the parcel numbered as the player: hospital tiles and 20,000.
             var land = (long)map.ParcelTileCount(player + 1) * Rules.LandCostPerTile;
             _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand, Rules.InterestRate, Rules.OverdraftDifferential);
+
+            _hospitals[player].ScheduleNextDisaster(Random);
 
             // CorsixTH's Hospital:Hospital: the rooms of the level whose objects are all there from the start.
             foreach (var room in Content.Rooms)
@@ -588,9 +593,28 @@ public sealed class Simulation
     private void OnEndDay()
     {
         var date = Date;
+        var radiators = new int[_hospitals.Length];
+        var handymen = new int[_hospitals.Length];
+        foreach (var entity in _entities)
+        {
+            if (entity is RoomObject { ObjectType: Radiator } radiator)
+            {
+                var owner = Map.GetParcelOwner(Map[radiator.Tile.X, radiator.Tile.Y].Parcel) - 1;
+                if (owner >= 0 && owner < radiators.Length)
+                {
+                    radiators[owner]++;
+                }
+            }
+            else if (entity is Humanoid { Profile.Class: StaffClass.Handyman, Employer: var employer } && employer >= 0 && employer < handymen.Length)
+            {
+                handymen[employer]++;
+            }
+        }
+
         foreach (var hospital in _hospitals)
         {
             hospital.OnEndDay();
+            hospital.OnEndDayHeating(Random, radiators[hospital.Player], handymen[hospital.Player], date.DaysInMonth);
         }
 
         Arrivals.OnEndDay(this);
@@ -617,6 +641,7 @@ public sealed class Simulation
             }
 
             hospital.PayWages(Tick, wages[hospital.Player]);
+            hospital.PayHeating(Tick);
             hospital.PayInterest(Tick);
             hospital.PayInsurance(Tick);
             if (date.IsLastDayOfYear)
