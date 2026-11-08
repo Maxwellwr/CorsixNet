@@ -109,7 +109,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 **Has:** balance and transaction log per player, level costs of rooms and objects, room purchase
 rules, wages, patient payments with inflation and insurers, drug cost.
 
-- Loans, interest, overdraft interest, credit limit, bank manager screen (`fullscreen/bank_manager.lua`, `hospital.lua`).
+- Bank manager screen (`fullscreen/bank_manager.lua`); loans, their limit, interest and overdraft interest are done
+  (L and Shift+L in the client).
 - Bank statement window showing the transaction log (data exists, no UI).
 - Casebook: per-disease price percentage, concentrate research, drug ratings (`fullscreen/drug_casebook.lua`).
   Partial: price percent is fixed at 100 %.

@@ -85,15 +85,15 @@ public sealed class EndConditions
     public IReadOnlyList<EndGoal> LoseGoals { get; }
 
     /// <summary>
-    /// <c>EndConditions:checkEndGame</c>: a hospital that meets every goal of a win group wins (it would also need to
-    /// owe the bank nothing, but there are no loans yet); otherwise one that meets every goal of a lose group loses to
+    /// <c>EndConditions:checkEndGame</c>: a hospital that meets every goal of a win group and owes the bank nothing
+    /// wins; otherwise one that meets every goal of a lose group loses to
     /// the last of them, by criterion number.
     /// </summary>
     public (EndOutcome Outcome, EndGoal? LostTo) Check(Simulation simulation, Hospital hospital)
     {
         foreach (var group in Groups(WinGoals))
         {
-            if (WinScore(simulation, hospital, group) == 1)
+            if (WinScore(simulation, hospital, group) == 1 && hospital.Loan == 0)
             {
                 return (EndOutcome.Won, null);
             }

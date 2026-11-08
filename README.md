@@ -45,6 +45,8 @@ first original level:
 | 1-5 | Game speed: slowest, slower, normal, max speed, and then some more |
 | Z (hold) | Speed up, eight game hours per tick |
 | Ctrl+1-4 | Hire the first doctor, nurse, handyman or receptionist onto the hovered tile |
+| Shift+O | Open the hospital before the opening watch runs down |
+| L / Shift+L | Borrow 5,000 from the bank / pay 5,000 back; with Ctrl, as much as allowed |
 | Esc | Quit |
 
 Building a room goes through the original game's steps:

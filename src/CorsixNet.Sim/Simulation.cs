@@ -26,7 +26,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 14;
+    private const int FormatVersion = 15;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -55,7 +55,7 @@ public sealed class Simulation
         {
             // CorsixTH's Hospital:Hospital prices the parcel numbered as the player: hospital tiles and 20,000.
             var land = (long)map.ParcelTileCount(player + 1) * Rules.LandCostPerTile;
-            _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand);
+            _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand, Rules.InterestRate, Rules.OverdraftDifferential);
         }
 
         MakeAvailableStaff(0);
@@ -470,6 +470,11 @@ public sealed class Simulation
     private void OnEndDay()
     {
         var date = Date;
+        foreach (var hospital in _hospitals)
+        {
+            hospital.OnEndDay();
+        }
+
         Arrivals.OnEndDay(this);
         if (!date.IsLastDayOfMonth)
         {
@@ -494,6 +499,7 @@ public sealed class Simulation
             }
 
             hospital.PayWages(Tick, wages[hospital.Player]);
+            hospital.PayInterest(Tick);
             hospital.PayInsurance(Tick);
             if (date.IsLastDayOfYear)
             {
