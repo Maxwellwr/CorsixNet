@@ -111,7 +111,7 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 
 - Bank manager screen (`fullscreen/bank_manager.lua`); loans, their limit, interest and overdraft interest are done
   (L and Shift+L in the client).
-- Bank statement window showing the transaction log (data exists, no UI).
+- Bank statement window showing the transaction log; F2 shows it as text for now.
 - Casebook window: per-disease prices, concentrate research, drug ratings (`fullscreen/drug_casebook.lua`).
   Partial: prices can be set by command (`SetTreatmentPriceCommand`), but there is no window to set them.
 - Reputation: changes from VIPs, emergencies, autopsies, room explosions, the year-end award and staff kicked out;
@@ -126,7 +126,7 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   are not; nor is the adviser's warning when the boiler breaks.
 - Research spending and its effect on drug ratings and new equipment (`research_department.lua`, `fullscreen/research_policy.lua`).
 - Graphs window of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`); the monthly
-  figures it draws are recorded (`Hospital.Statistics`).
+  figures it draws are recorded (`Hospital.Statistics`) and F8 shows them as text.
 
 ## 6. Interface, windows, faxes, adviser
 

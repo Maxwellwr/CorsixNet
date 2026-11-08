@@ -47,6 +47,7 @@ first original level:
 | Ctrl+1-4 | Hire the first doctor, nurse, handyman or receptionist onto the hovered tile |
 | Shift+O | Open the hospital before the opening watch runs down |
 | N | Buy the parcel of land under the cursor |
+| F2 / F8 | Show or hide the bank statement / the graphs' monthly figures, as text for now |
 | T / Shift+T | Turn the radiators up / down a tenth |
 | L / Shift+L | Borrow 5,000 from the bank / pay 5,000 back; with Ctrl, as much as allowed |
 | Esc | Quit |
