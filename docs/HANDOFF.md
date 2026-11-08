@@ -1,0 +1,92 @@
+# Handoff notes (2026-11-08)
+
+Context for continuing the work in a new Claude Code session on another computer. Read
+`CLAUDE.md` and `ARCHITECTURE.md` first. This note covers what they don't: where the work
+stands, how the user likes to work, and what was learnt about the original game. Delete it once
+the new session has absorbed it.
+
+## How the user works
+
+- The user writes in Russian; answer in Russian. Code, docs and commit messages are in English.
+  The user is fluent in C#.
+- Commit and push only when the user asks ("коммить", "пушь"). Commit messages end with
+  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- Edit and inspect code through the **Rider MCP** (`mcp__rider__apply_patch`, `read_file`,
+  `search_text`, `get_file_problems`, `reformat_file`, `rename_refactoring`, ...), not Python or
+  sed scripts. The Python scripts wrote CRLF on Windows and broke `dotnet format`. Use Bash for
+  git, `dotnet build/test/format` and running the client. Rider suggests removing trailing
+  commas; ignore that, the repository style (enforced by `dotnet format`) keeps them.
+- Downloads need the user's explicit yes. Don't spend money or make irreversible moves in the
+  user's own copy of the original game.
+- Faithfulness to the original matters. When unsure how the original behaves, look at CorsixTH
+  (reference checkout `C:\repos\github\CorsixTH`, MIT) and say what it does. The user corrects
+  wrong guesses about the original, so record their observations.
+
+## Environment
+
+- Original game (EA version) on the first computer: `D:\Games\Theme Hospital`, data in
+  `data\Game` (DATA, QDATA, LEVELS, ...). `ThemeHospitalInstall.Locate()` finds it, or set
+  `CORSIXNET_TH_PATH`. Real-data tests skip without it.
+- CorsixTH checkout: `C:\repos\github\CorsixTH`.
+- Commands: `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`.
+- Live checks were done by starting the client and injecting mouse and keyboard input from a
+  PowerShell script (user32 `SetCursorPos`, `mouse_event`, `keybd_event`, `PrintWindow` for
+  screenshots). Wait about 6 seconds after start before sending input, or the steps land before
+  the level has loaded. With the default window on `LEVEL.L1`, a GP's office goes in with:
+  B, drag from window (908,187) to (908,315), Enter, click (972,283) for the door, Enter.
+
+## Where the work stands
+
+Milestone M5 (build mode and a first complete room, then reception → GP patient flow).
+
+Done and committed:
+
+- Room building in the original's steps: blueprint (drag, resize by edge, move by middle) →
+  door → windows → furniture → confirm. Esc steps back; in the furniture step it takes the room
+  down. No doors or windows on corner tiles.
+- Rooms are built inactive; `PlaceObject`, `PickUpObject`, `ConfirmRoom`, `CancelRoom` commands.
+- The blueprint is drawn with the original's sprites (blue wireframe walls, door and window
+  sprites, floor marks; red parts recoloured through `QData/Ghost1.dat` table 6).
+- Money: `LevelConfig` reads `LEVELS/*.SAM`, `LevelRulesLoader` builds `LevelRules`
+  (start cash, room and object costs), `Hospital` per player with balance and transaction log,
+  `RoomPurchases` (whole cost needed to start; objects paid at build, room at confirm, objects
+  sold back on cancel). Balance in the client's top line. Save format version 3.
+- Build UI: red outline on the tile under the cursor while building; the object being placed is
+  attached to the cursor by its anchor tile and follows it tile by tile.
+
+Not done yet:
+
+- M5: staff (doctor, receptionist), reception desk, patient flow (reception, queue at the door,
+  GP consultation).
+- Money: buying land, loans and interest, hospital value (used by win criteria), bank window
+  with the transaction log.
+- Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and
+  buy buttons); steps are keys and the status line for now. Cursor shapes per step. CorsixTH's
+  clear-area step (people inside a new blueprint get walled in today). Buying extra objects.
+
+## What we learnt about the original game
+
+Observed by driving the original in DOSBox, plus the user's corrections:
+
+- The room's whole cost must be in the bank to start it. Game time keeps running while building.
+- Furniture step: walls are real already. The first missing item comes to the cursor on its own,
+  then the next one after each placement.
+- The item on the cursor is attached by one fixed cell and follows every tile step, even inside
+  its own footprint (as CorsixTH's `calculateBestPlacementPosition`). An earlier guess that it
+  only moves after leaving its footprint was wrong, and the user found it inconvenient.
+- The item is hidden when the cursor leaves the room. Right click turns it. A click on an invalid
+  spot does nothing. Invalid = drawn flat grey; there is only a faint light footprint, no red or
+  green tiles.
+- The tile under the cursor has a red outline while building.
+- Pick-up ("claw") button: the hovered object is highlighted; picking it up puts it back on the
+  cursor.
+- The GP desk includes the doctor's swivel chair; it needs a free tile behind the chair, so the
+  desk can't stand with the chair against a wall. The "Chair" item is the patient's chair.
+- Doors and windows never go on a room's corner tiles.
+- The cash-register button opens "Choose Items" (extinguisher, radiator, plant, bin) with prices.
+- Year end shows award or "Hall of Shame" screens and then returns to the game.
+
+## Shelved experiment
+
+Neural sprite upscaling (Real-ESRGAN x4plus and general-x4v3 as ONNX) flattened the game's
+dithering into a plastic look; it was put aside. MMPX smoothing (key U) is in the client.
