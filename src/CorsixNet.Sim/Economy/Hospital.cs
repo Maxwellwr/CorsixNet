@@ -1,5 +1,5 @@
-// Spending, receiving and the transaction log ported from CorsixTH CorsixTH/Lua/hospital.lua
-// (Hospital:spendMoney, Hospital:receiveMoney, Hospital:logTransaction).
+// Spending, receiving, the transaction log and monthly wages ported from CorsixTH CorsixTH/Lua/hospital.lua
+// (Hospital:spendMoney, Hospital:receiveMoney, Hospital:logTransaction, Hospital:onEndMonth).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Serialization;
@@ -13,12 +13,13 @@ public enum TransactionKind : byte
     SellObject = 1,
     BuildRoom = 2,
     HireStaff = 3,
+    Wages = 4,
 }
 
 /// <summary>One entry of a hospital's transaction log.</summary>
 /// <param name="Tick">When it happened.</param>
 /// <param name="Kind">What it was for.</param>
-/// <param name="Subject">Id of the room or object type it was for, or the staff class of a hire.</param>
+/// <param name="Subject">Id of the room or object type it was for, the staff class of a hire, or empty.</param>
 /// <param name="Amount">Money received (positive) or spent (negative).</param>
 /// <param name="Balance">The balance afterwards.</param>
 public readonly record struct Transaction(long Tick, TransactionKind Kind, string Subject, int Amount, long Balance);
@@ -58,6 +59,18 @@ public sealed class Hospital
         Log(new Transaction(tick, kind, subject, amount, Balance));
     }
 
+    /// <summary>
+    /// Pays the month's wages of all staff in one transaction, as CorsixTH's
+    /// <c>Hospital:onEndMonth</c> does; nothing is logged when they come to nothing.
+    /// </summary>
+    internal void PayWages(long tick, int wages)
+    {
+        if (wages != 0)
+        {
+            Spend(tick, wages, TransactionKind.Wages, string.Empty);
+        }
+    }
+
     internal void Write(SimWriter writer)
     {
         writer.WriteInt64(Balance);
@@ -80,7 +93,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.HireStaff)
+            if (kind > (byte)TransactionKind.Wages)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }

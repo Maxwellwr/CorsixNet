@@ -1,3 +1,4 @@
+using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Economy;
@@ -270,6 +271,65 @@ public class StaffTests
     }
 
     [Fact]
+    public void StaffArePaidAtTheEndOfEachMonth()
+    {
+        var simulation = NewSimulation(Rules);
+        Run(simulation, new HireStaffCommand(StaffClass.Doctor, 0, new(1, 1)));
+        Run(simulation, new HireStaffCommand(StaffClass.Nurse, 0, new(2, 1)));
+        var wages = simulation.Entities.OfType<Humanoid>().Sum(staff => staff.Profile!.Wage);
+        var hospital = simulation.Hospitals[0];
+        var afterHiring = hospital.Balance;
+
+        // The last hour of 31 January ends the month.
+        var endOfJanuary = (31 * GameDate.HoursPerDay) - 1;
+        StepUntil(simulation, endOfJanuary);
+        Assert.Equal(afterHiring, hospital.Balance);
+
+        simulation.Step();
+        Assert.Equal(afterHiring - wages, hospital.Balance);
+        Assert.Equal(new Transaction(endOfJanuary, TransactionKind.Wages, string.Empty, -wages, afterHiring - wages), hospital.Transactions[0]);
+
+        StepUntil(simulation, (31 + 28) * GameDate.HoursPerDay);
+        Assert.Equal(afterHiring - (2 * wages), hospital.Balance);
+    }
+
+    [Fact]
+    public void NoWagesAreLoggedWithoutStaff()
+    {
+        var simulation = NewSimulation(Rules);
+
+        StepUntil(simulation, 31 * GameDate.HoursPerDay);
+
+        Assert.Empty(simulation.Hospitals[0].Transactions);
+        Assert.Equal(1000, simulation.Hospitals[0].Balance);
+    }
+
+    [Fact]
+    public void TheCandidatesAreReplacedAtTheEndOfEachMonth()
+    {
+        var rules = new LevelRules(1000, [], [], new StaffRules(
+            [60, 75, 25, 20],
+            [-30, 30, 40, 30, 100, 20],
+            10,
+            250,
+            750,
+            [new StaffLevel(0, 8, 8, 3, 2, 4, 4, 4, 4, 4), new StaffLevel(1, Nurses: 1), new StaffLevel(2, Doctors: 5)]));
+        var simulation = NewSimulation(rules);
+        Run(simulation, new HireStaffCommand(StaffClass.Doctor, 0, new(1, 1)));
+        var january = simulation.AvailableStaff(StaffClass.Doctor).ToList();
+
+        // The staff levels of month 1 apply from the end of January.
+        StepUntil(simulation, 31 * GameDate.HoursPerDay);
+        Assert.Equal(8, simulation.AvailableStaff(StaffClass.Doctor).Count);
+        Assert.Single(simulation.AvailableStaff(StaffClass.Nurse));
+        Assert.NotEqual(january, simulation.AvailableStaff(StaffClass.Doctor));
+
+        StepUntil(simulation, (31 + 28) * GameDate.HoursPerDay);
+        Assert.Equal(5, simulation.AvailableStaff(StaffClass.Doctor).Count);
+        Assert.Single(simulation.AvailableStaff(StaffClass.Nurse));
+    }
+
+    [Fact]
     public void TheHireCommandSurvivesTheWire()
     {
         var command = new HireStaffCommand(StaffClass.Handyman, 2, new(4, 5));
@@ -284,6 +344,14 @@ public class StaffTests
     {
         simulation.Schedule(player, command);
         simulation.Step();
+    }
+
+    private static void StepUntil(Simulation simulation, long tick)
+    {
+        while (simulation.Tick < tick)
+        {
+            simulation.Step();
+        }
     }
 
     private static Simulation NewSimulation(LevelRules? rules)

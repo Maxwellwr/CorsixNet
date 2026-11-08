@@ -4,6 +4,7 @@ using CorsixNet.Client.Sessions;
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Sim;
+using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Economy;
@@ -918,13 +919,21 @@ internal sealed class MapViewScreen : IScreen
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
             ? $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}"
             : string.Empty;
+        var date = simulation is null ? string.Empty : $"   {DateText(simulation.Date)}";
 
         var levels = _levels.Count > 0 ? $"   ({_levelIndex + 1} of {_levels.Count})" : string.Empty;
         var people = Simulation?.Entities.OfType<Humanoid>().Count() ?? 0;
         var levelKeys = _levels.Count > 0 ? "   PgUp PgDn: level" : string.Empty;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{_session.Name}{levels}{money}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
+            $"{_session.Name}{levels}{date}{money}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
+    }
+
+    /// <summary>The date as the original's bottom panel shows it (day and month), with the year.</summary>
+    private static string DateText(GameDate date)
+    {
+        string[] months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        return string.Create(CultureInfo.InvariantCulture, $"{date.Day} {months[date.Month - 1]} year {date.Year}");
     }
 
     private string TileLine()

@@ -60,12 +60,13 @@ Done and committed:
   placement check, one month's salary paid on hiring, staff types and walk animations in the client.
   Debug keys 1-4 hire the first doctor, nurse, handyman or receptionist onto the hovered tile;
   `--demo` hires one of each. Save format version 4.
+- Game calendar (`GameDate`, from the tick, as CorsixTH's date.lua): monthly wages and new
+  candidates for hire at the end of each month. Date in the client's top line.
 
 Not done yet:
 
 - M5: hire window (the original's staff list with faces), staff names and descriptions from the
-  language files, refreshing the candidates every month (needs a game calendar), monthly salaries,
-  staff behaviour (meandering, going to rooms), reception desk (and placing a receptionist on it),
+  language files, staff behaviour (meandering, going to rooms), reception desk (and placing a receptionist on it),
   patient flow (reception, queue at the door, GP consultation).
 - Money: buying land, loans and interest, hospital value (used by win criteria), bank window
   with the transaction log.
