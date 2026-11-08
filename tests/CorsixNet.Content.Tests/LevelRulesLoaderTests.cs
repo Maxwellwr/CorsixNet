@@ -3,6 +3,7 @@ using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
 using CorsixNet.Sim.Diseases;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
 
@@ -27,6 +28,8 @@ public class LevelRulesLoaderTests
         var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
             #town.StartCash 10000
             #towns[3].StartCash 50000
+            #town.StartRep 450
+            #towns[3].StartRep 600
             #rooms[7].Cost 2280
             #objects[2].StartCost 100
             #objects[1].StartCost 300
@@ -41,6 +44,9 @@ public class LevelRulesLoaderTests
         Assert.Equal(10000, LevelRulesLoader.FromConfig(config, 4, content).StartCash);
         Assert.Equal(10000, LevelRulesLoader.FromConfig(config, null, content).StartCash);
         Assert.Equal(LevelRulesLoader.DefaultStartCash, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, content).StartCash);
+        Assert.Equal(600, rules.StartReputation);
+        Assert.Equal(450, LevelRulesLoader.FromConfig(config, 4, content).StartReputation);
+        Assert.Equal(Hospital.AverageReputation, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, content).StartReputation);
     }
 
     [Fact]

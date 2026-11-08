@@ -96,7 +96,7 @@ Not done yet:
   CorsixTH draws it, treatment rooms other than the pharmacy (inflation for bloaty heads,
   psychiatry for TV personalities), faxes asking what to do with a patient, the casebook window
   (prices), floating dollar signs, looks of visual diseases (new humanoid types in the client), health,
-  the death animation, reputation and the price's effect on it, drug research.
+  the death animation, the rest of reputation (VIPs, emergencies, awards), drug research.
 - Money: buying land, loans and interest, hospital value (used by win criteria), bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and

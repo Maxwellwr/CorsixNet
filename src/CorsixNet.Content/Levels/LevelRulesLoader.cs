@@ -1,7 +1,7 @@
 // Which level files are read, and where starting cash and costs come from, ported from CorsixTH
 // CorsixTH/Lua/map.lua (Map:_loadOriginalCampaignLevel), CorsixTH/Lua/hospital.lua (Hospital:Hospital,
 // Hospital:getObjectBuildCost) and CorsixTH/Lua/world.lua (World:getAvailableRooms); the fallback
-// starting cash is CorsixTH/Lua/base_config.lua's town.StartCash, and the staff settings fall back
+// starting cash and reputation are CorsixTH/Lua/base_config.lua's town.StartCash and StartRep, and the staff settings fall back
 // to the same file's staff, gbv and staff_levels.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -73,6 +73,9 @@ public static partial class LevelRulesLoader
         var startCash = (levelNumber is { } level ? config.GetInt($"towns[{level}].StartCash") : null)
             ?? config.GetInt("town.StartCash")
             ?? DefaultStartCash;
+        var startReputation = (levelNumber is { } repLevel ? config.GetInt($"towns[{repLevel}].StartRep") : null)
+            ?? config.GetInt("town.StartRep")
+            ?? Hospital.AverageReputation;
 
         var rooms = content.Rooms
             .Where(room => room.LevelConfigId != 0 && config.GetInt($"rooms[{room.LevelConfigId}].Cost") is not null)
@@ -80,7 +83,7 @@ public static partial class LevelRulesLoader
         var objects = content.Objects
             .Where(definition => config.GetInt($"objects[{definition.ObjectType}].StartCost") is not null)
             .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
-        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config));
+        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config), startReputation);
     }
 
     /// <summary>

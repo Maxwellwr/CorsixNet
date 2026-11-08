@@ -5,6 +5,7 @@
 
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Diseases;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Serialization;
@@ -282,7 +283,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour
             case PatientPhase.Waiting:
                 if (Waiting <= 0)
                 {
-                    GoHome(simulation, humanoid);
+                    GoHome(simulation, humanoid, ReputationChange.Kicked);
                 }
                 else
                 {
@@ -319,7 +320,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         if (Disease is not null && DiseaseCatalog.Find(DiseaseCatalog.GpDiagnosis) is { } consultation
             && !PatientCare.AgreesToPay(simulation, humanoid, this, consultation))
         {
-            GoHome(simulation, humanoid);
+            GoHome(simulation, humanoid, ReputationChange.OverPriced);
             return;
         }
 
@@ -542,7 +543,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     {
         if (Disease is not { } disease || DiagnosisProgress < PatientCare.SendHome)
         {
-            GoHome(simulation, humanoid);
+            GoHome(simulation, humanoid, ReputationChange.Kicked);
         }
         else if (DiagnosisProgress < PatientCare.GuessCure || !PatientCare.IsDiscovered(simulation, humanoid, disease))
         {
@@ -558,7 +559,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour
             }
             else
             {
-                GoHome(simulation, humanoid);
+                GoHome(simulation, humanoid, ReputationChange.OverPriced);
             }
         }
     }
@@ -850,16 +851,24 @@ public sealed class PatientBehaviour : HumanoidBehaviour
 
         if (Waiting == 0)
         {
-            GoHome(simulation, humanoid);
+            GoHome(simulation, humanoid, ReputationChange.Kicked);
             return;
         }
 
         Waiting--;
     }
 
-    /// <summary>Leaves through a random spawn point, as CorsixTH's <c>Humanoid:despawn</c>.</summary>
-    private void GoHome(Simulation simulation, Humanoid humanoid)
+    /// <summary>
+    /// Leaves through a random spawn point, as CorsixTH's <c>Humanoid:despawn</c>. A patient sent home or put off by the
+    /// price counts as not cured (<c>Patient:goHome</c>); the reasons for leaving a room were counted in the room.
+    /// </summary>
+    private void GoHome(Simulation simulation, Humanoid humanoid, ReputationChange? reason = null)
     {
+        if (reason is { } why)
+        {
+            PatientCare.NotCured(simulation, humanoid, this, why);
+        }
+
         Phase = PatientPhase.GoingHome;
         TargetId = 0;
         var points = simulation.Arrivals.SpawnPointsOf(simulation.Map);

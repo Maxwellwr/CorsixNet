@@ -26,7 +26,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 11;
+    private const int FormatVersion = 12;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -53,7 +53,7 @@ public sealed class Simulation
     {
         for (var player = 0; player < _hospitals.Length; player++)
         {
-            _hospitals[player] = new Hospital(player, Rules.StartCash);
+            _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation);
         }
 
         MakeAvailableStaff(0);
