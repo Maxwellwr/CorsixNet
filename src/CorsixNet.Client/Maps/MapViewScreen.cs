@@ -112,6 +112,7 @@ internal sealed class MapViewScreen : IScreen
     /// <summary>The speed a local game starts at (<c>--speed</c>).</summary>
     private readonly GameSpeed _initialSpeed;
     private bool _demoDeskPending;
+    private bool _demoDiagnosisPending;
     private int? _selected;
     private LevelMap? _preparedMap;
     private string? _capturePath;
@@ -151,6 +152,7 @@ internal sealed class MapViewScreen : IScreen
         _overlay = overlay;
         _demoPending = demo;
         _demoDeskPending = demo;
+        _demoDiagnosisPending = demo;
         if (demo)
         {
             foreach (var item in new[] { "desk", "cabinet", "chair" })
@@ -638,6 +640,36 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
+    /// <summary>
+    /// Once the demo's pharmacy works, builds general diagnosis near the camera and hires a second doctor for it, so
+    /// that patients the GP cannot diagnose at once get examined and come back.
+    /// </summary>
+    private void BuildDemoGeneralDiagnosis()
+    {
+        if (!_demoDiagnosisPending || _session is null || Simulation is not { } simulation
+            || !simulation.Entities.OfType<Room>().Any(room => room is { IsActive: true, RoomType: "pharmacy" }))
+        {
+            return;
+        }
+
+        _demoDiagnosisPending = false;
+        var start = simulation.Map.GetCameraTile(Math.Min(_session.Player, simulation.Map.PlayerCount - 1));
+        if (simulation.Content.FindRoom("general_diag") is not { } room || FindRoomSpot(simulation.Map, room, start) is not { } plan)
+        {
+            return;
+        }
+
+        _session.Submit(new BuildRoomCommand(plan));
+        _demoFurniture.Enqueue("screen");
+        _demoFurniture.Enqueue("crash_trolley");
+        var area = new TileRect(plan.Area.X - 1, plan.Area.Y - 1, plan.Area.Width + 2, plan.Area.Height + 2);
+        var tile = _hospitalTiles.Where(t => !area.Contains(t) && simulation.Map[t.X, t.Y].Has(TileFlags.Passable) && simulation.Map[t.X, t.Y].RoomId == 0)
+            .OrderBy(t => Math.Abs(t.X - start.X) + Math.Abs(t.Y - start.Y)).ThenBy(t => t.Y).ThenBy(t => t.X).FirstOrDefault();
+        var doctors = simulation.AvailableStaff(StaffClass.Doctor);
+        var best = doctors.Count == 0 ? 0 : doctors.Select((profile, index) => (profile.Skill, index)).Max().index;
+        _session.Submit(new HireStaffCommand(StaffClass.Doctor, best, tile));
+    }
+
     /// <summary>Finds the valid room plan closest to <paramref name="near"/>, trying a few sizes and every door position.</summary>
     private RoomPlan? FindRoomSpot(LevelMap map, RoomDefinition room, TilePosition near)
     {
@@ -729,6 +761,7 @@ internal sealed class MapViewScreen : IScreen
         PrepareMapIfReady();
         FurnishDemoRoom();
         PlaceDemoReceptionDesk();
+        BuildDemoGeneralDiagnosis();
         if (Simulation is not { } simulation || !_wander || _hospitalTiles.Count == 0 || _session.IsPaused)
         {
             return;
@@ -808,10 +841,12 @@ internal sealed class MapViewScreen : IScreen
             _wander = !_wander;
         }
 
-        // Until the build window exists: B builds a GP's office, Shift+B a pharmacy.
+        // Until the build window exists: B builds a GP's office, Shift+B a pharmacy, Ctrl+B general diagnosis.
         var wasBuilding = _buildTool.IsActive;
         var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
-        if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(shift ? "pharmacy" : "gp") is { } roomType)
+        var ctrl = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
+        var roomToBuild = shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
+        if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
             // As in the original, a room can only be started with its whole cost in the bank.
             if (RoomPurchases.CanAfford(simulation, roomType, _session.Player))
@@ -1013,7 +1048,7 @@ internal sealed class MapViewScreen : IScreen
                     break;
                 case RoomObject placed:
                     var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
-                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint);
+                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes);
                     break;
                 case RoomDoor roomDoor:
                     var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
@@ -1155,7 +1190,7 @@ internal sealed class MapViewScreen : IScreen
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-5: speed   Z: hold to speed up" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office (Shift: pharmacy, Ctrl: general diagnosis)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];

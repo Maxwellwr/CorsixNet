@@ -44,6 +44,24 @@ public enum PatientPhase : byte
     /// </summary>
     StandingAtObject,
 
+    /// <summary>In general diagnosis: undressing behind the screen.</summary>
+    Undressing,
+
+    /// <summary>In general diagnosis: walking to the crash trolley.</summary>
+    WalkingToTrolley,
+
+    /// <summary>In general diagnosis: at the crash trolley, waiting for the doctor to stand ready.</summary>
+    AtTrolley,
+
+    /// <summary>In general diagnosis: lying on the crash trolley while the doctor examines them.</summary>
+    OnTrolley,
+
+    /// <summary>In general diagnosis: walking back to the screen.</summary>
+    WalkingBackToScreen,
+
+    /// <summary>In general diagnosis: dressing behind the screen.</summary>
+    Dressing,
+
     /// <summary>Walking out of the room's door.</summary>
     LeavingRoom,
 
@@ -122,6 +140,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     /// <summary>The patient's use of an object in a room, while it lasts.</summary>
     public ObjectUse? Use { get; private set; }
 
+    /// <summary>The patient's use of the crash trolley with the doctor, while it lasts.</summary>
+    public MultiObjectUse? TrolleyUse { get; private set; }
+
     /// <summary>The patient's disease, or empty for none.</summary>
     public string DiseaseId { get; private set; } = string.Empty;
 
@@ -175,6 +196,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     /// <summary>Whether the room's staff is done with the patient (CorsixTH's <c>just_dealt_with</c>).</summary>
     private bool IsDealtWith { get; set; }
 
+    /// <summary>In general diagnosis: whether the doctor has examined the patient on the crash trolley.</summary>
+    private bool IsExamined { get; set; }
+
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
         switch (Phase)
@@ -216,6 +240,14 @@ public sealed class PatientBehaviour : HumanoidBehaviour
                     LeaveRoom(simulation, humanoid);
                 }
 
+                break;
+            case PatientPhase.Undressing:
+            case PatientPhase.WalkingToTrolley:
+            case PatientPhase.AtTrolley:
+            case PatientPhase.OnTrolley:
+            case PatientPhase.WalkingBackToScreen:
+            case PatientPhase.Dressing:
+                GeneralDiagnosisStep(simulation, humanoid);
                 break;
             case PatientPhase.LeavingRoom:
                 if (simulation.FindEntity(TargetId) is Room room && room.PatientId == humanoid.Id)
@@ -374,6 +406,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     internal void LetIn(Simulation simulation, Humanoid humanoid, Room room, RoomDoor door)
     {
         IsDealtWith = false;
+        IsExamined = false;
         Next = AfterRoom.GoHome;
         Phase = PatientPhase.EnteringRoom;
         TargetId = room.Id;
@@ -619,7 +652,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour
             return;
         }
 
-        room.MaxTimes = RoomVisits.GpMaxTimes;
+        if (string.Equals(room.RoomType, FirstRoom, StringComparison.Ordinal))
+        {
+            room.MaxTimes = RoomVisits.GpMaxTimes;
+        }
+
+        // The GP's chair, or general diagnosis's screen.
         humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, placed));
     }
 
@@ -642,8 +680,151 @@ public sealed class PatientBehaviour : HumanoidBehaviour
             return;
         }
 
+        if (string.Equals(room.RoomType, RoomVisits.GeneralDiagnosisRoom, StringComparison.Ordinal))
+        {
+            Phase = PatientPhase.Undressing;
+            UseScreen(simulation, humanoid, placed);
+            return;
+        }
+
         Phase = PatientPhase.UsingObject;
         Use = ObjectUse.Start(simulation, humanoid, placed);
+    }
+
+    /// <summary>
+    /// <c>GeneralDiagRoom:commandEnteringPatient</c>: undress behind the screen; if the doctor is there, lie down on the
+    /// crash trolley to be examined (the trolley's multi-use with the doctor); walk back to the screen and dress; then the
+    /// room is done with the patient. Without the doctor the patient dresses again, leaves and looks for the room anew.
+    /// </summary>
+    private void GeneralDiagnosisStep(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.FindEntity(TargetId) is not Room room || RoomVisits.PatientObject(simulation, room) is not { } screen)
+        {
+            EndScreenUse(humanoid, null);
+            LeaveRoom(simulation, humanoid);
+            return;
+        }
+
+        var trolley = RoomVisits.FindObject(simulation, room.Id, RoomVisits.TrolleyType);
+        switch (Phase)
+        {
+            case PatientPhase.Undressing:
+                if (Use is not null && Use.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                {
+                    return;
+                }
+
+                // action_use_screen_patient_clothes_state: the clothes now hang on the screen.
+                Use = null;
+                screen.HangingClothes = humanoid.Layers[1];
+                if (room.StaffPresent && trolley is not null)
+                {
+                    Phase = PatientPhase.WalkingToTrolley;
+                    humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, trolley));
+                }
+                else
+                {
+                    WalkBackToScreen(simulation, humanoid, screen);
+                }
+
+                return;
+            case PatientPhase.WalkingToTrolley:
+                Phase = PatientPhase.AtTrolley;
+                return;
+            case PatientPhase.AtTrolley:
+                if (trolley is null || !room.StaffPresent)
+                {
+                    WalkBackToScreen(simulation, humanoid, screen);
+                    return;
+                }
+
+                if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley }, IsMoving: false } doctor)
+                {
+                    TrolleyUse = MultiObjectUse.Start(simulation, humanoid, trolley, doctor);
+                    Phase = PatientPhase.OnTrolley;
+                    IsExamined = TrolleyUse is null;
+                }
+
+                return;
+            case PatientPhase.OnTrolley:
+                if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                {
+                    return;
+                }
+
+                TrolleyUse = null;
+                IsExamined = true;
+                WalkBackToScreen(simulation, humanoid, screen);
+                return;
+            case PatientPhase.WalkingBackToScreen:
+                Phase = PatientPhase.Dressing;
+                UseScreen(simulation, humanoid, screen);
+                return;
+            case PatientPhase.Dressing:
+                if (Use is not null && Use.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                {
+                    return;
+                }
+
+                EndScreenUse(humanoid, screen);
+                if (IsExamined)
+                {
+                    RoomVisits.DealtWithPatient(simulation, room);
+                }
+                else
+                {
+                    // Not served: leave and look for such a room again.
+                    _availableDiagnosisRooms.Add(room.RoomType);
+                    Next = AfterRoom.SeekRoom;
+                    Seeking = RoomSeek.Diagnosis;
+                    DiagnosisRoomIndex = _availableDiagnosisRooms.Count - 1;
+                }
+
+                LeaveRoom(simulation, humanoid);
+                return;
+        }
+    }
+
+    private void WalkBackToScreen(Simulation simulation, Humanoid humanoid, RoomObject screen)
+    {
+        Phase = PatientPhase.WalkingBackToScreen;
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, screen));
+    }
+
+    /// <summary>
+    /// <c>action_use_screen_start</c>: a dressed patient undresses and becomes a stripped patient, an undressed one dresses
+    /// again; the screen's animation shows them meanwhile.
+    /// </summary>
+    private void UseScreen(Simulation simulation, Humanoid humanoid, RoomObject screen)
+    {
+        Use = ObjectUse.Start(simulation, humanoid, screen);
+        humanoid.Type = humanoid.Type switch
+        {
+            HumanoidType.StandardMalePatient => HumanoidType.StrippedMalePatient,
+            HumanoidType.StandardFemalePatient => HumanoidType.StrippedFemalePatient,
+            HumanoidType.StrippedMalePatient => HumanoidType.StandardMalePatient,
+            HumanoidType.StrippedFemalePatient => HumanoidType.StandardFemalePatient,
+            var other => other,
+        };
+    }
+
+    /// <summary>The patient is dressed again and the screen empty (<c>action_use_screen_normal_state</c>).</summary>
+    private void EndScreenUse(Humanoid humanoid, RoomObject? screen)
+    {
+        Use = null;
+        TrolleyUse = null;
+        if (screen is not null)
+        {
+            screen.HangingClothes = null;
+        }
+
+        humanoid.Type = humanoid.Type switch
+        {
+            HumanoidType.StrippedMalePatient => HumanoidType.StandardMalePatient,
+            HumanoidType.StrippedFemalePatient => HumanoidType.StandardFemalePatient,
+            var other => other,
+        };
+        humanoid.ClearActionAnimation();
     }
 
     private void LeaveRoom(Simulation simulation, Humanoid humanoid)
@@ -714,6 +895,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         writer.WriteByte((byte)Next);
         writer.WriteBool(IsDealtWith);
         writer.WriteInt32(CureRoomsVisited);
+        writer.WriteBool(IsExamined);
+        MultiObjectUse.WriteOptional(writer, TrolleyUse);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -749,6 +932,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         patient.Next = (AfterRoom)reader.ReadByte();
         patient.IsDealtWith = reader.ReadBool();
         patient.CureRoomsVisited = reader.ReadInt32();
+        patient.IsExamined = reader.ReadBool();
+        patient.TrolleyUse = MultiObjectUse.ReadOptional(reader);
         return patient;
     }
 }

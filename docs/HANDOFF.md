@@ -79,14 +79,18 @@ Done and committed:
   deaths; `--demo` builds a pharmacy and hires the best candidates; `--speed` sets the starting speed.
   Save format version 7. Live-checked with `--demo --speed AndThenSomeMore`: keyboard input injected from a
   Remote Control session does not reach the window, hence `--speed`.
+- General diagnosis (see ARCHITECTURE.md, "General diagnosis"): Ctrl+B builds it; patients undress behind
+  the screen, the doctor examines them on the crash trolley, they dress, pay and go back to the GP. With a
+  weak GP on level one it takes cures from 0 to 8 in five months. `--demo` builds it after the pharmacy
+  and hires a second doctor. Save format version 8.
 
 Not done yet:
 
 - M5: hire window (the original's staff list with faces), staff names and descriptions from the
   language files, staff meandering, hiring a receptionist straight onto a desk, benches, queue
   priorities, staff called through a dispatcher, the hospital's opening countdown.
-- Patients: diagnosis rooms (general diagnosis first: on level one a middling GP leaves most patients
-  below 0.9, so they wait), treatment rooms other than the pharmacy (inflation for bloaty heads,
+- Patients: diagnosis rooms other than general diagnosis, the crash trolley split over two tiles as
+  CorsixTH draws it, treatment rooms other than the pharmacy (inflation for bloaty heads,
   psychiatry for TV personalities), faxes asking what to do with a patient, the casebook window
   (prices), floating dollar signs, looks of visual diseases (new humanoid types in the client), health,
   the death animation, reputation and the price's effect on it, drug research.

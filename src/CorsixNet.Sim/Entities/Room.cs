@@ -164,6 +164,12 @@ public sealed class RoomObject : Entity
     /// <summary>The reception desk's receptionist and queue, if the object is a reception desk.</summary>
     public ReceptionDeskState? Desk { get; internal set; }
 
+    /// <summary>
+    /// The clothes (a patient's layer 1) hanging on a screen while the patient is undressed, or null; the screen is then
+    /// drawn with them (CorsixTH's <c>action_use_screen_patient_clothes_state</c>).
+    /// </summary>
+    public byte? HangingClothes { get; internal set; }
+
     public override void Update(Simulation simulation)
     {
         if (Desk is not null)
@@ -177,6 +183,7 @@ public sealed class RoomObject : Entity
         return new RoomObject(id, reader.ReadString(), reader.ReadTile(), (Direction)reader.ReadByte(), reader.ReadInt32())
         {
             Desk = reader.ReadBool() ? ReceptionDeskState.Read(reader) : null,
+            HangingClothes = reader.ReadBool() ? reader.ReadByte() : null,
         };
     }
 
@@ -188,6 +195,11 @@ public sealed class RoomObject : Entity
         writer.WriteInt32(RoomId);
         writer.WriteBool(Desk is not null);
         Desk?.Write(writer);
+        writer.WriteBool(HangingClothes is not null);
+        if (HangingClothes is { } clothes)
+        {
+            writer.WriteByte(clothes);
+        }
     }
 }
 

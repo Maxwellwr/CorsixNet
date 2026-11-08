@@ -35,6 +35,7 @@ public class BaseGameContentTests
             .Where(o => o.MultiUsage is not null)
             .SelectMany(o => o.MultiUsage!.Values)
             .SelectMany(table => table.Values)
+            .SelectMany(variants => variants)
             .SelectMany(use => use.Phases)
             .SelectMany(phase => phase.Secondary is { } secondary ? new[] { phase.Primary, secondary } : [phase.Primary])
             .Distinct()

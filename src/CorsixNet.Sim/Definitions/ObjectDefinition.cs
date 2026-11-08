@@ -104,6 +104,8 @@ public sealed record MultiUseAnimations(IReadOnlyList<MultiUsePhase> Begin, Mult
 /// <param name="MultiUsage">
 /// Animations of two people using the object together, per facing direction and by the kinds of the one using it
 /// and the one with them. A direction without its own mirrors the opposite one, as CorsixTH's <c>orient_mirror</c>.
+/// Where CorsixTH gives lists of animations for the phases, one variant is picked at random for the whole use, as its
+/// <c>random_anim</c>; each variant is one entry here.
 /// </param>
 public sealed record ObjectDefinition(
     string Id,
@@ -114,13 +116,13 @@ public sealed record ObjectDefinition(
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageNorth = null,
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageEast = null,
     bool WalkInToUse = false,
-    IReadOnlyDictionary<Direction, IReadOnlyDictionary<(HumanoidType Primary, HumanoidType Secondary), MultiUseAnimations>>? MultiUsage = null)
+    IReadOnlyDictionary<Direction, IReadOnlyDictionary<(HumanoidType Primary, HumanoidType Secondary), IReadOnlyList<MultiUseAnimations>>>? MultiUsage = null)
 {
     /// <summary>
-    /// The animations for <paramref name="primary"/> using the object facing <paramref name="orientation"/> with
+    /// The animation variants for <paramref name="primary"/> using the object facing <paramref name="orientation"/> with
     /// <paramref name="secondary"/>, and whether they are mirrored (<c>action_multi_use_object_start</c>).
     /// </summary>
-    public (MultiUseAnimations Animations, bool Flip)? MultiUse(Direction orientation, HumanoidType primary, HumanoidType secondary)
+    public (IReadOnlyList<MultiUseAnimations> Variants, bool Flip)? MultiUse(Direction orientation, HumanoidType primary, HumanoidType secondary)
     {
         if (MultiUsage is null)
         {
@@ -145,7 +147,7 @@ public sealed record ObjectDefinition(
             flip = true;
         }
 
-        return table.TryGetValue((primary, secondary), out var animations) ? (animations, flip) : null;
+        return table.TryGetValue((primary, secondary), out var variants) && variants.Count > 0 ? (variants, flip) : null;
     }
 
     /// <summary>

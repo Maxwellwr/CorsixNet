@@ -20,7 +20,10 @@ namespace CorsixNet.Sim.People;
 /// </remarks>
 public sealed class MultiObjectUse
 {
-    /// <summary>Layers 0 to 4 describe the patient; the one using the object takes them on (<c>copy_layers</c>).</summary>
+    /// <summary>
+    /// Layers 0 to 4 describe the patient: a member of staff using the object takes them on, a patient using it with a
+    /// member of staff takes on their layer 5 (<c>copy_layers</c>).
+    /// </summary>
     private const int PatientLayers = 5;
 
     private const int Layer3 = 3;
@@ -43,6 +46,9 @@ public sealed class MultiObjectUse
     /// <summary>Ticks left of the current phase.</summary>
     public int Timer { get; private set; }
 
+    /// <summary>Which of the object's animation variants the use plays (CorsixTH's <c>random_anim</c>).</summary>
+    public int Variant { get; private set; }
+
     /// <summary>The value both users' layer 3 takes during the use, or −1 to leave it (CorsixTH's <c>setLayer3</c>).</summary>
     private int UseLayer3 { get; init; } = -1;
 
@@ -56,15 +62,26 @@ public sealed class MultiObjectUse
     /// </summary>
     internal static MultiObjectUse? Start(Simulation simulation, Humanoid humanoid, RoomObject placed, Humanoid useWith, int layer3 = -1)
     {
-        if (simulation.Content.FindObject(placed.ObjectType)?.MultiUse(placed.Orientation, humanoid.Type, useWith.Type) is null)
+        if (simulation.Content.FindObject(placed.ObjectType)?.MultiUse(placed.Orientation, humanoid.Type, useWith.Type) is not var (variants, _))
         {
             return null;
         }
 
-        var use = new MultiObjectUse(placed.Id, useWith.Id) { UseLayer3 = layer3 };
-        for (var layer = 0; layer < PatientLayers; layer++)
+        var use = new MultiObjectUse(placed.Id, useWith.Id)
         {
-            humanoid.SetLayer(layer, useWith.Layers[layer]);
+            UseLayer3 = layer3,
+            Variant = variants.Count > 1 ? simulation.Random.Next(variants.Count) : 0,
+        };
+        if (humanoid.Profile is not null)
+        {
+            for (var layer = 0; layer < PatientLayers; layer++)
+            {
+                humanoid.SetLayer(layer, useWith.Layers[layer]);
+            }
+        }
+        else if (useWith.Profile is not null)
+        {
+            humanoid.SetLayer(Humanoid.StaffLayer, useWith.Layers[Humanoid.StaffLayer]);
         }
 
         if (layer3 >= 0)
@@ -176,12 +193,12 @@ public sealed class MultiObjectUse
         if (simulation.FindEntity(ObjectId) is not RoomObject placed || simulation.FindEntity(UseWithId) is not Humanoid useWith
             || simulation.Content.FindObject(placed.ObjectType) is not { } definition
             || definition.Orientations.GetValueOrDefault(placed.Orientation) is not { } layout
-            || definition.MultiUse(placed.Orientation, humanoid.Type, useWith.Type) is not var (animations, flip))
+            || definition.MultiUse(placed.Orientation, humanoid.Type, useWith.Type) is not var (variants, flip))
         {
             return null;
         }
 
-        return (placed, layout, animations, flip, useWith);
+        return (placed, layout, variants[Math.Min(Variant, variants.Count - 1)], flip, useWith);
     }
 
     internal void Write(SimWriter writer)
@@ -190,6 +207,7 @@ public sealed class MultiObjectUse
         writer.WriteInt32(UseWithId);
         writer.WriteInt32(Phase);
         writer.WriteInt32(Timer);
+        writer.WriteInt32(Variant);
         writer.WriteInt32(UseLayer3);
         writer.WriteByte(OldLayer3);
         writer.WriteByte(OldLayer3UseWith);
@@ -201,6 +219,7 @@ public sealed class MultiObjectUse
         {
             Phase = reader.ReadInt32(),
             Timer = reader.ReadInt32(),
+            Variant = reader.ReadInt32(),
             UseLayer3 = reader.ReadInt32(),
             OldLayer3 = reader.ReadByte(),
             OldLayer3UseWith = reader.ReadByte(),

@@ -29,6 +29,12 @@ public static class RoomVisits
     /// <summary>The pharmacy's room type.</summary>
     internal const string PharmacyRoom = "pharmacy";
 
+    /// <summary>General diagnosis's room type.</summary>
+    internal const string GeneralDiagnosisRoom = "general_diag";
+
+    /// <summary>The object patients lie on in general diagnosis.</summary>
+    internal const string TrolleyType = "crash_trolley";
+
     /// <summary>
     /// What each room type patients can be seen in needs: the kind of staff it sends for (CorsixTH's
     /// <c>required_staff</c>) and the object the patient is seen at.
@@ -37,6 +43,7 @@ public static class RoomVisits
     {
         [PatientBehaviour.FirstRoom] = (BehaviourKind.Doctor, "chair"),
         [PharmacyRoom] = (BehaviourKind.Nurse, "pharmacy_cabinet"),
+        [GeneralDiagnosisRoom] = (BehaviourKind.Doctor, "screen"),
     };
 
     /// <summary>How many tiles further a patient walks for one person fewer in the queue.</summary>
@@ -121,7 +128,7 @@ public static class RoomVisits
         return best;
     }
 
-    /// <summary>Whether patients can be seen in rooms of this type yet: the GP's office and the pharmacy so far.</summary>
+    /// <summary>Whether patients can be seen in rooms of this type yet: the GP's office, the pharmacy and general diagnosis so far.</summary>
     public static bool IsSupported(string roomType) => Rules.ContainsKey(roomType);
 
     /// <summary>

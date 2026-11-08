@@ -17,6 +17,9 @@ public static class BaseGameContent
     /// <summary>The "white" wall set (walls/white.lua).</summary>
     public static readonly WallSet WhiteWalls = new(InsideNorth: 82, InsideWest: 83, OutsideNorth: 90, OutsideWest: 91, WindowNorth: 128, WindowWest: 129);
 
+    /// <summary>The "green" wall set (walls/green.lua).</summary>
+    public static readonly WallSet GreenWalls = new(InsideNorth: 88, InsideWest: 89, OutsideNorth: 96, OutsideWest: 97, WindowNorth: 140, WindowWest: 141);
+
     /// <summary>The doctor's desk (objects/desk.lua). The doctor's chair is part of it.</summary>
     public static readonly ObjectDefinition Desk = new(
         "desk",
@@ -140,6 +143,48 @@ public static class BaseGameContent
         },
         MultiUsage: PharmacyMultiUsage());
 
+    /// <summary>
+    /// The screen (objects/screen.lua): patients undress and dress behind it, its animation showing them. It only faces
+    /// north. While a patient's clothes hang on it, it is drawn with them (see <see cref="RoomObject.HangingClothes"/>).
+    /// </summary>
+    public static readonly ObjectDefinition Screen = new(
+        "screen",
+        "Screen",
+        ObjectType: 16,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(-1, -1, UsePosition), new(-1, 0), new(0, -1), new(0, 0)], RenderAttach: (-1, 0)),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations>
+        {
+            // Undressing, then dressing again.
+            [HumanoidType.StandardMalePatient] = new(null, [new(1048, 22)], null),
+            [HumanoidType.StandardFemalePatient] = new(null, [new(2848, 31)], null),
+            [HumanoidType.StrippedMalePatient] = new(null, [new(1052, 39)], null),
+            [HumanoidType.StrippedFemalePatient] = new(null, [new(2844, 29)], null),
+        });
+
+    /// <summary>
+    /// The crash trolley (objects/crash_trolley.lua). The patient lies on it from its use position while the doctor stands
+    /// at the secondary one. CorsixTH draws it split over two tiles; here it is drawn from its own tile.
+    /// </summary>
+    public static readonly ObjectDefinition CrashTrolley = new(
+        "crash_trolley",
+        "Crash Trolley",
+        ObjectType: 20,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(-1, 0, CompleteCell), new(-1, 1, UsePosition), new(0, 0, UsePosition), new(0, 1, UsePosition)],
+                UsePosition: (-1, 1),
+                SecondaryUsePosition: (0, 0)),
+            [Direction.East] = new(
+                [new(0, -1, CompleteCell), new(0, 0, UsePosition), new(1, -1, UsePosition), new(1, 0, UsePosition)],
+                UsePosition: (1, -1),
+                SecondaryUsePosition: (0, 0)),
+        },
+        MultiUsage: TrolleyMultiUsage());
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -160,6 +205,16 @@ public static class BaseGameContent
         NeededObjects: new Dictionary<string, int> { ["pharmacy_cabinet"] = 1 },
         LevelConfigId: 11);
 
+    /// <summary>General diagnosis (rooms/general_diag.lua).</summary>
+    public static readonly RoomDefinition GeneralDiagnosis = new(
+        "general_diag",
+        "General Diagnosis",
+        MinimumSize: 5,
+        FloorSprite: 21,
+        GreenWalls,
+        NeededObjects: new Dictionary<string, int> { ["screen"] = 1, ["crash_trolley"] = 1 },
+        LevelConfigId: 27);
+
     /// <summary>Sprites of the hospital's outer walls (walls/external.lua).</summary>
     private static readonly ushort[] ExternalWalls =
     [
@@ -167,27 +222,59 @@ public static class BaseGameContent
         114, 116, 118, 120, 142, 115, 119, 117, 121, 143,
     ];
 
-    public static GameContent Create() => new([GpOffice, Pharmacy], ExternalWalls, [Desk, Cabinet, Chair, ReceptionDesk, PharmacyCabinet]);
+    public static GameContent Create() => new(
+        [GpOffice, Pharmacy, GeneralDiagnosis],
+        ExternalWalls,
+        [Desk, Cabinet, Chair, ReceptionDesk, PharmacyCabinet, Screen, CrashTrolley]);
 
     /// <summary>
     /// pharmacy_cabinet.lua's <c>anim_set</c>: the nurse's own begin and finish animations around the ones showing her with
     /// the patient (<paramref name="begin"/>, <paramref name="finish"/>); the patient idles (<paramref name="idle"/>) while
     /// she gets the drink and drinks it (<paramref name="inUse"/>) while she waits. Defined for north and south.
     /// </summary>
-    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), MultiUseAnimations>> PharmacyMultiUsage()
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> PharmacyMultiUsage()
     {
-        static MultiUseAnimations AnimSet(AnimationRef begin, AnimationRef finish, AnimationRef idle, AnimationRef inUse)
+        static MultiUseAnimations[] AnimSet(AnimationRef begin, AnimationRef finish, AnimationRef idle, AnimationRef inUse)
         {
-            return new MultiUseAnimations(
-                [new(new(1590, 22), idle), new(new(1594, 42), idle), new(begin)],
-                new(new(1666, 1), inUse),
-                [new(finish), new(new(1598, 9), idle)]);
+            return
+            [
+                new MultiUseAnimations(
+                    [new(new(1590, 22), idle), new(new(1594, 42), idle), new(begin)],
+                    new(new(1666, 1), inUse),
+                    [new(finish), new(new(1598, 9), idle)]),
+            ];
         }
 
-        var north = new Dictionary<(HumanoidType, HumanoidType), MultiUseAnimations>
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
         {
             [(HumanoidType.Nurse, HumanoidType.StandardMalePatient)] = AnimSet(new(1630, 25), new(1638, 10), new(26, 1), new(1662, 26)),
             [(HumanoidType.Nurse, HumanoidType.StandardFemalePatient)] = AnimSet(new(3104, 25), new(3112, 10), new(10, 1), new(3108, 26)),
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
+
+    /// <summary>
+    /// crash_trolley.lua's <c>multi_usage_animations</c>: the undressed patient lies down, is examined and gets up, the
+    /// doctor drawn in the animations (no secondary ones, so the doctor is hidden). Each phase lists three animations; the
+    /// use plays the same position of each list. Defined for north and south.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> TrolleyMultiUsage()
+    {
+        static MultiUseAnimations[] Variants(AnimationRef[] begin, AnimationRef[] inUse, AnimationRef[] finish)
+        {
+            return [.. Enumerable.Range(0, begin.Length).Select(i => new MultiUseAnimations([new(begin[i])], new(inUse[i]), [new(finish[i])]))];
+        }
+
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.StrippedMalePatient, HumanoidType.Doctor)] = Variants(
+                [new(3740, 14), new(3736, 14), new(3818, 11)],
+                [new(540, 25), new(544, 41), new(552, 29)],
+                [new(3802, 12), new(3806, 12), new(3826, 6)]),
+            [(HumanoidType.StrippedFemalePatient, HumanoidType.Doctor)] = Variants(
+                [new(3732, 14), new(3728, 14), new(3822, 11)],
+                [new(524, 22), new(528, 35), new(536, 29)],
+                [new(3810, 12), new(3814, 12), new(3830, 6)]),
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }

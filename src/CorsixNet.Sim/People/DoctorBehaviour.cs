@@ -1,4 +1,5 @@
-// Ported from CorsixTH CorsixTH/Lua/rooms/gp.lua (GPRoom:doStaffUseCycle, commandEnteringStaff).
+// Ported from CorsixTH CorsixTH/Lua/rooms/gp.lua (GPRoom:doStaffUseCycle, commandEnteringStaff) and
+// CorsixTH/Lua/rooms/general_diag.lua (GeneralDiagRoom:commandEnteringPatient, the doctor's part).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Entities;
@@ -19,12 +20,19 @@ public enum DoctorPhase : byte
     UsingCabinet,
     WalkingToDesk,
     UsingDesk,
+
+    /// <summary>In general diagnosis: walking to the crash trolley's doctor side.</summary>
+    WalkingToTrolley,
+
+    /// <summary>In general diagnosis: standing at the crash trolley for the patient (hidden while examining them).</summary>
+    AtTrolley,
 }
 
 /// <summary>
 /// A doctor working in the GP's office: they go back and forth between the filing cabinet and the desk.
 /// At the desk, every round of the desk animation counts down; when a patient sits on the chair the doctor
-/// may conclude the consultation, the more likely the more skilled they are.
+/// may conclude the consultation, the more likely the more skilled they are. In general diagnosis the doctor
+/// waits at the crash trolley, where the patient's use of it shows them both.
 /// </summary>
 public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 {
@@ -79,7 +87,20 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 }
 
                 room.StaffPresent = true;
-                StartCycle(simulation, humanoid, room);
+                if (string.Equals(room.RoomType, RoomVisits.GeneralDiagnosisRoom, StringComparison.Ordinal))
+                {
+                    WalkToTrolley(simulation, humanoid, room);
+                }
+                else
+                {
+                    StartCycle(simulation, humanoid, room);
+                }
+
+                break;
+            case DoctorPhase.WalkingToTrolley:
+                Phase = DoctorPhase.AtTrolley;
+                break;
+            case DoctorPhase.AtTrolley:
                 break;
             case DoctorPhase.WalkingToCabinet:
                 if (RoomVisits.FindObject(simulation, room.Id, CabinetType) is { } cabinet)
@@ -180,6 +201,20 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         else
         {
             WalkToDesk(simulation, humanoid, room);
+        }
+    }
+
+    /// <summary>
+    /// GeneralDiagRoom: the doctor waits for the patient at the trolley's secondary use position. CorsixTH's doctor
+    /// meanders about the room until the patient has undressed; meandering is not ported, so they wait there.
+    /// </summary>
+    private void WalkToTrolley(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Use = null;
+        Phase = DoctorPhase.WalkingToTrolley;
+        if (RoomVisits.FindObject(simulation, room.Id, RoomVisits.TrolleyType) is { } trolley)
+        {
+            humanoid.WalkTo(simulation, RoomVisits.SecondaryUseTile(simulation, trolley));
         }
     }
 
