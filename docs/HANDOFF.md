@@ -90,8 +90,9 @@ Done and committed:
   corridor objects, the opening watch (Shift+O), reputation, the year end's trophies and awards and the
   hospital's value, winning and losing, loans and interest (L / Shift+L), buying land (N), room availability
   by level, setting prices in the casebook (by command only), heating and boiler breakdowns (T / Shift+T),
-  patients sent to the hospitals in turn. No game data in the cloud: real-data tests were skipped there and
-  the client was not run, so these want a look on MSI. Save format version 19.
+  patients sent to the hospitals in turn; then the monthly statistics for the graphs (PR #109). No game data
+  in the cloud: real-data tests were skipped there and the client was not run, so these want a look on MSI.
+  Save format version 20.
 
 Not done yet:
 

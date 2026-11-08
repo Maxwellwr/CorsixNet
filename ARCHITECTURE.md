@@ -419,6 +419,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (medium difficulty) comes a chance
   of a disaster: an open hospital with radiators and fewer than one handyman per 8 of them may have its boiler
   break, stuck at full or no heat, until 10–30 repairs are done (1 to 3 a day, the more handymen the more).
+- **Statistics** (`Hospital.Statistics`, from `hospital.lua`). At the end of each month, after the bills and
+  insurance, the month's money in and out, its wages, the balance, the visitors, cures and deaths so far and the
+  reputation are recorded for the graphs; the first entry is the start of the game.
 - **Room availability** (`LevelRules.IsRoomAvailable`, `Hospital.IsRoomDiscovered`, from `world.lua` and
   `hospital.lua`). A level has a room type when every object it needs has `objects[n].AvailableForLevel`; the
   hospital may build it from the start when they all have `StartAvail` too, otherwise once research discovers it.

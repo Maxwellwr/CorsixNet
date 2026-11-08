@@ -9,7 +9,8 @@
 // dialogs/fullscreen/annual_report.lua (UIAnnualReport:checkTrophiesAndAwards, updateAwards); the rooms discovered
 // from the same file (Hospital:Hospital's room_discoveries, Hospital:isRoomDiscovered); heating from the same file
 // (Hospital:onEndDay, onEndMonth, daysUntilNextDisaster, boilerBreakdown, _fixBoiler) and
-// dialogs/fullscreen/town_map.lua (UITownMap:increaseHeat, decreaseHeat).
+// dialogs/fullscreen/town_map.lua (UITownMap:increaseHeat, decreaseHeat); the monthly statistics for the graphs from
+// hospital.lua (Hospital:Hospital, onEndMonth, spendMoney, receiveMoney).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -63,6 +64,19 @@ public enum TransactionKind : byte
     /// <summary>The month's heating bill (<c>heating</c>).</summary>
     Heating = 15,
 }
+
+/// <summary>
+/// The hospital's figures at the end of a month, for the graphs (an entry of CorsixTH's <c>statistics</c>).
+/// </summary>
+/// <param name="MoneyIn">Money taken in during the month.</param>
+/// <param name="MoneyOut">Money spent during the month.</param>
+/// <param name="Wages">The month's wages.</param>
+/// <param name="Balance">The balance at the month's end.</param>
+/// <param name="Visitors">Patients so far.</param>
+/// <param name="Cures">Patients cured so far.</param>
+/// <param name="Deaths">Patients who died so far.</param>
+/// <param name="Reputation">The reputation at the month's end.</param>
+public readonly record struct MonthStatistics(long MoneyIn, long MoneyOut, int Wages, long Balance, int Visitors, int Cures, int Deaths, int Reputation);
 
 /// <summary>A trophy, award or fine of the year end (CorsixTH's annual report).</summary>
 public enum YearEndAwardKind : byte
@@ -220,6 +234,9 @@ public sealed class Hospital
 
     private const int MaxCases = 256;
 
+    /// <summary>Months of statistics a save may hold: over 5,000 years.</summary>
+    private const int MaxStatisticsMonths = 1 << 16;
+
     /// <summary>
     /// Hours per segment of the opening watch: CorsixTH's <c>UIWatch</c> runs 100 days over 13 segments
     /// (<c>TICK_DAYS</c>, <c>TIMER_SEGMENTS</c>), rounded down.
@@ -267,6 +284,7 @@ public sealed class Hospital
 
     private readonly List<YearEndAward> _lastYearAwards = [];
     private readonly SortedSet<string> _discoveredRooms = new(StringComparer.Ordinal);
+    private readonly List<MonthStatistics> _statistics = [];
 
     internal Hospital(int player, long balance, int reputation = AverageReputation, long value = 0, int interestRate = DefaultInterestRate, int overdraftDifferential = DefaultOverdraftDifferential)
     {
@@ -277,7 +295,20 @@ public sealed class Hospital
         Reputation = Math.Clamp(reputation, MinReputation, MaxReputation);
         LowestReputationThisYear = Reputation;
         Value = value;
+        _statistics.Add(new MonthStatistics(0, 0, 0, Balance, 0, 0, 0, Reputation));
     }
+
+    /// <summary>
+    /// The figures of each month for the graphs, the first as the game began (CorsixTH's <c>statistics</c>): entry
+    /// <c>i</c> holds them at the end of month <c>i</c> of the game.
+    /// </summary>
+    public IReadOnlyList<MonthStatistics> Statistics => _statistics;
+
+    /// <summary>Money taken in this month so far (CorsixTH's <c>money_in</c>).</summary>
+    public long MoneyInThisMonth { get; private set; }
+
+    /// <summary>Money spent this month so far (CorsixTH's <c>money_out</c>).</summary>
+    public long MoneyOutThisMonth { get; private set; }
 
     /// <summary>
     /// What the hospital is worth (CorsixTH's <c>value</c>): its land and 20,000 at the start, plus what was paid for
@@ -521,6 +552,7 @@ public sealed class Hospital
         }
 
         Balance -= amount;
+        MoneyOutThisMonth += amount;
         Log(new Transaction(tick, kind, subject, -amount, Balance));
     }
 
@@ -533,6 +565,7 @@ public sealed class Hospital
         }
 
         Balance += amount;
+        MoneyInThisMonth += amount;
         Log(new Transaction(tick, kind, subject, amount, Balance));
     }
 
@@ -761,6 +794,17 @@ public sealed class Hospital
         {
             AccruedOverdraft += -Balance * ((InterestRate + OverdraftDifferential) / 10000m) / 365;
         }
+    }
+
+    /// <summary>
+    /// The end of <c>Hospital:onEndMonth</c>, after the bills and insurance: the month's figures go into
+    /// <see cref="Statistics"/> and the month's money in and out start afresh.
+    /// </summary>
+    internal void RecordMonth(int wages)
+    {
+        _statistics.Add(new MonthStatistics(MoneyInThisMonth, MoneyOutThisMonth, wages, Balance, Visitors, Cured, Deaths, Reputation));
+        MoneyInThisMonth = 0;
+        MoneyOutThisMonth = 0;
     }
 
     /// <summary>
@@ -1107,6 +1151,21 @@ public sealed class Hospital
             writer.WriteString(room);
         }
 
+        writer.WriteInt64(MoneyInThisMonth);
+        writer.WriteInt64(MoneyOutThisMonth);
+        writer.WriteInt32(_statistics.Count);
+        foreach (var month in _statistics)
+        {
+            writer.WriteInt64(month.MoneyIn);
+            writer.WriteInt64(month.MoneyOut);
+            writer.WriteInt32(month.Wages);
+            writer.WriteInt64(month.Balance);
+            writer.WriteInt32(month.Visitors);
+            writer.WriteInt32(month.Cures);
+            writer.WriteInt32(month.Deaths);
+            writer.WriteInt32(month.Reputation);
+        }
+
         writer.WriteInt64(SpawnAttempts);
         writer.WriteInt32(RadiatorHeat);
         writer.WriteBool(IsHeatingBroken);
@@ -1203,6 +1262,16 @@ public sealed class Hospital
         for (var i = 0; i < rooms; i++)
         {
             hospital._discoveredRooms.Add(reader.ReadString());
+        }
+
+        hospital.MoneyInThisMonth = reader.ReadInt64();
+        hospital.MoneyOutThisMonth = reader.ReadInt64();
+        hospital._statistics.Clear();
+        var months = reader.ReadCount(MaxStatisticsMonths);
+        for (var i = 0; i < months; i++)
+        {
+            hospital._statistics.Add(new MonthStatistics(
+                reader.ReadInt64(), reader.ReadInt64(), reader.ReadInt32(), reader.ReadInt64(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()));
         }
 
         hospital.SpawnAttempts = reader.ReadInt64();
