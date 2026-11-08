@@ -1,3 +1,4 @@
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
@@ -27,6 +28,7 @@ public enum CommandKind : ushort
     Borrow = 13,
     Repay = 14,
     PurchaseParcel = 15,
+    SetTreatmentPrice = 16,
 }
 
 /// <summary>
@@ -66,6 +68,7 @@ public abstract record Command
             CommandKind.Borrow => new BorrowCommand(reader.ReadBool()),
             CommandKind.Repay => new RepayCommand(reader.ReadBool()),
             CommandKind.PurchaseParcel => new PurchaseParcelCommand(reader.ReadInt32()),
+            CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -318,6 +321,12 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
                 RoomPurchases.PayForRoom(simulation, definition, player);
             }
 
+            // CorsixTH's World:markRoomAsBuilt: building a diagnosis room puts its diagnosis in the casebook.
+            if (DiseaseCatalog.Find("diag_" + room.RoomType) is { } diagnosis && player < simulation.Hospitals.Count)
+            {
+                simulation.Hospitals[player].CaseOf(diagnosis, simulation.Rules.Diseases).Discovered = true;
+            }
+
             RoomVisits.OnRoomActivated(simulation, room);
         }
     }
@@ -442,4 +451,28 @@ public sealed record PurchaseParcelCommand(int Parcel) : Command
     public override void Execute(Simulation simulation, int player) => simulation.PurchaseParcel(Parcel, player);
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Parcel);
+}
+
+/// <summary>
+/// Sets what the hospital charges for a disease or a diagnosis in its casebook, as a percentage of the standard price
+/// (CorsixTH's <c>UICasebook:increasePay</c> and <c>decreasePay</c>): held to 50–200, and only for one the casebook
+/// shows, that is one the hospital knows.
+/// </summary>
+public sealed record SetTreatmentPriceCommand(string DiseaseId, int PricePercent) : Command
+{
+    public override CommandKind Kind => CommandKind.SetTreatmentPrice;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < simulation.Hospitals.Count && DiseaseCatalog.Find(DiseaseId) is { } disease)
+        {
+            simulation.Hospitals[player].SetTreatmentPrice(disease, simulation.Rules.Diseases, PricePercent);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteString(DiseaseId);
+        writer.WriteInt32(PricePercent);
+    }
 }
