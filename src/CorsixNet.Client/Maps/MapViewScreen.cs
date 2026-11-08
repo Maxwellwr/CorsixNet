@@ -108,6 +108,9 @@ internal sealed class MapViewScreen : IScreen
     private long _buildReminderUntil;
     private bool _wander;
     private bool _demoPending;
+
+    /// <summary>The speed a local game starts at (<c>--speed</c>).</summary>
+    private readonly GameSpeed _initialSpeed;
     private bool _demoDeskPending;
     private int? _selected;
     private LevelMap? _preparedMap;
@@ -122,9 +125,11 @@ internal sealed class MapViewScreen : IScreen
         MapOverlay overlay = MapOverlay.None,
         bool demo = false,
         IGameSession? networkSession = null,
-        int upscale = 1)
+        int upscale = 1,
+        GameSpeed speed = GameSpeed.Normal)
     {
         _device = device;
+        _initialSpeed = speed;
         _levels = networkSession is null ? levels : [];
 
         var palette = install.LoadPalette("DATA", "MPALETTE.DAT");
@@ -422,7 +427,9 @@ internal sealed class MapViewScreen : IScreen
         try
         {
             var level = _levels[index].Load();
-            _session = new LocalSession(_levels[index].Name, level.StartSimulation(seed: 1));
+            var local = new LocalSession(_levels[index].Name, level.StartSimulation(seed: 1));
+            local.SetSpeed(_initialSpeed);
+            _session = local;
             _error = null;
         }
         catch (Exception e) when (e is InvalidDataException or IOException)
@@ -515,17 +522,22 @@ internal sealed class MapViewScreen : IScreen
             .ThenBy(tile => tile.X)
             .Take(40)
             .ToList();
+        // The most skilled candidate of each kind, so that the GP diagnoses patients well enough to send them on to
+        // the pharmacy while there are no diagnosis rooms.
         foreach (var staffClass in StaffClasses.HireOrder)
         {
-            _session.Submit(new HireStaffCommand(staffClass, 0, nearby[_random.Next(nearby.Count)]));
+            var candidates = Simulation?.AvailableStaff(staffClass) ?? [];
+            var best = candidates.Count == 0 ? 0 : candidates.Select((profile, index) => (profile.Skill, index)).Max().index;
+            _session.Submit(new HireStaffCommand(staffClass, best, nearby[_random.Next(nearby.Count)]));
         }
 
         _wander = true;
     }
 
     /// <summary>
-    /// Places the demo's furniture in its GP's office, one object at a time: each placement is
-    /// checked against the state that includes the previous object.
+    /// Places the demo's furniture in its unfinished room (the GP's office, then the pharmacy), one object at a
+    /// time: each placement is checked against the state that includes the previous object. The room is confirmed
+    /// with its last object.
     /// </summary>
     private void FurnishDemoRoom()
     {
@@ -534,14 +546,16 @@ internal sealed class MapViewScreen : IScreen
             return;
         }
 
-        var room = simulation.Entities.OfType<Room>().FirstOrDefault();
+        var objectId = _demoFurniture.Peek();
+        var room = simulation.Entities.OfType<Room>()
+            .FirstOrDefault(r => !r.IsActive && simulation.Content.FindRoom(r.RoomType)?.Allows(objectId) == true);
         if (room is null || simulation.Entities.OfType<RoomObject>().Count() < _demoFurnitureExpected)
         {
             return;
         }
 
-        var objectId = _demoFurniture.Dequeue();
-        var confirm = _demoFurniture.Count == 0;
+        _demoFurniture.Dequeue();
+        var confirm = !_demoFurniture.TryPeek(out var next) || simulation.Content.FindRoom(room.RoomType)?.Allows(next) != true;
         foreach (var tile in DemoFurnitureTiles(room.Area, objectId))
         {
             foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
@@ -600,7 +614,18 @@ internal sealed class MapViewScreen : IScreen
 
         _demoDeskPending = false;
         var start = simulation.Map.GetCameraTile(Math.Min(_session.Player, simulation.Map.PlayerCount - 1));
-        foreach (var tile in _hospitalTiles.OrderBy(t => Math.Abs(t.X - start.X) + Math.Abs(t.Y - start.Y)).ThenBy(t => t.Y).ThenBy(t => t.X))
+
+        // A pharmacy next, for the patients the GP diagnoses with a disease cured by a drink. The desk keeps clear of it.
+        var keepClear = new TileRect(0, 0, 0, 0);
+        if (simulation.Content.FindRoom("pharmacy") is { } pharmacy && FindRoomSpot(simulation.Map, pharmacy, start) is { } pharmacyPlan)
+        {
+            _session.Submit(new BuildRoomCommand(pharmacyPlan));
+            _demoFurniture.Enqueue("pharmacy_cabinet");
+            var area = pharmacyPlan.Area;
+            keepClear = new TileRect(area.X - 2, area.Y - 2, area.Width + 4, area.Height + 4);
+        }
+
+        foreach (var tile in _hospitalTiles.Where(t => !keepClear.Contains(t)).OrderBy(t => Math.Abs(t.X - start.X) + Math.Abs(t.Y - start.Y)).ThenBy(t => t.Y).ThenBy(t => t.X))
         {
             foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
             {
@@ -783,17 +808,19 @@ internal sealed class MapViewScreen : IScreen
             _wander = !_wander;
         }
 
+        // Until the build window exists: B builds a GP's office, Shift+B a pharmacy.
         var wasBuilding = _buildTool.IsActive;
-        if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom("gp") is { } gp)
+        var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
+        if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(shift ? "pharmacy" : "gp") is { } roomType)
         {
             // As in the original, a room can only be started with its whole cost in the bank.
-            if (RoomPurchases.CanAfford(simulation, gp, _session.Player))
+            if (RoomPurchases.CanAfford(simulation, roomType, _session.Player))
             {
-                _buildTool.Start(gp);
+                _buildTool.Start(roomType);
             }
             else
             {
-                ShowNotice($"Not enough money for a {gp.Name}: it costs {MoneyText.Format(simulation.Rules.BuildCost(gp))}");
+                ShowNotice($"Not enough money for a {roomType.Name}: it costs {MoneyText.Format(simulation.Rules.BuildCost(roomType))}");
             }
         }
 
@@ -921,6 +948,12 @@ internal sealed class MapViewScreen : IScreen
         foreach (var entity in simulation.Entities)
         {
             if (entity is RoomObject hiddenObject && _hiddenObjects.Contains(hiddenObject.Id))
+            {
+                continue;
+            }
+
+            // Someone shown by another's animation, such as a patient at the pharmacy cabinet.
+            if (entity is Humanoid { IsHidden: true })
             {
                 continue;
             }
@@ -1061,7 +1094,9 @@ internal sealed class MapViewScreen : IScreen
 
         var simulation = Simulation;
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
-            ? $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}"
+            ? string.Create(
+                CultureInfo.InvariantCulture,
+                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}")
             : string.Empty;
 
         var levels = _levels.Count > 0 ? $"   ({_levelIndex + 1} of {_levels.Count})" : string.Empty;

@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.People;
@@ -10,6 +11,17 @@ public enum BehaviourKind : byte
     Patient = 1,
     Receptionist = 2,
     Doctor = 3,
+    Nurse = 4,
+}
+
+/// <summary>A member of staff whom a room sends for and who works in it.</summary>
+internal interface IRoomStaff
+{
+    /// <summary>The room they work in or are going to, or 0 when free.</summary>
+    int RoomId { get; }
+
+    /// <summary>Sends them to work in <paramref name="room"/>, walking to <paramref name="inside"/> first.</summary>
+    void GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside);
 }
 
 /// <summary>
@@ -43,6 +55,7 @@ public abstract class HumanoidBehaviour
             BehaviourKind.Patient => PatientBehaviour.ReadState(reader),
             BehaviourKind.Receptionist => ReceptionistBehaviour.ReadState(reader),
             BehaviourKind.Doctor => DoctorBehaviour.ReadState(reader),
+            BehaviourKind.Nurse => NurseBehaviour.ReadState(reader),
             _ => throw new InvalidDataException($"Unknown behaviour kind {(byte)kind}."),
         };
     }

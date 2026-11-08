@@ -16,13 +16,17 @@ namespace CorsixNet.Client.Maps;
 /// </remarks>
 internal sealed class ObjectDrawing
 {
-    /// <summary>Idle animations from CorsixTH's <c>objects/*.lua</c>; south and west mirror east and north.</summary>
-    private static readonly Dictionary<string, (int North, int East)> IdleAnimations = new(StringComparer.Ordinal)
+    /// <summary>
+    /// Idle animations from CorsixTH's <c>objects/*.lua</c>; south and west mirror east and north. Where an object has
+    /// only north and south ones (the pharmacy cabinet), east mirrors south, which is the north one.
+    /// </summary>
+    private static readonly Dictionary<string, (int North, int East, bool EastMirrorsNorth)> IdleAnimations = new(StringComparer.Ordinal)
     {
-        ["desk"] = (48, 50),
-        ["cabinet"] = (80, 82),
-        ["chair"] = (686, 688),
-        ["reception_desk"] = (2062, 2064),
+        ["desk"] = (48, 50, false),
+        ["cabinet"] = (80, 82, false),
+        ["chair"] = (686, 688, false),
+        ["reception_desk"] = (2062, 2064, false),
+        ["pharmacy_cabinet"] = (1578, 1578, true),
     };
 
     private static readonly byte[] NoLayers = [];
@@ -55,8 +59,8 @@ internal sealed class ObjectDrawing
         var (animation, flip) = orientation switch
         {
             Direction.North => (animations.North, false),
-            Direction.East => (animations.East, false),
-            Direction.South => (animations.East, true),
+            Direction.East => (animations.East, animations.EastMirrorsNorth),
+            Direction.South => (animations.East, !animations.EastMirrorsNorth),
             _ => (animations.North, true),
         };
         var set = _renderer.Animations;

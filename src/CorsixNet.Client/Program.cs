@@ -17,7 +17,8 @@ const string Usage = """
       --map PATH        Show a map file from disk, e.g. a CorsixTH .map file
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
-      --demo            Build and furnish a GP's office and add twenty patients wandering around
+      --demo            Build and furnish a GP's office and a pharmacy and add twenty patients wandering around
+      --speed NAME      Start a local game at a speed: Pause, Slowest, Slower, Normal, MaxSpeed or AndThenSomeMore
       --upscale N       Smooth sprites with the MMPX pixel art filter: 1 (original), 2 or 4 (key U)
       --capture FILE    After a few seconds, save the map view to a PNG file and quit
       --sprite-viewer   Browse sprite sheets instead of maps
@@ -43,6 +44,7 @@ var zoom = 1f;
 var overlay = MapOverlay.None;
 var demo = false;
 var upscale = 1;
+var speed = GameSpeed.Normal;
 string? capturePath = null;
 for (var i = 0; i < args.Length; i++)
 {
@@ -67,6 +69,10 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--upscale" when i + 1 < args.Length && int.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var u) && u is 1 or 2 or 4:
             upscale = u;
+            i++;
+            break;
+        case "--speed" when i + 1 < args.Length && Enum.TryParse<GameSpeed>(args[i + 1], ignoreCase: true, out var s) && s != GameSpeed.SpeedUp:
+            speed = s;
             i++;
             break;
         case "--host":
@@ -201,7 +207,7 @@ else
 
     createScreen = device =>
     {
-        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale);
+        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale, speed);
         if (capturePath is not null)
         {
             // Give the demo time to build and furnish its room before capturing.

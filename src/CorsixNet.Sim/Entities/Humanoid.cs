@@ -103,6 +103,12 @@ public sealed class Humanoid : Entity
     /// </summary>
     public int HiddenObjectId { get; private set; }
 
+    /// <summary>
+    /// Whether the humanoid is not drawn, because someone else's animation shows them (CorsixTH's
+    /// <c>makeInvisible</c> on the other user of a multi-use object).
+    /// </summary>
+    public bool IsHidden { get; internal set; }
+
     /// <summary>Whether the humanoid has left the map and is about to be removed.</summary>
     public bool IsDespawning { get; internal set; }
 
@@ -227,6 +233,9 @@ public sealed class Humanoid : Entity
         HiddenObjectId = hiddenObject;
     }
 
+    /// <summary>Sets the variant of one animation layer (CorsixTH's <c>setLayer</c>).</summary>
+    internal void SetLayer(int layer, byte value) => _layers[layer] = value;
+
     /// <summary>Goes back to walking and standing animations.</summary>
     internal void ClearActionAnimation()
     {
@@ -313,6 +322,7 @@ public sealed class Humanoid : Entity
             StepProgress = reader.ReadInt32(),
             RawWalk = reader.ReadBool(),
             IsDespawning = reader.ReadBool(),
+            IsHidden = reader.ReadBool(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -349,6 +359,7 @@ public sealed class Humanoid : Entity
         writer.WriteInt32(StepProgress);
         writer.WriteBool(RawWalk);
         writer.WriteBool(IsDespawning);
+        writer.WriteBool(IsHidden);
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)
         {

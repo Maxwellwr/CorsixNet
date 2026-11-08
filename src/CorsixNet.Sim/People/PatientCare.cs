@@ -1,7 +1,9 @@
 // Ported from CorsixTH CorsixTH/Lua/entities/humanoids/patient.lua (Patient:setDisease, completeDiagnosticStep,
-// modifyDiagnosisProgress, getTreatmentDiseaseId, agreesToPay), CorsixTH/Lua/rooms/gp.lua (GPRoom:dealtWithPatient,
-// sendPatientToNextDiagnosisRoom), CorsixTH/Lua/hospital.lua (Hospital:receiveMoneyForTreatment, the default
-// policies) and CorsixTH/Lua/world.lua (World:getNewPatientDisease).
+// modifyDiagnosisProgress, getTreatmentDiseaseId, agreesToPay, treatDisease, isTreatmentEffective), CorsixTH/Lua/room.lua
+// (Room:dealtWithPatient, getStaffServiceQuality), CorsixTH/Lua/rooms/gp.lua (GPRoom:dealtWithPatient,
+// sendPatientToNextDiagnosisRoom), CorsixTH/Lua/hospital.lua (Hospital:receiveMoneyForTreatment, paySupplierForDrug,
+// updateCuredCounts, humanoidDeath, the default policies), CorsixTH/Lua/entities/humanoids/staff.lua
+// (Staff:getServiceQuality) and CorsixTH/Lua/world.lua (World:getNewPatientDisease).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Diseases;
@@ -96,6 +98,101 @@ public static class PatientCare
     }
 
     /// <summary>
+    /// <c>Room:dealtWithPatient</c> (<c>GPRoom:dealtWithPatient</c> in the GP's office): what the patient pays and does
+    /// next. After a diagnosis room an undiagnosed patient gets further in the diagnosis, pays and goes back to the GP;
+    /// a diagnosed one goes on to the next room of the treatment, or after the last is treated.
+    /// </summary>
+    internal static void DealtWith(Simulation simulation, Room room, Humanoid humanoid, PatientBehaviour patient)
+    {
+        if (string.Equals(room.RoomType, PatientBehaviour.FirstRoom, StringComparison.Ordinal))
+        {
+            GpDealtWith(simulation, room, humanoid, patient);
+            return;
+        }
+
+        if (patient.Disease is not { } disease)
+        {
+            patient.SetNextGoHome();
+            return;
+        }
+
+        if (!patient.IsDiagnosed)
+        {
+            CompleteDiagnosticStep(simulation, room, patient, disease);
+            ReceiveMoneyForTreatment(simulation, humanoid, patient, room.RoomType);
+            if (DiseaseCatalog.Find(DiseaseCatalog.GpDiagnosis) is { } consultation && !AgreesToPay(simulation, humanoid, patient, consultation))
+            {
+                patient.SetNextGoHome();
+            }
+            else
+            {
+                patient.SetNextGp();
+            }
+
+            return;
+        }
+
+        patient.CureRoomsVisited++;
+        if (patient.CureRoomsVisited < disease.TreatmentRooms.Count)
+        {
+            patient.SetNextTreatment();
+        }
+        else
+        {
+            TreatDisease(simulation, room, humanoid, patient, disease);
+        }
+    }
+
+    /// <summary>
+    /// <c>Patient:treatDisease</c>: the patient pays for the cure; it works with a chance from the drug's effectiveness,
+    /// how sure the diagnosis is and how good the staff is, and then the patient goes home cured, or else dies. The drug
+    /// is paid for either way.
+    /// </summary>
+    internal static void TreatDisease(Simulation simulation, Room room, Humanoid humanoid, PatientBehaviour patient, DiseaseDefinition disease)
+    {
+        var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
+        var entry = hospital.CaseOf(disease, simulation.Rules.Diseases);
+        ReceiveMoneyForTreatment(simulation, humanoid, patient, room.RoomType);
+        if (IsTreatmentEffective(simulation, room, patient, entry))
+        {
+            // Patient:cure and goHome("cured") with Hospital:updateCuredCounts.
+            hospital.Cured++;
+            entry.Recoveries++;
+            patient.SetNextGoHome();
+        }
+        else
+        {
+            // Patient:die with Hospital:humanoidDeath.
+            hospital.Deaths++;
+            entry.Fatalities++;
+            patient.SetNextDie();
+        }
+
+        hospital.PayForDrug(simulation.Tick, entry, simulation.Random.NextInclusive(1, 5));
+    }
+
+    /// <summary>
+    /// <c>Patient:isTreatmentEffective</c>: the chance in percent is the cure's effectiveness times the diagnosis progress,
+    /// moved by up to a tenth of what is left to 100 (at least 20) by the staff's service quality, which is
+    /// <c>0.7 × skill + 0.2 × (1 − fatigue) + 0.1 × happiness</c> (fatigue 0 and happiness 1 while they are not modelled).
+    /// </summary>
+    private static bool IsTreatmentEffective(Simulation simulation, Room room, PatientBehaviour patient, DiseaseCase entry)
+    {
+        var cureChance = entry.CureEffectiveness * (patient.DiagnosisProgress / 1000m);
+        var quality = 0.5m;
+        if (simulation.FindEntity(room.StaffId) is Humanoid { Profile: { } profile })
+        {
+            quality = (0.7m * profile.Skill / StaffProfile.MaxSkill) + 0.2m + 0.1m;
+        }
+
+        const int minImpact = 20;
+        const decimal scale = 0.2m;
+        var serviceBase = Math.Max(100 - cureChance, minImpact);
+        cureChance += serviceBase * (quality - 0.5m) * scale;
+        return cureChance >= simulation.Random.NextInclusive(1, 100);
+    }
+
+    /// <summary>
     /// <c>GPRoom:dealtWithPatient</c>: the GP is done. The patient pays for the consultation and gets further in
     /// the diagnosis; once diagnosed they go on to treatment, otherwise to another diagnosis room. What they do
     /// after leaving the room is decided here, while they are still in it.
@@ -110,8 +207,7 @@ public static class PatientCare
         }
 
         ReceiveMoneyForTreatment(simulation, humanoid, patient, room.RoomType);
-        CompleteDiagnosticStep(simulation, room, patient, disease);
-        if (patient.DiagnosisProgress >= StopProcedure || (patient.DiagnosisProgress >= FullDiagnosis && patient.AvailableDiagnosisRooms.Count == 0))
+        CompleteDiagnosticStep(simulation, room, patient, disease); if (patient.DiagnosisProgress >= StopProcedure || (patient.DiagnosisProgress >= FullDiagnosis && patient.AvailableDiagnosisRooms.Count == 0))
         {
             SetDiagnosed(simulation, humanoid, patient, disease);
             if (AgreesToPay(simulation, humanoid, patient, disease))

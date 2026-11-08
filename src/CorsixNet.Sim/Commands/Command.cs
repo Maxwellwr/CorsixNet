@@ -2,6 +2,7 @@ using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Serialization;
 using CorsixNet.Sim.Staff;
@@ -227,6 +228,8 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
             {
                 RoomPurchases.PayForRoom(simulation, definition, player);
             }
+
+            RoomVisits.OnRoomActivated(simulation, room);
         }
     }
 

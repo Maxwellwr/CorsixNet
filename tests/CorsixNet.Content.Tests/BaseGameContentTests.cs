@@ -25,4 +25,25 @@ public class BaseGameContentTests
             Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
         }
     }
+
+    [Fact]
+    public void MultiUseAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var animations = BaseGameContent.Create().Objects
+            .Where(o => o.MultiUsage is not null)
+            .SelectMany(o => o.MultiUsage!.Values)
+            .SelectMany(table => table.Values)
+            .SelectMany(use => use.Phases)
+            .SelectMany(phase => phase.Secondary is { } secondary ? new[] { phase.Primary, secondary } : [phase.Primary])
+            .Distinct()
+            .ToList();
+
+        Assert.NotEmpty(animations);
+        foreach (var animation in animations)
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+    }
 }
