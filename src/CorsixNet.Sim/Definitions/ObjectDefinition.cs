@@ -26,12 +26,22 @@ public enum FootprintFlags : byte
 
     /// <summary>Another object's use position may overlap this tile ("shareable").</summary>
     Shareable = 1 << 6,
+
+    /// <summary>
+    /// The object stands against one side of the tile, the side it faces, and leaves the tile itself free
+    /// ("only_side", CorsixTH's side objects: radiator, fire extinguisher, bin).
+    /// </summary>
+    OnlySide = 1 << 7,
 }
 
 /// <summary>One tile of a footprint, relative to the tile the object is placed on.</summary>
 public readonly record struct FootprintTile(int X, int Y, FootprintFlags Flags = FootprintFlags.None)
 {
     public bool IsUsePosition => (Flags & FootprintFlags.UsePosition) != 0;
+
+    public bool IsSide => (Flags & FootprintFlags.OnlySide) != 0;
+
+    public bool IsShareable => (Flags & FootprintFlags.Shareable) != 0;
 }
 
 /// <summary>An object's layout when facing one direction.</summary>

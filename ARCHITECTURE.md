@@ -208,7 +208,10 @@ and each tile has flags:
 - **complete cell:** the object fills the tile, so all four sides must be free;
 - **use position:** the tile stays passable, and someone stands there to use the object;
 - **need side:** the object needs that side of the tile free;
-- **shareable:** another object's use position may overlap the tile.
+- **shareable:** another object's use position may overlap the tile;
+- **only side:** a side object (radiator, fire extinguisher, bin) stands against the side of the
+  tile it faces and leaves the tile free. The bin facing east stands against the west side, as in
+  CorsixTH.
 
 The render attach offset says which tile's drawing pass draws the object, which decides what it
 overlaps. The animation itself is still drawn from the placement tile; CorsixTH does the same by
@@ -222,13 +225,25 @@ shifting the animation back by the attach tile's screen offset.
   use positions);
 - the sides the footprint covers must still be buildable;
 - a use position must not overlap another object's use position or a door's walkway;
+- only one object per tile, and none on a tile someone stands on to use an object (unless that
+  tile is shareable) or on a door's walkway (CorsixTH's `isTileExclusivelyPassable`);
+- a side object needs its side buildable;
 - every use position in the room must stay reachable from the door, checked by a flood fill on
-  a provisional placement.
+  a provisional placement;
+- outside rooms, the object must not cut the corridor: the passable tiles around its solid part
+  must still reach each other with it in place (`wouldNonSideObjectBreakPathfindingIfSpawnedAt`),
+  and a side object on an edge without a wall must leave another way from one side of the edge to
+  the other.
 
-Placing marks the footprint as CorsixTH's `occupyTilesByObjectFootprintAt` does. Room doors
+Placing marks the footprint as CorsixTH's `occupyTilesByObjectFootprintAt` does. A side object
+only takes its side; on an edge without a wall it also closes the edge to walking, kept in the
+tile flags `BlockedNorth` and `BlockedWest` so that recomputing travel flags keeps it closed. Room doors
 keep the tiles on both sides clear. Picking an object up recomputes the room's tiles from the
 saved originals and the remaining objects. The client previews with the same check and draws
-objects with their idle animations, mirroring east and north for south and west.
+objects with their idle animations; a facing without its own animation mirrors its mirror facing
+(north and west, east and south), as CorsixTH's `orient_mirror`. The corridor objects are the
+reception desk, bench, drinks machine, fire extinguisher, radiator, bin and plant; using them
+(benches, drinks, watering plants, heating) is not ported yet.
 
 ## Money
 
@@ -387,7 +402,8 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   them too, and lasts as long as the longer of the two. The user takes on the other one's layers 0 to 4 for the
   use, or a patient using it with a member of staff takes on their layer 5. Where CorsixTH lists animations for the phases, one variant is picked for the whole use. Prolonged use and the morphs of invisible patients are not ported yet.
 
-The client buys a reception desk with F (a stand-in for the original's corridor furnishing window),
+The client buys a reception desk with F (a stand-in for the original's corridor furnishing window;
+Tab and Shift+Tab go through the other corridor objects),
 draws use animations, and puts a receptionist facing away from the viewer in front of the desk on its
 tile, otherwise behind it. B builds a GP's office, Shift+B a pharmacy and Ctrl+B general diagnosis until the build window exists; the
 status line shows how many patients were cured and died. `--demo` hires the most skilled candidate of each kind,

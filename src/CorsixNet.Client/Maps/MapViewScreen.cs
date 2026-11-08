@@ -871,6 +871,11 @@ internal sealed class MapViewScreen : IScreen
         {
             _furnishTool.Start(receptionDesk);
         }
+        else if (pressed(Keys.Tab) && _furnishTool.IsActive)
+        {
+            // Until the furnish corridor window exists, Tab (Shift+Tab) goes through the corridor objects.
+            _furnishTool.Cycle(simulation.Content, backwards: shift);
+        }
 
         if (_buildTool.IsActive || _furnishTool.IsActive)
         {

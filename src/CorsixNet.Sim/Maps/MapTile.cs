@@ -64,6 +64,15 @@ public enum TileFlags : uint
     /// </summary>
     AvoidTile = 1 << 20,
 
+    /// <summary>
+    /// A side object (a radiator, say) closes the tile's north edge, which has no wall: nobody walks across it
+    /// (CorsixTH's object footprint clearing <c>travelNorth</c>). Kept when travel flags are worked out again.
+    /// </summary>
+    BlockedNorth = 1 << 21,
+
+    /// <summary>A side object closes the tile's west edge, which has no wall.</summary>
+    BlockedWest = 1 << 22,
+
     CanTravelAll = CanTravelNorth | CanTravelEast | CanTravelSouth | CanTravelWest,
 }
 
