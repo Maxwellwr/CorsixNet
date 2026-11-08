@@ -30,6 +30,8 @@ public class LevelRulesLoaderTests
             #towns[3].StartCash 50000
             #town.StartRep 450
             #towns[3].StartRep 600
+            #gbv.LandCostPerTile 40
+            #awards_trophies.CuresAward 30
             #rooms[7].Cost 2280
             #objects[2].StartCost 100
             #objects[1].StartCost 300
@@ -45,6 +47,10 @@ public class LevelRulesLoaderTests
         Assert.Equal(10000, LevelRulesLoader.FromConfig(config, null, content).StartCash);
         Assert.Equal(LevelRulesLoader.DefaultStartCash, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, content).StartCash);
         Assert.Equal(600, rules.StartReputation);
+        Assert.Equal(40, rules.LandCostPerTile);
+        Assert.Equal(30, rules.Awards[AwardRules.CuresAward]);
+        Assert.Equal(AwardRules.Default[AwardRules.CuresBonus], rules.Awards[AwardRules.CuresBonus]);
+        Assert.Equal(LevelRules.DefaultLandCostPerTile, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, content).LandCostPerTile);
         Assert.Equal(450, LevelRulesLoader.FromConfig(config, 4, content).StartReputation);
         Assert.Equal(Hospital.AverageReputation, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, content).StartReputation);
     }
@@ -125,6 +131,9 @@ public class LevelRulesLoaderTests
         var simulation = LevelMapLoader.LoadOriginal(install, "LEVEL.L1").StartSimulation(seed: 1);
 
         Assert.Equal(40000, simulation.Hospitals[0].Balance);
+
+        // The hospital is worth its parcel's tiles and 20,000.
+        Assert.True(simulation.Hospitals[0].Value > Hospital.StartValueBesidesLand);
         Assert.Equal(2280, simulation.Rules.RoomCost("gp"));
     }
 
