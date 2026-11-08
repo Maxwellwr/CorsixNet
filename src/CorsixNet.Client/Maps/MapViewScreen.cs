@@ -30,7 +30,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// PgUp/PgDn previous/next level (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
-/// Space pause (local games). B builds a GP's office: blueprint, door, windows, then furniture
+/// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
 /// (right click turns an object, P picks one up, Enter confirms, Esc steps back). In a network
 /// game, commands go through the server.
 /// </remarks>
@@ -48,6 +48,9 @@ internal sealed class MapViewScreen : IScreen
 
     /// <summary>Colour of the status bar and the frame around the map while building, the blue of the blueprints.</summary>
     private static readonly Color BuildModeColor = new(0, 48, 144);
+
+    /// <summary>Background of the date and speed box.</summary>
+    private static readonly Color DatePanelColor = new(40, 40, 40);
 
     /// <summary>Width of the frame drawn around the map while building.</summary>
     private const int BuildFrameWidth = 3;
@@ -290,7 +293,7 @@ internal sealed class MapViewScreen : IScreen
         _hoveredTile = inView && Map is { } map && map.Contains(tile.X, tile.Y) ? tile : null;
         _hoveredFraction = Camera.WorldToTileFraction(world);
 
-        UpdateSimulation(gameTime, mouse, Pressed);
+        UpdateSimulation(gameTime, mouse, keys, Pressed);
 
         _previousKeys = keys;
         _previousMouse = mouse;
@@ -381,6 +384,7 @@ internal sealed class MapViewScreen : IScreen
 
         _text.Draw(batch, StatusLine(), new Vector2(8, 4));
         _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
+        DrawDatePanel(batch, viewport);
         batch.End();
     }
 
@@ -658,7 +662,56 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
-    private void UpdateSimulation(GameTime gameTime, MouseState mouse, Func<Keys, bool> pressed)
+    /// <summary>
+    /// CorsixTH's speed keys: 1 to 5 pick a speed, P or Space pause and unpause, Z held down speeds the
+    /// game up and going back to the previous speed when let go. The speed also changes while building,
+    /// as game time runs on in the original.
+    /// </summary>
+    private void UpdateSpeed(KeyboardState keys, Func<Keys, bool> pressed)
+    {
+        if (_session is not { CanChangeSpeed: true } session)
+        {
+            return;
+        }
+
+        var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
+        (Keys Key, GameSpeed Speed)[] speedKeys =
+        [
+            (Keys.D1, GameSpeed.Slowest), (Keys.D2, GameSpeed.Slower), (Keys.D3, GameSpeed.Normal),
+            (Keys.D4, GameSpeed.MaxSpeed), (Keys.D5, GameSpeed.AndThenSomeMore),
+        ];
+        foreach (var (key, speed) in speedKeys)
+        {
+            if (!control && pressed(key))
+            {
+                session.SetSpeed(speed);
+            }
+        }
+
+        // While building, P is the pick-up key.
+        if (pressed(Keys.Space) || (pressed(Keys.P) && !_buildTool.IsActive))
+        {
+            if (session.IsPaused)
+            {
+                session.ResumeSpeed();
+            }
+            else
+            {
+                session.SetSpeed(GameSpeed.Pause);
+            }
+        }
+
+        if (keys.IsKeyDown(Keys.Z))
+        {
+            session.SetSpeed(GameSpeed.SpeedUp);
+        }
+        else if (session.Speed == GameSpeed.SpeedUp)
+        {
+            session.ResumeSpeed();
+        }
+    }
+
+    private void UpdateSimulation(GameTime gameTime, MouseState mouse, KeyboardState keys, Func<Keys, bool> pressed)
     {
         AdvanceSession(gameTime);
         if (_session is null || Simulation is not { } simulation)
@@ -666,10 +719,7 @@ internal sealed class MapViewScreen : IScreen
             return;
         }
 
-        if (pressed(Keys.Space) && _session.CanPause)
-        {
-            _session.IsPaused = !_session.IsPaused;
-        }
+        UpdateSpeed(keys, pressed);
 
         if (pressed(Keys.R))
         {
@@ -720,7 +770,7 @@ internal sealed class MapViewScreen : IScreen
                 _session.Submit(command);
             }
 
-            if (wasBuilding && (pressed(Keys.B) || pressed(Keys.H) || pressed(Keys.G) || pressed(Keys.D1) || pressed(Keys.D2) || pressed(Keys.D3) || pressed(Keys.D4)))
+            if (wasBuilding && (pressed(Keys.B) || pressed(Keys.H) || pressed(Keys.G)))
             {
                 _buildReminderUntil = Environment.TickCount64 + NoticeMilliseconds;
             }
@@ -733,15 +783,17 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(new SpawnHumanoidCommand(new TilePosition(spawnAt.X, spawnAt.Y)));
         }
 
-        // Debug hiring until the hire window exists: 1 to 4 hire the first doctor, nurse, handyman or
-        // receptionist on the list and place them on the tile under the cursor.
+        // Debug hiring until the hire window exists: Ctrl+1 to Ctrl+4 hire the first doctor, nurse,
+        // handyman or receptionist on the list and place them on the tile under the cursor. The plain
+        // number keys set the game speed, as in CorsixTH.
+        var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
         (Keys Key, StaffClass Class)[] hireKeys =
         [
             (Keys.D1, StaffClass.Doctor), (Keys.D2, StaffClass.Nurse), (Keys.D3, StaffClass.Handyman), (Keys.D4, StaffClass.Receptionist),
         ];
         foreach (var (key, staffClass) in hireKeys)
         {
-            if (pressed(key) && _hoveredTile is { } hireAt)
+            if (control && pressed(key) && _hoveredTile is { } hireAt)
             {
                 var tile = new TilePosition(hireAt.X, hireAt.Y);
                 var problem = StaffHiring.Check(simulation, staffClass, 0, tile, _session.Player);
@@ -919,14 +971,33 @@ internal sealed class MapViewScreen : IScreen
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
             ? $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}"
             : string.Empty;
-        var date = simulation is null ? string.Empty : $"   {DateText(simulation.Date)}";
 
         var levels = _levels.Count > 0 ? $"   ({_levelIndex + 1} of {_levels.Count})" : string.Empty;
         var people = Simulation?.Entities.OfType<Humanoid>().Count() ?? 0;
         var levelKeys = _levels.Count > 0 ? "   PgUp PgDn: level" : string.Empty;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{_session.Name}{levels}{date}{money}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
+            $"{_session.Name}{levels}{money}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
+    }
+
+    /// <summary>
+    /// The date and the game speed in a box in the top right corner, standing in for the date on the
+    /// original's bottom panel until that panel exists.
+    /// </summary>
+    private void DrawDatePanel(SpriteBatch batch, Viewport viewport)
+    {
+        if (_session is null || Simulation is not { } simulation)
+        {
+            return;
+        }
+
+        var date = DateText(simulation.Date);
+        var speed = GameSpeeds.Name(_session.Speed);
+        var width = Math.Max(_text.Measure(date).Width, _text.Measure(speed).Width) + 16;
+        var box = new Rectangle(viewport.Width - width, 0, width, StatusHeight);
+        batch.Draw(_pixel, box, DatePanelColor);
+        _text.Draw(batch, date, new Vector2(box.X + 8, 4));
+        _text.Draw(batch, speed, new Vector2(box.X + 8, 4 + _text.LineHeight + 2));
     }
 
     /// <summary>The date as the original's bottom panel shows it (day and month), with the year.</summary>
@@ -951,8 +1022,8 @@ internal sealed class MapViewScreen : IScreen
 
         if (_hoveredTile is not { } position || Map is not { } map)
         {
-            var pause = _session?.CanPause == true ? "   Space: pause" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   1-4: hire   Click: select or walk   R: wander{pause}";
+            var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-5: speed   Z: hold to speed up" : string.Empty;
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];

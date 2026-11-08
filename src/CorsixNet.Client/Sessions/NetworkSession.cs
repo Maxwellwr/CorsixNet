@@ -30,14 +30,16 @@ internal sealed class NetworkSession : IGameSession
 
     public int Player => _client.Player;
 
-    public bool CanPause => false;
+    public bool CanChangeSpeed => false;
 
-    public bool IsPaused
+    public GameSpeed Speed => GameSpeed.Normal;
+
+    public void SetSpeed(GameSpeed speed)
     {
-        get => false;
-        set
-        {
-        }
+    }
+
+    public void ResumeSpeed()
+    {
     }
 
     public string Status
