@@ -1,5 +1,7 @@
-// Placement rules ported from CorsixTH CorsixTH/Lua/dialogs/place_objects.lua, CorsixTH/Lua/world.lua
-// (isFootprintTileBuildableOrPassable) and CorsixTH/Lua/entities/object.lua (occupyTilesByObjectFootprintAt).
+// Placement rules ported from CorsixTH CorsixTH/Lua/dialogs/place_objects.lua
+// (_placementAvailableHereAndOtherObjectsDoNotInterfere, _isSideObjectPlacementValid), CorsixTH/Lua/world.lua
+// (isFootprintTileBuildableOrPassable, isTileExclusivelyPassable, wouldNonSideObjectBreakPathfindingIfSpawnedAt)
+// and CorsixTH/Lua/entities/object.lua (occupyTilesByObjectFootprintAt, adjacent_to_solid_footprint).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Definitions;
@@ -36,6 +38,12 @@ public static class ObjectPlacer
         (Direction.South, 0, 1, TileFlags.BuildableSouth, FootprintFlags.NeedSouthSide),
         (Direction.West, -1, 0, TileFlags.BuildableWest, FootprintFlags.NeedWestSide),
     ];
+
+    /// <summary>The order CorsixTH looks at the tiles around a solid footprint tile (<c>adjacent_to_solid_footprint</c>).</summary>
+    private static readonly (int Dx, int Dy)[] AdjacentDeltas = [(-1, 0), (0, -1), (0, 1), (1, 0)];
+
+    /// <summary>The bin's object type ("thob"): facing east, it stands against the west side (CorsixTH's special case).</summary>
+    private const byte BinObjectType = 50;
 
     /// <summary>Checks placing <paramref name="objectId"/> at <paramref name="tile"/> facing <paramref name="orientation"/> for <paramref name="player"/> (0-based).</summary>
     public static ObjectPlacementProblem Check(Simulation simulation, string objectId, TilePosition tile, Direction orientation, int player)
@@ -82,13 +90,35 @@ public static class ObjectPlacer
                 return ObjectPlacementProblem.NotOwned;
             }
 
-            if (!IsTileFree(cell, part, layout.Footprint))
+            var position = new TilePosition(x, y);
+            if (part.IsSide)
+            {
+                if (!cell.Has(SideOf(definition, orientation).Buildable))
+                {
+                    return ObjectPlacementProblem.Blocked;
+                }
+            }
+            else if (!IsTileFree(cell, part, layout.Footprint))
+            {
+                return ObjectPlacementProblem.Blocked;
+            }
+
+            // Only one object per tile, and not on a tile someone has to stand on (CorsixTH's check 4).
+            if (!part.IsShareable && (cell.ObjectId != 0 || !IsTileExclusivelyPassable(simulation, position)))
             {
                 return ObjectPlacementProblem.Blocked;
             }
         }
 
-        if (roomId != 0 && !KeepsRoomAccessible(simulation, roomId, tile, layout))
+        var side = layout.Footprint.Any(part => part.IsSide);
+        if (roomId != 0)
+        {
+            if (!side && !KeepsRoomAccessible(simulation, roomId, tile, layout))
+            {
+                return ObjectPlacementProblem.WouldBlockAccess;
+            }
+        }
+        else if (side ? !SideObjectKeepsPaths(simulation, tile, SideOf(definition, orientation)) : WouldBreakPathfinding(simulation, tile, layout))
         {
             return ObjectPlacementProblem.WouldBlockAccess;
         }
@@ -96,13 +126,216 @@ public static class ObjectPlacer
         return ObjectPlacementProblem.None;
     }
 
+    /// <summary>
+    /// The side of the tile a side object stands against: the side it faces, except that the bin facing east
+    /// stands against the west side, as CorsixTH has it.
+    /// </summary>
+    private static (Direction Side, int Dx, int Dy, TileFlags Buildable, FootprintFlags Needed) SideOf(ObjectDefinition definition, Direction orientation)
+    {
+        if (definition.ObjectType == BinObjectType && orientation == Direction.East)
+        {
+            orientation = Direction.West;
+        }
+
+        return Sides[(int)orientation];
+    }
+
+    /// <summary>
+    /// Whether nobody has to stand on the tile: it is no use position of an object (unless shareable) and no
+    /// door's walkway, as CorsixTH's <c>World:isTileExclusivelyPassable</c>.
+    /// </summary>
+    private static bool IsTileExclusivelyPassable(Simulation simulation, TilePosition tile)
+    {
+        foreach (var entity in simulation.Entities)
+        {
+            switch (entity)
+            {
+                case RoomObject placed
+                    when simulation.Content.FindObject(placed.ObjectType) is { } definition
+                    && definition.Orientations.TryGetValue(placed.Orientation, out var layout):
+                    foreach (var part in layout.Footprint)
+                    {
+                        if (part.IsUsePosition && !part.IsShareable && placed.Tile.X + part.X == tile.X && placed.Tile.Y + part.Y == tile.Y)
+                        {
+                            return false;
+                        }
+                    }
+
+                    break;
+                case RoomDoor door when door.Tile == tile || door.OtherSide == tile:
+                    return false;
+                case EntranceDoor entrance when entrance.Tile == tile || OtherSide(entrance.Tile, entrance.Orientation) == tile:
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static TilePosition OtherSide(TilePosition tile, EdgeOrientation edge) =>
+        edge == EdgeOrientation.North ? tile with { Y = tile.Y - 1 } : tile with { X = tile.X - 1 };
+
+    /// <summary>
+    /// Whether a side object against an open edge (one without a wall) still lets people get from one side of the
+    /// edge to the other some other way, as CorsixTH's <c>_isSideObjectPlacementValid</c> outside rooms. Against a
+    /// wall it always does.
+    /// </summary>
+    private static bool SideObjectKeepsPaths(Simulation simulation, TilePosition tile, (Direction Side, int Dx, int Dy, TileFlags Buildable, FootprintFlags Needed) side)
+    {
+        var map = simulation.Map;
+        var travel = TravelFlag(side.Side);
+        if (!map[tile.X, tile.Y].Has(travel))
+        {
+            return true;
+        }
+
+        var beyond = new TilePosition(tile.X + side.Dx, tile.Y + side.Dy);
+        var back = TravelFlag((Direction)(((int)side.Side + 2) % 4));
+        map[tile.X, tile.Y].Set(travel, false);
+        map[beyond.X, beyond.Y].Set(back, false);
+        try
+        {
+            // As CorsixTH, no path only counts when the tile beyond is passable at all.
+            return simulation.Pathfinder.TryFindPath(map, tile, beyond, []) || !map[beyond.X, beyond.Y].Has(TileFlags.Passable);
+        }
+        finally
+        {
+            map[tile.X, tile.Y].Set(travel, true);
+            map[beyond.X, beyond.Y].Set(back, true);
+        }
+    }
+
+    /// <summary>
+    /// Whether an object outside rooms would cut the tiles around its solid part off from each other, as CorsixTH's
+    /// <c>World:wouldNonSideObjectBreakPathfindingIfSpawnedAt</c>: with the solid tiles made impassable, each passable
+    /// corridor tile next to them must still reach the previous one, unless one of the two is cut off from the
+    /// hospital anyway.
+    /// </summary>
+    /// <remarks>
+    /// CorsixTH's <c>isIsolated</c> makes the solid tiles passable again when it is done, so the tiles looked at after
+    /// its first use are checked as if the object were not there. That looks like a slip; here the solid tiles stay
+    /// impassable for the whole check.
+    /// </remarks>
+    private static bool WouldBreakPathfinding(Simulation simulation, TilePosition tile, ObjectOrientation layout)
+    {
+        var map = simulation.Map;
+        var solid = layout.Footprint.Where(part => !part.IsUsePosition && !part.IsSide).Select(part => (part.X, part.Y)).ToList();
+        var adjacent = new List<(int X, int Y)>();
+        foreach (var (sx, sy) in solid)
+        {
+            foreach (var (dx, dy) in AdjacentDeltas)
+            {
+                var point = (sx + dx, sy + dy);
+                if (!solid.Contains(point) && !adjacent.Contains(point))
+                {
+                    adjacent.Add(point);
+                }
+            }
+        }
+
+        var saved = solid.Select(point => map[tile.X + point.X, tile.Y + point.Y].Has(TileFlags.Passable)).ToList();
+        foreach (var (sx, sy) in solid)
+        {
+            map[tile.X + sx, tile.Y + sy].Set(TileFlags.Passable, false);
+        }
+
+        try
+        {
+            TilePosition? previous = null;
+            foreach (var (ax, ay) in adjacent)
+            {
+                var position = new TilePosition(tile.X + ax, tile.Y + ay);
+                if (!map.Contains(position.X, position.Y) || map[position.X, position.Y].RoomId != 0 || !map[position.X, position.Y].Has(TileFlags.Passable))
+                {
+                    continue;
+                }
+
+                if (previous is { } last && !simulation.Pathfinder.TryFindPath(map, position, last, []))
+                {
+                    // No route between the two: unless either was cut off from the hospital before, the object breaks one.
+                    if (IsReachableFromHospital(map, position))
+                    {
+                        if (IsReachableFromHospital(map, last))
+                        {
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        position = last;
+                    }
+                }
+
+                previous = position;
+            }
+
+            return false;
+        }
+        finally
+        {
+            for (var i = 0; i < solid.Count; i++)
+            {
+                map[tile.X + solid[i].X, tile.Y + solid[i].Y].Set(TileFlags.Passable, saved[i]);
+            }
+        }
+    }
+
+    /// <summary>Whether a hospital tile can be walked to from <paramref name="start"/> (CorsixTH's <c>isReachableFromHospital</c>).</summary>
+    private static bool IsReachableFromHospital(LevelMap map, TilePosition start)
+    {
+        if (!map[start.X, start.Y].Has(TileFlags.Passable))
+        {
+            return false;
+        }
+
+        var seen = new HashSet<TilePosition> { start };
+        var queue = new Queue<TilePosition>();
+        queue.Enqueue(start);
+        while (queue.Count > 0)
+        {
+            var current = queue.Dequeue();
+            var cell = map[current.X, current.Y];
+            if (cell.Has(TileFlags.Hospital))
+            {
+                return true;
+            }
+
+            foreach (var side in Sides)
+            {
+                var next = new TilePosition(current.X + side.Dx, current.Y + side.Dy);
+                if (cell.Has(TravelFlag(side.Side)) && map[next.X, next.Y].Has(TileFlags.Passable) && seen.Add(next))
+                {
+                    queue.Enqueue(next);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static TileFlags TravelFlag(Direction direction) => direction switch
+    {
+        Direction.North => TileFlags.CanTravelNorth,
+        Direction.East => TileFlags.CanTravelEast,
+        Direction.South => TileFlags.CanTravelSouth,
+        _ => TileFlags.CanTravelWest,
+    };
+
     /// <summary>Places the object after a successful <see cref="Check"/>.</summary>
     internal static RoomObject Place(Simulation simulation, ObjectDefinition definition, TilePosition tile, Direction orientation)
     {
         var map = simulation.Map;
         var roomId = map[tile.X, tile.Y].RoomId;
         var placed = simulation.AddEntity(id => new RoomObject(id, definition.Id, tile, orientation, roomId));
-        Occupy(map, tile, definition.Orientations[orientation], placed.Id);
+        if (definition.Orientations[orientation].Footprint.Any(part => part.IsSide))
+        {
+            OccupySide(map, tile, SideOf(definition, orientation), placed.Id);
+        }
+        else
+        {
+            Occupy(map, tile, definition.Orientations[orientation], placed.Id);
+        }
+
         ReceptionDesks.OnPlaced(simulation, placed);
         return placed;
     }
@@ -222,6 +455,41 @@ public static class ObjectPlacer
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Marks a side object on the map, as CorsixTH's <c>occupyTilesByObjectFootprintAt</c> does for an <c>only_side</c>
+    /// tile: the side is no longer buildable, and an open edge is closed to walking.
+    /// </summary>
+    private static void OccupySide(LevelMap map, TilePosition tile, (Direction Side, int Dx, int Dy, TileFlags Buildable, FootprintFlags Needed) side, int objectId)
+    {
+        ref var cell = ref map[tile.X, tile.Y];
+        cell.Set(side.Buildable, false);
+        cell.ObjectId = objectId;
+        if (!cell.Has(TravelFlag(side.Side)))
+        {
+            return;
+        }
+
+        var beyond = new TilePosition(tile.X + side.Dx, tile.Y + side.Dy);
+        switch (side.Side)
+        {
+            case Direction.North:
+                cell.Set(TileFlags.BlockedNorth, true);
+                break;
+            case Direction.West:
+                cell.Set(TileFlags.BlockedWest, true);
+                break;
+            case Direction.South:
+                map[beyond.X, beyond.Y].Set(TileFlags.BlockedNorth, true);
+                break;
+            default:
+                map[beyond.X, beyond.Y].Set(TileFlags.BlockedWest, true);
+                break;
+        }
+
+        cell.Set(TravelFlag(side.Side), false);
+        map[beyond.X, beyond.Y].Set(TravelFlag((Direction)(((int)side.Side + 2) % 4)), false);
     }
 
     private static bool IsAllowedIn(Simulation simulation, ObjectDefinition definition, int roomId)

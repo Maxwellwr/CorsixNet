@@ -120,6 +120,61 @@ public static class BaseGameContent
         CorridorObject: true);
 
     /// <summary>
+    /// The bench (objects/bench.lua): patients sit on it from the tile in front, which other objects may share.
+    /// CorsixTH draws it split over three tiles facing north; here it is drawn from its own tile.
+    /// </summary>
+    public static readonly ObjectDefinition Bench = new(
+        "bench",
+        "Bench",
+        ObjectType: 4,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, -1, UsePosition | Shareable)]),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition | Shareable)]),
+            [Direction.South] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition | Shareable)]),
+            [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition | Shareable)]),
+        },
+        CorridorObject: true,
+        WalkInToUse: true);
+
+    /// <summary>The drinks machine (objects/drinks_machine.lua), used from the tile in front.</summary>
+    public static readonly ObjectDefinition DrinksMachine = new(
+        "drinks_machine",
+        "Drinks Machine",
+        ObjectType: 7,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, -1, UsePosition)]),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.South] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
+        },
+        CorridorObject: true);
+
+    /// <summary>The fire extinguisher (objects/fire_extinguisher.lua), a side object.</summary>
+    public static readonly ObjectDefinition FireExtinguisher = new("extinguisher", "Fire Extinguisher", ObjectType: 43, SideOrientations(Direction.North, Direction.East, Direction.South, Direction.West), CorridorObject: true);
+
+    /// <summary>The radiator (objects/radiator.lua), a side object. Heating is not ported yet.</summary>
+    public static readonly ObjectDefinition Radiator = new("radiator", "Radiator", ObjectType: 44, SideOrientations(Direction.North, Direction.East, Direction.South, Direction.West), CorridorObject: true);
+
+    /// <summary>The bin (objects/bin.lua), a side object that only faces north or east (which stands against the west side).</summary>
+    public static readonly ObjectDefinition Bin = new("bin", "Bin", ObjectType: 50, SideOrientations(Direction.North, Direction.East), CorridorObject: true);
+
+    /// <summary>The plant (objects/plant.lua). Wilting and watering are not ported yet.</summary>
+    public static readonly ObjectDefinition Plant = new(
+        "plant",
+        "Plant",
+        ObjectType: 45,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell)], AnimateFromUsePosition: true),
+            [Direction.South] = new([new(0, 0, CompleteCell)], AnimateFromUsePosition: true),
+            [Direction.West] = new([new(0, 0, CompleteCell)], AnimateFromUsePosition: true),
+        },
+        CorridorObject: true);
+
+    /// <summary>
     /// The pharmacy cabinet (objects/pharmacy_cabinet.lua). The nurse stands at the use position and hands the patient,
     /// who stands at the secondary use position, a drink; only north and east facings exist, and the east one mirrors
     /// the north one's animations.
@@ -238,7 +293,8 @@ public static class BaseGameContent
     public static GameContent Create() => new(
         [GpOffice, Pharmacy, GeneralDiagnosis],
         ExternalWalls,
-        [Desk, Cabinet, Chair, ReceptionDesk, PharmacyCabinet, Screen, CrashTrolley],
+        // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant],
         DoorAnimations);
 
     /// <summary>
@@ -291,6 +347,12 @@ public static class BaseGameContent
                 [new(3810, 12), new(3814, 12), new(3830, 6)]),
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
+    }
+
+    /// <summary>Layouts of a side object (CorsixTH's <c>only_side</c> footprint) for the given facings.</summary>
+    private static Dictionary<Direction, ObjectOrientation> SideOrientations(params Direction[] facings)
+    {
+        return facings.ToDictionary(facing => facing, _ => new ObjectOrientation([new(0, 0, OnlySide)]));
     }
 
     private static AnimationRef[] ChairTalk(AnimationRef quiet, AnimationRef nodding, AnimationRef talking)

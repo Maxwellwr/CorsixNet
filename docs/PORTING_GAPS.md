@@ -26,12 +26,14 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 ## 2. Objects
 
 **Has:** footprints and placement rules (`ObjectPlacer`), pick up, use animations (single and
-two-person), corridor reception desk; objects of the three rooms (desk, cabinet, chair, pharmacy
-cabinet, screen, crash trolley). Map-placed objects from the level file.
+two-person), corridor objects (reception desk, bench, drinks machine, fire extinguisher, radiator,
+bin, plant; side objects; the corridor path check), bought one at a time with F and Tab; objects
+of the three rooms (desk, cabinet, chair, pharmacy cabinet, screen, crash trolley). Map-placed
+objects from the level file.
 
-- Corridor objects: bench, plant, radiator, fire extinguisher, bin, drinks machine. Partial: the
-  furnish-corridor tool only buys a reception desk (key F). (`objects/bench.lua`, `plant.lua`,
-  `radiator.lua`, `fire_extinguisher.lua`, `bin.lua`, `drinks_machine.lua`, `dialogs/furnish_corridor.lua`)
+- Furnish corridor window with counts and prices (`dialogs/furnish_corridor.lua`); the bench drawn
+  split over three tiles as CorsixTH does (drawn from its own tile for now).
+- Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
 - Machines: strength, wear per use, breakdown, smoking, explosion (room crash), repair by handymen,
   replacement and upgrade (`entities/machine.lua`, `dialogs/machine_dialog.lua`, `resizables/machine_menu.lua`).

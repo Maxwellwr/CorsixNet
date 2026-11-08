@@ -16,19 +16,30 @@ namespace CorsixNet.Client.Maps;
 /// </remarks>
 internal sealed class ObjectDrawing
 {
+    private const Direction N = Direction.North;
+    private const Direction E = Direction.East;
+    private const Direction S = Direction.South;
+    private const Direction W = Direction.West;
+
     /// <summary>
-    /// Idle animations from CorsixTH's <c>objects/*.lua</c>; south and west mirror east and north. Where an object has
-    /// only north and south ones (the pharmacy cabinet), east mirrors south, which is the north one.
+    /// Idle animations from CorsixTH's <c>objects/*.lua</c> (<c>idle_animations</c>), by facing. A facing without its own
+    /// animation draws the mirrored animation of its mirror facing (north and west, east and south: <c>orient_mirror</c>).
     /// </summary>
-    private static readonly Dictionary<string, (int North, int East, bool EastMirrorsNorth)> IdleAnimations = new(StringComparer.Ordinal)
+    private static readonly Dictionary<string, Dictionary<Direction, int>> IdleAnimations = new(StringComparer.Ordinal)
     {
-        ["desk"] = (48, 50, false),
-        ["cabinet"] = (80, 82, false),
-        ["chair"] = (686, 688, false),
-        ["reception_desk"] = (2062, 2064, false),
-        ["pharmacy_cabinet"] = (1578, 1578, true),
-        ["crash_trolley"] = (3838, 3838, true),
-        ["screen"] = (1022, 1022, false),
+        ["desk"] = new() { [N] = 48, [E] = 50 },
+        ["cabinet"] = new() { [N] = 80, [E] = 82 },
+        ["chair"] = new() { [N] = 686, [E] = 688 },
+        ["reception_desk"] = new() { [N] = 2062, [E] = 2064 },
+        ["pharmacy_cabinet"] = new() { [N] = 1578, [S] = 1578 },
+        ["crash_trolley"] = new() { [N] = 3838, [S] = 3838 },
+        ["screen"] = new() { [N] = 1022, [E] = 1022 },
+        ["bench"] = new() { [N] = 112, [E] = 114 },
+        ["drinks_machine"] = new() { [S] = 170, [W] = 172, [N] = 174, [E] = 176 },
+        ["extinguisher"] = new() { [N] = 178, [E] = 468, [S] = 470 },
+        ["radiator"] = new() { [N] = 750, [E] = 752 },
+        ["bin"] = new() { [N] = 1752, [S] = 1752 },
+        ["plant"] = new() { [N] = 1950, [S] = 1950, [E] = 1950, [W] = 1950 },
     };
 
     /// <summary>The screen with a patient's clothes hanging on it (screen.lua's second idle animation, 1204).</summary>
@@ -62,13 +73,24 @@ internal sealed class ObjectDrawing
         }
 
         // Directions without their own animation mirror the opposite one (CorsixTH's orient_mirror).
-        var (animation, flip) = orientation switch
+        var flip = false;
+        if (!animations.TryGetValue(orientation, out var animation))
         {
-            Direction.North => (animations.North, false),
-            Direction.East => (animations.East, animations.EastMirrorsNorth),
-            Direction.South => (animations.East, !animations.EastMirrorsNorth),
-            _ => (animations.North, true),
-        };
+            var mirror = orientation switch
+            {
+                Direction.North => Direction.West,
+                Direction.West => Direction.North,
+                Direction.East => Direction.South,
+                _ => Direction.East,
+            };
+            if (!animations.TryGetValue(mirror, out animation))
+            {
+                return;
+            }
+
+            flip = true;
+        }
+
         var layers = NoLayers;
         if (hangingClothes is { } clothes)
         {

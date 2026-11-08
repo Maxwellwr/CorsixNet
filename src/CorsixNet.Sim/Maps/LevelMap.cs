@@ -177,7 +177,7 @@ public sealed class LevelMap
             for (var x = 0; x < Width; x++)
             {
                 ref var tile = ref this[x, y];
-                if (tile.NorthWall != 0)
+                if (tile.NorthWall != 0 || tile.Has(TileFlags.BlockedNorth))
                 {
                     tile.Set(TileFlags.CanTravelNorth, false);
                     if (y != 0)
@@ -186,7 +186,7 @@ public sealed class LevelMap
                     }
                 }
 
-                if (tile.WestWall != 0)
+                if (tile.WestWall != 0 || tile.Has(TileFlags.BlockedWest))
                 {
                     tile.Set(TileFlags.CanTravelWest, false);
                     if (x != 0)

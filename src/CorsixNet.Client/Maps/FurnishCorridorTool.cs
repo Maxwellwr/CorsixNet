@@ -12,8 +12,8 @@ namespace CorsixNet.Client.Maps;
 /// <summary>
 /// Buying an object for a corridor, such as a reception desk, after CorsixTH's <c>UIFurnishCorridor</c>
 /// and <c>UIPlaceObjects</c>: the object follows the cursor, a right click turns it and a left click buys
-/// and places it. For now the tool offers the reception desk only; the original's list of items comes
-/// with the on-screen panel.
+/// and places it. Until the furnish corridor window exists, <see cref="Cycle"/> goes through the
+/// corridor objects in that window's order.
 /// </summary>
 internal sealed class FurnishCorridorTool
 {
@@ -42,6 +42,25 @@ internal sealed class FurnishCorridorTool
     }
 
     public void Stop() => _placing = null;
+
+    /// <summary>Switches to the next (or previous) object that may stand in a corridor.</summary>
+    public void Cycle(GameContent content, bool backwards)
+    {
+        var items = content.Objects.Where(o => o.CorridorObject).ToList();
+        if (_placing is null || items.Count == 0)
+        {
+            return;
+        }
+
+        var index = items.FindIndex(o => o.Id == _placing.Id);
+        var next = items[(index + (backwards ? items.Count - 1 : 1)) % items.Count];
+        var orientation = _orientation;
+        Start(next);
+        if (next.Orientations.ContainsKey(orientation))
+        {
+            _orientation = orientation;
+        }
+    }
 
     /// <summary>Follows the input; returns the command that buys and places the object when the player clicks.</summary>
     public Command? Update(Simulation simulation, int player, BuildInput input)
@@ -84,7 +103,7 @@ internal sealed class FurnishCorridorTool
 
         var price = simulation is null ? string.Empty : $" ({MoneyText.Format(simulation.Rules.ObjectCost(_placing.Id))})";
         var problem = _cannotAfford ? "   (not enough money)" : _problem is ObjectPlacementProblem.None or ObjectPlacementProblem.OutsideMap ? string.Empty : $"   ({_problem})";
-        return $"{_placing.Name}{price}: click to buy and place it, right click turns it{problem}   Esc: cancel";
+        return $"{_placing.Name}{price}: click to buy and place it, right click turns it, Tab: next item{problem}   Esc: cancel";
     }
 
     /// <summary>Turns the object clockwise to its next available orientation.</summary>
