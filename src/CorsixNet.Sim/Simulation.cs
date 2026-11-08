@@ -27,7 +27,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 16;
+    private const int FormatVersion = 17;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -63,6 +63,15 @@ public sealed class Simulation
             // CorsixTH's Hospital:Hospital prices the parcel numbered as the player: hospital tiles and 20,000.
             var land = (long)map.ParcelTileCount(player + 1) * Rules.LandCostPerTile;
             _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand, Rules.InterestRate, Rules.OverdraftDifferential);
+
+            // CorsixTH's Hospital:Hospital: the rooms of the level whose objects are all there from the start.
+            foreach (var room in Content.Rooms)
+            {
+                if (Rules.IsRoomDiscoveredAtStart(room))
+                {
+                    _hospitals[player].DiscoverRoom(room.Id);
+                }
+            }
         }
 
         _parcelAdjacency = ParcelAdjacency(map);

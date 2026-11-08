@@ -87,7 +87,25 @@ public static partial class LevelRulesLoader
             AwardsFromConfig(config), config.GetInt("gbv.LandCostPerTile") ?? LevelRules.DefaultLandCostPerTile,
             EndConditionsFromConfig(config, startCash, startReputation),
             TownInt(config, levelNumber, "InterestRate") ?? Hospital.DefaultInterestRate,
-            TownInt(config, levelNumber, "OverdraftDiff") ?? Hospital.DefaultOverdraftDifferential);
+            TownInt(config, levelNumber, "OverdraftDiff") ?? Hospital.DefaultOverdraftDifferential,
+            ObjectAvailabilityFromConfig(config, content));
+    }
+
+    /// <summary>
+    /// The <c>objects[n].AvailableForLevel</c> and <c>objects[n].StartAvail</c> settings of the objects the level names;
+    /// a missing one counts as 1, as for an object the level does not name at all.
+    /// </summary>
+    public static IEnumerable<KeyValuePair<string, ObjectAvailability>> ObjectAvailabilityFromConfig(LevelConfig config, GameContent content)
+    {
+        foreach (var definition in content.Objects)
+        {
+            var forLevel = config.GetInt($"objects[{definition.ObjectType}].AvailableForLevel");
+            var atStart = config.GetInt($"objects[{definition.ObjectType}].StartAvail");
+            if (forLevel is not null || atStart is not null)
+            {
+                yield return KeyValuePair.Create(definition.Id, new ObjectAvailability(forLevel != 0, atStart != 0));
+            }
+        }
     }
 
     /// <summary>

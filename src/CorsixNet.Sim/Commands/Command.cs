@@ -210,8 +210,8 @@ public sealed record UnmarkBlueprintCommand : Command
 }
 
 /// <summary>
-/// Builds a room, if the plan is valid for the issuing player when the command executes and their
-/// hospital can afford the whole room. As in CorsixTH, the room is built once the people on its
+/// Builds a room, if the plan is valid for the issuing player when the command executes, their hospital
+/// has discovered the room type and can afford the whole room. As in CorsixTH, the room is built once the people on its
 /// blueprint have left (<see cref="ConstructionSite"/>), at once if nobody is in the way. The objects
 /// it needs are bought then. The room starts inactive: its owner furnishes it, then confirms it
 /// (paying for the room) or cancels it (selling the objects back).
@@ -224,6 +224,7 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
     {
         if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) != RoomPlanProblem.None
             || simulation.Content.FindRoom(Plan.RoomType) is not { } room
+            || !RoomPurchases.CanBuild(simulation, room, player)
             || !RoomPurchases.CanAfford(simulation, room, player))
         {
             return;

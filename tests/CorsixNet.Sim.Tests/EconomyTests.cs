@@ -143,6 +143,40 @@ public class EconomyTests
         Assert.Equal(0, simulation.Hospitals[0].Balance);
     }
 
+    [Theory]
+    [InlineData(true, true, true, true)]
+    [InlineData(true, false, true, false)]
+    [InlineData(false, true, false, false)]
+    public void OnlyRoomsWhoseObjectsAreThereFromTheStartCanBeBuilt(bool forLevel, bool atStart, bool available, bool built)
+    {
+        var rules = new LevelRules(3000, [], [], objectAvailability: [KeyValuePair.Create("cabinet", new ObjectAvailability(forLevel, atStart))]);
+        Assert.Equal(available, rules.IsRoomAvailable(Office));
+        Assert.Equal(built, rules.IsRoomDiscoveredAtStart(Office));
+        var simulation = NewSimulation(rules);
+        Assert.Equal(built, simulation.Hospitals[0].IsRoomDiscovered("office"));
+        Assert.Equal(built, RoomPurchases.CanBuild(simulation, Office, 0));
+
+        Run(simulation, new BuildRoomCommand(Plan));
+
+        Assert.Equal(built, simulation.Entities.OfType<Room>().Any());
+
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var loaded = Simulation.Load(stream, Content);
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+        Assert.Equal(built, loaded.Hospitals[0].IsRoomDiscovered("office"));
+        Assert.Equal(available, loaded.Rules.IsRoomAvailable(Office));
+    }
+
+    [Fact]
+    public void AnObjectTheLevelDoesNotNameIsThereFromTheStart()
+    {
+        Assert.Equal(new ObjectAvailability(true, true), Rules.Availability("cabinet"));
+        Assert.True(Rules.IsRoomDiscoveredAtStart(Office));
+        Assert.Equal(["office"], NewSimulation(Rules).Hospitals[0].DiscoveredRooms);
+    }
+
     private static void Run(Simulation simulation, Command command, int player = 0)
     {
         simulation.Schedule(player, command);

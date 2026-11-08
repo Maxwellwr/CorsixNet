@@ -112,6 +112,35 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsWhichObjectsTheLevelHas()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #objects[2].StartCost.StartAvail.AvailableForLevel 100 0 1
+            #objects[1].StartCost.StartAvail.AvailableForLevel 100 1 0
+            """));
+        var content = BaseGameContent.Create();
+
+        var rules = LevelRulesLoader.FromConfig(config, null, content);
+
+        Assert.Equal(new ObjectAvailability(true, false), rules.Availability("cabinet"));
+        Assert.Equal(new ObjectAvailability(false, true), rules.Availability("desk"));
+        Assert.Equal(new ObjectAvailability(true, true), rules.Availability("chair"));
+        Assert.False(rules.IsRoomAvailable(BaseGameContent.GpOffice));
+    }
+
+    [Fact]
+    public void TheOriginalLevelOneHasTheGpsOfficeFromTheStart()
+    {
+        var install = RealGameData.Require();
+        var content = BaseGameContent.Create();
+
+        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", content);
+
+        Assert.True(rules.IsRoomDiscoveredAtStart(BaseGameContent.GpOffice));
+        Assert.Contains("gp", LevelMapLoader.LoadOriginal(install, "LEVEL.L1").StartSimulation(seed: 1).Hospitals[0].DiscoveredRooms);
+    }
+
+    [Fact]
     public void ReadsTheOriginalLevelOneStaffSettings()
     {
         var install = RealGameData.Require();
