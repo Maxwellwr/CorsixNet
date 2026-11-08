@@ -160,7 +160,12 @@ and the tiles get back the floor and flags the room saved when it was built.
 The client's `BuildRoomTool` follows the original's steps: blueprint (resize by dragging an
 edge, move by dragging the middle), door, windows, then furniture. The blueprint, door and
 windows stay in the client; the room only reaches the simulation when the player is done with
-them. In the furniture step the needed objects come to the cursor one at a time. As in the
+them. `RoomBlueprint` and `BlueprintDrawing` draw the blueprint as the original does, with
+the game's own sprites: blue floor tiles (red where a tile cannot be built on) and a blue
+wireframe wall, into which the door and windows are drawn and marked on the floor. The red
+parts are the blue sprites recoloured through table 6 of `QData/Ghost1.dat` (`PaletteRemaps`),
+CorsixTH's alternative palette for them. In the furniture step the needed objects come to the
+cursor one at a time. As in the
 original, an object only moves once the cursor leaves the tiles it covers, and it is drawn grey
 where it cannot go. Commands take a few ticks to arrive, so the tool keeps track of the ones it
 has sent until the simulation shows their effect.

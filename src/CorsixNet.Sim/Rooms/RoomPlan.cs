@@ -109,28 +109,44 @@ public static class RoomBuilder
         {
             for (var x = area.X; x < area.Right; x++)
             {
-                var tile = map[x, y];
-                if (tile.Has(TileFlags.Room))
+                var problem = CheckTile(map, area, new TilePosition(x, y), player);
+                if (problem != RoomPlanProblem.None)
                 {
-                    return RoomPlanProblem.OverlapsRoom;
-                }
-
-                if (!tile.Has(TileFlags.Buildable | TileFlags.Hospital))
-                {
-                    return RoomPlanProblem.NotBuildable;
-                }
-
-                if (map.GetParcelOwner(tile.Parcel) != player + 1)
-                {
-                    return RoomPlanProblem.NotOwned;
-                }
-
-                // Walls between tiles of the area would split the room.
-                if ((x > area.X && tile.WestWall != 0) || (y > area.Y && tile.NorthWall != 0))
-                {
-                    return RoomPlanProblem.WallInside;
+                    return problem;
                 }
             }
+        }
+
+        return RoomPlanProblem.None;
+    }
+
+    /// <summary>
+    /// Checks one tile of <paramref name="area"/> (which must lie on the map) for <paramref name="player"/>
+    /// (0-based), as CorsixTH marks each blueprint tile good or bad.
+    /// </summary>
+    public static RoomPlanProblem CheckTile(LevelMap map, TileRect area, TilePosition position, int player)
+    {
+        var (x, y) = (position.X, position.Y);
+        var tile = map[x, y];
+        if (tile.Has(TileFlags.Room))
+        {
+            return RoomPlanProblem.OverlapsRoom;
+        }
+
+        if (!tile.Has(TileFlags.Buildable | TileFlags.Hospital))
+        {
+            return RoomPlanProblem.NotBuildable;
+        }
+
+        if (map.GetParcelOwner(tile.Parcel) != player + 1)
+        {
+            return RoomPlanProblem.NotOwned;
+        }
+
+        // Walls between tiles of the area would split the room.
+        if ((x > area.X && tile.WestWall != 0) || (y > area.Y && tile.NorthWall != 0))
+        {
+            return RoomPlanProblem.WallInside;
         }
 
         return RoomPlanProblem.None;

@@ -46,6 +46,27 @@ public sealed class IndexedImage
         return new IndexedImage(width, height, data[..size].ToArray());
     }
 
+    /// <summary>
+    /// A copy with each palette index replaced through <paramref name="table"/> (see <see cref="PaletteRemaps"/>).
+    /// Transparent pixels stay transparent.
+    /// </summary>
+    public IndexedImage Remap(ReadOnlySpan<byte> table)
+    {
+        if (table.Length != Palette.Size)
+        {
+            throw new ArgumentException($"A remap table has {Palette.Size} entries, got {table.Length}.", nameof(table));
+        }
+
+        var pixels = new byte[Pixels.Length];
+        for (var i = 0; i < pixels.Length; i++)
+        {
+            var index = Pixels[i];
+            pixels[i] = index == Palette.TransparentIndex ? index : table[index];
+        }
+
+        return new IndexedImage(Width, Height, pixels);
+    }
+
     /// <summary>Converts to 32-bit colours, row by row.</summary>
     public PaletteColor[] ToColors(Palette palette)
     {

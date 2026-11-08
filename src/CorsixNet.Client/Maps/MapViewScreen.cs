@@ -49,6 +49,7 @@ internal sealed class MapViewScreen : IScreen
     private readonly GraphicsDevice _device;
     private readonly IReadOnlyList<LevelSource> _levels;
     private readonly SpriteAtlas _blocks;
+    private readonly BlueprintDrawing _blueprints;
     private readonly MapRenderer _renderer;
     private readonly TextRenderer _text;
     private readonly Texture2D _diamond;
@@ -105,7 +106,9 @@ internal sealed class MapViewScreen : IScreen
         _blocks = new SpriteAtlas(device, install.LoadSpriteSheet("DATA", "VBLK-0", complex: false), palette, upscale, sprite => sprite.Width == 64 && sprite.Height == 32);
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
-        _animations = new AnimationRenderer(device, AnimationSet.Load(install), install.LoadSpriteSheet("DATA", "VSPR-0", complex: false), palette, upscale);
+        var sprites = install.LoadSpriteSheet("DATA", "VSPR-0", complex: false);
+        _animations = new AnimationRenderer(device, AnimationSet.Load(install), sprites, palette, upscale);
+        _blueprints = new BlueprintDrawing(device, install, _blocks, _animations, sprites, palette);
         _humanoids = new HumanoidDrawing(_animations);
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
@@ -218,6 +221,7 @@ internal sealed class MapViewScreen : IScreen
             var scale = _blocks.Scale switch { 1 => 2, 2 => 4, _ => 1 };
             _blocks.SetScale(scale);
             _animations.SetScale(scale);
+            _blueprints.SetScale(scale);
         }
 
         var pan = Vector2.Zero;
@@ -294,8 +298,14 @@ internal sealed class MapViewScreen : IScreen
             // The object being placed is drawn in the same order as placed objects, so walls in front hide it.
             var ghost = _buildTool.Ghost;
             var ghostTile = ghost is { } g && Simulation is { } ghostSimulation ? ObjectDrawing.DrawTile(ghostSimulation.Content, g.ObjectType, g.Tile, g.Orientation) : (TilePosition?)null;
+            var blueprint = _buildTool.Blueprint;
             _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) =>
             {
+                if (blueprint is not null)
+                {
+                    _blueprints.DrawTile(batch, blueprint, tile, anchorX, anchorY);
+                }
+
                 DrawEntities(batch, tile, anchorX, anchorY);
                 if (tile == ghostTile && ghost is { } shown)
                 {
@@ -303,7 +313,7 @@ internal sealed class MapViewScreen : IScreen
                 }
             });
             DrawOverlay(batch, map, view);
-            _buildTool.DrawPreview(batch, _diamond, _pixel, _hoveredTile is { } hovered ? new TilePosition(hovered.X, hovered.Y) : null);
+            _buildTool.DrawPreview(batch, _diamond);
             batch.End();
             if (_capturePath is { } capturePath && _target is not null)
             {
@@ -342,6 +352,7 @@ internal sealed class MapViewScreen : IScreen
     {
         _session?.Dispose();
         _target?.Dispose();
+        _blueprints.Dispose();
         _animations.Dispose();
         _blocks.Dispose();
         _text.Dispose();
@@ -748,6 +759,8 @@ internal sealed class MapViewScreen : IScreen
 
     private void DrawOverlay(SpriteBatch batch, LevelMap map, Rectangle view)
     {
+        // While building, the blueprint and the object being placed show where the cursor is, as in the original.
+        var hovered = _buildTool.IsActive ? null : _hoveredTile;
         var (firstScanline, lastScanline) = MapRenderer.VisibleScanlines(map, view);
         for (var s = firstScanline; s <= lastScanline; s++)
         {
@@ -755,7 +768,7 @@ internal sealed class MapViewScreen : IScreen
             for (var x = firstX; x <= lastX; x++)
             {
                 var y = s - x;
-                var tint = _hoveredTile == new Point(x, y) ? HoverTint : OverlayTint(map[x, y]);
+                var tint = hovered == new Point(x, y) ? HoverTint : OverlayTint(map[x, y]);
                 if (tint != Color.Transparent)
                 {
                     batch.Draw(_diamond, new Vector2((32 * (x - y)) - 32, 16 * (x + y)), tint);

@@ -42,11 +42,6 @@ internal readonly record struct BuildInput(
 /// </summary>
 internal sealed class BuildRoomTool
 {
-    private static readonly Color BlueprintTint = new Color(40, 90, 255) * 0.45f;
-    private static readonly Color InvalidTint = new Color(255, 70, 0) * 0.5f;
-    private static readonly Color DoorColor = new(255, 230, 0);
-    private static readonly Color WindowColor = new(0, 230, 255);
-    private static readonly Color InvalidEdgeColor = new(255, 40, 0);
     private static readonly Color FootprintTint = Color.White * 0.22f;
 
     /// <summary>How the original shows an object that cannot go where it is: flat and grey.</summary>
@@ -73,6 +68,7 @@ internal sealed class BuildRoomTool
     private long _sentTick;
     private int _roomId;
     private string? _message;
+    private RoomBlueprint? _blueprint;
 
     private ObjectDefinition? _placing;
     private Direction _orientation;
@@ -101,6 +97,9 @@ internal sealed class BuildRoomTool
 
     public bool IsActive => _phase != Phase.Inactive;
 
+    /// <summary>The blueprint to draw on the map, with its door and windows, until the room is built.</summary>
+    public RoomBlueprint? Blueprint => _blueprint;
+
     /// <summary>The object under the cursor while picking up, to draw highlighted; 0 if none.</summary>
     public int HighlightedObject => _pickingUp ? _highlightedObject : 0;
 
@@ -121,6 +120,7 @@ internal sealed class BuildRoomTool
         _pending.Clear();
         _problem = RoomPlanProblem.None;
         _message = null;
+        _blueprint = null;
         StopPlacing();
     }
 
@@ -132,7 +132,7 @@ internal sealed class BuildRoomTool
             return null;
         }
 
-        return _phase switch
+        var command = _phase switch
         {
             Phase.Blueprint => UpdateBlueprint(simulation, player, input),
             Phase.Door => UpdateDoor(simulation, input),
@@ -141,6 +141,8 @@ internal sealed class BuildRoomTool
             Phase.Objects => UpdateObjects(simulation, player, input),
             _ => null,
         };
+        _blueprint = CreateBlueprint(simulation, player);
+        return command;
     }
 
     public string Status(Simulation? simulation)
@@ -165,23 +167,63 @@ internal sealed class BuildRoomTool
         };
     }
 
-    /// <summary>Draws the blueprint, door and windows, or the footprint of the object being placed, in world coordinates.</summary>
-    public void DrawPreview(SpriteBatch batch, Texture2D diamond, Texture2D pixel, TilePosition? hovered)
+    /// <summary>Draws the footprint of the object being placed, in world coordinates.</summary>
+    public void DrawPreview(SpriteBatch batch, Texture2D diamond)
     {
-        switch (_phase)
+        if (_phase == Phase.Objects && _placing is not null && _ghostTile is { } tile && !_pickingUp
+            && _placing.Orientations.TryGetValue(_orientation, out var layout))
         {
-            case Phase.Blueprint or Phase.Door or Phase.Windows:
-                DrawBlueprint(batch, diamond, pixel, hovered);
-                break;
-            case Phase.Objects when _placing is not null && _ghostTile is { } tile && !_pickingUp
-                && _placing.Orientations.TryGetValue(_orientation, out var layout):
-                foreach (var part in layout.Footprint)
-                {
-                    DrawDiamond(batch, diamond, new TilePosition(tile.X + part.X, tile.Y + part.Y), FootprintTint);
-                }
-
-                break;
+            foreach (var part in layout.Footprint)
+            {
+                DrawDiamond(batch, diamond, new TilePosition(tile.X + part.X, tile.Y + part.Y), FootprintTint);
+            }
         }
+    }
+
+    /// <summary>
+    /// The blueprint as the original shows it: while dragging, good tiles blue and bad ones red;
+    /// from the door step on, a solid blue floor with the door and windows drawn into the wall.
+    /// </summary>
+    private RoomBlueprint? CreateBlueprint(Simulation simulation, int player)
+    {
+        if (_area is not { } area || _phase is not (Phase.Blueprint or Phase.Door or Phase.Windows or Phase.Waiting))
+        {
+            return null;
+        }
+
+        if (_phase == Phase.Blueprint)
+        {
+            var map = simulation.Map;
+            var allBad = _problem is RoomPlanProblem.TooSmall or RoomPlanProblem.UnknownRoomType;
+            return RoomBlueprint.Create(
+                area,
+                tile => !allBad && map.Contains(tile.X, tile.Y) && RoomBuilder.CheckTile(map, area, tile, player) == RoomPlanProblem.None,
+                placed: false);
+        }
+
+        var blueprint = RoomBlueprint.Create(area, _ => true, placed: true);
+        if (_phase == Phase.Door)
+        {
+            if (_door is { } hovered)
+            {
+                blueprint.SetDoor(hovered, _problem == RoomPlanProblem.None);
+            }
+
+            return blueprint;
+        }
+
+        blueprint.SetDoor(_door!.Value, valid: true);
+        foreach (var window in _windows)
+        {
+            blueprint.SetWindow(window, valid: true);
+        }
+
+        if (_phase == Phase.Windows && _hoverEdge is { } edge && edge != _door && !_windows.Contains(edge))
+        {
+            blueprint.SetWindow(edge, _problem == RoomPlanProblem.None);
+        }
+
+        return blueprint;
     }
 
     private Command? UpdateBlueprint(Simulation simulation, int player, BuildInput input)
@@ -575,56 +617,9 @@ internal sealed class BuildRoomTool
         return $"{name}: place the objects ({list}){placing}   Right click: turn   P: pick up   Esc: take the room down";
     }
 
-    private void DrawBlueprint(SpriteBatch batch, Texture2D diamond, Texture2D pixel, TilePosition? hovered)
-    {
-        var area = _area ?? (hovered is { } tile ? new TileRect(tile.X, tile.Y, 1, 1) : (TileRect?)null);
-        if (area is not { } rect)
-        {
-            return;
-        }
-
-        var invalid = _area is not null && _phase == Phase.Blueprint && _problem != RoomPlanProblem.None;
-        var tint = invalid ? InvalidTint : _area is null ? BlueprintTint * 0.6f : BlueprintTint;
-        for (var y = rect.Y; y < rect.Bottom; y++)
-        {
-            for (var x = rect.X; x < rect.Right; x++)
-            {
-                DrawDiamond(batch, diamond, new TilePosition(x, y), tint);
-            }
-        }
-
-        if (_phase == Phase.Door && _door is { } door)
-        {
-            DrawEdge(batch, pixel, door, _problem == RoomPlanProblem.None ? DoorColor : InvalidEdgeColor);
-        }
-
-        if (_phase == Phase.Windows)
-        {
-            DrawEdge(batch, pixel, _door!.Value, DoorColor);
-            foreach (var window in _windows)
-            {
-                DrawEdge(batch, pixel, window, WindowColor);
-            }
-
-            if (_hoverEdge is { } edge && !_windows.Contains(edge))
-            {
-                DrawEdge(batch, pixel, edge, _problem == RoomPlanProblem.None ? WindowColor * 0.6f : InvalidEdgeColor);
-            }
-        }
-    }
-
     private static void DrawDiamond(SpriteBatch batch, Texture2D diamond, TilePosition tile, Color tint)
     {
         batch.Draw(diamond, new Vector2((32 * (tile.X - tile.Y)) - 32, 16 * (tile.X + tile.Y)), tint);
-    }
-
-    /// <summary>Draws a thick line along a tile edge: from the tile's top corner to its right (north edge) or left (west edge) corner.</summary>
-    private static void DrawEdge(SpriteBatch batch, Texture2D pixel, DoorPlacement edge, Color color)
-    {
-        var top = new Vector2(32 * (edge.Tile.X - edge.Tile.Y), 16 * (edge.Tile.X + edge.Tile.Y));
-        var end = top + (edge.Edge == EdgeOrientation.North ? new Vector2(32, 16) : new Vector2(-32, 16));
-        var along = end - top;
-        batch.Draw(pixel, top, null, color, MathF.Atan2(along.Y, along.X), new Vector2(0, 0.5f), new Vector2(along.Length(), 3), SpriteEffects.None, 0);
     }
 
     private static string Explain(RoomPlanProblem problem)

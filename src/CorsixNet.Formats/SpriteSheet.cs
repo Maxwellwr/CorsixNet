@@ -25,6 +25,12 @@ public sealed class SpriteSheet
 
     public IndexedImage this[int index] => _sprites[index];
 
+    /// <summary>A sheet of the given sprites, for example a recoloured copy of part of another sheet.</summary>
+    public static SpriteSheet FromImages(IEnumerable<IndexedImage> sprites)
+    {
+        return new SpriteSheet([.. sprites]);
+    }
+
     /// <summary>Decodes a sprite sheet from decompressed table and chunk data.</summary>
     /// <param name="table">Contents of the <c>.TAB</c> file.</param>
     /// <param name="data">Contents of the <c>.DAT</c> file.</param>
