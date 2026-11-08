@@ -1,3 +1,4 @@
+using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Economy;
@@ -15,7 +16,8 @@ namespace CorsixNet.Sim;
 /// </summary>
 /// <remarks>
 /// Each <see cref="Step"/> first executes the commands scheduled for the current tick, in
-/// sequence order, then updates every entity in id order, then advances <see cref="Tick"/>.
+/// sequence order, then handles the end of the day if the tick is the day's last hour, then
+/// updates every entity in id order, then advances <see cref="Tick"/>.
 /// Given the same initial state and the same commands, every machine reaches the same state,
 /// which <see cref="ComputeStateHash"/> lets them compare.
 /// </remarks>
@@ -82,6 +84,9 @@ public sealed class Simulation
     /// <summary>Number of ticks completed since the game started.</summary>
     public long Tick { get; private set; }
 
+    /// <summary>The game date: each tick is one game hour, as in CorsixTH.</summary>
+    public GameDate Date => GameDate.FromHours(Tick);
+
     public LevelMap Map { get; }
 
     /// <summary>The only source of randomness the simulation may use.</summary>
@@ -138,6 +143,12 @@ public sealed class Simulation
             var scheduled = _pending[0];
             _pending.RemoveAt(0);
             scheduled.Command.Execute(this, scheduled.Player);
+        }
+
+        // CorsixTH's World:onTick handles the end of a day before the hour that starts the next one.
+        if (Date.Day != GameDate.FromHours(Tick + 1).Day)
+        {
+            OnEndDay();
         }
 
         // Entities added during this loop are updated from the next tick on.
@@ -423,6 +434,36 @@ public sealed class Simulation
         {
             placement.Write(writer);
         }
+    }
+
+    /// <summary>
+    /// The end of the current day, as CorsixTH's <c>World:onTick</c> handles it. At the end of a month
+    /// every hospital pays its staff's wages (<c>Hospital:onEndMonth</c>), then the candidates for hire
+    /// are replaced (<c>World:onEndMonth</c>).
+    /// </summary>
+    private void OnEndDay()
+    {
+        var date = Date;
+        if (!date.IsLastDayOfMonth)
+        {
+            return;
+        }
+
+        var wages = new int[_hospitals.Length];
+        foreach (var entity in _entities)
+        {
+            if (entity is Humanoid { Profile: { } profile, Employer: var employer } && employer >= 0 && employer < wages.Length)
+            {
+                wages[employer] += profile.Wage;
+            }
+        }
+
+        foreach (var hospital in _hospitals)
+        {
+            hospital.PayWages(Tick, wages[hospital.Player]);
+        }
+
+        MakeAvailableStaff(date.MonthOfGame);
     }
 
     private void CreateMapObject(MapObjectPlacement placement)

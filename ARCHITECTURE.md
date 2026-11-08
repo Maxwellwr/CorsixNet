@@ -101,7 +101,12 @@ entities and pending commands.
 - **Tick.** One tick is one game "hour", as in CorsixTH. At CorsixTH's Normal speed a tick
   lasts 54 ms of real time (about 18.5 ticks per second). The client decides how many ticks
   to run. The simulation knows nothing about real time.
-- **Step order.** Commands scheduled for the current tick run first, in sequence order. Then
+- **Calendar.** `Simulation.Date` (`Sim.Calendar.GameDate`, a port of CorsixTH's `date.lua`) follows
+  from the tick: days of 50 hours, months of the usual lengths, no leap years, the game starting at
+  hour 0 of 1 January of year 1. It needs no saved state of its own.
+- **Step order.** Commands scheduled for the current tick run first, in sequence order. If the
+  tick is the last hour of a day, the end of the day follows, as in CorsixTH's `World:onTick`: at
+  the end of a month every hospital pays its wages, then the candidates for hire are replaced. Then
   every entity updates in id order. Entity ids are assigned sequentially and never reused.
 - **Commands** (`Sim.Commands`) are the only input. A `ScheduledCommand` carries the tick,
   a sequence number and the player. For now the commands are debug ones: spawn a patient and
@@ -245,8 +250,12 @@ CorsixTH's free build mode.
 - The wage is the class's minimum salary plus skill divided by `SalaryAbilityDivisor`, plus for a
   doctor the addition of each ability (or the plain doctor's addition), never below the minimum.
 - The candidates for hire (`Simulation.AvailableStaff`) are made when the game starts, as CorsixTH's
-  `makeAvailableStaff(0)`. As in CorsixTH, all hospitals hire from the same list. Refreshing the
-  list every month comes with the game calendar.
+  `makeAvailableStaff(0)`, and made anew at the end of every month for the month that ends
+  (`GameDate.MonthOfGame`, 1 at the end of January), as `World:onEndMonth` does. As in CorsixTH,
+  all hospitals hire from the same list.
+- At the end of every month each hospital pays the wages of all its staff in one transaction
+  (`TransactionKind.Wages`), as `Hospital:onEndMonth` does; nothing is logged when there is no
+  wage to pay.
 - `HireStaffCommand(class, index, tile)` hires a candidate if the hospital has a month's salary in
   the bank and `StaffHiring.CheckPlacement` accepts the tile: a passable tile in the player's
   hospital, in a room only if its door can be reached, and never in a room for receptionists. Hiring
