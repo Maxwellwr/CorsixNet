@@ -22,6 +22,15 @@ public static class RoomPurchases
         return HospitalOf(simulation, player) is { } hospital && hospital.Balance >= simulation.Rules.BuildCost(room);
     }
 
+    /// <summary>
+    /// Whether <paramref name="player"/> (0-based) may build a room of this type: the level has it and the hospital has
+    /// discovered it (CorsixTH's build room dialog lists only discovered rooms).
+    /// </summary>
+    public static bool CanBuild(Simulation simulation, RoomDefinition room, int player)
+    {
+        return HospitalOf(simulation, player) is { } hospital && hospital.IsRoomDiscovered(room.Id);
+    }
+
     /// <summary>Buys the objects a newly built room needs, one transaction per object type.</summary>
     internal static void BuyNeededObjects(Simulation simulation, RoomDefinition room, int player)
     {
@@ -36,7 +45,6 @@ public static class RoomPurchases
         }
     }
 
-    /// <summary>Pays for the room itself when it is confirmed; its objects were paid for already.</summary>
     /// <summary>
     /// Whether <paramref name="player"/> can buy an object for a corridor: the hospital needs its whole price
     /// (CorsixTH's <c>UIFurnishCorridor:purchase</c>).
@@ -52,6 +60,7 @@ public static class RoomPurchases
         HospitalOf(simulation, player)?.Spend(simulation.Tick, simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
     }
 
+    /// <summary>Pays for the room itself when it is confirmed; its objects were paid for already.</summary>
     internal static void PayForRoom(Simulation simulation, RoomDefinition room, int player)
     {
         HospitalOf(simulation, player)?.Spend(simulation.Tick, simulation.Rules.RoomCost(room.Id), TransactionKind.BuildRoom, room.Id);

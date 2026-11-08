@@ -7,6 +7,12 @@ using CorsixNet.Sim.Staff;
 namespace CorsixNet.Sim.Economy;
 
 /// <summary>
+/// Whether an object type can be had on a level at all (the level files' <c>objects[n].AvailableForLevel</c>) and
+/// whether from the start, without research (<c>objects[n].StartAvail</c>).
+/// </summary>
+public readonly record struct ObjectAvailability(bool ForLevel, bool AtStart);
+
+/// <summary>
 /// The money settings of a level, from its level files: starting cash, what rooms and objects
 /// cost, and the staff settings (salaries, who is available for hire). Unlike <see cref="GameContent"/>, they differ between levels, so they are part of the
 /// saved state.
@@ -33,6 +39,8 @@ public sealed class LevelRules
     private readonly (string Id, int Cost)[] _objectCosts;
     private readonly Dictionary<string, int> _roomLookup;
     private readonly Dictionary<string, int> _objectLookup;
+    private readonly (string Id, ObjectAvailability Availability)[] _objectAvailability;
+    private readonly Dictionary<string, ObjectAvailability> _availabilityLookup;
 
     /// <param name="startCash">Each hospital's balance at the start.</param>
     /// <param name="roomCosts">Cost of each room type by room id, without its objects.</param>
@@ -46,6 +54,7 @@ public sealed class LevelRules
     /// <param name="endConditions">The goals to win and lose by; by default none.</param>
     /// <param name="interestRate">The bank's yearly interest in hundredths of a percent (<c>InterestRate</c>).</param>
     /// <param name="overdraftDifferential">What overdrafts cost on top, likewise (<c>OverdraftDiff</c>).</param>
+    /// <param name="objectAvailability">Which object types the level has and from when; an object it does not name is there from the start.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -58,7 +67,8 @@ public sealed class LevelRules
         int landCostPerTile = DefaultLandCostPerTile,
         EndConditions? endConditions = null,
         int interestRate = Hospital.DefaultInterestRate,
-        int overdraftDifferential = Hospital.DefaultOverdraftDifferential)
+        int overdraftDifferential = Hospital.DefaultOverdraftDifferential,
+        IEnumerable<KeyValuePair<string, ObjectAvailability>>? objectAvailability = null)
     {
         InterestRate = interestRate;
         OverdraftDifferential = overdraftDifferential;
@@ -74,6 +84,8 @@ public sealed class LevelRules
         _objectCosts = Sorted(objectCosts);
         _roomLookup = _roomCosts.ToDictionary(entry => entry.Id, entry => entry.Cost, StringComparer.Ordinal);
         _objectLookup = _objectCosts.ToDictionary(entry => entry.Id, entry => entry.Cost, StringComparer.Ordinal);
+        _objectAvailability = [.. (objectAvailability ?? []).Select(pair => (pair.Key, pair.Value)).OrderBy(entry => entry.Key, StringComparer.Ordinal)];
+        _availabilityLookup = _objectAvailability.ToDictionary(entry => entry.Id, entry => entry.Availability, StringComparer.Ordinal);
     }
 
     public int StartCash { get; }
@@ -132,6 +144,21 @@ public sealed class LevelRules
     /// </summary>
     public int BuildCost(RoomDefinition room) => RoomCost(room.Id) + NeededObjectsCost(room);
 
+    /// <summary>Whether the level has this object type, and from the start; one the level does not name is there from the start.</summary>
+    public ObjectAvailability Availability(string objectId) => _availabilityLookup.GetValueOrDefault(objectId, new ObjectAvailability(true, true));
+
+    /// <summary>
+    /// Whether a room of this type can ever be built on the level: every object it needs must be available for the
+    /// level (CorsixTH's <c>World:getAvailableRooms</c>).
+    /// </summary>
+    public bool IsRoomAvailable(RoomDefinition room) => Needed(room).All(needed => Availability(needed.ObjectId).ForLevel);
+
+    /// <summary>
+    /// Whether a room of this type can be built from the start: it is available and every object it needs is there
+    /// from the start; otherwise it has to be researched first (CorsixTH's <c>is_discovered</c>).
+    /// </summary>
+    public bool IsRoomDiscoveredAtStart(RoomDefinition room) => Needed(room).All(needed => Availability(needed.ObjectId) is { ForLevel: true, AtStart: true });
+
     /// <summary>The objects a room needs, in id order.</summary>
     public static IEnumerable<(string ObjectId, int Count)> Needed(RoomDefinition room)
     {
@@ -151,6 +178,14 @@ public sealed class LevelRules
         writer.WriteInt32(OverdraftDifferential);
         WriteCosts(writer, _roomCosts);
         WriteCosts(writer, _objectCosts);
+        writer.WriteInt32(_objectAvailability.Length);
+        foreach (var (id, availability) in _objectAvailability)
+        {
+            writer.WriteString(id);
+            writer.WriteBool(availability.ForLevel);
+            writer.WriteBool(availability.AtStart);
+        }
+
         Staff.Write(writer);
         writer.WriteInt32(Population.Count);
         foreach (var entry in Population)
@@ -173,6 +208,12 @@ public sealed class LevelRules
         var overdraftDifferential = reader.ReadInt32();
         var rooms = ReadCosts(reader);
         var objects = ReadCosts(reader);
+        var availability = new KeyValuePair<string, ObjectAvailability>[reader.ReadCount(MaxEntries)];
+        for (var i = 0; i < availability.Length; i++)
+        {
+            availability[i] = new(reader.ReadString(), new ObjectAvailability(reader.ReadBool(), reader.ReadBool()));
+        }
+
         var staff = StaffRules.Read(reader);
         var population = new PopulationChange[reader.ReadCount(MaxEntries)];
         for (var i = 0; i < population.Length; i++)
@@ -180,7 +221,7 @@ public sealed class LevelRules
             population[i] = new PopulationChange(reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential);
+        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

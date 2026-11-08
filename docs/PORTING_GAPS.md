@@ -17,7 +17,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Diagnosis rooms: X-ray, scanner, ultrascan, blood machine, cardiogram, psychiatry (also a treatment room), ward (also treatment) | `rooms/x_ray_room.lua`, `scanner_room.lua`, `ultrascan.lua`, `blood_machine_room.lua`, `cardiogram.lua`, `psych.lua`, `ward.lua` |
 | Treatment rooms: operating theatre, inflation, fracture clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination | `rooms/operating_theatre.lua`, `inflation.lua`, `fracture_clinic.lua`, `hair_restoration.lua`, `slack_tongue.lua`, `dna_fixer.lua`, `electrolysis.lua`, `jelly_vat.lua`, `decontamination.lua` |
 | Facilities: staff room, toilets, training room, research department | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
-| Room availability by level (`rooms[n]` / `towns` settings) and by research (rooms to be discovered) | `world.lua` (`available_rooms`), `research_department.lua` |
+| Rooms discovered by research (availability by level and at the start is ported) | `research_department.lua` |
 | Editing a finished room (back to blueprint: resize, move the door; add, move or remove objects), deleting a room | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
 | Room-specific rules: doors that can't be used while busy (swing doors of the operating theatre, ward), rooms that need two staff (operating theatre), max patients per room (ward beds) | `rooms/*.lua`, `objects/doors/*` |
@@ -158,7 +158,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`). Staff and
   patient happiness for the criteria count as full until happiness is modelled.
 - Remaining level settings: emergencies (`#emergency_control`), epidemics, VIP and earthquake schedules,
-  `computer[n]` AI players, interest rates and overdraft, research settings, room availability, `#gbv`
+  `computer[n]` AI players, research settings, `#gbv`
   values beyond the ones read now.
 - Original campaign (12 levels in order, difficulty choice), CorsixTH campaigns (`.campaign`),
   custom levels (`.level` + `.map`) (`app.lua`, `Campaigns/`, `Levels/`).

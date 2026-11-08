@@ -6,7 +6,8 @@
 // getReputationChangeLikelihood, computePriceLevelImpact, updateNotCuredCounts) and entities/humanoids/patient.lua
 // (Patient:getPriceDistortion); the hospital's value and the year's counts from the same file (Hospital:Hospital,
 // spendMoney, receiveMoney, onEndYear) and the year end's trophies and awards from
-// dialogs/fullscreen/annual_report.lua (UIAnnualReport:checkTrophiesAndAwards, updateAwards).
+// dialogs/fullscreen/annual_report.lua (UIAnnualReport:checkTrophiesAndAwards, updateAwards); the rooms discovered
+// from the same file (Hospital:Hospital's room_discoveries, Hospital:isRoomDiscovered).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -254,6 +255,7 @@ public sealed class Hospital
     private readonly long[,] _insuranceOwed = new long[InsuranceCompanies, InsuranceMonths];
 
     private readonly List<YearEndAward> _lastYearAwards = [];
+    private readonly SortedSet<string> _discoveredRooms = new(StringComparer.Ordinal);
 
     internal Hospital(int player, long balance, int reputation = AverageReputation, long value = 0, int interestRate = DefaultInterestRate, int overdraftDifferential = DefaultOverdraftDifferential)
     {
@@ -371,6 +373,15 @@ public sealed class Hospital
     /// watch has run down, or when the player opened it early.
     /// </summary>
     public bool IsOpen { get; private set; }
+
+    /// <summary>The room types the hospital may build, in id order: those discovered at the start or since by research.</summary>
+    public IReadOnlyCollection<string> DiscoveredRooms => _discoveredRooms;
+
+    /// <summary>Whether the hospital may build rooms of this type (CorsixTH's <c>Hospital:isRoomDiscovered</c>).</summary>
+    public bool IsRoomDiscovered(string roomId) => _discoveredRooms.Contains(roomId);
+
+    /// <summary>Lets the hospital build rooms of this type: at the start, or when research discovers it.</summary>
+    internal void DiscoverRoom(string roomId) => _discoveredRooms.Add(roomId);
 
     /// <summary>The opening watch's segments still to go, from 12 down to −1 (CorsixTH's <c>open_timer</c>).</summary>
     public int OpenTimer { get; private set; } = OpeningSegments;
@@ -938,6 +949,12 @@ public sealed class Hospital
             writer.WriteInt32(lostTo.Start);
         }
 
+        writer.WriteInt32(_discoveredRooms.Count);
+        foreach (var room in _discoveredRooms)
+        {
+            writer.WriteString(room);
+        }
+
         writer.WriteBool(IsOpen);
         writer.WriteInt32(OpenTimer);
         writer.WriteInt32(OpenTickTimer);
@@ -1021,6 +1038,12 @@ public sealed class Hospital
         if (reader.ReadBool())
         {
             hospital.LostTo = new EndGoal((EndCriterion)reader.ReadByte(), reader.ReadInt32(), reader.ReadBool(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        }
+
+        var rooms = reader.ReadCount(MaxCases);
+        for (var i = 0; i < rooms; i++)
+        {
+            hospital._discoveredRooms.Add(reader.ReadString());
         }
 
         hospital.IsOpen = reader.ReadBool();

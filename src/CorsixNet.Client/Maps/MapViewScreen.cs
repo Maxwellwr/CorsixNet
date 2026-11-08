@@ -884,8 +884,14 @@ internal sealed class MapViewScreen : IScreen
         var roomToBuild = shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
-            // As in the original, a room can only be started with its whole cost in the bank.
-            if (RoomPurchases.CanAfford(simulation, roomType, _session.Player))
+            // As in the original, a room can only be started once discovered and with its whole cost in the bank.
+            if (!RoomPurchases.CanBuild(simulation, roomType, _session.Player))
+            {
+                ShowNotice(simulation.Rules.IsRoomAvailable(roomType)
+                    ? $"The {roomType.Name} has not been researched yet"
+                    : $"There is no {roomType.Name} on this level");
+            }
+            else if (RoomPurchases.CanAfford(simulation, roomType, _session.Player))
             {
                 _buildTool.Start(roomType);
             }
