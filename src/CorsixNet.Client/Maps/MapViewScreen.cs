@@ -45,6 +45,12 @@ internal sealed class MapViewScreen : IScreen
     private static readonly Color PickUpTint = new(150, 200, 255);
     private static readonly Color CellOutlineColor = new(232, 0, 0);
 
+    /// <summary>Colour of the status bar and the frame around the map while building, the blue of the blueprints.</summary>
+    private static readonly Color BuildModeColor = new(0, 48, 144);
+
+    /// <summary>Width of the frame drawn around the map while building.</summary>
+    private const int BuildFrameWidth = 3;
+
     /// <summary>How long a notice such as "not enough money" stays in the status line.</summary>
     private const int NoticeMilliseconds = 4000;
 
@@ -90,6 +96,9 @@ internal sealed class MapViewScreen : IScreen
     private bool _buildBack;
     private string? _notice;
     private long _noticeUntil;
+
+    /// <summary>Until when the status line reminds that other keys wait until building is over.</summary>
+    private long _buildReminderUntil;
     private bool _wander;
     private bool _demoPending;
     private int? _selected;
@@ -357,7 +366,18 @@ internal sealed class MapViewScreen : IScreen
         batch.End();
 
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-        batch.Draw(_pixel, new Rectangle(0, 0, _device.Viewport.Width, StatusHeight), Color.Black);
+        var viewport = _device.Viewport;
+        var building = _buildTool.IsActive;
+        batch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, StatusHeight), building ? BuildModeColor : Color.Black);
+        if (building)
+        {
+            // A frame round the map, so that building can be told apart at a glance.
+            var mapHeight = viewport.Height - StatusHeight;
+            batch.Draw(_pixel, new Rectangle(0, StatusHeight, BuildFrameWidth, mapHeight), BuildModeColor);
+            batch.Draw(_pixel, new Rectangle(viewport.Width - BuildFrameWidth, StatusHeight, BuildFrameWidth, mapHeight), BuildModeColor);
+            batch.Draw(_pixel, new Rectangle(0, viewport.Height - BuildFrameWidth, viewport.Width, BuildFrameWidth), BuildModeColor);
+        }
+
         _text.Draw(batch, StatusLine(), new Vector2(8, 4));
         _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
         batch.End();
@@ -655,6 +675,7 @@ internal sealed class MapViewScreen : IScreen
             _wander = !_wander;
         }
 
+        var wasBuilding = _buildTool.IsActive;
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom("gp") is { } gp)
         {
             // As in the original, a room can only be started with its whole cost in the bank.
@@ -696,6 +717,11 @@ internal sealed class MapViewScreen : IScreen
             if (_buildTool.Update(simulation, _session.Player, input) is { } command)
             {
                 _session.Submit(command);
+            }
+
+            if (wasBuilding && (pressed(Keys.B) || pressed(Keys.H) || pressed(Keys.G) || pressed(Keys.D1) || pressed(Keys.D2) || pressed(Keys.D3) || pressed(Keys.D4)))
+            {
+                _buildReminderUntil = Environment.TickCount64 + NoticeMilliseconds;
             }
 
             return;
@@ -905,7 +931,8 @@ internal sealed class MapViewScreen : IScreen
     {
         if (_buildTool.IsActive)
         {
-            return _buildTool.Status(Simulation);
+            var reminder = Environment.TickCount64 < _buildReminderUntil ? " (finish or cancel the room to use other keys)" : string.Empty;
+            return $"BUILD MODE{reminder}   {_buildTool.Status(Simulation)}";
         }
 
         if (_notice is not null && Environment.TickCount64 < _noticeUntil)
