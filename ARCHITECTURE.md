@@ -315,8 +315,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   done with `decimal` here to stay deterministic); at the end of each day the next day's patients get
   random hours. A patient only arrives at a hospital with a staffed reception desk, at one of up to 8
   spawn points per map edge from which the hospital can be reached; the first one by the shortest way
-  to a desk. As in CorsixTH every patient goes to the first hospital for now, and only
-  once it has opened: each `Hospital` runs CorsixTH's opening watch (`UIWatch` "initial_opening"),
+  to a desk. As in CorsixTH (`World:chooseHospitalForPatient`) the hospitals take turns by
+  `Hospital.SpawnAttempts`, a hospital not yet open passing its turn, and patients come only once the first
+  hospital has opened: each `Hospital` runs CorsixTH's opening watch (`UIWatch` "initial_opening"),
   13 segments of 385 hours, and opens an hour after it has run down, 5006 hours (about 100 days)
   into the game. `OpenHospitalCommand` opens it early, as the watch's button does; the client's O
   key stands in for that button and the date box shows the days left. `--demo` opens at once.

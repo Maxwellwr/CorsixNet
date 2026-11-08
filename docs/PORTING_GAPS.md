@@ -99,8 +99,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - VIP visits and their verdict, affecting reputation (`entities/humanoids/vip.lua`, `humanoid_actions/vip_go_to_next_room.lua`).
 - Earthquakes damaging machines (`earthquake.lua`).
 - Rats, litter and vomit, hospital cleanliness (`entities/rat.lua`, `objects/litter.lua`).
-- Patient AI in multi-hospital games: choosing between hospitals by reputation; today every patient goes
-  to the first hospital.
+- Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
+  `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
 - Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
 - Floating dollar signs when a patient pays.
 

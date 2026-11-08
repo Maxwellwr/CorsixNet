@@ -394,6 +394,9 @@ public sealed class Hospital
     /// <summary>Lets the hospital build rooms of this type: at the start, or when research discovers it.</summary>
     internal void DiscoverRoom(string roomId) => _discoveredRooms.Add(roomId);
 
+    /// <summary>Patients sent to the hospital so far, whether they came or not (CorsixTH's <c>spawn_attempts</c>).</summary>
+    public long SpawnAttempts { get; internal set; }
+
     /// <summary>The radiators' heat at the start, in tenths (CorsixTH's <c>radiator_heat</c> of 0.5).</summary>
     public const int DefaultRadiatorHeat = 5;
 
@@ -1104,6 +1107,7 @@ public sealed class Hospital
             writer.WriteString(room);
         }
 
+        writer.WriteInt64(SpawnAttempts);
         writer.WriteInt32(RadiatorHeat);
         writer.WriteBool(IsHeatingBroken);
         writer.WriteInt32(SavedRadiatorHeat);
@@ -1201,6 +1205,7 @@ public sealed class Hospital
             hospital._discoveredRooms.Add(reader.ReadString());
         }
 
+        hospital.SpawnAttempts = reader.ReadInt64();
         hospital.RadiatorHeat = reader.ReadInt32();
         hospital.IsHeatingBroken = reader.ReadBool();
         hospital.SavedRadiatorHeat = reader.ReadInt32();

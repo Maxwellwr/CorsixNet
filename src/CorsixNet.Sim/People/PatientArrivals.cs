@@ -18,8 +18,9 @@ namespace CorsixNet.Sim.People;
 /// to a hospital with a staffed reception desk, and enters the map at one of its spawn points.
 /// </summary>
 /// <remarks>
-/// CorsixTH waits for the hospital to open (the countdown at the start of a level) and sends every
-/// patient to the first hospital; both still apply here, apart from the countdown.
+/// As in CorsixTH, patients come once the first hospital has opened (the countdown at the start of a level), and go
+/// to the hospitals in turn (<c>World:chooseHospitalForPatient</c>). Unlike CorsixTH, whose other hospitals are
+/// computer players, a hospital that has not opened yet gets none: its turn passes as if it had no desk.
 /// </remarks>
 public sealed class PatientArrivals
 {
@@ -39,9 +40,6 @@ public sealed class PatientArrivals
 
     /// <summary>How much <see cref="SpawnRate"/> changes at the end of each month.</summary>
     public int MonthlyIncrease { get; private set; }
-
-    /// <summary>Whether the first hospital has had a patient yet; the first comes by the shortest way to a desk.</summary>
-    public bool HadPatients { get; private set; }
 
     /// <summary>
     /// Where patients enter and leave the map: up to 8 tiles on each edge that can be reached from the
@@ -78,7 +76,7 @@ public sealed class PatientArrivals
     /// </summary>
     internal void SpawnPatients(Simulation simulation)
     {
-        // As in CorsixTH, patients come to the first hospital, and only once it has opened.
+        // As in CorsixTH, patients come only once the first hospital has opened.
         if (simulation.Hospitals.Count == 0 || !simulation.Hospitals[0].IsOpen)
         {
             return;
@@ -87,8 +85,23 @@ public sealed class PatientArrivals
         var count = _spawnHours[GameDate.FromHours(simulation.Tick + 1).Hour];
         for (var i = 0; i < count; i++)
         {
-            SpawnPatient(simulation, player: 0);
+            SpawnPatient(simulation, ChooseHospital(simulation));
         }
+    }
+
+    /// <summary>
+    /// <c>World:chooseHospitalForPatient</c>, which CorsixTH has round-robin only: the hospitals take turns, by the
+    /// patients each was sent so far, whether they came or not.
+    /// </summary>
+    internal static int ChooseHospital(Simulation simulation)
+    {
+        long attempts = 0;
+        foreach (var hospital in simulation.Hospitals)
+        {
+            attempts += hospital.SpawnAttempts;
+        }
+
+        return (int)(attempts % simulation.Hospitals.Count);
     }
 
     /// <summary>
@@ -106,16 +119,19 @@ public sealed class PatientArrivals
         // The disease is chosen first, even when no patient comes after all.
         var hospital = simulation.Hospitals[player];
         var disease = PatientCare.NewPatientDisease(simulation, hospital);
+
+        // Counted even when no patient comes, as CorsixTH's spawn_attempts.
+        hospital.SpawnAttempts++;
         var desks = ReceptionDesks.OfHospital(simulation, player, staffedOnly: true).ToList();
-        if (desks.Count == 0)
+        if (desks.Count == 0 || !hospital.IsOpen)
         {
             return null;
         }
 
-        var spawn = !HadPatients && ClosestSpawnToDesk(simulation, desks) is { } closest
+        // The hospital's first patient takes the shortest way to a desk (Hospital:hadPatients).
+        var spawn = hospital.Visitors == 0 && ClosestSpawnToDesk(simulation, desks) is { } closest
             ? closest
             : _spawnPoints[simulation.Random.Next(_spawnPoints.Count)];
-        HadPatients = true;
         var look = disease?.Look ?? PatientLook.Standard;
         var patient = simulation.AddEntity(id => Humanoid.CreatePatient(id, spawn, simulation.Random, look, player));
         var behaviour = new PatientBehaviour();
@@ -329,7 +345,6 @@ public sealed class PatientArrivals
     {
         writer.WriteInt32(SpawnRate);
         writer.WriteInt32(MonthlyIncrease);
-        writer.WriteBool(HadPatients);
         foreach (var count in _spawnDates)
         {
             writer.WriteInt32(count);
@@ -347,7 +362,6 @@ public sealed class PatientArrivals
         {
             SpawnRate = reader.ReadInt32(),
             MonthlyIncrease = reader.ReadInt32(),
-            HadPatients = reader.ReadBool(),
         };
         for (var i = 0; i < arrivals._spawnDates.Length; i++)
         {

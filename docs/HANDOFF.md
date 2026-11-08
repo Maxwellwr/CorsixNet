@@ -86,6 +86,12 @@ Done and committed:
 - Room doors (see ARCHITECTURE.md, "Room doors", "Wandering"): people go through a room door with its
   opening animation, one at a time; the demo's wanderers meander as CorsixTH's and keep out of rooms.
   Save format version 9.
+- Overnight cloud batch on 2026-11-08 (PRs #97–#108, each listing its oddities): clearing a new blueprint,
+  corridor objects, the opening watch (Shift+O), reputation, the year end's trophies and awards and the
+  hospital's value, winning and losing, loans and interest (L / Shift+L), buying land (N), room availability
+  by level, setting prices in the casebook (by command only), heating and boiler breakdowns (T / Shift+T),
+  patients sent to the hospitals in turn. No game data in the cloud: real-data tests were skipped there and
+  the client was not run, so these want a look on MSI. Save format version 19.
 
 Not done yet:
 
