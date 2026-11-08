@@ -264,6 +264,31 @@ public sealed class Hospital
     /// </summary>
     public int LowestReputationThisYear { get; private set; }
 
+    /// <summary>
+    /// Cured patients in percent of all who were cured, died or went home uncured, rounded (CorsixTH's
+    /// <c>percentage_cured</c> from <c>Hospital:updatePercentages</c>); 0 until the first of them.
+    /// </summary>
+    public int PercentageCured
+    {
+        get
+        {
+            var all = Cured + NotCured + Deaths;
+            return all == 0 ? 0 : RoundPercent(Cured, all);
+        }
+    }
+
+    /// <summary>
+    /// Deaths in percent of the cured and dead, rounded (CorsixTH's <c>percentage_killed</c>); 0 until the first
+    /// patient leaves. CorsixTH computes 0 / 0 when patients have only gone home uncured, which is null here.
+    /// </summary>
+    public int? PercentageKilled => Cured + Deaths > 0 ? RoundPercent(Deaths, Cured + Deaths) : NotCured > 0 ? null : 0;
+
+    /// <summary>Whether the hospital has won or lost the level.</summary>
+    public EndOutcome Outcome { get; private set; }
+
+    /// <summary>The goal the hospital lost to, if it lost.</summary>
+    public EndGoal? LostTo { get; private set; }
+
     /// <summary>The trophies, awards and fines of the last year end, in the order of CorsixTH's annual report.</summary>
     public IReadOnlyList<YearEndAward> LastYearAwards => _lastYearAwards;
 
@@ -576,6 +601,19 @@ public sealed class Hospital
         }
     }
 
+    /// <summary>Records that the hospital won or lost; the first outcome stands.</summary>
+    internal void End(EndOutcome outcome, EndGoal? lostTo)
+    {
+        if (Outcome == EndOutcome.None && outcome != EndOutcome.None)
+        {
+            Outcome = outcome;
+            LostTo = lostTo;
+        }
+    }
+
+    /// <summary>Lua's <c>math.round</c>, <c>floor(x + 0.5)</c>, of a part in percent.</summary>
+    private static int RoundPercent(int part, int all) => (int)decimal.Floor((part * 100m / all) + 0.5m);
+
     /// <summary>Opens the hospital (CorsixTH's <c>Hospital:open</c>), when the watch runs down or the player clicks it.</summary>
     internal void Open() => IsOpen = true;
 
@@ -767,6 +805,18 @@ public sealed class Hospital
             writer.WriteInt32(award.Reputation);
         }
 
+        writer.WriteByte((byte)Outcome);
+        writer.WriteBool(LostTo is not null);
+        if (LostTo is { } lostTo)
+        {
+            writer.WriteByte((byte)lostTo.Criterion);
+            writer.WriteInt32(lostTo.Group);
+            writer.WriteBool(lostTo.AtLeast);
+            writer.WriteInt32(lostTo.Value);
+            writer.WriteInt32(lostTo.Bound);
+            writer.WriteInt32(lostTo.Start);
+        }
+
         writer.WriteBool(IsOpen);
         writer.WriteInt32(OpenTimer);
         writer.WriteInt32(OpenTickTimer);
@@ -833,6 +883,18 @@ public sealed class Hospital
             }
 
             hospital._lastYearAwards.Add(new((YearEndAwardKind)kind, reader.ReadInt32(), reader.ReadInt32()));
+        }
+
+        var outcome = reader.ReadByte();
+        if (outcome > (byte)EndOutcome.Lost)
+        {
+            throw new InvalidDataException($"Unknown outcome {outcome}.");
+        }
+
+        hospital.Outcome = (EndOutcome)outcome;
+        if (reader.ReadBool())
+        {
+            hospital.LostTo = new EndGoal((EndCriterion)reader.ReadByte(), reader.ReadInt32(), reader.ReadBool(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
         }
 
         hospital.IsOpen = reader.ReadBool();

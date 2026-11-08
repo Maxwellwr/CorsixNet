@@ -84,7 +84,8 @@ public static partial class LevelRulesLoader
             .Where(definition => config.GetInt($"objects[{definition.ObjectType}].StartCost") is not null)
             .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
         return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config), startReputation,
-            AwardsFromConfig(config), config.GetInt("gbv.LandCostPerTile") ?? LevelRules.DefaultLandCostPerTile);
+            AwardsFromConfig(config), config.GetInt("gbv.LandCostPerTile") ?? LevelRules.DefaultLandCostPerTile,
+            EndConditionsFromConfig(config, startCash, startReputation));
     }
 
     /// <summary>
@@ -108,6 +109,15 @@ public static partial class LevelRulesLoader
 
             entries.Add(new PopulationChange(month.Value, change.Value));
         }
+    }
+
+    /// <summary>
+    /// The level's <c>win_criteria[n]</c> and <c>lose_criteria[n]</c> entries (CorsixTH's <c>EndConditions:_loadGoals</c>);
+    /// entries with a criterion CorsixTH does not know, such as base_config.lua's zeros, are left out.
+    /// </summary>
+    public static EndConditions EndConditionsFromConfig(LevelConfig config, int startCash, int startReputation)
+    {
+        return new EndConditions(GoalsFromConfig(config, "win_criteria", startCash, startReputation), GoalsFromConfig(config, "lose_criteria", startCash, startReputation));
     }
 
     /// <summary>The level's <c>awards_trophies</c> settings on top of CorsixTH's base_config.lua.</summary>
@@ -228,4 +238,34 @@ public static partial class LevelRulesLoader
 
     [GeneratedRegex(@"^LEVEL\.L(\d+)$", RegexOptions.IgnoreCase)]
     private static partial Regex OriginalLevel();
+
+    private static List<EndGoal> GoalsFromConfig(LevelConfig config, string table, int startCash, int startReputation)
+    {
+        const int maxIndex = 100;
+        var goals = new List<EndGoal>();
+        for (var i = 0; i < maxIndex; i++)
+        {
+            if (config.GetInt($"{table}[{i}].Criteria") is not { } number || !Enum.IsDefined((EndCriterion)number) || number > byte.MaxValue)
+            {
+                continue;
+            }
+
+            var criterion = (EndCriterion)number;
+            var start = criterion switch
+            {
+                EndCriterion.Balance => startCash,
+                EndCriterion.Reputation => startReputation,
+                _ => 0,
+            };
+            goals.Add(new EndGoal(
+                criterion,
+                config.GetInt($"{table}[{i}].Group") ?? 0,
+                config.GetInt($"{table}[{i}].MaxMin") == 1,
+                config.GetInt($"{table}[{i}].Value") ?? 0,
+                config.GetInt($"{table}[{i}].Bound") ?? 0,
+                start));
+        }
+
+        return goals;
+    }
 }

@@ -69,6 +69,9 @@ public class LevelRulesLoaderTests
         Assert.Equal(20, rules.ObjectCost("chair"));
         Assert.True(rules.ObjectCost("desk") > 0);
         Assert.Equal(2280 + rules.ObjectCost("desk") + 100 + 20, rules.BuildCost(BaseGameContent.GpOffice));
+
+        // Every original level can be won.
+        Assert.NotEmpty(rules.EndConditions.WinGoals);
     }
 
     [Fact]
@@ -146,6 +149,30 @@ public class LevelRulesLoaderTests
 
         // FULL01.SAM: 3 patients the first month, one more each month until month 7, and so on.
         Assert.Equal([new(0, 3), new(1, 1), new(7, 0), new(14, 1), new(21, 0)], rules.Population);
+    }
+
+    [Fact]
+    public void ReadsWinAndLoseCriteria()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #town.StartCash.StartRep 30000 450
+            #win_criteria[0].Criteria.MaxMin.Value.Group.Bound 1 1 600 1 0
+            #win_criteria[1].Criteria.MaxMin.Value.Group.Bound 2 1 50000 1 0
+            #win_criteria[2].Criteria.MaxMin.Value.Group.Bound 0 0 0 0 0
+            #lose_criteria[0].Criteria.MaxMin.Value.Group.Bound 2 0 -20000 1 -10000
+            #lose_criteria[4].Criteria.MaxMin.Value.Group.Bound 5 1 40 2 30
+            #lose_criteria[5].Criteria.MaxMin.Value.Group.Bound 12 1 40 2 30
+            """));
+
+        var conditions = LevelRulesLoader.FromConfig(config, null, BaseGameContent.Create()).EndConditions;
+
+        Assert.Equal(
+            [new EndGoal(EndCriterion.Reputation, 1, true, 600, 0, 450), new EndGoal(EndCriterion.Balance, 1, true, 50000, 0, 30000)],
+            conditions.WinGoals);
+        Assert.Equal(
+            [new EndGoal(EndCriterion.Balance, 1, false, -20000, -10000, 30000), new EndGoal(EndCriterion.PercentageKilled, 2, true, 40, 30, 0)],
+            conditions.LoseGoals);
+        Assert.Empty(LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, BaseGameContent.Create()).EndConditions.WinGoals);
     }
 
     [Fact]
