@@ -83,6 +83,9 @@ Done and committed:
   the screen, the doctor examines them on the crash trolley, they dress, pay and go back to the GP. With a
   weak GP on level one it takes cures from 0 to 8 in five months. `--demo` builds it after the pharmacy
   and hires a second doctor. Save format version 8.
+- Room doors (see ARCHITECTURE.md, "Room doors", "Wandering"): people go through a room door with its
+  opening animation, one at a time; the demo's wanderers meander as CorsixTH's and keep out of rooms.
+  Save format version 9.
 
 Not done yet:
 

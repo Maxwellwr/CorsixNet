@@ -20,6 +20,7 @@ public enum CommandKind : ushort
     ConfirmRoom = 6,
     CancelRoom = 7,
     HireStaff = 8,
+    Meander = 9,
 }
 
 /// <summary>
@@ -52,6 +53,7 @@ public abstract record Command
             CommandKind.ConfirmRoom => new ConfirmRoomCommand(reader.ReadInt32()),
             CommandKind.CancelRoom => new CancelRoomCommand(reader.ReadInt32()),
             CommandKind.HireStaff => new HireStaffCommand(ReadStaffClass(reader), reader.ReadInt32(), reader.ReadTile()),
+            CommandKind.Meander => new MeanderCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -99,6 +101,32 @@ public sealed record WalkToCommand(int HumanoidId, TilePosition Target) : Comman
         writer.WriteInt32(HumanoidId);
         writer.WriteTile(Target);
     }
+}
+
+/// <summary>
+/// Debug command: sends a humanoid wandering, as CorsixTH's meander action (<c>humanoid_actions/meander.lua</c>): to one
+/// of the 24 nearest idle tiles, picked at random. The idle tile search does not go through doors, so wandering people
+/// stay out of rooms (and inside the room they are in).
+/// </summary>
+public sealed record MeanderCommand(int HumanoidId) : Command
+{
+    public override CommandKind Kind => CommandKind.Meander;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(HumanoidId) is not Humanoid humanoid)
+        {
+            return;
+        }
+
+        var start = humanoid.StepTarget;
+        if (simulation.Pathfinder.TryFindIdleTile(simulation.Map, start, simulation.Random.NextInclusive(1, 24), out var tile) && tile != start)
+        {
+            humanoid.WalkTo(simulation, tile);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(HumanoidId);
 }
 
 /// <summary>

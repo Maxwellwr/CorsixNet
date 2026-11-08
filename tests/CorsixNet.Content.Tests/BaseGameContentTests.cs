@@ -27,6 +27,20 @@ public class BaseGameContentTests
     }
 
     [Fact]
+    public void DoorAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var animations = BaseGameContent.DoorAnimations.Values.SelectMany(door => new[] { door.Entering, door.Leaving }).ToList();
+
+        Assert.NotEmpty(animations);
+        foreach (var animation in animations)
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+    }
+
+    [Fact]
     public void MultiUseAnimationsLastAsLongAsTheOriginalsAnimations()
     {
         var set = AnimationSet.Load(RealGameData.Require());

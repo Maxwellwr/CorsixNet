@@ -222,10 +222,24 @@ public static class BaseGameContent
         114, 116, 118, 120, 142, 115, 119, 117, 121, 143,
     ];
 
+    /// <summary>
+    /// Door animations (DoorE, DoorL) of entities/humanoid.lua's <c>walk_anims</c> table. The receptionist and undressed
+    /// patients have none there; they never go through a room door.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<HumanoidType, DoorAnimations> DoorAnimations = new Dictionary<HumanoidType, DoorAnimations>
+    {
+        [HumanoidType.StandardMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12)),
+        [HumanoidType.StandardFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12)),
+        [HumanoidType.Doctor] = new(Entering: new(672, 10), Leaving: new(670, 12)),
+        [HumanoidType.Nurse] = new(Entering: new(3266, 10), Leaving: new(3264, 12)),
+        [HumanoidType.Handyman] = new(Entering: new(3288, 10), Leaving: new(3286, 12)),
+    };
+
     public static GameContent Create() => new(
         [GpOffice, Pharmacy, GeneralDiagnosis],
         ExternalWalls,
-        [Desk, Cabinet, Chair, ReceptionDesk, PharmacyCabinet, Screen, CrashTrolley]);
+        [Desk, Cabinet, Chair, ReceptionDesk, PharmacyCabinet, Screen, CrashTrolley],
+        DoorAnimations);
 
     /// <summary>
     /// pharmacy_cabinet.lua's <c>anim_set</c>: the nurse's own begin and finish animations around the ones showing her with

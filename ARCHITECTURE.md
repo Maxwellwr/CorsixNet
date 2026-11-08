@@ -119,6 +119,16 @@ entities and pending commands.
 - **Humanoids** walk one tile per 8 ticks, as in CorsixTH. During a step, `Tile` is the tile
   being left; it changes when the step completes. When the map changes under a planned path,
   the humanoid plans again.
+- **Room doors.** A step across a room door's edge is CorsixTH's `navigateDoor` (`walk.lua`): the
+  humanoid stands on the door's tile while its door animation (`GameContent.FindDoorAnimations`,
+  `walk_anims` DoorL/DoorE) plays, the door itself hidden, and comes out on the far side when it
+  ends. Going north or west uses the leaving animation, east or south the entering one, mirrored
+  for west and south. One humanoid goes through a door at a time; others wait on their side.
+  Humanoids without door animations (receptionist, undressed patients) walk through plainly.
+  Door queues, knocking and swing doors are not ported yet.
+- **Wandering.** `MeanderCommand` ports `meander.lua`: the humanoid walks to one of the 24 nearest
+  idle tiles (`Pathfinder.TryFindIdleTile`), whose search does not go through doors, so wandering
+  people keep out of rooms. The demo's walkers use it.
 
 Presentation details are derived in the client, not stored in the simulation. Examples are
 pixel offsets during a step and which tile a walking humanoid is drawn with. Animation timing

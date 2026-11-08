@@ -772,7 +772,7 @@ internal sealed class MapViewScreen : IScreen
             // People with something to do (patients on a visit, staff at work) are left to it.
             if (humanoid.Behaviour is null && humanoid.Destination is null && humanoid.Id != _selected && _random.Next(60) == 0)
             {
-                _session.Submit(new WalkToCommand(humanoid.Id, _hospitalTiles[_random.Next(_hospitalTiles.Count)]));
+                _session.Submit(new MeanderCommand(humanoid.Id));
             }
         }
     }
@@ -982,7 +982,8 @@ internal sealed class MapViewScreen : IScreen
 
         foreach (var entity in simulation.Entities)
         {
-            if (entity is RoomObject hiddenObject && _hiddenObjects.Contains(hiddenObject.Id))
+            // A room door is hidden too while someone goes through: their door animation shows it.
+            if (entity is RoomObject or RoomDoor && _hiddenObjects.Contains(entity.Id))
             {
                 continue;
             }
