@@ -1,155 +1,630 @@
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client.Maps;
 
+/// <summary>What the build tool reads from the mouse and keyboard in one frame.</summary>
+/// <param name="Hovered">The map tile under the cursor, if any.</param>
+/// <param name="FractionX">Where in that tile the cursor is along x, from 0 to 255.</param>
+/// <param name="FractionY">Where in that tile the cursor is along y, from 0 to 255.</param>
+/// <param name="LeftDown">The left button is held.</param>
+/// <param name="LeftPressed">The left button went down this frame.</param>
+/// <param name="LeftReleased">The left button came up this frame.</param>
+/// <param name="RightClicked">The right button was clicked (not dragged) this frame.</param>
+/// <param name="Confirm">The player confirms the current step (Enter).</param>
+/// <param name="Back">The player steps back (Esc).</param>
+/// <param name="PickUp">The player toggles picking objects up (P).</param>
+internal readonly record struct BuildInput(
+    TilePosition? Hovered,
+    int FractionX,
+    int FractionY,
+    bool LeftDown,
+    bool LeftPressed,
+    bool LeftReleased,
+    bool RightClicked,
+    bool Confirm,
+    bool Back,
+    bool PickUp);
+
 /// <summary>
-/// The player's room building flow: drag out the room's area, then click its perimeter to
-/// place the door. Validity is checked with the simulation's own <see cref="RoomBuilder"/>,
-/// so a plan shown as valid is the plan the simulation accepts.
+/// The player's room building flow, after the original game and CorsixTH's <c>UIEditRoom</c>:
+/// drag out a blueprint (drag its edges to resize it, its middle to move it), place the door,
+/// optionally windows, then furnish the room and confirm it. The blueprint, door and windows stay
+/// in the client until the player is done with them; from then on the room exists in the
+/// simulation, inactive, and every step is a command. All checks are the simulation's own.
 /// </summary>
 internal sealed class BuildRoomTool
 {
-    private static readonly Color ValidTint = new Color(0, 220, 0) * 0.45f;
-    private static readonly Color InvalidTint = new Color(230, 0, 0) * 0.45f;
-    private static readonly Color DoorTint = new Color(255, 230, 0) * 0.7f;
+    private static readonly Color BlueprintTint = new Color(40, 90, 255) * 0.45f;
+    private static readonly Color InvalidTint = new Color(255, 70, 0) * 0.5f;
+    private static readonly Color DoorColor = new(255, 230, 0);
+    private static readonly Color WindowColor = new(0, 230, 255);
+    private static readonly Color InvalidEdgeColor = new(255, 40, 0);
+    private static readonly Color FootprintTint = Color.White * 0.22f;
+
+    /// <summary>How the original shows an object that cannot go where it is: flat and grey.</summary>
+    private static readonly Color BlockedGhost = new Color(120, 120, 120) * 0.9f;
+
+    /// <summary>How long to wait for a command to show in the simulation before giving up on it.</summary>
+    private const long CommandTimeoutTicks = 200;
+
+    private static readonly Direction[] Turns = [Direction.North, Direction.East, Direction.South, Direction.West];
+
+    private readonly List<DoorPlacement> _windows = [];
+    private readonly List<Pending> _pending = [];
 
     private Phase _phase;
     private RoomDefinition? _room;
-    private TilePosition? _anchor;
     private TileRect? _area;
+    private Drag _drag;
+    private TilePosition _dragStart;
+    private TileRect _dragArea;
     private DoorPlacement? _door;
+    private DoorPlacement? _hoverEdge;
     private RoomPlanProblem _problem;
+    private RoomPlan? _sentPlan;
+    private long _sentTick;
+    private int _roomId;
+    private string? _message;
+
+    private ObjectDefinition? _placing;
+    private Direction _orientation;
+    private TilePosition? _ghostTile;
+    private ObjectPlacementProblem _placeProblem;
+    private bool _pickingUp;
+    private int _highlightedObject;
 
     private enum Phase
     {
         Inactive,
-        Area,
+        Blueprint,
         Door,
+        Windows,
+        Waiting,
+        Objects,
+    }
+
+    private enum Drag
+    {
+        None,
+        New,
+        Move,
+        Resize,
     }
 
     public bool IsActive => _phase != Phase.Inactive;
 
-    public string Status => _phase switch
-    {
-        Phase.Area => $"Build {_room!.Name}: drag out the room, at least {_room.MinimumSize} by {_room.MinimumSize}{Explain(_problem)}   Esc: cancel",
-        Phase.Door => $"Build {_room!.Name}: click a wall to place the door{Explain(_problem)}   Esc: back",
-        _ => string.Empty,
-    };
+    /// <summary>The object under the cursor while picking up, to draw highlighted; 0 if none.</summary>
+    public int HighlightedObject => _pickingUp ? _highlightedObject : 0;
+
+    /// <summary>The object to draw at the cursor, if any.</summary>
+    public (string ObjectType, TilePosition Tile, Direction Orientation, Color Tint)? Ghost =>
+        _placing is not null && _ghostTile is { } tile && !_pickingUp
+            ? (_placing.Id, tile, _orientation, _placeProblem == ObjectPlacementProblem.None ? Color.White : BlockedGhost)
+            : null;
 
     public void Start(RoomDefinition room)
     {
         _room = room;
-        _phase = Phase.Area;
-        _anchor = null;
+        _phase = Phase.Blueprint;
         _area = null;
+        _drag = Drag.None;
         _door = null;
+        _windows.Clear();
+        _pending.Clear();
         _problem = RoomPlanProblem.None;
+        _message = null;
+        StopPlacing();
     }
 
-    /// <summary>Steps back: from the door to the area, or out of building altogether.</summary>
-    public void Back()
-    {
-        if (_phase == Phase.Door)
-        {
-            _phase = Phase.Area;
-            _door = null;
-            _problem = RoomPlanProblem.None;
-        }
-        else
-        {
-            _phase = Phase.Inactive;
-        }
-    }
-
-    /// <summary>Follows the mouse; returns a command when the player confirms a valid room.</summary>
-    public BuildRoomCommand? Update(Simulation simulation, int player, TilePosition? hovered, bool leftDown, bool leftPressed, bool leftReleased)
+    /// <summary>Follows the input; returns a command for the simulation when a step needs one.</summary>
+    public Command? Update(Simulation simulation, int player, BuildInput input)
     {
         if (_room is null)
         {
             return null;
         }
 
-        var map = simulation.Map;
+        return _phase switch
+        {
+            Phase.Blueprint => UpdateBlueprint(simulation, player, input),
+            Phase.Door => UpdateDoor(simulation, input),
+            Phase.Windows => UpdateWindows(simulation, player, input),
+            Phase.Waiting => UpdateWaiting(simulation, player, input),
+            Phase.Objects => UpdateObjects(simulation, player, input),
+            _ => null,
+        };
+    }
+
+    public string Status(Simulation? simulation)
+    {
+        if (_room is null)
+        {
+            return string.Empty;
+        }
+
+        var name = _room.Name;
+        var message = _message is null ? string.Empty : $"   ({_message})";
+        return _phase switch
+        {
+            Phase.Blueprint => _area is null
+                ? $"{name}: drag out the blueprint, at least {_room.MinimumSize} by {_room.MinimumSize}{message}   Esc: cancel"
+                : $"{name}: drag the blueprint's edges to resize it, its middle to move it{Explain(_problem)}   Enter: done   Esc: cancel",
+            Phase.Door => $"{name}: place the door{Explain(_problem)}   Esc: back to the blueprint",
+            Phase.Windows => $"{name}: place windows if you like, click one again to remove it{Explain(_problem)}   Enter: done   Esc: back to the blueprint",
+            Phase.Waiting => $"{name}: building...",
+            Phase.Objects => ObjectsStatus(simulation),
+            _ => string.Empty,
+        };
+    }
+
+    /// <summary>Draws the blueprint, door and windows, or the footprint of the object being placed, in world coordinates.</summary>
+    public void DrawPreview(SpriteBatch batch, Texture2D diamond, Texture2D pixel, TilePosition? hovered)
+    {
         switch (_phase)
         {
-            case Phase.Area:
-                if (leftPressed && hovered is { } start)
+            case Phase.Blueprint or Phase.Door or Phase.Windows:
+                DrawBlueprint(batch, diamond, pixel, hovered);
+                break;
+            case Phase.Objects when _placing is not null && _ghostTile is { } tile && !_pickingUp
+                && _placing.Orientations.TryGetValue(_orientation, out var layout):
+                foreach (var part in layout.Footprint)
                 {
-                    _anchor = start;
-                }
-
-                if (_anchor is { } anchor && hovered is { } corner && leftDown)
-                {
-                    _area = TileRect.FromCorners(anchor, corner);
-                    _problem = RoomBuilder.CheckArea(map, _room, _area.Value, player);
-                }
-
-                if (leftReleased && _anchor is not null)
-                {
-                    _anchor = null;
-                    if (_area is not null && _problem == RoomPlanProblem.None)
-                    {
-                        _phase = Phase.Door;
-                    }
+                    DrawDiamond(batch, diamond, new TilePosition(tile.X + part.X, tile.Y + part.Y), FootprintTint);
                 }
 
                 break;
+        }
+    }
 
-            case Phase.Door:
-                _door = hovered is { } tile ? RoomBuilder.DoorNear(_area!.Value, tile) : null;
-                var plan = _door is { } door ? new RoomPlan(_room.Id, _area!.Value, door) : null;
-                _problem = plan is null ? RoomPlanProblem.DoorNotOnPerimeter : RoomBuilder.Check(map, simulation.Content, plan, player);
-                if (leftPressed && plan is not null && _problem == RoomPlanProblem.None)
-                {
-                    _phase = Phase.Inactive;
-                    return new BuildRoomCommand(plan);
-                }
+    private Command? UpdateBlueprint(Simulation simulation, int player, BuildInput input)
+    {
+        if (input.Back)
+        {
+            _phase = Phase.Inactive;
+            return null;
+        }
 
-                break;
+        if (input.LeftPressed && input.Hovered is { } start)
+        {
+            BeginDrag(start);
+        }
+
+        if (input.LeftDown && _drag != Drag.None && input.Hovered is { } at)
+        {
+            _area = Dragged(at);
+        }
+
+        if (input.LeftReleased)
+        {
+            _drag = Drag.None;
+        }
+
+        _problem = _area is { } area ? RoomBuilder.CheckArea(simulation.Map, _room, area, player) : RoomPlanProblem.None;
+        if (input.Confirm && _area is not null && _problem == RoomPlanProblem.None)
+        {
+            _phase = Phase.Door;
+            _door = null;
         }
 
         return null;
     }
 
-    /// <summary>Draws the planned area and door over the map, in world coordinates.</summary>
-    public void DrawPreview(SpriteBatch batch, Texture2D diamond, TilePosition? hovered)
+    /// <summary>
+    /// Starts a drag as CorsixTH does: inside the blueprint away from its border moves it, on its
+    /// border resizes it from that side, and outside it starts a new blueprint.
+    /// </summary>
+    private void BeginDrag(TilePosition start)
     {
-        if (!IsActive)
+        _dragStart = start;
+        if (_area is not { } area || !area.Contains(start))
+        {
+            _drag = Drag.New;
+            _area = new TileRect(start.X, start.Y, 1, 1);
+            return;
+        }
+
+        _dragArea = area;
+        var onBorder = start.X == area.X || start.X == area.Right - 1 || start.Y == area.Y || start.Y == area.Bottom - 1;
+        _drag = onBorder ? Drag.Resize : Drag.Move;
+    }
+
+    private TileRect Dragged(TilePosition at)
+    {
+        var area = _dragArea;
+        switch (_drag)
+        {
+            case Drag.Move:
+                return area with { X = area.X + at.X - _dragStart.X, Y = area.Y + at.Y - _dragStart.Y };
+            case Drag.Resize:
+                // Each side the drag started on follows the cursor; the opposite side stays.
+                var (x1, y1, x2, y2) = (area.X, area.Y, area.Right - 1, area.Bottom - 1);
+                if (_dragStart.X == area.X)
+                {
+                    x1 = at.X;
+                }
+                else if (_dragStart.X == area.Right - 1)
+                {
+                    x2 = at.X;
+                }
+
+                if (_dragStart.Y == area.Y)
+                {
+                    y1 = at.Y;
+                }
+                else if (_dragStart.Y == area.Bottom - 1)
+                {
+                    y2 = at.Y;
+                }
+
+                return TileRect.FromCorners(new(x1, y1), new(x2, y2));
+            default:
+                return TileRect.FromCorners(_dragStart, at);
+        }
+    }
+
+    private Command? UpdateDoor(Simulation simulation, BuildInput input)
+    {
+        if (input.Back)
+        {
+            _phase = Phase.Blueprint;
+            return null;
+        }
+
+        var area = _area!.Value;
+        _door = input.Hovered is { } tile ? RoomBuilder.WallNear(area, tile, input.FractionX, input.FractionY) : null;
+        _problem = _door is { } door ? RoomBuilder.CheckDoor(simulation.Map, simulation.Content, area, door) : RoomPlanProblem.DoorNotOnPerimeter;
+        if (!input.LeftPressed || _door is null || _problem != RoomPlanProblem.None)
+        {
+            return null;
+        }
+
+        _windows.Clear();
+        if (_room!.Walls.HasWindows)
+        {
+            _phase = Phase.Windows;
+            return null;
+        }
+
+        return Submit(simulation);
+    }
+
+    private Command? UpdateWindows(Simulation simulation, int player, BuildInput input)
+    {
+        if (input.Back)
+        {
+            _phase = Phase.Blueprint;
+            _windows.Clear();
+            return null;
+        }
+
+        var area = _area!.Value;
+        _hoverEdge = input.Hovered is { } tile ? RoomBuilder.WallNear(area, tile, input.FractionX, input.FractionY) : null;
+        _problem = RoomPlanProblem.None;
+        if (_hoverEdge is { } edge && !_windows.Contains(edge))
+        {
+            _problem = RoomBuilder.CheckWindow(simulation.Map, _room!, area, _door!.Value, edge);
+        }
+
+        if (input.LeftPressed && _hoverEdge is { } clicked)
+        {
+            if (!_windows.Remove(clicked) && _problem == RoomPlanProblem.None)
+            {
+                _windows.Add(clicked);
+            }
+        }
+
+        if (input.Confirm)
+        {
+            var plan = new RoomPlan(_room!.Id, area, _door!.Value, [.. _windows]);
+            _problem = RoomBuilder.Check(simulation.Map, simulation.Content, plan, player);
+            if (_problem == RoomPlanProblem.None)
+            {
+                return Submit(simulation);
+            }
+        }
+
+        return null;
+    }
+
+    private BuildRoomCommand Submit(Simulation simulation)
+    {
+        _sentPlan = new RoomPlan(_room!.Id, _area!.Value, _door!.Value, [.. _windows]);
+        _sentTick = simulation.Tick;
+        _phase = Phase.Waiting;
+        _message = null;
+        return new BuildRoomCommand(_sentPlan);
+    }
+
+    /// <summary>Waits for the room to appear in the simulation, which happens a few ticks after the command is sent.</summary>
+    private Command? UpdateWaiting(Simulation simulation, int player, BuildInput input)
+    {
+        var room = simulation.Entities.OfType<Room>().FirstOrDefault(r =>
+            !r.IsActive && r.Area == _sentPlan!.Area && r.RoomType == _sentPlan.RoomType && RoomBuilder.IsOwnedBy(simulation.Map, r, player));
+        if (room is not null)
+        {
+            _roomId = room.Id;
+            _phase = Phase.Objects;
+            _pending.Clear();
+            StopPlacing();
+            return null;
+        }
+
+        if (simulation.Tick > _sentTick + CommandTimeoutTicks)
+        {
+            // Something got there first, for example another player's room.
+            _phase = Phase.Blueprint;
+            _message = "the room could not be built there";
+        }
+
+        return null;
+    }
+
+    private Command? UpdateObjects(Simulation simulation, int player, BuildInput input)
+    {
+        if (simulation.FindEntity(_roomId) is not Room room || room.IsActive)
+        {
+            _phase = Phase.Inactive;
+            return null;
+        }
+
+        ForgetSettledCommands(simulation, room);
+
+        if (input.Back)
+        {
+            if (_pickingUp)
+            {
+                _pickingUp = false;
+                return null;
+            }
+
+            // As in CorsixTH, cancelling the furnishing takes the room down and goes back to placing its door.
+            _phase = Phase.Door;
+            StopPlacing();
+            return new CancelRoomCommand(room.Id);
+        }
+
+        if (input.PickUp)
+        {
+            _pickingUp = !_pickingUp;
+            StopPlacing();
+        }
+
+        if (_pickingUp)
+        {
+            return UpdatePickingUp(simulation, room, input);
+        }
+
+        // An object whose last missing piece got placed meanwhile (say, by a command still on its way) is dropped.
+        if (_placing is not null && !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id))
+        {
+            StopPlacing();
+        }
+
+        if (_placing is null && NextToPlace(simulation, room) is { } next)
+        {
+            StartPlacing(next, Turns.First(next.Orientations.ContainsKey));
+        }
+
+        if (input.Confirm && _placing is null && _pending.Count == 0 && RoomBuilder.CanConfirm(simulation, room, player))
+        {
+            _phase = Phase.Inactive;
+            return new ConfirmRoomCommand(room.Id);
+        }
+
+        if (_placing is null)
+        {
+            return null;
+        }
+
+        if (input.RightClicked)
+        {
+            Turn();
+        }
+
+        FollowCursor(simulation, room, input.Hovered);
+        _placeProblem = _ghostTile is { } tile
+            ? ObjectPlacer.Check(simulation, _placing.Id, tile, _orientation, player)
+            : ObjectPlacementProblem.OutsideMap;
+        if (input.LeftPressed && _ghostTile is { } target && _placeProblem == ObjectPlacementProblem.None)
+        {
+            var command = new PlaceObjectCommand(_placing.Id, target, _orientation);
+            var newer = simulation.Entities.Count == 0 ? 1 : simulation.Entities.Max(e => e.Id) + 1;
+            _pending.Add(new Pending(_placing.Id, +1, simulation.Tick, newer, target, _orientation));
+            StopPlacing();
+            return command;
+        }
+
+        return null;
+    }
+
+    private Command? UpdatePickingUp(Simulation simulation, Room room, BuildInput input)
+    {
+        _highlightedObject = 0;
+        if (input.Hovered is { } tile
+            && simulation.Map[tile.X, tile.Y].ObjectId is var id and not 0
+            && simulation.FindEntity(id) is RoomObject placed
+            && placed.RoomId == room.Id)
+        {
+            _highlightedObject = placed.Id;
+            if (input.LeftPressed && simulation.Content.FindObject(placed.ObjectType) is { } definition)
+            {
+                // The object comes off the floor onto the cursor, keeping its orientation.
+                _pickingUp = false;
+                _pending.Add(new Pending(placed.ObjectType, -1, simulation.Tick, placed.Id, placed.Tile, placed.Orientation));
+                StartPlacing(definition, placed.Orientation);
+                _ghostTile = placed.Tile;
+                return new PickUpObjectCommand(placed.Id);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Moves the object with the cursor. Like the original, the object only moves once the cursor
+    /// leaves the tiles it would cover, so a large object does not jump about under the cursor, and
+    /// it stays at its last spot in the room while the cursor is outside the room.
+    /// </summary>
+    private void FollowCursor(Simulation simulation, Room room, TilePosition? hovered)
+    {
+        if (hovered is not { } tile || !room.Area.Contains(tile))
         {
             return;
         }
 
+        if (_ghostTile is { } ghost && _placing!.Orientations.TryGetValue(_orientation, out var layout)
+            && layout.Footprint.Any(part => ghost.X + part.X == tile.X && ghost.Y + part.Y == tile.Y))
+        {
+            return;
+        }
+
+        _ghostTile = tile;
+    }
+
+    /// <summary>The next object still missing from the room, biggest first as in CorsixTH.</summary>
+    private ObjectDefinition? NextToPlace(Simulation simulation, Room room)
+    {
+        return Remaining(simulation, room)
+            .Select(missing => simulation.Content.FindObject(missing.ObjectType))
+            .OfType<ObjectDefinition>()
+            .OrderByDescending(definition => definition.Orientations.Values.First().Footprint.Count)
+            .ThenBy(definition => definition.Id, StringComparer.Ordinal)
+            .FirstOrDefault();
+    }
+
+    /// <summary>What is still to be placed, counting commands sent but not yet carried out.</summary>
+    private List<(string ObjectType, int Count)> Remaining(Simulation simulation, Room room)
+    {
+        var remaining = RoomBuilder.MissingObjects(simulation, room).ToDictionary(m => m.ObjectType, m => m.Count, StringComparer.Ordinal);
+        foreach (var pending in _pending)
+        {
+            remaining[pending.ObjectType] = remaining.GetValueOrDefault(pending.ObjectType) - pending.Change;
+        }
+
+        return remaining.Where(pair => pair.Value > 0).Select(pair => (pair.Key, pair.Value)).OrderBy(pair => pair.Key, StringComparer.Ordinal).ToList();
+    }
+
+    /// <summary>
+    /// Forgets sent commands once the room shows their effect, or once they are long overdue
+    /// (the simulation refused them, for example because something else changed meanwhile).
+    /// </summary>
+    private void ForgetSettledCommands(Simulation simulation, Room room)
+    {
+        _pending.RemoveAll(p => p.IsSettled(simulation, room) || simulation.Tick > p.Tick + CommandTimeoutTicks);
+    }
+
+    private void StartPlacing(ObjectDefinition definition, Direction orientation)
+    {
+        _placing = definition;
+        _orientation = orientation;
+        _ghostTile = null;
+        _placeProblem = ObjectPlacementProblem.None;
+    }
+
+    private void StopPlacing()
+    {
+        _placing = null;
+        _ghostTile = null;
+        _highlightedObject = 0;
+    }
+
+    /// <summary>Turns the object clockwise to its next available orientation.</summary>
+    private void Turn()
+    {
+        var index = Array.IndexOf(Turns, _orientation);
+        for (var i = 1; i <= Turns.Length; i++)
+        {
+            var next = Turns[(index + i) % Turns.Length];
+            if (_placing!.Orientations.ContainsKey(next))
+            {
+                _orientation = next;
+                return;
+            }
+        }
+    }
+
+    private string ObjectsStatus(Simulation? simulation)
+    {
+        var name = _room!.Name;
+        if (_pickingUp)
+        {
+            return $"{name}: click an object to pick it up   P or Esc: stop picking up";
+        }
+
+        if (simulation?.FindEntity(_roomId) is not Room room)
+        {
+            return $"{name}: ...";
+        }
+
+        var remaining = Remaining(simulation, room);
+        if (remaining.Count == 0 && _placing is null)
+        {
+            return $"{name}: you can confirm the room, or move objects   Enter: confirm   P: pick up   Esc: take the room down";
+        }
+
+        var list = string.Join(", ", remaining.Select(r => $"{simulation.Content.FindObject(r.ObjectType)?.Name ?? r.ObjectType} {r.Count}"));
+        var placing = _placing is null ? string.Empty : $"   placing {_placing.Name}{ExplainPlacement(_placeProblem)}";
+        return $"{name}: place the objects ({list}){placing}   Right click: turn   P: pick up   Esc: take the room down";
+    }
+
+    private void DrawBlueprint(SpriteBatch batch, Texture2D diamond, Texture2D pixel, TilePosition? hovered)
+    {
         var area = _area ?? (hovered is { } tile ? new TileRect(tile.X, tile.Y, 1, 1) : (TileRect?)null);
         if (area is not { } rect)
         {
             return;
         }
 
-        var tint = _area is null || (_phase == Phase.Area && _problem != RoomPlanProblem.None) ? InvalidTint : ValidTint;
-        if (_area is null)
-        {
-            tint = ValidTint * 0.6f;
-        }
-
+        var invalid = _area is not null && _phase == Phase.Blueprint && _problem != RoomPlanProblem.None;
+        var tint = invalid ? InvalidTint : _area is null ? BlueprintTint * 0.6f : BlueprintTint;
         for (var y = rect.Y; y < rect.Bottom; y++)
         {
             for (var x = rect.X; x < rect.Right; x++)
             {
-                batch.Draw(diamond, new Vector2((32 * (x - y)) - 32, 16 * (x + y)), tint);
+                DrawDiamond(batch, diamond, new TilePosition(x, y), tint);
             }
         }
 
         if (_phase == Phase.Door && _door is { } door)
         {
-            var doorTint = _problem == RoomPlanProblem.None ? DoorTint : InvalidTint;
-            batch.Draw(diamond, new Vector2((32 * (door.Tile.X - door.Tile.Y)) - 32, 16 * (door.Tile.X + door.Tile.Y)), doorTint);
+            DrawEdge(batch, pixel, door, _problem == RoomPlanProblem.None ? DoorColor : InvalidEdgeColor);
         }
+
+        if (_phase == Phase.Windows)
+        {
+            DrawEdge(batch, pixel, _door!.Value, DoorColor);
+            foreach (var window in _windows)
+            {
+                DrawEdge(batch, pixel, window, WindowColor);
+            }
+
+            if (_hoverEdge is { } edge && !_windows.Contains(edge))
+            {
+                DrawEdge(batch, pixel, edge, _problem == RoomPlanProblem.None ? WindowColor * 0.6f : InvalidEdgeColor);
+            }
+        }
+    }
+
+    private static void DrawDiamond(SpriteBatch batch, Texture2D diamond, TilePosition tile, Color tint)
+    {
+        batch.Draw(diamond, new Vector2((32 * (tile.X - tile.Y)) - 32, 16 * (tile.X + tile.Y)), tint);
+    }
+
+    /// <summary>Draws a thick line along a tile edge: from the tile's top corner to its right (north edge) or left (west edge) corner.</summary>
+    private static void DrawEdge(SpriteBatch batch, Texture2D pixel, DoorPlacement edge, Color color)
+    {
+        var top = new Vector2(32 * (edge.Tile.X - edge.Tile.Y), 16 * (edge.Tile.X + edge.Tile.Y));
+        var end = top + (edge.Edge == EdgeOrientation.North ? new Vector2(32, 16) : new Vector2(-32, 16));
+        var along = end - top;
+        batch.Draw(pixel, top, null, color, MathF.Atan2(along.Y, along.X), new Vector2(0, 0.5f), new Vector2(along.Length(), 3), SpriteEffects.None, 0);
     }
 
     private static string Explain(RoomPlanProblem problem)
@@ -162,12 +637,50 @@ internal sealed class BuildRoomTool
             RoomPlanProblem.NotOwned => "not your land",
             RoomPlanProblem.OverlapsRoom => "overlaps a room",
             RoomPlanProblem.WallInside => "a wall is in the way",
-            RoomPlanProblem.DoorNotOnPerimeter => "point at the room's walls",
+            RoomPlanProblem.DoorNotOnPerimeter or RoomPlanProblem.WindowNotOnPerimeter => "point at the room's walls",
+            RoomPlanProblem.DoorInCorner or RoomPlanProblem.WindowInCorner => "not in a corner",
             RoomPlanProblem.DoorInWall => "cannot put a door in that wall",
+            RoomPlanProblem.WindowInWall => "cannot put a window in that wall",
+            RoomPlanProblem.WindowOnDoor => "the door is there",
             RoomPlanProblem.DoorBlocked => "the door would open onto a blocked tile",
+            RoomPlanProblem.NoWindows => "this room has no windows",
+            RoomPlanProblem.TooManyWindows => "too many windows",
             RoomPlanProblem.UnknownRoomType => "unknown room",
             _ => null,
         };
         return text is null ? string.Empty : $"   ({text})";
+    }
+
+    private static string ExplainPlacement(ObjectPlacementProblem problem)
+    {
+        var text = problem switch
+        {
+            ObjectPlacementProblem.OutsideMap => "point into the room",
+            ObjectPlacementProblem.NotAllowedHere => "must stand inside the room",
+            ObjectPlacementProblem.NotOwned => "not your land",
+            ObjectPlacementProblem.Blocked => "something is in the way",
+            ObjectPlacementProblem.WouldBlockAccess => "would block access",
+            _ => null,
+        };
+        return text is null ? string.Empty : $" ({text})";
+    }
+
+    /// <summary>
+    /// A command sent but perhaps not yet carried out: one more (+1) object of a type in the room,
+    /// placed at <paramref name="Tile"/> with an id of at least <paramref name="ObjectId"/>, or one
+    /// fewer (−1): the object <paramref name="ObjectId"/>.
+    /// </summary>
+    private readonly record struct Pending(string ObjectType, int Change, long Tick, int ObjectId, TilePosition Tile, Direction Orientation)
+    {
+        public bool IsSettled(Simulation simulation, Room room)
+        {
+            if (Change < 0)
+            {
+                return simulation.FindEntity(ObjectId) is null;
+            }
+
+            var (minimumId, type, tile, orientation) = (ObjectId, ObjectType, Tile, Orientation);
+            return simulation.Entities.OfType<RoomObject>().Any(o => o.Id >= minimumId && o.RoomId == room.Id && o.ObjectType == type && o.Tile == tile && o.Orientation == orientation);
+        }
     }
 }

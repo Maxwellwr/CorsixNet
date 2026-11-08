@@ -181,13 +181,13 @@ public class RoomBuilderTests
     [InlineData(5, 3, 5, 3, EdgeOrientation.West)]   // just right
     public void FindsTheDoorNearATile(int x, int y, int doorX, int doorY, EdgeOrientation edge)
     {
-        Assert.Equal(new DoorPlacement(new(doorX, doorY), edge), RoomBuilder.DoorNear(new TileRect(2, 2, 3, 3), new(x, y)));
+        Assert.Equal(new DoorPlacement(new(doorX, doorY), edge), RoomBuilder.WallNear(new TileRect(2, 2, 3, 3), new(x, y)));
     }
 
     [Fact]
     public void NoDoorAwayFromThePerimeter()
     {
-        Assert.Null(RoomBuilder.DoorNear(new TileRect(2, 2, 3, 3), new(8, 8)));
+        Assert.Null(RoomBuilder.WallNear(new TileRect(2, 2, 3, 3), new(8, 8)));
     }
 
     private static Simulation NewSimulation()

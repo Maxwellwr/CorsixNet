@@ -4,14 +4,36 @@ using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.Entities;
 
+/// <summary>A room tile as it was before the room was built, so that cancelling the room can restore it.</summary>
+/// <param name="Floor">The floor sprite.</param>
+/// <param name="Flags">The flags in <see cref="Room.RestorableFlags"/>.</param>
+public readonly record struct OriginalTile(ushort Floor, TileFlags Flags);
+
 /// <summary>A room built by a player. Its tiles carry its id in <see cref="MapTile.RoomId"/>.</summary>
+/// <remarks>
+/// A new room is inactive, like CorsixTH's rooms while the edit dialog is open: its owner furnishes
+/// it, and confirms it once the needed objects stand in it. Only then does it work.
+/// </remarks>
 public sealed class Room : Entity
 {
-    public Room(int id, string roomType, TileRect area)
+    /// <summary>Tile flags that objects change and that cancelling a room puts back.</summary>
+    public const TileFlags RestorableFlags = TileFlags.Passable | TileFlags.Buildable
+        | TileFlags.BuildableNorth | TileFlags.BuildableEast | TileFlags.BuildableSouth | TileFlags.BuildableWest;
+
+    /// <summary>Largest width or height accepted when reading a room.</summary>
+    private const int MaxSide = 1024;
+
+    public Room(int id, string roomType, TileRect area, IReadOnlyList<OriginalTile> originalTiles)
         : base(id)
     {
+        if (originalTiles.Count != area.Width * area.Height)
+        {
+            throw new ArgumentException("There must be one original tile per tile of the area.", nameof(originalTiles));
+        }
+
         RoomType = roomType;
         Area = area;
+        OriginalTiles = originalTiles;
     }
 
     public override EntityKind Kind => EntityKind.Room;
@@ -24,6 +46,18 @@ public sealed class Room : Entity
     /// <summary>Entity id of the room's door.</summary>
     public int DoorId { get; internal set; }
 
+    /// <summary>Whether the room has been confirmed and works; until then its owner may furnish or cancel it.</summary>
+    public bool IsActive { get; internal set; }
+
+    /// <summary>The area's tiles before the room was built, row by row.</summary>
+    public IReadOnlyList<OriginalTile> OriginalTiles { get; }
+
+    /// <summary>Whether the tile outside the door could be built on before the door kept it clear.</summary>
+    public bool DoorOutsideWasBuildable { get; internal set; }
+
+    /// <summary>The original state of <paramref name="tile"/>, which must lie in the area.</summary>
+    public OriginalTile OriginalTileAt(TilePosition tile) => OriginalTiles[((tile.Y - Area.Y) * Area.Width) + (tile.X - Area.X)];
+
     public override void Update(Simulation simulation)
     {
     }
@@ -31,8 +65,17 @@ public sealed class Room : Entity
     internal static Room ReadState(int id, SimReader reader)
     {
         var roomType = reader.ReadString();
-        var area = new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-        return new Room(id, roomType, area) { DoorId = reader.ReadInt32() };
+        var area = new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadCount(MaxSide), reader.ReadCount(MaxSide));
+        var doorId = reader.ReadInt32();
+        var active = reader.ReadBool();
+        var outsideBuildable = reader.ReadBool();
+        var tiles = new OriginalTile[area.Width * area.Height];
+        for (var i = 0; i < tiles.Length; i++)
+        {
+            tiles[i] = new OriginalTile(reader.ReadUInt16(), (TileFlags)reader.ReadUInt32());
+        }
+
+        return new Room(id, roomType, area, tiles) { DoorId = doorId, IsActive = active, DoorOutsideWasBuildable = outsideBuildable };
     }
 
     protected override void WriteState(SimWriter writer)
@@ -43,6 +86,13 @@ public sealed class Room : Entity
         writer.WriteInt32(Area.Width);
         writer.WriteInt32(Area.Height);
         writer.WriteInt32(DoorId);
+        writer.WriteBool(IsActive);
+        writer.WriteBool(DoorOutsideWasBuildable);
+        foreach (var tile in OriginalTiles)
+        {
+            writer.WriteUInt16(tile.Floor);
+            writer.WriteUInt32((uint)tile.Flags);
+        }
     }
 }
 
@@ -140,6 +190,18 @@ public sealed class RoomDoor : Entity
         if (map.Contains(OtherSide.X, OtherSide.Y))
         {
             map[OtherSide.X, OtherSide.Y].Set(TileFlags.Buildable, false);
+        }
+    }
+
+    /// <summary>Takes the door out of its edge again; the wall itself is left to whoever removes the room.</summary>
+    internal void Unplace(LevelMap map, bool outsideWasBuildable, TileRect area)
+    {
+        ref var tile = ref map[Tile.X, Tile.Y];
+        tile.Set(Edge == EdgeOrientation.North ? TileFlags.DoorNorth | TileFlags.TallNorth : TileFlags.DoorWest | TileFlags.TallWest, false);
+        var outside = area.Contains(Tile) ? OtherSide : Tile;
+        if (map.Contains(outside.X, outside.Y))
+        {
+            map[outside.X, outside.Y].Set(TileFlags.Buildable, outsideWasBuildable);
         }
     }
 

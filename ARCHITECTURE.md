@@ -127,14 +127,18 @@ not part of the saved state, so every machine in a game must use the same conten
 this when joining is still to do. `Content.BaseGameContent` describes the original game, in
 code for now, taken from CorsixTH's `rooms/*.lua` and `walls/*.lua`.
 
-Building a room is a command, `BuildRoomCommand(RoomPlan)`. A plan is a room type, an area
-and a door placement on the area's perimeter. `RoomBuilder.Check` applies CorsixTH's rules:
+Building a room is a command, `BuildRoomCommand(RoomPlan)`. A plan is a room type, an area,
+a door placement on the area's perimeter and optional windows. `RoomBuilder.Check` applies
+CorsixTH's rules:
 
 - at least the minimum size;
 - only buildable hospital tiles, on a parcel the player owns, outside other rooms and with no
   walls inside the area;
 - a door on the perimeter, not cut into an outer wall or a wall outside the room, and opening
-  onto a passable hospital tile.
+  onto a passable hospital tile;
+- windows on the perimeter where no wall stands yet, not on the door;
+- no door or window on a corner tile of the room. `RoomBuilder.WallNear` picks the wall under
+  the cursor the way CorsixTH's `screenToWall` does, stepping off corners.
 
 The client's build tool calls the same check for its preview. Building follows CorsixTH's
 `UIEditRoom:_finishRoomFoundation`:
@@ -142,8 +146,24 @@ The client's build tool calls the same check for its preview. Building follows C
 - inside walls on the north and west sides, outside walls on the south and east sides;
 - outer walls and walls of neighbouring rooms stay;
 - the room's floor and id go on its tiles;
+- window sprites replace the walls where windows go; a neighbour's window stays a window;
 - a `RoomDoor` entity opens the wall at the door;
 - travel flags and shadows are recomputed (`LevelMap.UpdatePathfinding`, `UpdateShadows`).
+
+A new room is inactive, like a CorsixTH room while its edit dialog is open. Its owner furnishes
+it with `PlaceObjectCommand` and `PickUpObjectCommand`, then sends `ConfirmRoomCommand`, which
+activates the room once all its needed objects stand in it. `CancelRoomCommand` takes an
+inactive room down as CorsixTH's `removeRoom` does: objects and door go, walls come down
+(outer walls stay, and a wall shared with a neighbouring room becomes that room's wall again),
+and the tiles get back the floor and flags the room saved when it was built.
+
+The client's `BuildRoomTool` follows the original's steps: blueprint (resize by dragging an
+edge, move by dragging the middle), door, windows, then furniture. The blueprint, door and
+windows stay in the client; the room only reaches the simulation when the player is done with
+them. In the furniture step the needed objects come to the cursor one at a time. As in the
+original, an object only moves once the cursor leaves the tiles it covers, and it is drawn grey
+where it cannot go. Commands take a few ticks to arrive, so the tool keeps track of the ones it
+has sent until the simulation shows their effect.
 
 ## Objects
 
@@ -162,7 +182,8 @@ shifting the animation back by the attach tile's screen offset.
 
 `PlaceObjectCommand` places an object if `ObjectPlacer.Check` allows it:
 
-- the object must fit its place: a room whose type lists it, or a corridor for corridor objects;
+- the object must fit its place: a room under construction whose type lists it, or a corridor
+  for corridor objects;
 - every footprint tile must be in that room, on the player's land, and buildable (passable for
   use positions);
 - the sides the footprint covers must still be buildable;
@@ -171,8 +192,9 @@ shifting the animation back by the attach tile's screen offset.
   a provisional placement.
 
 Placing marks the footprint as CorsixTH's `occupyTilesByObjectFootprintAt` does. Room doors
-keep the tiles on both sides clear. The client's placement tool previews with the same check
-and draws objects with their idle animations, mirroring east and north for south and west.
+keep the tiles on both sides clear. Picking an object up recomputes the room's tiles from the
+saved originals and the remaining objects. The client previews with the same check and draws
+objects with their idle animations, mirroring east and north for south and west.
 
 ## Saves
 
@@ -278,7 +300,8 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
    ported from CorsixTH; humanoids walking; entrance doors from map files. *(done)*
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows. *(done)*
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
-   *(in progress: room building and object placement done; staff and patient flow to come)*
+   *(in progress: room building in the original's steps (blueprint, door, windows, furniture,
+   confirm) done; money, staff and patient flow to come)*
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
    music and video.
 

@@ -18,7 +18,7 @@ entrance doors (`EntranceDoor.cs`, `EntranceDoorDrawing.cs`, from
 ownership (`Simulation.cs`, `LevelMapLoader.cs`, from `CorsixTH/Lua/world.lua` and
 `CorsixTH/Lua/map.lua`), object footprints and placement rules (`ObjectPlacer.cs`, `BaseGameContent.cs`, `ObjectDrawing.cs`, from
 `CorsixTH/Lua/objects/*.lua`, `CorsixTH/Lua/entities/object.lua` and `CorsixTH/Lua/dialogs/place_objects.lua`),
-room building rules and wall sets (`RoomPlan.cs`, `BaseGameContent.cs`, `LevelMap.cs`, from
+room building rules, windows, room removal and wall sets (`RoomPlan.cs`, `Room.cs`, `BuildRoomTool.cs`, `BaseGameContent.cs`, `LevelMap.cs`, from
 `CorsixTH/Lua/dialogs/edit_room.lua`, `CorsixTH/Lua/rooms/*.lua`, `CorsixTH/Lua/walls/*.lua`
 and `CorsixTH/Src/th_map.cpp`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
 `CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and

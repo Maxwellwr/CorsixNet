@@ -48,6 +48,16 @@ internal sealed class Camera
     /// <summary>World position of the centre of tile (<paramref name="x"/>, <paramref name="y"/>).</summary>
     public static Vector2 TileCenter(int x, int y) => new(32 * (x - y), (16 * (x + y)) + 16);
 
+    /// <summary>Where in its tile a world position lies, along x and y, each from 0 to 255.</summary>
+    public static (int X, int Y) WorldToTileFraction(Vector2 world)
+    {
+        var u = world.Y / 16f;
+        var v = world.X / 32f;
+        var x = (u + v) / 2;
+        var y = (u - v) / 2;
+        return ((int)((x - MathF.Floor(x)) * 256), (int)((y - MathF.Floor(y)) * 256));
+    }
+
     /// <summary>The tile containing a world position, which may lie outside the map.</summary>
     public static Point WorldToTile(Vector2 world)
     {

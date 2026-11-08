@@ -105,6 +105,63 @@ public static class ObjectPlacer
         return placed;
     }
 
+    /// <summary>Whether <paramref name="player"/> may pick up the object: it stands in a room of theirs that is still being built.</summary>
+    public static bool CanPickUp(Simulation simulation, int objectId, int player)
+    {
+        return simulation.FindEntity(objectId) is RoomObject placed
+            && simulation.FindEntity(placed.RoomId) is Room { IsActive: false } room
+            && RoomBuilder.IsOwnedBy(simulation.Map, room, player);
+    }
+
+    /// <summary>
+    /// Takes an object out of its room after a successful <see cref="CanPickUp"/>, freeing its tiles,
+    /// as CorsixTH's pick up button does while a room is edited.
+    /// </summary>
+    internal static void PickUp(Simulation simulation, RoomObject placed)
+    {
+        simulation.RemoveEntity(placed.Id);
+        if (simulation.FindEntity(placed.RoomId) is Room room)
+        {
+            Reoccupy(simulation, room);
+        }
+    }
+
+    /// <summary>
+    /// Recomputes which tiles of a room its objects take: the tiles go back to how they were before
+    /// the room, the door's walkway is kept clear, and every remaining object occupies its footprint.
+    /// Occupying only clears flags, so the order of the objects does not matter.
+    /// </summary>
+    private static void Reoccupy(Simulation simulation, Room room)
+    {
+        var map = simulation.Map;
+        var area = room.Area;
+        for (var y = area.Y; y < area.Bottom; y++)
+        {
+            for (var x = area.X; x < area.Right; x++)
+            {
+                ref var cell = ref map[x, y];
+                cell.Flags = (cell.Flags & ~Room.RestorableFlags) | room.OriginalTileAt(new(x, y)).Flags;
+                cell.ObjectId = 0;
+            }
+        }
+
+        if (simulation.FindEntity(room.DoorId) is RoomDoor door)
+        {
+            var inside = door.InsideTile(area);
+            map[inside.X, inside.Y].Set(TileFlags.Buildable, false);
+        }
+
+        foreach (var placed in simulation.Entities.OfType<RoomObject>())
+        {
+            if (placed.RoomId == room.Id
+                && simulation.Content.FindObject(placed.ObjectType) is { } definition
+                && definition.Orientations.TryGetValue(placed.Orientation, out var layout))
+            {
+                Occupy(map, placed.Tile, layout, placed.Id);
+            }
+        }
+    }
+
     /// <summary>
     /// The footprint tile must be passable (for use positions) or buildable (otherwise), and every side
     /// the object covers must still be buildable: sides towards other footprint tiles, all sides of a
@@ -172,7 +229,8 @@ public static class ObjectPlacer
             return definition.CorridorObject;
         }
 
-        return simulation.FindEntity(roomId) is Room room
+        // Objects go into rooms while they are being built, as in CorsixTH's edit room dialog.
+        return simulation.FindEntity(roomId) is Room { IsActive: false } room
             && simulation.Content.FindRoom(room.RoomType) is { } roomDefinition
             && roomDefinition.Allows(definition.Id);
     }

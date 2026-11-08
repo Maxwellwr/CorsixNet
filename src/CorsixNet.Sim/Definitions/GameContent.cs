@@ -5,7 +5,13 @@ namespace CorsixNet.Sim.Definitions;
 /// <param name="InsideWest">West wall seen from inside the room.</param>
 /// <param name="OutsideNorth">North wall of the tile south of the room, seen from outside.</param>
 /// <param name="OutsideWest">West wall of the tile east of the room, seen from outside.</param>
-public sealed record WallSet(ushort InsideNorth, ushort InsideWest, ushort OutsideNorth, ushort OutsideWest);
+/// <param name="WindowNorth">North wall with a window, used inside and outside alike; 0 if the room has no windows.</param>
+/// <param name="WindowWest">West wall with a window, used inside and outside alike; 0 if the room has no windows.</param>
+public sealed record WallSet(ushort InsideNorth, ushort InsideWest, ushort OutsideNorth, ushort OutsideWest, ushort WindowNorth = 0, ushort WindowWest = 0)
+{
+    /// <summary>Whether the room type allows windows.</summary>
+    public bool HasWindows => WindowNorth != 0 && WindowWest != 0;
+}
 
 /// <summary>A kind of room the player can build, as in CorsixTH's <c>rooms/*.lua</c>.</summary>
 /// <param name="Id">Stable identifier used in commands and saves, e.g. "gp".</param>
@@ -42,6 +48,7 @@ public sealed class GameContent
     private readonly Dictionary<string, RoomDefinition> _rooms;
     private readonly Dictionary<string, ObjectDefinition> _objects;
     private readonly HashSet<ushort> _externalWallSprites;
+    private readonly HashSet<ushort> _windowSprites;
 
     /// <param name="rooms">Room types the player can build.</param>
     /// <param name="externalWallSprites">Sprites of the hospital's outer walls, which rooms keep rather than replace.</param>
@@ -53,6 +60,7 @@ public sealed class GameContent
         _externalWallSprites = [.. externalWallSprites];
         Rooms = [.. _rooms.Values.OrderBy(room => room.Id, StringComparer.Ordinal)];
         Objects = [.. _objects.Values.OrderBy(obj => obj.Id, StringComparer.Ordinal)];
+        _windowSprites = [.. Rooms.SelectMany(room => new[] { room.Walls.WindowNorth, room.Walls.WindowWest }).Where(sprite => sprite != 0)];
     }
 
     /// <summary>All object types, ordered by id.</summary>
@@ -66,4 +74,7 @@ public sealed class GameContent
     public RoomDefinition? FindRoom(string id) => _rooms.GetValueOrDefault(id);
 
     public bool IsExternalWall(ushort sprite) => _externalWallSprites.Contains(sprite);
+
+    /// <summary>Whether <paramref name="sprite"/> is a room window of any room type.</summary>
+    public bool IsWindowWall(ushort sprite) => _windowSprites.Contains(sprite);
 }

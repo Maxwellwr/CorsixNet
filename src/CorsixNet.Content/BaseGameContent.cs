@@ -14,7 +14,7 @@ namespace CorsixNet.Content;
 public static class BaseGameContent
 {
     /// <summary>The "white" wall set (walls/white.lua).</summary>
-    public static readonly WallSet WhiteWalls = new(InsideNorth: 82, InsideWest: 83, OutsideNorth: 90, OutsideWest: 91);
+    public static readonly WallSet WhiteWalls = new(InsideNorth: 82, InsideWest: 83, OutsideNorth: 90, OutsideWest: 91, WindowNorth: 128, WindowWest: 129);
 
     /// <summary>The doctor's desk (objects/desk.lua).</summary>
     public static readonly ObjectDefinition Desk = new("desk", "Desk", ObjectType: 1, new Dictionary<Direction, ObjectOrientation>

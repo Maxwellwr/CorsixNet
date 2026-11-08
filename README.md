@@ -36,14 +36,24 @@ first original level:
 | O | Cycle overlay (passable, hospital, parcels) |
 | U | Cycle sprite smoothing: original, 2x, 4x |
 | Home | Reset camera |
-| B | Build a GP's office: drag out the area, then click a wall for the door (Esc steps back) |
-| 1 / 2 / 3 | Place a desk, cabinet or chair (E turns it, Esc cancels) |
+| B | Build a GP's office (see below) |
 | H | Spawn a patient at the cursor |
 | G | Spawn ten patients in the hospital |
 | Left click | Select a patient, or send the selected one walking |
 | R | Toggle random wandering |
 | Space | Pause or resume the simulation |
 | Esc | Quit |
+
+Building a room goes through the original game's steps:
+
+1. Drag out the blueprint. Drag its edges to resize it or its middle to move it, then press Enter.
+2. Click a wall to place the door. Doors and windows never go on a corner tile.
+3. Click walls to add windows (click again to remove one), then press Enter.
+4. The room is built and the furniture it needs comes to the cursor one piece at a time. Click
+   to place, right click to turn. P picks up a placed object to move it.
+5. Press Enter to confirm the room once everything is in it.
+
+Esc steps back. In the furniture step it takes the room down again and returns to the door.
 
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the

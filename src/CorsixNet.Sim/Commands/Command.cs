@@ -13,6 +13,9 @@ public enum CommandKind : ushort
     WalkTo = 2,
     BuildRoom = 3,
     PlaceObject = 4,
+    PickUpObject = 5,
+    ConfirmRoom = 6,
+    CancelRoom = 7,
 }
 
 /// <summary>
@@ -41,6 +44,9 @@ public abstract record Command
             CommandKind.WalkTo => new WalkToCommand(reader.ReadInt32(), reader.ReadTile()),
             CommandKind.BuildRoom => BuildRoomCommand.ReadArguments(reader),
             CommandKind.PlaceObject => new PlaceObjectCommand(reader.ReadString(), reader.ReadTile(), (Direction)reader.ReadByte()),
+            CommandKind.PickUpObject => new PickUpObjectCommand(reader.ReadInt32()),
+            CommandKind.ConfirmRoom => new ConfirmRoomCommand(reader.ReadInt32()),
+            CommandKind.CancelRoom => new CancelRoomCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -84,7 +90,10 @@ public sealed record WalkToCommand(int HumanoidId, TilePosition Target) : Comman
     }
 }
 
-/// <summary>Builds a room, if the plan is valid for the issuing player when the command executes.</summary>
+/// <summary>
+/// Builds a room, if the plan is valid for the issuing player when the command executes. The room
+/// starts inactive: its owner furnishes it, then confirms or cancels it.
+/// </summary>
 public sealed record BuildRoomCommand(RoomPlan Plan) : Command
 {
     public override CommandKind Kind => CommandKind.BuildRoom;
@@ -101,8 +110,14 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
     {
         var roomType = reader.ReadString();
         var area = new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-        var door = new DoorPlacement(reader.ReadTile(), (EdgeOrientation)reader.ReadByte());
-        return new BuildRoomCommand(new RoomPlan(roomType, area, door));
+        var door = ReadEdge(reader);
+        var windows = new DoorPlacement[reader.ReadCount(RoomPlan.MaxWindows)];
+        for (var i = 0; i < windows.Length; i++)
+        {
+            windows[i] = ReadEdge(reader);
+        }
+
+        return new BuildRoomCommand(new RoomPlan(roomType, area, door, windows));
     }
 
     protected override void WriteArguments(SimWriter writer)
@@ -112,8 +127,20 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
         writer.WriteInt32(Plan.Area.Y);
         writer.WriteInt32(Plan.Area.Width);
         writer.WriteInt32(Plan.Area.Height);
-        writer.WriteTile(Plan.Door.Tile);
-        writer.WriteByte((byte)Plan.Door.Edge);
+        WriteEdge(writer, Plan.Door);
+        writer.WriteInt32(Plan.WindowList.Count);
+        foreach (var window in Plan.WindowList)
+        {
+            WriteEdge(writer, window);
+        }
+    }
+
+    private static DoorPlacement ReadEdge(SimReader reader) => new(reader.ReadTile(), (EdgeOrientation)reader.ReadByte());
+
+    private static void WriteEdge(SimWriter writer, DoorPlacement edge)
+    {
+        writer.WriteTile(edge.Tile);
+        writer.WriteByte((byte)edge.Edge);
     }
 }
 
@@ -136,6 +163,55 @@ public sealed record PlaceObjectCommand(string ObjectType, TilePosition Tile, Di
         writer.WriteTile(Tile);
         writer.WriteByte((byte)Orientation);
     }
+}
+
+/// <summary>Picks an object up from a room that is still being built, if it belongs to the issuing player.</summary>
+/// <remarks>The client then lets the player place the object again, with a <see cref="PlaceObjectCommand"/>.</remarks>
+public sealed record PickUpObjectCommand(int ObjectId) : Command
+{
+    public override CommandKind Kind => CommandKind.PickUpObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (ObjectPlacer.CanPickUp(simulation, ObjectId, player))
+        {
+            ObjectPlacer.PickUp(simulation, (RoomObject)simulation.FindEntity(ObjectId)!);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(ObjectId);
+}
+
+/// <summary>Finishes a room: once its needed objects stand in it, it starts working.</summary>
+public sealed record ConfirmRoomCommand(int RoomId) : Command
+{
+    public override CommandKind Kind => CommandKind.ConfirmRoom;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RoomId) is Room room && RoomBuilder.CanConfirm(simulation, room, player))
+        {
+            room.IsActive = true;
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>Removes a room that is still being built, with its objects, door and walls.</summary>
+public sealed record CancelRoomCommand(int RoomId) : Command
+{
+    public override CommandKind Kind => CommandKind.CancelRoom;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RoomId) is Room { IsActive: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
+        {
+            RoomBuilder.Remove(simulation, room);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
 }
 
 /// <summary>A command stamped with the tick it executes on and its order within that tick.</summary>

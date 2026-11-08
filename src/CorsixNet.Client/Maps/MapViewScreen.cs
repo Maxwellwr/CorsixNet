@@ -27,8 +27,9 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// PgUp/PgDn previous/next level (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
-/// Space pause (local games). B builds a GP's office; 1, 2, 3 place a desk, cabinet or chair
-/// (E turns it). In a network game, commands go through the server.
+/// Space pause (local games). B builds a GP's office: blueprint, door, windows, then furniture
+/// (right click turns an object, P picks one up, Enter confirms, Esc steps back). In a network
+/// game, commands go through the server.
 /// </remarks>
 internal sealed class MapViewScreen : IScreen
 {
@@ -39,6 +40,7 @@ internal sealed class MapViewScreen : IScreen
     private static readonly Color Background = Color.Black;
     private static readonly Color HoverTint = new Color(255, 255, 255) * 0.35f;
     private static readonly byte[] NoLayers = [];
+    private static readonly Color PickUpTint = new(150, 200, 255);
 
     /// <summary>Room door animations from CorsixTH's <c>objects/door.lua</c>.</summary>
     private const int RoomDoorNorth = 104;
@@ -57,7 +59,6 @@ internal sealed class MapViewScreen : IScreen
     private readonly EntranceDoorDrawing _doors;
     private readonly Dictionary<TilePosition, List<Entity>> _entitiesByTile = [];
     private readonly BuildRoomTool _buildTool = new();
-    private readonly PlaceObjectTool _placeTool = new();
     private readonly ObjectDrawing _objects;
 
     /// <summary>Objects the demo still has to place in its GP's office, one at a time.</summary>
@@ -76,6 +77,9 @@ internal sealed class MapViewScreen : IScreen
     private KeyboardState _previousKeys;
     private MouseState _previousMouse;
     private Point? _hoveredTile;
+    private (int X, int Y) _hoveredFraction;
+    private Point _rightPressedAt;
+    private bool _buildBack;
     private bool _wander;
     private bool _demoPending;
     private int? _selected;
@@ -180,11 +184,7 @@ internal sealed class MapViewScreen : IScreen
         {
             if (_buildTool.IsActive)
             {
-                _buildTool.Back();
-            }
-            else if (_placeTool.IsActive)
-            {
-                _placeTool.Cancel();
+                _buildBack = true;
             }
             else
             {
@@ -261,8 +261,10 @@ internal sealed class MapViewScreen : IScreen
         ClampCamera();
 
         var inView = mouse.Y >= StatusHeight && mouse.X >= 0 && mouse.X < viewSize.X && mouse.Y < StatusHeight + viewSize.Y;
-        var tile = Camera.WorldToTile(_camera.ScreenToWorld(new Point(mouse.X, mouse.Y - StatusHeight), viewSize));
+        var world = _camera.ScreenToWorld(new Point(mouse.X, mouse.Y - StatusHeight), viewSize);
+        var tile = Camera.WorldToTile(world);
         _hoveredTile = inView && Map is { } map && map.Contains(tile.X, tile.Y) ? tile : null;
+        _hoveredFraction = Camera.WorldToTileFraction(world);
 
         UpdateSimulation(gameTime, mouse, Pressed);
 
@@ -289,15 +291,19 @@ internal sealed class MapViewScreen : IScreen
             var toTarget = Matrix.CreateTranslation(-topLeft.X, -topLeft.Y, 0) * Matrix.CreateScale(scale, scale, 1);
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
             CollectEntitiesByTile();
-            _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) => DrawEntities(batch, tile, anchorX, anchorY));
-            DrawOverlay(batch, map, view);
-            _buildTool.DrawPreview(batch, _diamond, _hoveredTile is { } hovered ? new TilePosition(hovered.X, hovered.Y) : null);
-            _placeTool.DrawFootprint(batch, _diamond);
-            if (_placeTool.Ghost is { } ghost && Simulation is { } ghostSimulation)
+            // The object being placed is drawn in the same order as placed objects, so walls in front hide it.
+            var ghost = _buildTool.Ghost;
+            var ghostTile = ghost is { } g && Simulation is { } ghostSimulation ? ObjectDrawing.DrawTile(ghostSimulation.Content, g.ObjectType, g.Tile, g.Orientation) : (TilePosition?)null;
+            _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) =>
             {
-                _objects.Draw(batch, ghost.ObjectType, ghost.Tile, ghost.Orientation, ghostSimulation.Tick, ghost.Tint);
-            }
-
+                DrawEntities(batch, tile, anchorX, anchorY);
+                if (tile == ghostTile && ghost is { } shown)
+                {
+                    _objects.Draw(batch, shown.ObjectType, shown.Tile, shown.Orientation, Simulation!.Tick, shown.Tint);
+                }
+            });
+            DrawOverlay(batch, map, view);
+            _buildTool.DrawPreview(batch, _diamond, _pixel, _hoveredTile is { } hovered ? new TilePosition(hovered.X, hovered.Y) : null);
             batch.End();
             if (_capturePath is { } capturePath && _target is not null)
             {
@@ -460,6 +466,7 @@ internal sealed class MapViewScreen : IScreen
         }
 
         var objectId = _demoFurniture.Dequeue();
+        var confirm = _demoFurniture.Count == 0;
         for (var y = room.Area.Y; y < room.Area.Bottom; y++)
         {
             for (var x = room.Area.X; x < room.Area.Right; x++)
@@ -471,6 +478,12 @@ internal sealed class MapViewScreen : IScreen
                     {
                         _session.Submit(new PlaceObjectCommand(objectId, tile, orientation));
                         _demoFurnitureExpected++;
+                        if (confirm)
+                        {
+                            // Commands of one tick run in order, so the room is complete when this runs.
+                            _session.Submit(new ConfirmRoomCommand(room.Id));
+                        }
+
                         return;
                     }
                 }
@@ -602,45 +615,37 @@ internal sealed class MapViewScreen : IScreen
 
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom("gp") is { } gp)
         {
-            _placeTool.Cancel();
             _buildTool.Start(gp);
         }
 
-        foreach (var (key, objectId) in new[] { (Keys.D1, "desk"), (Keys.D2, "cabinet"), (Keys.D3, "chair") })
+        var back = _buildBack;
+        _buildBack = false;
+        if (mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released)
         {
-            if (pressed(key) && !_buildTool.IsActive && simulation.Content.FindObject(objectId) is { } definition)
-            {
-                _placeTool.Start(definition);
-            }
-        }
-
-        if (pressed(Keys.E))
-        {
-            _placeTool.Turn();
-        }
-
-        if (_placeTool.IsActive)
-        {
-            // While placing, the left mouse button belongs to the placement tool.
-            var placeAt = _hoveredTile is { } point ? new TilePosition(point.X, point.Y) : (TilePosition?)null;
-            var placeClicked = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released;
-            if (_placeTool.Update(simulation, _session.Player, placeAt, placeClicked) is { } place)
-            {
-                _session.Submit(place);
-            }
-
-            return;
+            _rightPressedAt = new Point(mouse.X, mouse.Y);
         }
 
         if (_buildTool.IsActive)
         {
-            // While building, the left mouse button belongs to the build tool.
-            var hovered = _hoveredTile is { } point ? new TilePosition(point.X, point.Y) : (TilePosition?)null;
+            // While building, the mouse belongs to the build tool; a right click (not a drag, which pans) turns objects.
             var leftDown = mouse.LeftButton == ButtonState.Pressed;
             var leftWasDown = _previousMouse.LeftButton == ButtonState.Pressed;
-            if (_buildTool.Update(simulation, _session.Player, hovered, leftDown, leftDown && !leftWasDown, !leftDown && leftWasDown) is { } build)
+            var rightReleased = mouse.RightButton == ButtonState.Released && _previousMouse.RightButton == ButtonState.Pressed;
+            var rightClicked = rightReleased && Math.Abs(mouse.X - _rightPressedAt.X) + Math.Abs(mouse.Y - _rightPressedAt.Y) < 6;
+            var input = new BuildInput(
+                _hoveredTile is { } point ? new TilePosition(point.X, point.Y) : null,
+                _hoveredFraction.X,
+                _hoveredFraction.Y,
+                leftDown,
+                leftDown && !leftWasDown,
+                !leftDown && leftWasDown,
+                rightClicked,
+                pressed(Keys.Enter),
+                back,
+                pressed(Keys.P));
+            if (_buildTool.Update(simulation, _session.Player, input) is { } command)
             {
-                _session.Submit(build);
+                _session.Submit(command);
             }
 
             return;
@@ -730,7 +735,8 @@ internal sealed class MapViewScreen : IScreen
                     _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
                     break;
                 case RoomObject placed:
-                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, Color.White);
+                    var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
+                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint);
                     break;
                 case RoomDoor roomDoor:
                     var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
@@ -813,18 +819,13 @@ internal sealed class MapViewScreen : IScreen
     {
         if (_buildTool.IsActive)
         {
-            return _buildTool.Status;
-        }
-
-        if (_placeTool.IsActive)
-        {
-            return _placeTool.Status;
+            return _buildTool.Status(Simulation);
         }
 
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanPause == true ? "   Space: pause" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   1 2 3: desk cabinet chair   H: spawn   G: spawn 10   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];
