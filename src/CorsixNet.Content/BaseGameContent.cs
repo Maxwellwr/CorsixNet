@@ -50,7 +50,8 @@ public static class BaseGameContent
         MinimumSize: 4,
         FloorSprite: 18,
         WhiteWalls,
-        NeededObjects: new Dictionary<string, int> { ["desk"] = 1, ["cabinet"] = 1, ["chair"] = 1 });
+        NeededObjects: new Dictionary<string, int> { ["desk"] = 1, ["cabinet"] = 1, ["chair"] = 1 },
+        LevelConfigId: 7);
 
     /// <summary>Sprites of the hospital's outer walls (walls/external.lua).</summary>
     private static readonly ushort[] ExternalWalls =

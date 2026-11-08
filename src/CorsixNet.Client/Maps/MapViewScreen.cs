@@ -6,6 +6,7 @@ using CorsixNet.Formats;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -41,6 +42,10 @@ internal sealed class MapViewScreen : IScreen
     private static readonly Color HoverTint = new Color(255, 255, 255) * 0.35f;
     private static readonly byte[] NoLayers = [];
     private static readonly Color PickUpTint = new(150, 200, 255);
+    private static readonly Color CellOutlineColor = new(232, 0, 0);
+
+    /// <summary>How long a notice such as "not enough money" stays in the status line.</summary>
+    private const int NoticeMilliseconds = 4000;
 
     /// <summary>Room door animations from CorsixTH's <c>objects/door.lua</c>.</summary>
     private const int RoomDoorNorth = 104;
@@ -53,6 +58,7 @@ internal sealed class MapViewScreen : IScreen
     private readonly MapRenderer _renderer;
     private readonly TextRenderer _text;
     private readonly Texture2D _diamond;
+    private readonly Texture2D _cellOutline;
     private readonly Texture2D _pixel;
     private readonly Camera _camera = new();
     private readonly AnimationRenderer _animations;
@@ -81,6 +87,8 @@ internal sealed class MapViewScreen : IScreen
     private (int X, int Y) _hoveredFraction;
     private Point _rightPressedAt;
     private bool _buildBack;
+    private string? _notice;
+    private long _noticeUntil;
     private bool _wander;
     private bool _demoPending;
     private int? _selected;
@@ -113,6 +121,7 @@ internal sealed class MapViewScreen : IScreen
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
         _diamond = CreateDiamond(device);
+        _cellOutline = CreateCellOutline(device);
         _pixel = new Texture2D(device, 1, 1);
         _pixel.SetData([Color.White]);
 
@@ -314,6 +323,11 @@ internal sealed class MapViewScreen : IScreen
             });
             DrawOverlay(batch, map, view);
             _buildTool.DrawPreview(batch, _diamond);
+            if (_buildTool.IsActive && _hoveredTile is { } cell)
+            {
+                // While building, the tile under the cursor has a red outline, as in CorsixTH's UIEditRoom:draw.
+                batch.Draw(_cellOutline, new Vector2((32 * (cell.X - cell.Y)) - 32, 16 * (cell.X + cell.Y)), CellOutlineColor);
+            }
             batch.End();
             if (_capturePath is { } capturePath && _target is not null)
             {
@@ -357,6 +371,7 @@ internal sealed class MapViewScreen : IScreen
         _blocks.Dispose();
         _text.Dispose();
         _diamond.Dispose();
+        _cellOutline.Dispose();
         _pixel.Dispose();
     }
 
@@ -626,7 +641,15 @@ internal sealed class MapViewScreen : IScreen
 
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom("gp") is { } gp)
         {
-            _buildTool.Start(gp);
+            // As in the original, a room can only be started with its whole cost in the bank.
+            if (RoomPurchases.CanAfford(simulation, gp, _session.Player))
+            {
+                _buildTool.Start(gp);
+            }
+            else
+            {
+                ShowNotice($"Not enough money for a {gp.Name}: it costs {MoneyText.Format(simulation.Rules.BuildCost(gp))}");
+            }
         }
 
         var back = _buildBack;
@@ -813,6 +836,12 @@ internal sealed class MapViewScreen : IScreen
         return new Color(r, g, b);
     }
 
+    private void ShowNotice(string text)
+    {
+        _notice = text;
+        _noticeUntil = Environment.TickCount64 + NoticeMilliseconds;
+    }
+
     private string StatusLine()
     {
         if (_session is null)
@@ -820,12 +849,17 @@ internal sealed class MapViewScreen : IScreen
             return "No game.";
         }
 
+        var simulation = Simulation;
+        var money = simulation is not null && _session.Player < simulation.Hospitals.Count
+            ? $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}"
+            : string.Empty;
+
         var levels = _levels.Count > 0 ? $"   ({_levelIndex + 1} of {_levels.Count})" : string.Empty;
         var people = Simulation?.Entities.OfType<Humanoid>().Count() ?? 0;
         var levelKeys = _levels.Count > 0 ? "   PgUp PgDn: level" : string.Empty;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{_session.Name}{levels}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
+            $"{_session.Name}{levels}{money}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
     }
 
     private string TileLine()
@@ -833,6 +867,11 @@ internal sealed class MapViewScreen : IScreen
         if (_buildTool.IsActive)
         {
             return _buildTool.Status(Simulation);
+        }
+
+        if (_notice is not null && Environment.TickCount64 < _noticeUntil)
+        {
+            return _notice;
         }
 
         if (_hoveredTile is not { } position || Map is not { } map)
@@ -866,6 +905,26 @@ internal sealed class MapViewScreen : IScreen
         }
 
         return string.Join(' ', parts);
+    }
+
+    /// <summary>The outline of a tile's floor diamond, two pixels wide across and one down.</summary>
+    private static Texture2D CreateCellOutline(GraphicsDevice device)
+    {
+        const int width = 64;
+        const int height = 32;
+        var pixels = new Color[width * height];
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
+            {
+                var distance = (MathF.Abs(x + 0.5f - 32f) / 32f) + (MathF.Abs(y + 0.5f - 16f) / 16f);
+                pixels[(y * width) + x] = distance <= 1f && distance > 1f - (2f / 32f) ? Color.White : Color.Transparent;
+            }
+        }
+
+        var texture = new Texture2D(device, width, height);
+        texture.SetData(pixels);
+        return texture;
     }
 
     private static Texture2D CreateDiamond(GraphicsDevice device)

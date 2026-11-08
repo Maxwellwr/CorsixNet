@@ -65,7 +65,10 @@ try
 {
     if (mapPath is not null)
     {
-        loaded = LevelMapLoader.LoadFile(mapPath);
+        // The game's level files give the money settings, if the game is at hand.
+        var settings = gamePath is null ? ThemeHospitalInstall.Locate()
+            : ThemeHospitalInstall.TryOpen(gamePath, out var found, out _) ? found : null;
+        loaded = LevelMapLoader.LoadFile(mapPath, settings);
         levelName = Path.GetFileName(mapPath);
     }
     else

@@ -21,6 +21,7 @@ public sealed record WallSet(ushort InsideNorth, ushort InsideWest, ushort Outsi
 /// <param name="Walls">Wall sprites.</param>
 /// <param name="NeededObjects">Objects the room needs before it works, with how many of each.</param>
 /// <param name="AdditionalObjects">Further objects that may be placed in the room.</param>
+/// <param name="LevelConfigId">The room's number in the level files (<c>rooms[n]</c>), CorsixTH's <c>level_config_id</c>; 0 if none.</param>
 public sealed record RoomDefinition(
     string Id,
     string Name,
@@ -28,7 +29,8 @@ public sealed record RoomDefinition(
     ushort FloorSprite,
     WallSet Walls,
     IReadOnlyDictionary<string, int>? NeededObjects = null,
-    IReadOnlyList<string>? AdditionalObjects = null)
+    IReadOnlyList<string>? AdditionalObjects = null,
+    int LevelConfigId = 0)
 {
     /// <summary>Whether objects of type <paramref name="objectId"/> may be placed in the room.</summary>
     public bool Allows(string objectId)

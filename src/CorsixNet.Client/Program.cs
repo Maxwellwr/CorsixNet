@@ -152,7 +152,7 @@ else
     if (mapPath is not null)
     {
         var fullPath = Path.GetFullPath(mapPath);
-        levels.Insert(0, new LevelSource(Path.GetFileName(fullPath), () => LevelMapLoader.LoadFile(fullPath)));
+        levels.Insert(0, new LevelSource(Path.GetFileName(fullPath), () => LevelMapLoader.LoadFile(fullPath, install)));
     }
     else if (initialLevel is not null)
     {

@@ -1,6 +1,7 @@
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -135,9 +136,9 @@ internal sealed class BuildRoomTool
         var command = _phase switch
         {
             Phase.Blueprint => UpdateBlueprint(simulation, player, input),
-            Phase.Door => UpdateDoor(simulation, input),
+            Phase.Door => UpdateDoor(simulation, player, input),
             Phase.Windows => UpdateWindows(simulation, player, input),
-            Phase.Waiting => UpdateWaiting(simulation, player, input),
+            Phase.Waiting => UpdateWaiting(simulation, player),
             Phase.Objects => UpdateObjects(simulation, player, input),
             _ => null,
         };
@@ -152,15 +153,15 @@ internal sealed class BuildRoomTool
             return string.Empty;
         }
 
-        var name = _room.Name;
+        var name = simulation is null ? _room.Name : $"{_room.Name} ({MoneyText.Format(simulation.Rules.BuildCost(_room))})";
         var message = _message is null ? string.Empty : $"   ({_message})";
         return _phase switch
         {
             Phase.Blueprint => _area is null
                 ? $"{name}: drag out the blueprint, at least {_room.MinimumSize} by {_room.MinimumSize}{message}   Esc: cancel"
-                : $"{name}: drag the blueprint's edges to resize it, its middle to move it{Explain(_problem)}   Enter: done   Esc: cancel",
-            Phase.Door => $"{name}: place the door{Explain(_problem)}   Esc: back to the blueprint",
-            Phase.Windows => $"{name}: place windows if you like, click one again to remove it{Explain(_problem)}   Enter: done   Esc: back to the blueprint",
+                : $"{name}: drag the blueprint's edges to resize it, its middle to move it{Explain(_problem)}{message}   Enter: done   Esc: cancel",
+            Phase.Door => $"{name}: place the door{Explain(_problem)}{message}   Esc: back to the blueprint",
+            Phase.Windows => $"{name}: place windows if you like, click one again to remove it{Explain(_problem)}{message}   Enter: done   Esc: back to the blueprint",
             Phase.Waiting => $"{name}: building...",
             Phase.Objects => ObjectsStatus(simulation),
             _ => string.Empty,
@@ -312,7 +313,7 @@ internal sealed class BuildRoomTool
         }
     }
 
-    private Command? UpdateDoor(Simulation simulation, BuildInput input)
+    private Command? UpdateDoor(Simulation simulation, int player, BuildInput input)
     {
         if (input.Back)
         {
@@ -335,7 +336,7 @@ internal sealed class BuildRoomTool
             return null;
         }
 
-        return Submit(simulation);
+        return Submit(simulation, player);
     }
 
     private Command? UpdateWindows(Simulation simulation, int player, BuildInput input)
@@ -369,15 +370,21 @@ internal sealed class BuildRoomTool
             _problem = RoomBuilder.Check(simulation.Map, simulation.Content, plan, player);
             if (_problem == RoomPlanProblem.None)
             {
-                return Submit(simulation);
+                return Submit(simulation, player);
             }
         }
 
         return null;
     }
 
-    private BuildRoomCommand Submit(Simulation simulation)
+    private BuildRoomCommand? Submit(Simulation simulation, int player)
     {
+        if (!RoomPurchases.CanAfford(simulation, _room!, player))
+        {
+            _message = $"not enough money: the room costs {MoneyText.Format(simulation.Rules.BuildCost(_room!))}";
+            return null;
+        }
+
         _sentPlan = new RoomPlan(_room!.Id, _area!.Value, _door!.Value, [.. _windows]);
         _sentTick = simulation.Tick;
         _phase = Phase.Waiting;
@@ -386,7 +393,7 @@ internal sealed class BuildRoomTool
     }
 
     /// <summary>Waits for the room to appear in the simulation, which happens a few ticks after the command is sent.</summary>
-    private Command? UpdateWaiting(Simulation simulation, int player, BuildInput input)
+    private Command? UpdateWaiting(Simulation simulation, int player)
     {
         var room = simulation.Entities.OfType<Room>().FirstOrDefault(r =>
             !r.IsActive && r.Area == _sentPlan!.Area && r.RoomType == _sentPlan.RoomType && RoomBuilder.IsOwnedBy(simulation.Map, r, player));
@@ -401,9 +408,9 @@ internal sealed class BuildRoomTool
 
         if (simulation.Tick > _sentTick + CommandTimeoutTicks)
         {
-            // Something got there first, for example another player's room.
+            // Something got there first, for example another player's room, or the money ran out.
             _phase = Phase.Blueprint;
-            _message = "the room could not be built there";
+            _message = RoomPurchases.CanAfford(simulation, _room!, player) ? "the room could not be built there" : "not enough money";
         }
 
         return null;
@@ -471,7 +478,7 @@ internal sealed class BuildRoomTool
             Turn();
         }
 
-        FollowCursor(simulation, room, input.Hovered);
+        FollowCursor(room, input.Hovered);
         _placeProblem = _ghostTile is { } tile
             ? ObjectPlacer.Check(simulation, _placing.Id, tile, _orientation, player)
             : ObjectPlacementProblem.OutsideMap;
@@ -511,24 +518,13 @@ internal sealed class BuildRoomTool
     }
 
     /// <summary>
-    /// Moves the object with the cursor. Like the original, the object only moves once the cursor
-    /// leaves the tiles it would cover, so a large object does not jump about under the cursor, and
-    /// it stays at its last spot in the room while the cursor is outside the room.
+    /// Keeps the object on the cursor: its anchor tile is always the tile under the cursor, as in
+    /// CorsixTH's <c>calculateBestPlacementPosition</c>, so it follows every step of the cursor. It
+    /// is hidden while the cursor is outside the room.
     /// </summary>
-    private void FollowCursor(Simulation simulation, Room room, TilePosition? hovered)
+    private void FollowCursor(Room room, TilePosition? hovered)
     {
-        if (hovered is not { } tile || !room.Area.Contains(tile))
-        {
-            return;
-        }
-
-        if (_ghostTile is { } ghost && _placing!.Orientations.TryGetValue(_orientation, out var layout)
-            && layout.Footprint.Any(part => ghost.X + part.X == tile.X && ghost.Y + part.Y == tile.Y))
-        {
-            return;
-        }
-
-        _ghostTile = tile;
+        _ghostTile = hovered is { } tile && room.Area.Contains(tile) ? tile : null;
     }
 
     /// <summary>The next object still missing from the room, biggest first as in CorsixTH.</summary>
@@ -609,12 +605,13 @@ internal sealed class BuildRoomTool
         var remaining = Remaining(simulation, room);
         if (remaining.Count == 0 && _placing is null)
         {
-            return $"{name}: you can confirm the room, or move objects   Enter: confirm   P: pick up   Esc: take the room down";
+            var price = MoneyText.Format(simulation.Rules.RoomCost(_room.Id));
+            return $"{name}: you can confirm the room ({price}), or move objects   Enter: confirm   P: pick up   Esc: take the room down, selling the objects back";
         }
 
         var list = string.Join(", ", remaining.Select(r => $"{simulation.Content.FindObject(r.ObjectType)?.Name ?? r.ObjectType} {r.Count}"));
         var placing = _placing is null ? string.Empty : $"   placing {_placing.Name}{ExplainPlacement(_placeProblem)}";
-        return $"{name}: place the objects ({list}){placing}   Right click: turn   P: pick up   Esc: take the room down";
+        return $"{name}: place the objects ({list}){placing}   Right click: turn   P: pick up   Esc: take the room down, selling the objects back";
     }
 
     private static void DrawDiamond(SpriteBatch batch, Texture2D diamond, TilePosition tile, Color tint)

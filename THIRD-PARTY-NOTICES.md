@@ -20,7 +20,10 @@ ownership (`Simulation.cs`, `LevelMapLoader.cs`, from `CorsixTH/Lua/world.lua` a
 `CorsixTH/Lua/objects/*.lua`, `CorsixTH/Lua/entities/object.lua` and `CorsixTH/Lua/dialogs/place_objects.lua`),
 room building rules, windows, room removal, blueprints and wall sets (`RoomPlan.cs`, `Room.cs`, `BuildRoomTool.cs`, `RoomBlueprint.cs`, `BaseGameContent.cs`, `LevelMap.cs`, from
 `CorsixTH/Lua/dialogs/edit_room.lua`, `CorsixTH/Lua/rooms/*.lua`, `CorsixTH/Lua/walls/*.lua`,
-`CorsixTH/Src/th_lua_map.cpp` and `CorsixTH/Src/th_map.cpp`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
+`CorsixTH/Src/th_lua_map.cpp` and `CorsixTH/Src/th_map.cpp`), level settings and money
+(`LevelConfig.cs`, `LevelRulesLoader.cs`, `Hospital.cs`, `RoomPurchases.cs`, from
+`CorsixTH/Lua/map.lua`, `CorsixTH/Lua/hospital.lua`, `CorsixTH/Lua/world.lua`,
+`CorsixTH/Lua/base_config.lua` and `CorsixTH/Lua/dialogs/*.lua`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
 `CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and
 the RNC decompressor modifications (`Rnc.cs`).
 

@@ -164,10 +164,10 @@ them. `RoomBlueprint` and `BlueprintDrawing` draw the blueprint as the original 
 the game's own sprites: blue floor tiles (red where a tile cannot be built on) and a blue
 wireframe wall, into which the door and windows are drawn and marked on the floor. The red
 parts are the blue sprites recoloured through table 6 of `QData/Ghost1.dat` (`PaletteRemaps`),
-CorsixTH's alternative palette for them. In the furniture step the needed objects come to the
-cursor one at a time. As in the
-original, an object only moves once the cursor leaves the tiles it covers, and it is drawn grey
-where it cannot go. Commands take a few ticks to arrive, so the tool keeps track of the ones it
+CorsixTH's alternative palette for them. While building, the tile under the cursor has a red
+outline. In the furniture step the needed objects come to the cursor one at a time. An object's
+anchor tile is always the tile under the cursor, so it follows the cursor tile by tile, and it is
+drawn grey where it cannot go. Commands take a few ticks to arrive, so the tool keeps track of the ones it
 has sent until the simulation shows their effect.
 
 ## Objects
@@ -200,6 +200,27 @@ Placing marks the footprint as CorsixTH's `occupyTilesByObjectFootprintAt` does.
 keep the tiles on both sides clear. Picking an object up recomputes the room's tiles from the
 saved originals and the remaining objects. The client previews with the same check and draws
 objects with their idle animations, mirroring east and north for south and west.
+
+## Money
+
+Each player has a `Hospital` with a balance and a log of its latest transactions, as in
+CorsixTH's `hospital.lua`. What things cost depends on the level, so the prices travel with the
+saved state as `LevelRules`: starting cash, each room type's own cost and each object type's
+cost. `LevelRulesLoader` reads them from the original's level files, as CorsixTH does: the
+difficulty's base file (`FULL00.SAM`, medium difficulty), then the level's own file
+(`FULL01.SAM` for `LEVEL.L1`). The format (`#towns[1].StartCash.IllRate 40000 2`) is read by
+`LevelConfig`. Rooms find their price through their number in those files (`LevelConfigId`, 7
+for the GP's office), objects through their object type. Without level files everything is free.
+
+`RoomPurchases` charges for rooms as the original does:
+
+- a room can only be started with its whole cost (room plus needed objects) in the bank;
+  `BuildRoomCommand` checks this when it executes;
+- the needed objects are bought when the room is built, the moment they come to the cursor;
+- confirming the room pays for the room itself;
+- taking down an unfinished room sells its objects back at full price.
+
+Otherwise the balance may go below zero.
 
 ## Saves
 
@@ -289,6 +310,8 @@ Format readers in `CorsixNet.Formats`:
 | `SpriteSheet` | `.TAB` + `.DAT` sprite sheets in the simple (world) or complex (UI) chunk encoding, decoded to `IndexedImage` |
 | `IndexedImage.FromRaw` | Uncompressed 640x480 backgrounds (`QDATA/*01V.DAT`) |
 | `BitmapFont`, `Cp437` | Bitmap fonts: sprite `i` draws character `31 + i` in the game's code page |
+| `LevelConfig` | Level settings (`LEVELS/*.SAM`, CorsixTH `.level` files) as flat keys such as `towns[1].StartCash` |
+| `PaletteRemaps` | Colour remap tables (`QDATA/GHOST*.DAT`), for example the red room blueprint |
 
 Images stay as palette indices so that the renderer can apply palette effects.
 The client converts them to textures.
@@ -306,7 +329,7 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows. *(done)*
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
    *(in progress: room building in the original's steps (blueprint, door, windows, furniture,
-   confirm) done; money, staff and patient flow to come)*
+   confirm) and paying for rooms done; staff and patient flow to come)*
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
    music and video.
 

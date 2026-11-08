@@ -3,13 +3,14 @@
 
 using CorsixNet.Formats;
 using CorsixNet.Sim;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 
 namespace CorsixNet.Content.Levels;
 
-/// <summary>A level map ready for the simulation, plus the objects its file places.</summary>
-public sealed record LoadedLevelMap(LevelMap Map, IReadOnlyList<MapObjectPlacement> Objects)
+/// <summary>A level map ready for the simulation, plus the objects its file places and the level's money settings.</summary>
+public sealed record LoadedLevelMap(LevelMap Map, IReadOnlyList<MapObjectPlacement> Objects, LevelRules? Rules = null)
 {
     /// <summary>
     /// Starts a simulation on this map and places the map's objects. Use a freshly loaded map:
@@ -17,7 +18,7 @@ public sealed record LoadedLevelMap(LevelMap Map, IReadOnlyList<MapObjectPlaceme
     /// </summary>
     public Simulation StartSimulation(ulong seed)
     {
-        var simulation = new Simulation(Map, seed, BaseGameContent.Create());
+        var simulation = new Simulation(Map, seed, BaseGameContent.Create(), Rules);
         simulation.PlaceMapObjects(Objects);
         return simulation;
     }
@@ -162,16 +163,24 @@ public static class LevelMapLoader
         return new LoadedLevelMap(map, objects);
     }
 
-    /// <summary>Loads an original level map, such as <c>LEVEL.L1</c>, from the game's LEVELS folder.</summary>
+    /// <summary>
+    /// Loads an original level map, such as <c>LEVEL.L1</c>, from the game's LEVELS folder, with the
+    /// level's money settings at the original's medium difficulty.
+    /// </summary>
     public static LoadedLevelMap LoadOriginal(ThemeHospitalInstall install, string fileName)
     {
-        return Load(MapFile.Parse(install.ReadDataFile("LEVELS", fileName)));
+        var level = Load(MapFile.Parse(install.ReadDataFile("LEVELS", fileName)));
+        return level with { Rules = LevelRulesLoader.LoadOriginal(install, fileName, BaseGameContent.Create()) };
     }
 
-    /// <summary>Loads a map file from any path, such as a CorsixTH <c>.map</c> file.</summary>
-    public static LoadedLevelMap LoadFile(string path)
+    /// <summary>
+    /// Loads a map file from any path, such as a CorsixTH <c>.map</c> file. With the game at hand, the
+    /// money settings are the medium difficulty's general ones; without it, everything is free.
+    /// </summary>
+    public static LoadedLevelMap LoadFile(string path, ThemeHospitalInstall? install = null)
     {
-        return Load(MapFile.Parse(Rnc.DecompressIfNeeded(File.ReadAllBytes(path))));
+        var level = Load(MapFile.Parse(Rnc.DecompressIfNeeded(File.ReadAllBytes(path))));
+        return install is null ? level : level with { Rules = LevelRulesLoader.LoadOriginal(install, path, BaseGameContent.Create()) };
     }
 
     private static bool IsDividerWall(byte blockCode) => blockCode >> 1 == 70;

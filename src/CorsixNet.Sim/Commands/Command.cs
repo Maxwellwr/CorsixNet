@@ -1,3 +1,4 @@
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -91,8 +92,10 @@ public sealed record WalkToCommand(int HumanoidId, TilePosition Target) : Comman
 }
 
 /// <summary>
-/// Builds a room, if the plan is valid for the issuing player when the command executes. The room
-/// starts inactive: its owner furnishes it, then confirms or cancels it.
+/// Builds a room, if the plan is valid for the issuing player when the command executes and their
+/// hospital can afford the whole room. The objects it needs are bought at once. The room starts
+/// inactive: its owner furnishes it, then confirms it (paying for the room) or cancels it (selling
+/// the objects back).
 /// </summary>
 public sealed record BuildRoomCommand(RoomPlan Plan) : Command
 {
@@ -100,9 +103,12 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
 
     public override void Execute(Simulation simulation, int player)
     {
-        if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) == RoomPlanProblem.None)
+        if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) == RoomPlanProblem.None
+            && simulation.Content.FindRoom(Plan.RoomType) is { } room
+            && RoomPurchases.CanAfford(simulation, room, player))
         {
-            RoomBuilder.Build(simulation, Plan, simulation.Content.FindRoom(Plan.RoomType)!);
+            RoomBuilder.Build(simulation, Plan, room);
+            RoomPurchases.BuyNeededObjects(simulation, room, player);
         }
     }
 
@@ -192,6 +198,10 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
         if (simulation.FindEntity(RoomId) is Room room && RoomBuilder.CanConfirm(simulation, room, player))
         {
             room.IsActive = true;
+            if (simulation.Content.FindRoom(room.RoomType) is { } definition)
+            {
+                RoomPurchases.PayForRoom(simulation, definition, player);
+            }
         }
     }
 
@@ -208,6 +218,10 @@ public sealed record CancelRoomCommand(int RoomId) : Command
         if (simulation.FindEntity(RoomId) is Room { IsActive: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
         {
             RoomBuilder.Remove(simulation, room);
+            if (simulation.Content.FindRoom(room.RoomType) is { } definition)
+            {
+                RoomPurchases.SellNeededObjects(simulation, definition, player);
+            }
         }
     }
 

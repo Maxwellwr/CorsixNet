@@ -55,6 +55,10 @@ Building a room goes through the original game's steps:
 
 Esc steps back. In the furniture step it takes the room down again and returns to the door.
 
+Rooms cost money, at the prices of the level's files: you need the whole cost in the bank to
+start one. The furniture is paid for when it comes to the cursor and the room when you confirm
+it; taking an unfinished room down sells the furniture back. The balance is in the top line.
+
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
 initial view. `--upscale 2` (or 4) starts with smoothed sprites. `--capture shot.png` saves

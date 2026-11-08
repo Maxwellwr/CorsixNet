@@ -1,5 +1,6 @@
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -20,7 +21,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    public const int FormatVersion = 2;
+    private const int FormatVersion = 3;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -29,6 +30,7 @@ public sealed class Simulation
     private readonly List<Entity> _entities = [];
     private readonly List<ScheduledCommand> _pending = [];
     private readonly List<MapObjectPlacement> _delayedObjects = [];
+    private readonly Hospital[] _hospitals;
 
     /// <summary>Entity to tell when someone walks onto or off a tile. Derived from the entities; not saved.</summary>
     private readonly Dictionary<TilePosition, int> _occupantObservers = [];
@@ -36,20 +38,33 @@ public sealed class Simulation
     /// <param name="map">The level map; the simulation takes ownership and changes it.</param>
     /// <param name="seed">Seed for <see cref="Random"/>.</param>
     /// <param name="content">Content definitions; every machine in a game must use the same.</param>
-    public Simulation(LevelMap map, ulong seed, GameContent? content = null)
-        : this(map, new SimRandom(seed), content ?? GameContent.Empty)
+    /// <param name="rules">The level's money settings; by default everything is free.</param>
+    public Simulation(LevelMap map, ulong seed, GameContent? content = null, LevelRules? rules = null)
+        : this(map, new SimRandom(seed), content ?? GameContent.Empty, rules ?? LevelRules.Free)
     {
+        for (var player = 0; player < _hospitals.Length; player++)
+        {
+            _hospitals[player] = new Hospital(player, Rules.StartCash);
+        }
     }
 
-    private Simulation(LevelMap map, SimRandom random, GameContent content)
+    private Simulation(LevelMap map, SimRandom random, GameContent content, LevelRules rules)
     {
         Map = map;
         Random = random;
         Content = content;
+        Rules = rules;
+        _hospitals = new Hospital[map.PlayerCount];
     }
 
     /// <summary>The content definitions the rules refer to. Not part of the saved state.</summary>
     public GameContent Content { get; }
+
+    /// <summary>The level's money settings. Part of the saved state.</summary>
+    public LevelRules Rules { get; }
+
+    /// <summary>Each player's hospital, by player (0-based).</summary>
+    public IReadOnlyList<Hospital> Hospitals => _hospitals;
 
     /// <summary>Number of ticks completed since the game started.</summary>
     public long Tick { get; private set; }
@@ -253,13 +268,19 @@ public sealed class Simulation
         var nextEntityId = reader.ReadInt32();
         var nextSequence = reader.ReadInt64();
         var map = LevelMap.Read(reader);
+        var rules = LevelRules.Read(reader);
 
-        var simulation = new Simulation(map, random, content ?? GameContent.Empty)
+        var simulation = new Simulation(map, random, content ?? GameContent.Empty, rules)
         {
             Tick = tick,
             NextEntityId = nextEntityId,
             NextSequence = nextSequence,
         };
+
+        for (var player = 0; player < map.PlayerCount; player++)
+        {
+            simulation._hospitals[player] = Hospital.Read(reader, player);
+        }
 
         var entityCount = reader.ReadCount(MaxEntities);
         for (var i = 0; i < entityCount; i++)
@@ -318,6 +339,11 @@ public sealed class Simulation
         }
 
         Map.Write(writer);
+        Rules.Write(writer);
+        foreach (var hospital in _hospitals)
+        {
+            hospital.Write(writer);
+        }
 
         writer.WriteInt32(_entities.Count);
         foreach (var entity in _entities)
