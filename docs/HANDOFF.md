@@ -67,14 +67,20 @@ Done and committed:
   receptionist goes to it; patients arrive by the level's `popn` schedule, queue at the desk, go to
   the GP's office, queue at its door, sit on the chair until the doctor (cabinet-desk cycle) is done,
   then go home. Use animations of desk, cabinet and chair. Save format version 5.
+- Diseases, diagnosis and payment (see ARCHITECTURE.md, "Diseases", "Diagnosis", "Payment"): patients
+  come with one of the level's diseases, the GP diagnoses them and they pay for the consultation (or
+  their insurance pays two months later); diagnosed patients wait for a treatment room, the others for a
+  diagnosis room or go home, as CorsixTH's default policies say. The demo's patient chair keeps off the
+  front walls. Save format version 6.
 
 Not done yet:
 
 - M5: hire window (the original's staff list with faces), staff names and descriptions from the
-  language files, staff meandering, hiring a receptionist straight onto a desk, diseases, diagnosis
-  and paying for treatment, benches, queue priorities, staff called through a dispatcher, the
-  hospital's opening countdown. In `--demo` screenshots the GP's patient chair
-  (and the patient on it) could not be seen; probably hidden by the room's south or east wall, to check.
+  language files, staff meandering, hiring a receptionist straight onto a desk, benches, queue
+  priorities, staff called through a dispatcher, the hospital's opening countdown.
+- Patients: diagnosis and treatment rooms other than the GP's office, faxes asking what to do with a
+  patient, the casebook window (prices), floating dollar signs, looks of visual diseases (new humanoid
+  types in the client), health, deaths, reputation and the price's effect on it.
 - Money: buying land, loans and interest, hospital value (used by win criteria), bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and

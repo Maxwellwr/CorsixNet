@@ -100,15 +100,18 @@ public static class RoomVisits
         return best;
     }
 
+    /// <summary>Whether patients can be seen in rooms of this type yet; only the GP's office works so far.</summary>
+    public static bool IsSupported(string roomType) => string.Equals(roomType, PatientBehaviour.FirstRoom, StringComparison.Ordinal);
+
     /// <summary>
-    /// The GP's loop callback found the patient seen: they get up and leave, and the doctor goes on
-    /// (<c>GPRoom:dealtWithPatient</c>; without diseases nothing is diagnosed or paid yet).
+    /// The GP's loop callback found the patient seen: they pay, get further in their diagnosis, get up and leave,
+    /// and the doctor goes on (<c>GPRoom:dealtWithPatient</c>).
     /// </summary>
     internal static void DealtWithPatient(Simulation simulation, Room room)
     {
-        if (simulation.FindEntity(room.PatientId) is Humanoid { Behaviour: PatientBehaviour patient })
+        if (simulation.FindEntity(room.PatientId) is Humanoid { Behaviour: PatientBehaviour patient } humanoid)
         {
-            patient.DealtWith();
+            patient.DealtWith(simulation, room, humanoid);
         }
     }
 

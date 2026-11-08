@@ -299,8 +299,32 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   `random(3 + 5 * (1 - skill), 8 + 10 * (1 - skill))` rounds of the desk animation (consultants
   longer). Patients queue at the door and go in one at a time once the doctor is in. A patient sits on
   the chair; each time the doctor's desk time runs out, they conclude with probability
-  `0.7 + 0.3 * skill`, at the latest after three failures. Diseases, diagnosis and payment come later:
-  for now every patient goes home after the GP, leaving through a random spawn point.
+  `0.7 + 0.3 * skill`, at the latest after three failures, and the patient leaves (see below).
+- **Diseases** (`Sim.Diseases`, from `diseases/*.lua`, `diagnosis/*.lua` and `world.lua`). `DiseaseCatalog`
+  holds every disease and every diagnosis room's pseudo disease (`diag_gp`, `diag_x_ray`, ...), which is
+  what a patient pays for before they are diagnosed. `DiseaseRules`, part of `LevelRules`, comes from the
+  level files: each disease's `expertise[n]` price, `Known` and `MaxDiagDiff`, how common it is
+  (`visuals`, `non_visuals`; 0 leaves it out) and from which month it comes (`visuals_available`,
+  `non_visuals_available`, `gbv.HoldVisualMonths`, `gbv.HoldVisualPeepCount`). A new patient gets one of the
+  level's diseases at random (`World:getNewPatientDisease`), looks as it makes them (only bloaty heads differ
+  so far; the other visual diseases need humanoid types the client cannot draw yet) and pays through one of
+  three insurance companies one time in four.
+- **Diagnosis** (`PatientCare`, from `patient.lua` and `rooms/gp.lua`). Progress is in thousandths, worked
+  out with decimals: each GP visit adds `0.4 * (1 - MaxDiagDiff)` plus `(attention / d + 0.4) * skill / d`
+  times 1.5 (fatigue is always 0), `d` a random 1 to 3, very skilled doctors up to five times as much.
+  At 1.0 (the default `stop_procedure` policy) the patient is diagnosed, the hospital knows the disease, and
+  they look for its treatment rooms; otherwise the GP sends them to one of the disease's diagnosis rooms.
+  Only the GP's office works so far (`RoomVisits.IsSupported`), so other rooms are never found: as in
+  CorsixTH's `seek_room.lua` with the default policies, a patient below 0.1 goes home, one below 0.9 or
+  with a disease the hospital does not know waits, and one above has the disease guessed. Waiting patients
+  step off to a free spot and give up after 60 days; CorsixTH's faxes asking the player what to do, and
+  patients going to a room built meanwhile, are not there yet.
+- **Payment** (`Hospital`, from `hospital.lua`). Before each room the patient agrees to pay its current price
+  (always at or below the standard price, with chance `e^(-4 * overprice)` above it) and pays it when the
+  staff is done: into the bank as a `Treatment` transaction, or, if insured, owed by the insurance company,
+  which pays two months later at a month's end. The price is the level's `StartPrice` (a pseudo disease's
+  own price) with 4.5 % inflation a year, times the player's percentage in the casebook (100 % until the
+  casebook window exists). Reputation is not modelled; at CorsixTH's starting 500 it does not change prices.
 - **Using objects** (`ObjectUse`, from `use_object.lua`). The object's usage animations
   (`ObjectDefinition.UsageNorth` and `UsageEast`, mirrored for south and west) say how long each phase
   lasts: one tick per frame, with the lengths of the original's animations in `BaseGameContent` (a

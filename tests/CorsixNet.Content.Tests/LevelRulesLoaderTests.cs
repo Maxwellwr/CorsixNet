@@ -2,6 +2,7 @@ using System.Text;
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
 
@@ -138,5 +139,47 @@ public class LevelRulesLoaderTests
         var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("#popn[0].Month.Change 0 2\n"));
 
         Assert.Equal([new(0, 2), new(1, 1), new(27, 0)], LevelRulesLoader.PopulationFromConfig(config));
+    }
+
+    [Fact]
+    public void ReadsDiseaseSettingsOnTopOfTheDefaults()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #expertise[2].StartPrice.Known.MaxDiagDiff 900 1 200 BLOATY_HEAD
+            #non_visuals[0] 5 I_UNCOMMON_COLD
+            #non_visuals_available[0] 4 I_UNCOMMON_COLD
+            """));
+
+        var diseases = LevelRulesLoader.DiseasesFromConfig(config);
+        var cold = DiseaseCatalog.Find("uncommon_cold")!;
+
+        Assert.Equal(900, diseases.StartPrice(2));
+        Assert.True(diseases.IsKnown(2));
+        Assert.Equal(200, diseases.MaxDiagDiff(2));
+        Assert.Equal(300, diseases.StartPrice(16));
+        Assert.Equal(350, diseases.MaxDiagDiff(16));
+        Assert.True(diseases.IsKnown(1));
+        Assert.Equal([cold], diseases.AvailableDiseases());
+        Assert.Equal(2, diseases.HoldVisualMonths);
+        Assert.False(diseases.IsUsableForNewPatient(cold, monthOfGame: 4, visitors: 0));
+        Assert.True(diseases.IsUsableForNewPatient(cold, monthOfGame: 5, visitors: 0));
+    }
+
+    [Fact]
+    public void ReadsTheOriginalLevelOneDiseases()
+    {
+        var install = RealGameData.Require();
+
+        var diseases = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()).Diseases;
+
+        // FULL01.SAM: two visual and four non-visual diseases; prices from FULL00.SAM, difficulties from FULL01.SAM.
+        Assert.Equal(
+            ["bloaty_head", "heaped_piles", "invisibility", "the_squits", "tv_personalities", "uncommon_cold"],
+            diseases.AvailableDiseases().Select(d => d.Id));
+        Assert.Equal(850, diseases.CurePrice(DiseaseCatalog.Find("bloaty_head")!));
+        Assert.Equal(200, diseases.MaxDiagDiff(2));
+        Assert.True(diseases.IsKnown(5));
+        Assert.False(diseases.IsKnown(2));
+        Assert.Equal(2, diseases.HoldVisualPeepCount);
     }
 }

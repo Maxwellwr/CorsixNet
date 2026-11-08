@@ -9,6 +9,7 @@ using System.Globalization;
 using System.Text.RegularExpressions;
 using CorsixNet.Formats;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
@@ -26,6 +27,15 @@ public static partial class LevelRulesLoader
 
     /// <summary>Number of levels in the original campaign; each has its own settings file.</summary>
     public const int CampaignLevels = 12;
+
+    /// <summary>base_config.lua's <c>gbv.HoldVisualMonths</c>.</summary>
+    private const int BaseHoldVisualMonths = 2;
+
+    /// <summary>base_config.lua's <c>gbv.HoldVisualPeepCount</c>.</summary>
+    private const int BaseHoldVisualPeepCount = 6;
+
+    /// <summary>base_config.lua's <c>visuals_available</c>; its <c>visuals</c>, <c>non_visuals</c> and <c>non_visuals_available</c> are all 0.</summary>
+    private static readonly int[] BaseVisualsAvailable = [0, 12, 3, 12, 18, 6, 0, 6, 12, 0, 18, 0, 0, 6];
 
     /// <summary>
     /// The level number of an original level map such as <c>LEVEL.L1</c>, or null for other maps.
@@ -70,7 +80,7 @@ public static partial class LevelRulesLoader
         var objects = content.Objects
             .Where(definition => config.GetInt($"objects[{definition.ObjectType}].StartCost") is not null)
             .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
-        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config));
+        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config));
     }
 
     /// <summary>
@@ -136,6 +146,40 @@ public static partial class LevelRulesLoader
             config.GetInt("gbv.DoctorThreshold") ?? defaults.DoctorThreshold,
             config.GetInt("gbv.ConsultantThreshold") ?? defaults.ConsultantThreshold,
             levels);
+    }
+
+    /// <summary>
+    /// The disease settings: <c>expertise[n].StartPrice</c>, <c>.Known</c> and <c>.MaxDiagDiff</c>, <c>visuals[n]</c>,
+    /// <c>non_visuals[n]</c>, <c>visuals_available[n]</c>, <c>non_visuals_available[n]</c>, <c>gbv.HoldVisualMonths</c>
+    /// and <c>gbv.HoldVisualPeepCount</c>, on top of CorsixTH's base_config.lua.
+    /// </summary>
+    public static DiseaseRules DiseasesFromConfig(LevelConfig config)
+    {
+        var defaults = DiseaseRules.Default;
+        var count = DiseaseRules.ExpertiseCount + 1;
+        var prices = new int[count];
+        var known = new bool[count];
+        var difficulties = new int[count];
+        for (var i = 1; i < count; i++)
+        {
+            prices[i] = config.GetInt($"expertise[{i}].StartPrice") ?? defaults.StartPrice(i);
+            known[i] = (config.GetInt($"expertise[{i}].Known") ?? (defaults.IsKnown(i) ? 1 : 0)) == 1;
+            difficulties[i] = config.GetInt($"expertise[{i}].MaxDiagDiff") ?? defaults.MaxDiagDiff(i);
+        }
+
+        int[] Values(string table, int length, IReadOnlyList<int>? fallback) =>
+            [.. Enumerable.Range(0, length).Select(i => config.GetInt($"{table}[{i}].Value") ?? fallback?[i] ?? 0)];
+
+        return new DiseaseRules(
+            prices,
+            known,
+            difficulties,
+            Values("visuals", DiseaseRules.VisualsCount, null),
+            Values("non_visuals", DiseaseRules.NonVisualsCount, null),
+            Values("visuals_available", DiseaseRules.VisualsCount, BaseVisualsAvailable),
+            Values("non_visuals_available", DiseaseRules.NonVisualsCount, null),
+            config.GetInt("gbv.HoldVisualMonths") ?? BaseHoldVisualMonths,
+            config.GetInt("gbv.HoldVisualPeepCount") ?? BaseHoldVisualPeepCount);
     }
 
     private static StaffLevel StaffLevelFromConfig(LevelConfig config, int index, StaffLevel? fallback)

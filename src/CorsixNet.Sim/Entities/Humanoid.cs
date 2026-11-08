@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
@@ -375,8 +376,25 @@ public sealed class Humanoid : Entity
     /// </summary>
     public static Humanoid CreateRandomPatient(int id, TilePosition tile, SimRandom random, int hospitalPlayer = -1)
     {
+        return CreatePatient(id, tile, random, PatientLook.Standard, hospitalPlayer);
+    }
+
+    /// <summary>
+    /// Creates a patient who looks as their disease makes them, with CorsixTH's random choices from the disease's
+    /// <c>initPatient</c> (<c>diseases/broken_wind.lua</c> for the standard look, <c>diseases/bloaty_head.lua</c>).
+    /// </summary>
+    public static Humanoid CreatePatient(int id, TilePosition tile, SimRandom random, PatientLook look, int hospitalPlayer = -1)
+    {
         Span<byte> layers = stackalloc byte[LayerCount];
         HumanoidType type;
+        if (look == PatientLook.BloatyHead)
+        {
+            layers[0] = (byte)(random.NextInclusive(6, 8) * 2);
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            layers[2] = (byte)(random.NextInclusive(0, 1) * 2);
+            return new Humanoid(id, tile, HumanoidType.StandardMalePatient, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
         if (random.Next(2) == 0)
         {
             type = HumanoidType.StandardMalePatient;

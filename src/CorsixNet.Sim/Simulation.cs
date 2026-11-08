@@ -25,7 +25,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 5;
+    private const int FormatVersion = 6;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -453,8 +453,9 @@ public sealed class Simulation
     /// <summary>
     /// The end of the current day, as CorsixTH's <c>World:onTick</c> handles it: the next day's patient arrivals
     /// get their hours (<c>World:onEndDay</c>). At the end of a month every hospital pays its staff's wages
-    /// (<c>Hospital:onEndMonth</c>), then the next month's arrivals are planned and the candidates for hire
-    /// are replaced (<c>World:onEndMonth</c>).
+    /// and receives what insurance companies owed from two months ago (<c>Hospital:onEndMonth</c>), at the end of
+    /// a year prices go up (<c>Hospital:onEndYear</c>), then the next month's arrivals are planned and the
+    /// candidates for hire are replaced (<c>World:onEndMonth</c>).
     /// </summary>
     private void OnEndDay()
     {
@@ -477,6 +478,11 @@ public sealed class Simulation
         foreach (var hospital in _hospitals)
         {
             hospital.PayWages(Tick, wages[hospital.Player]);
+            hospital.PayInsurance(Tick);
+            if (date.IsLastDayOfYear)
+            {
+                hospital.OnEndYear();
+            }
         }
 
         Arrivals.OnEndMonth(this);

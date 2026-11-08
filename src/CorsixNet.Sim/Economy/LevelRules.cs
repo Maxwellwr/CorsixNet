@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
 using CorsixNet.Sim.Staff;
@@ -35,13 +36,16 @@ public sealed class LevelRules
     /// <param name="objectCosts">Cost of each object type by object id.</param>
     /// <param name="staff">Salaries and staff for hire; by default the original game's settings.</param>
     /// <param name="population">How the number of patients per month changes; by default CorsixTH's base_config.lua.</param>
+    /// <param name="diseases">Which diseases come and their prices; by default <see cref="DiseaseRules.Default"/>.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
         IEnumerable<KeyValuePair<string, int>> objectCosts,
         StaffRules? staff = null,
-        IEnumerable<PopulationChange>? population = null)
+        IEnumerable<PopulationChange>? population = null,
+        DiseaseRules? diseases = null)
     {
+        Diseases = diseases ?? DiseaseRules.Default;
         StartCash = startCash;
         Staff = staff ?? StaffRules.Default;
         Population = [.. population ?? DefaultPopulation];
@@ -61,6 +65,9 @@ public sealed class LevelRules
     /// changes by how much each month.
     /// </summary>
     public IReadOnlyList<PopulationChange> Population { get; }
+
+    /// <summary>Which diseases the level has, from when, and their prices.</summary>
+    public DiseaseRules Diseases { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -106,6 +113,8 @@ public sealed class LevelRules
             writer.WriteInt32(entry.Month);
             writer.WriteInt32(entry.Change);
         }
+
+        Diseases.Write(writer);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -120,7 +129,7 @@ public sealed class LevelRules
             population[i] = new PopulationChange(reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population);
+        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader));
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)
