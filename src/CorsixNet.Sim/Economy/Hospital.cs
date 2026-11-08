@@ -4,7 +4,9 @@
 // Hospital:getTreatmentPrice, Hospital:addInsuranceMoney, Hospital:onEndYear); reputation from the same file
 // (reputation_changes, Hospital:changeReputation, unconditionalChangeReputation, isReputationChangeAllowed,
 // getReputationChangeLikelihood, computePriceLevelImpact, updateNotCuredCounts) and entities/humanoids/patient.lua
-// (Patient:getPriceDistortion).
+// (Patient:getPriceDistortion); the hospital's value and the year's counts from the same file (Hospital:Hospital,
+// spendMoney, receiveMoney, onEndYear) and the year end's trophies and awards from
+// dialogs/fullscreen/annual_report.lua (UIAnnualReport:checkTrophiesAndAwards, updateAwards).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -33,7 +35,68 @@ public enum TransactionKind : byte
     /// names one of five companies at random.
     /// </summary>
     DrugCost = 7,
+
+    /// <summary>Money for the year's trophies (CorsixTH's <c>eoy_trophy_bonus</c>).</summary>
+    TrophyBonus = 8,
+
+    /// <summary>The year's award money less its fines, which may be negative (CorsixTH's <c>eoy_bonus_penalty</c>).</summary>
+    AwardBonus = 9,
 }
+
+/// <summary>A trophy, award or fine of the year end (CorsixTH's annual report).</summary>
+public enum YearEndAwardKind : byte
+{
+    /// <summary>Trophy: the reputation stayed above <c>awards_trophies.Reputation</c> all year.</summary>
+    ConsistentReputation,
+
+    /// <summary>Trophy: nobody died or went home uncured.</summary>
+    AllCuredTrophy,
+
+    /// <summary>Trophy: nobody died.</summary>
+    NoDeathsTrophy,
+
+    /// <summary>Trophy: more cured than nine tenths of those not cured.</summary>
+    ManyCuredTrophy,
+
+    /// <summary>Award: a reputation above <c>ReputationAward</c>.</summary>
+    HighReputation,
+
+    /// <summary>Fine: a reputation below <c>ReputationPoor</c>.</summary>
+    PoorReputation,
+
+    /// <summary>Award (in reputation): a hospital worth more than <c>HospValueAward</c>.</summary>
+    HighValue,
+
+    /// <summary>Penalty (in reputation): a hospital worth less than <c>HospValuePoor</c>.</summary>
+    LowValue,
+
+    /// <summary>Award: more cures than <c>CuresAward</c>.</summary>
+    ManyCures,
+
+    /// <summary>Fine: fewer cures than <c>CuresPoor</c>.</summary>
+    FewCures,
+
+    /// <summary>Award: nobody died or went home uncured.</summary>
+    AllCures,
+
+    /// <summary>Award: fewer deaths than <c>DeathsAward</c>.</summary>
+    FewDeaths,
+
+    /// <summary>Fine: more deaths than <c>DeathsPoor</c>.</summary>
+    ManyDeaths,
+
+    /// <summary>Award: more than <c>CuresVDeathsAward</c> cures per death.</summary>
+    CuresOverDeaths,
+
+    /// <summary>Fine: at most <c>CuresVDeathsPoor</c> cures per death.</summary>
+    DeathsOverCures,
+}
+
+/// <summary>A trophy, award or fine the hospital got at a year end, and what it brought.</summary>
+/// <param name="Kind">Which.</param>
+/// <param name="Money">Money it brought; negative for a fine.</param>
+/// <param name="Reputation">Reputation it brought; negative for a penalty.</param>
+public readonly record struct YearEndAward(YearEndAwardKind Kind, int Money, int Reputation);
 
 /// <summary>Why a hospital's reputation changes, as the keys of CorsixTH's <c>reputation_changes</c>.</summary>
 public enum ReputationChange : byte
@@ -142,6 +205,11 @@ public sealed class Hospital
     /// <summary>The reputation a disease starts with in the casebook, and above which prices rise with it.</summary>
     public const int AverageReputation = 500;
 
+    /// <summary>What a hospital is worth at the start besides its land (CorsixTH's <c>+ 20000</c>).</summary>
+    public const int StartValueBesidesLand = 20000;
+
+    private const int MaxYearEndAwards = 64;
+
     public const int MinReputation = 0;
 
     public const int MaxReputation = 1000;
@@ -161,12 +229,43 @@ public sealed class Hospital
     /// <summary>What each insurance company owes: this month, last month and the month before.</summary>
     private readonly long[,] _insuranceOwed = new long[InsuranceCompanies, InsuranceMonths];
 
-    internal Hospital(int player, long balance, int reputation = AverageReputation)
+    private readonly List<YearEndAward> _lastYearAwards = [];
+
+    internal Hospital(int player, long balance, int reputation = AverageReputation, long value = 0)
     {
         Player = player;
         Balance = balance;
         Reputation = Math.Clamp(reputation, MinReputation, MaxReputation);
+        LowestReputationThisYear = Reputation;
+        Value = value;
     }
+
+    /// <summary>
+    /// What the hospital is worth (CorsixTH's <c>value</c>): its land and 20,000 at the start, plus what was paid for
+    /// rooms and objects, less what objects were sold for.
+    /// </summary>
+    public long Value { get; private set; }
+
+    /// <summary>Patients who came this year (CorsixTH's <c>num_visitors_ty</c>).</summary>
+    public int VisitorsThisYear { get; internal set; }
+
+    /// <summary>Patients cured this year (CorsixTH's <c>num_cured_ty</c>).</summary>
+    public int CuredThisYear { get; internal set; }
+
+    /// <summary>Patients who died this year (CorsixTH's <c>num_deaths_this_year</c>).</summary>
+    public int DeathsThisYear { get; internal set; }
+
+    /// <summary>Patients who went home uncured this year (CorsixTH's <c>not_cured_ty</c>).</summary>
+    public int NotCuredThisYear { get; internal set; }
+
+    /// <summary>
+    /// The lowest reputation since the year began; while it stays above the level's <c>awards_trophies.Reputation</c>
+    /// the hospital is on its way to the consistent reputation trophy (CorsixTH's <c>has_impressive_reputation</c>).
+    /// </summary>
+    public int LowestReputationThisYear { get; private set; }
+
+    /// <summary>The trophies, awards and fines of the last year end, in the order of CorsixTH's annual report.</summary>
+    public IReadOnlyList<YearEndAward> LastYearAwards => _lastYearAwards;
 
     /// <summary>The player (0-based) the hospital belongs to.</summary>
     public int Player { get; }
@@ -269,14 +368,29 @@ public sealed class Hospital
         return (int)decimal.Ceiling(price);
     }
 
+    /// <summary>
+    /// Pays money out; what is paid for a room or an object adds to the hospital's value (CorsixTH's
+    /// <c>spendMoney</c> with <c>changeValue</c>).
+    /// </summary>
     internal void Spend(long tick, int amount, TransactionKind kind, string subject)
     {
+        if (kind is TransactionKind.BuyObject or TransactionKind.BuildRoom)
+        {
+            Value += amount;
+        }
+
         Balance -= amount;
         Log(new Transaction(tick, kind, subject, -amount, Balance));
     }
 
+    /// <summary>Takes money in; what an object is sold for is taken off the hospital's value (<c>receiveMoney</c>).</summary>
     internal void Receive(long tick, int amount, TransactionKind kind, string subject)
     {
+        if (kind == TransactionKind.SellObject)
+        {
+            Value -= amount;
+        }
+
         Balance += amount;
         Log(new Transaction(tick, kind, subject, amount, Balance));
     }
@@ -361,15 +475,22 @@ public sealed class Hospital
             ReputationChange.OverPriced => -2,
             _ => 1,
         };
-        if (IsReputationChangeAllowed(random, amount))
-        {
-            Reputation = Math.Clamp(Reputation + amount, MinReputation, MaxReputation);
-        }
-
+        ChangeReputation(random, amount);
         if (entry is { Reputation: { } diseaseReputation })
         {
             // CorsixTH does not keep a disease's reputation within 0 to 1000.
             entry.Reputation = diseaseReputation + amount;
+        }
+    }
+
+    /// <summary><c>Hospital:changeReputation</c> by an amount, with no disease (the year end's <c>year_end</c>).</summary>
+    internal void ChangeReputation(SimRandom random, int amount)
+    {
+        if (IsReputationChangeAllowed(random, amount))
+        {
+            // Hospital:unconditionalChangeReputation.
+            Reputation = Math.Clamp(Reputation + amount, MinReputation, MaxReputation);
+            LowestReputationThisYear = Math.Min(LowestReputationThisYear, Reputation);
         }
     }
 
@@ -411,6 +532,7 @@ public sealed class Hospital
     {
         ChangeReputation(random, reason, entry);
         NotCured++;
+        NotCuredThisYear++;
         if (reason == ReputationChange.Kicked)
         {
             entry.TurnedAway++;
@@ -483,8 +605,134 @@ public sealed class Hospital
         }
     }
 
-    /// <summary><c>Hospital:onEndYear</c>: prices go up by the inflation rate.</summary>
-    internal void OnEndYear() => InflationYears++;
+    /// <summary>
+    /// The year end: CorsixTH's annual report judges the year (<c>UIAnnualReport:checkTrophiesAndAwards</c>), then
+    /// <c>Hospital:onEndYear</c> starts the year's counts afresh and raises prices by the inflation rate, and then the
+    /// trophy and award money and reputation are given (<c>UIAnnualReport:updateAwards</c>).
+    /// </summary>
+    internal void OnEndYear(long tick, SimRandom random, AwardRules prices)
+    {
+        JudgeYear(random, prices);
+
+        VisitorsThisYear = 0;
+        CuredThisYear = 0;
+        NotCuredThisYear = 0;
+        DeathsThisYear = 0;
+        LowestReputationThisYear = Reputation;
+        InflationYears++;
+
+        var trophyMoney = 0;
+        var awardMoney = 0;
+        var reputation = 0;
+        foreach (var award in _lastYearAwards)
+        {
+            if (award.Kind <= YearEndAwardKind.ManyCuredTrophy)
+            {
+                trophyMoney += award.Money;
+            }
+            else
+            {
+                awardMoney += award.Money;
+            }
+
+            reputation += award.Reputation;
+        }
+
+        if (trophyMoney != 0)
+        {
+            Receive(tick, trophyMoney, TransactionKind.TrophyBonus, string.Empty);
+        }
+
+        if (awardMoney != 0)
+        {
+            Receive(tick, awardMoney, TransactionKind.AwardBonus, string.Empty);
+        }
+
+        if (reputation != 0)
+        {
+            ChangeReputation(random, reputation);
+        }
+    }
+
+    /// <summary>
+    /// <c>UIAnnualReport:checkTrophiesAndAwards</c>. Nothing counts unless more than one patient was cured this year,
+    /// except the fines. The trophies for drinks sold and pleased VIPs are left out until drinks are sold and VIPs come.
+    /// </summary>
+    private void JudgeYear(SimRandom random, AwardRules prices)
+    {
+        _lastYearAwards.Clear();
+        var anybodyCured = CuredThisYear > 1;
+
+        // Trophies.
+        if (anybodyCured && LowestReputationThisYear > prices[AwardRules.Reputation])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.ConsistentReputation, prices[AwardRules.TrophyReputationBonus], 0));
+        }
+
+        if (anybodyCured && DeathsThisYear == 0 && NotCuredThisYear == 0)
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.AllCuredTrophy, prices[AwardRules.TrophyAllCuredBonus], 0));
+        }
+        else if (anybodyCured && DeathsThisYear == 0)
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.NoDeathsTrophy, prices[AwardRules.TrophyDeathBonus], 0));
+        }
+        else if (anybodyCured && CuredThisYear > NotCuredThisYear * 0.9m)
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.ManyCuredTrophy, prices[AwardRules.TrophyCuresBonus], 0));
+        }
+
+        // Awards and fines.
+        if (anybodyCured && Reputation > prices[AwardRules.ReputationAward])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.HighReputation, prices[AwardRules.AwardReputationBonus], 0));
+        }
+        else if (Reputation < prices[AwardRules.ReputationPoor])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.PoorReputation, prices[AwardRules.AwardReputationPenalty], 0));
+        }
+
+        if (anybodyCured && Value > prices[AwardRules.HospValueAward])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.HighValue, 0, prices[AwardRules.HospValueBonus] * random.NextInclusive(1, 15)));
+        }
+        else if (Value < prices[AwardRules.HospValuePoor])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.LowValue, 0, prices[AwardRules.HospValuePenalty] * random.NextInclusive(1, 15)));
+        }
+
+        if (anybodyCured && CuredThisYear > prices[AwardRules.CuresAward])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.ManyCures, prices[AwardRules.CuresBonus], 0));
+        }
+        else if (CuredThisYear < prices[AwardRules.CuresPoor])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.FewCures, prices[AwardRules.CuresPenalty], 0));
+        }
+
+        if (anybodyCured && DeathsThisYear == 0 && NotCuredThisYear == 0)
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.AllCures, prices[AwardRules.AllCuresBonus], 0));
+        }
+        else if (anybodyCured && DeathsThisYear < prices[AwardRules.DeathsAward])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.FewDeaths, prices[AwardRules.DeathsBonus], 0));
+        }
+        else if (DeathsThisYear > prices[AwardRules.DeathsPoor])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.ManyDeaths, prices[AwardRules.DeathsPenalty], 0));
+        }
+
+        var cureRatio = DeathsThisYear > 0 ? CuredThisYear / (decimal)DeathsThisYear : 100;
+        if (anybodyCured && cureRatio > prices[AwardRules.CuresVDeathsAward])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.CuresOverDeaths, prices[AwardRules.CuresVDeathsBonus], 0));
+        }
+        else if (cureRatio <= prices[AwardRules.CuresVDeathsPoor])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.DeathsOverCures, prices[AwardRules.CuresVDeathsPenalty], 0));
+        }
+    }
 
     internal void Write(SimWriter writer)
     {
@@ -505,6 +753,20 @@ public sealed class Hospital
         writer.WriteInt32(NotCured);
         writer.WriteInt32(Reputation);
         writer.WriteInt32(InflationYears);
+        writer.WriteInt64(Value);
+        writer.WriteInt32(VisitorsThisYear);
+        writer.WriteInt32(CuredThisYear);
+        writer.WriteInt32(DeathsThisYear);
+        writer.WriteInt32(NotCuredThisYear);
+        writer.WriteInt32(LowestReputationThisYear);
+        writer.WriteInt32(_lastYearAwards.Count);
+        foreach (var award in _lastYearAwards)
+        {
+            writer.WriteByte((byte)award.Kind);
+            writer.WriteInt32(award.Money);
+            writer.WriteInt32(award.Reputation);
+        }
+
         writer.WriteBool(IsOpen);
         writer.WriteInt32(OpenTimer);
         writer.WriteInt32(OpenTickTimer);
@@ -541,7 +803,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.DrugCost)
+            if (kind > (byte)TransactionKind.AwardBonus)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -555,6 +817,24 @@ public sealed class Hospital
         hospital.NotCured = reader.ReadInt32();
         hospital.Reputation = reader.ReadInt32();
         hospital.InflationYears = reader.ReadInt32();
+        hospital.Value = reader.ReadInt64();
+        hospital.VisitorsThisYear = reader.ReadInt32();
+        hospital.CuredThisYear = reader.ReadInt32();
+        hospital.DeathsThisYear = reader.ReadInt32();
+        hospital.NotCuredThisYear = reader.ReadInt32();
+        hospital.LowestReputationThisYear = reader.ReadInt32();
+        var awards = reader.ReadCount(MaxYearEndAwards);
+        for (var i = 0; i < awards; i++)
+        {
+            var kind = reader.ReadByte();
+            if (kind > (byte)YearEndAwardKind.DeathsOverCures)
+            {
+                throw new InvalidDataException($"Unknown year end award {kind}.");
+            }
+
+            hospital._lastYearAwards.Add(new((YearEndAwardKind)kind, reader.ReadInt32(), reader.ReadInt32()));
+        }
+
         hospital.IsOpen = reader.ReadBool();
         hospital.OpenTimer = reader.ReadInt32();
         hospital.OpenTickTimer = reader.ReadInt32();

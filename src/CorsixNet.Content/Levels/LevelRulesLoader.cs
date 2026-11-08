@@ -83,7 +83,8 @@ public static partial class LevelRulesLoader
         var objects = content.Objects
             .Where(definition => config.GetInt($"objects[{definition.ObjectType}].StartCost") is not null)
             .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
-        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config), startReputation);
+        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config), startReputation,
+            AwardsFromConfig(config), config.GetInt("gbv.LandCostPerTile") ?? LevelRules.DefaultLandCostPerTile);
     }
 
     /// <summary>
@@ -107,6 +108,21 @@ public static partial class LevelRulesLoader
 
             entries.Add(new PopulationChange(month.Value, change.Value));
         }
+    }
+
+    /// <summary>The level's <c>awards_trophies</c> settings on top of CorsixTH's base_config.lua.</summary>
+    public static AwardRules AwardsFromConfig(LevelConfig config)
+    {
+        var given = new List<KeyValuePair<string, int>>();
+        foreach (var name in AwardRules.Names)
+        {
+            if (config.GetInt("awards_trophies." + name) is { } value)
+            {
+                given.Add(new(name, value));
+            }
+        }
+
+        return AwardRules.With(given);
     }
 
     /// <summary>

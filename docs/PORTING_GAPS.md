@@ -116,7 +116,9 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 - Reputation: changes from VIPs, emergencies, autopsies, room explosions, the year-end award and staff kicked out;
   the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
   price, prices far from what patients expect, and the price rise above 500 are done.
-- Hospital value (used by win criteria), monthly/yearly accounting, end-of-year bonuses and awards money.
+- Annual report screen (statistics, rankings, trophy and award plaques); trophies and awards for drinks sold, VIPs,
+  rats, plants, staff and patient happiness, cleanliness, emergencies, waiting times, machines and research; the
+  level 3 salary rise. The hospital's value, the year's counts and the other trophies and awards are done.
 - Buying land: plot purchase from the town map, plot prices (`fullscreen/town_map.lua`).
 - Heating costs and heating level (`fullscreen/town_map.lua`, radiators).
 - Research spending and its effect on drug ratings and new equipment (`research_department.lua`, `fullscreen/research_policy.lua`).

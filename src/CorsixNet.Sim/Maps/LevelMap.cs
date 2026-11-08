@@ -69,6 +69,21 @@ public sealed class LevelMap
         _parcelOwners[parcel] = owner;
     }
 
+    /// <summary>Number of tiles in <paramref name="parcel"/> (CorsixTH's <c>Map:getParcelTileCount</c>).</summary>
+    public int ParcelTileCount(int parcel)
+    {
+        var count = 0;
+        foreach (var tile in _tiles)
+        {
+            if (tile.Parcel == parcel)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     public bool Contains(int x, int y) => x >= 0 && x < Width && y >= 0 && y < Height;
 
     /// <summary>The tile at (<paramref name="x"/>, <paramref name="y"/>).</summary>

@@ -24,6 +24,9 @@ public sealed class LevelRules
     /// <summary>No money at the start and everything free, staff included.</summary>
     public static readonly LevelRules Free = new(0, [], [], StaffRules.Free);
 
+    /// <summary>CorsixTH's fallback for <c>gbv.LandCostPerTile</c> (map.lua's <c>Map:getParcelPrice</c>).</summary>
+    public const int DefaultLandCostPerTile = 25;
+
     private const int MaxEntries = 1024;
 
     private readonly (string Id, int Cost)[] _roomCosts;
@@ -38,6 +41,8 @@ public sealed class LevelRules
     /// <param name="population">How the number of patients per month changes; by default CorsixTH's base_config.lua.</param>
     /// <param name="diseases">Which diseases come and their prices; by default <see cref="DiseaseRules.Default"/>.</param>
     /// <param name="startReputation">Each hospital's reputation at the start (the level files' <c>StartRep</c>).</param>
+    /// <param name="awards">Trophy and award settings; by default <see cref="AwardRules.Default"/>.</param>
+    /// <param name="landCostPerTile">What a tile of land is worth (<c>gbv.LandCostPerTile</c>).</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -45,8 +50,12 @@ public sealed class LevelRules
         StaffRules? staff = null,
         IEnumerable<PopulationChange>? population = null,
         DiseaseRules? diseases = null,
-        int startReputation = Hospital.AverageReputation)
+        int startReputation = Hospital.AverageReputation,
+        AwardRules? awards = null,
+        int landCostPerTile = DefaultLandCostPerTile)
     {
+        Awards = awards ?? AwardRules.Default;
+        LandCostPerTile = landCostPerTile;
         StartReputation = startReputation;
         Diseases = diseases ?? DiseaseRules.Default;
         StartCash = startCash;
@@ -62,6 +71,12 @@ public sealed class LevelRules
 
     /// <summary>Each hospital's reputation at the start, from 0 to 1000.</summary>
     public int StartReputation { get; }
+
+    /// <summary>What it takes to win trophies and awards at the year end, and what they bring.</summary>
+    public AwardRules Awards { get; }
+
+    /// <summary>What a tile of land is worth, for the hospital's value.</summary>
+    public int LandCostPerTile { get; }
 
     /// <summary>Salaries and who is available for hire when.</summary>
     public StaffRules Staff { get; }
@@ -111,6 +126,8 @@ public sealed class LevelRules
     {
         writer.WriteInt32(StartCash);
         writer.WriteInt32(StartReputation);
+        writer.WriteInt32(LandCostPerTile);
+        Awards.Write(writer);
         WriteCosts(writer, _roomCosts);
         WriteCosts(writer, _objectCosts);
         Staff.Write(writer);
@@ -128,6 +145,8 @@ public sealed class LevelRules
     {
         var startCash = reader.ReadInt32();
         var startReputation = reader.ReadInt32();
+        var landCostPerTile = reader.ReadInt32();
+        var awards = AwardRules.Read(reader);
         var rooms = ReadCosts(reader);
         var objects = ReadCosts(reader);
         var staff = StaffRules.Read(reader);
@@ -137,7 +156,7 @@ public sealed class LevelRules
             population[i] = new PopulationChange(reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation);
+        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation, awards, landCostPerTile);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

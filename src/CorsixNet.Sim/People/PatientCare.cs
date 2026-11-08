@@ -159,6 +159,7 @@ public static class PatientCare
             // Patient:cure and goHome("cured") with Hospital:updateCuredCounts.
             hospital.ChangeReputation(simulation.Random, ReputationChange.Cured, entry);
             hospital.Cured++;
+            hospital.CuredThisYear++;
             entry.Recoveries++;
             patient.SetNextGoHome();
         }
@@ -166,6 +167,7 @@ public static class PatientCare
         {
             // Patient:die with Hospital:humanoidDeath.
             hospital.Deaths++;
+            hospital.DeathsThisYear++;
             entry.Fatalities++;
             hospital.ChangeReputation(simulation.Random, ReputationChange.Death, entry);
             patient.SetNextDie();

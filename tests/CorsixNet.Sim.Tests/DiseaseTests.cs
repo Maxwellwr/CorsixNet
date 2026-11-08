@@ -68,9 +68,9 @@ public class DiseaseTests
         hospital.CaseOf(cold, rules).PricePercent = 150;
         Assert.Equal(450, hospital.TreatmentPrice(cold, rules));
 
-        hospital.OnEndYear();
+        hospital.OnEndYear(0, new SimRandom(1), AwardRules.Default);
         Assert.Equal(105, hospital.TreatmentPrice(gp, rules)); // ceil(100 * 1.045) = 105
-        hospital.OnEndYear();
+        hospital.OnEndYear(0, new SimRandom(1), AwardRules.Default);
         Assert.Equal(110, hospital.TreatmentPrice(gp, rules)); // ceil(100 * 1.045²) = ceil(109.2025)
     }
 

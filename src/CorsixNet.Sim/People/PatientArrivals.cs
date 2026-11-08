@@ -126,6 +126,7 @@ public sealed class PatientArrivals
 
         patient.Behaviour = behaviour;
         hospital.Visitors++;
+        hospital.VisitorsThisYear++;
         return patient;
     }
 
