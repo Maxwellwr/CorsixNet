@@ -97,7 +97,7 @@ Not done yet:
   psychiatry for TV personalities), faxes asking what to do with a patient, the casebook window
   (prices), floating dollar signs, looks of visual diseases (new humanoid types in the client), health,
   the death animation, the rest of reputation (VIPs, emergencies, awards), drug research.
-- Money: the town map, heating, the annual report and bank manager screens, bank window
+- Money: the town map, tile temperatures, the annual report and bank manager screens, bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and
   buy buttons); steps are keys and the status line for now. Cursor shapes per step. Buying extra

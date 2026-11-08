@@ -29,6 +29,7 @@ public enum CommandKind : ushort
     Repay = 14,
     PurchaseParcel = 15,
     SetTreatmentPrice = 16,
+    SetRadiatorHeat = 17,
 }
 
 /// <summary>
@@ -68,6 +69,7 @@ public abstract record Command
             CommandKind.Borrow => new BorrowCommand(reader.ReadBool()),
             CommandKind.Repay => new RepayCommand(reader.ReadBool()),
             CommandKind.PurchaseParcel => new PurchaseParcelCommand(reader.ReadInt32()),
+            CommandKind.SetRadiatorHeat => new SetRadiatorHeatCommand(reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -475,4 +477,23 @@ public sealed record SetTreatmentPriceCommand(string DiseaseId, int PricePercent
         writer.WriteString(DiseaseId);
         writer.WriteInt32(PricePercent);
     }
+}
+
+/// <summary>
+/// Sets how hot the hospital's radiators are, in tenths from 1 to 10, as the town map's heating buttons do; not while
+/// the boiler is broken.
+/// </summary>
+public sealed record SetRadiatorHeatCommand(int Tenths) : Command
+{
+    public override CommandKind Kind => CommandKind.SetRadiatorHeat;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[player].SetRadiatorHeat(Tenths);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Tenths);
 }

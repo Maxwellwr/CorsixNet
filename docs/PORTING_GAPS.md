@@ -120,9 +120,10 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 - Annual report screen (statistics, rankings, trophy and award plaques); trophies and awards for drinks sold, VIPs,
   rats, plants, staff and patient happiness, cleanliness, emergencies, waiting times, machines and research; the
   level 3 salary rise. The hospital's value, the year's counts and the other trophies and awards are done.
-- Town map screen (`fullscreen/town_map.lua`), the grass and divider walls of parcels nobody owns, and heating;
-  buying parcels (N in the client) and their prices are done.
-- Heating costs and heating level (`fullscreen/town_map.lua`, radiators).
+- Town map screen (`fullscreen/town_map.lua`), the grass and divider walls of parcels nobody owns; buying parcels
+  (N in the client), their prices, the heating level (T in the client), the heating bill and the boiler breaking
+  down are done. The temperature of tiles (`th_map.cpp`'s `updateTemperatures`) and patients and staff feeling it
+  are not; nor is the adviser's warning when the boiler breaks.
 - Research spending and its effect on drug ratings and new equipment (`research_department.lua`, `fullscreen/research_policy.lua`).
 - Graphs of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`).
 

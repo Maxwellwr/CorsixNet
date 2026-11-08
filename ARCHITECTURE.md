@@ -413,6 +413,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
 - **Land** (`Simulation.PurchaseParcel`, from `hospital.lua` and `th_map.cpp`). A parcel nobody owns may be
   bought when it touches the outside or the buyer's land by passable tiles of the map as the level began; it
   costs its tiles at `gbv.LandCostPerTile` and adds that to the hospital's value (`PurchaseParcelCommand`).
+- **Heating** (`Hospital`, from `hospital.lua` and `town_map.lua`). The radiators' heat is set in tenths from 1 to
+  10 (`SetRadiatorHeatCommand`, 5 at the start). Each day runs up heat × 10 × radiators × 7.5 over the month, paid
+  at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (medium difficulty) comes a chance
+  of a disaster: an open hospital with radiators and fewer than one handyman per 8 of them may have its boiler
+  break, stuck at full or no heat, until 10–30 repairs are done (1 to 3 a day, the more handymen the more).
 - **Room availability** (`LevelRules.IsRoomAvailable`, `Hospital.IsRoomDiscovered`, from `world.lua` and
   `hospital.lua`). A level has a room type when every object it needs has `objects[n].AvailableForLevel`; the
   hospital may build it from the start when they all have `StartAvail` too, otherwise once research discovers it.

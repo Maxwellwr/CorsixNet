@@ -7,7 +7,9 @@
 // (Patient:getPriceDistortion); the hospital's value and the year's counts from the same file (Hospital:Hospital,
 // spendMoney, receiveMoney, onEndYear) and the year end's trophies and awards from
 // dialogs/fullscreen/annual_report.lua (UIAnnualReport:checkTrophiesAndAwards, updateAwards); the rooms discovered
-// from the same file (Hospital:Hospital's room_discoveries, Hospital:isRoomDiscovered).
+// from the same file (Hospital:Hospital's room_discoveries, Hospital:isRoomDiscovered); heating from the same file
+// (Hospital:onEndDay, onEndMonth, daysUntilNextDisaster, boilerBreakdown, _fixBoiler) and
+// dialogs/fullscreen/town_map.lua (UITownMap:increaseHeat, decreaseHeat).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -57,6 +59,9 @@ public enum TransactionKind : byte
 
     /// <summary>A parcel of land was bought; the subject is its number (<c>buy_land</c>).</summary>
     BuyLand = 14,
+
+    /// <summary>The month's heating bill (<c>heating</c>).</summary>
+    Heating = 15,
 }
 
 /// <summary>A trophy, award or fine of the year end (CorsixTH's annual report).</summary>
@@ -388,6 +393,33 @@ public sealed class Hospital
 
     /// <summary>Lets the hospital build rooms of this type: at the start, or when research discovers it.</summary>
     internal void DiscoverRoom(string roomId) => _discoveredRooms.Add(roomId);
+
+    /// <summary>The radiators' heat at the start, in tenths (CorsixTH's <c>radiator_heat</c> of 0.5).</summary>
+    public const int DefaultRadiatorHeat = 5;
+
+    /// <summary>The highest heat the player may set, in tenths.</summary>
+    public const int MaxRadiatorHeat = 10;
+
+    /// <summary>The lowest heat the player may set, in tenths.</summary>
+    public const int MinRadiatorHeat = 1;
+
+    /// <summary>How hot the radiators are, in tenths (CorsixTH's <c>heating.radiator_heat</c>): 0 or 10 while the boiler is broken.</summary>
+    public int RadiatorHeat { get; private set; } = DefaultRadiatorHeat;
+
+    /// <summary>Whether the boiler is broken, so that the radiators are stuck at full or no heat (CorsixTH's <c>heating_broke</c>).</summary>
+    public bool IsHeatingBroken { get; private set; }
+
+    /// <summary>The heat the player had set before the boiler broke (CorsixTH's <c>saved_radiator_heat</c>).</summary>
+    private int SavedRadiatorHeat { get; set; } = DefaultRadiatorHeat;
+
+    /// <summary>Repair work left on the broken boiler (CorsixTH's <c>boiler_repair_count</c>).</summary>
+    public int BoilerRepairCount { get; private set; }
+
+    /// <summary>Days until the next chance of a disaster, such as the boiler breaking (CorsixTH's <c>disasterless_days</c>).</summary>
+    public int DisasterlessDays { get; private set; }
+
+    /// <summary>The heating run up this month and not yet paid (CorsixTH's <c>acc_heating</c>).</summary>
+    public decimal AccruedHeating { get; private set; }
 
     /// <summary>The opening watch's segments still to go, from 12 down to −1 (CorsixTH's <c>open_timer</c>).</summary>
     public int OpenTimer { get; private set; } = OpeningSegments;
@@ -729,6 +761,100 @@ public sealed class Hospital
     }
 
     /// <summary>
+    /// <c>UITownMap:increaseHeat</c> and <c>decreaseHeat</c>: sets the radiators' heat, held to
+    /// <see cref="MinRadiatorHeat"/>–<see cref="MaxRadiatorHeat"/> tenths, unless the boiler is broken.
+    /// </summary>
+    /// <returns>Whether the heat was set.</returns>
+    public bool SetRadiatorHeat(int tenths)
+    {
+        if (IsHeatingBroken)
+        {
+            return false;
+        }
+
+        RadiatorHeat = Math.Clamp(tenths, MinRadiatorHeat, MaxRadiatorHeat);
+        return true;
+    }
+
+    /// <summary><c>Hospital:daysUntilNextDisaster</c> at medium difficulty: 200 days, give or take 10.</summary>
+    internal void ScheduleNextDisaster(SimRandom random) => DisasterlessDays = 200 + random.NextInclusive(1, 21) - 11;
+
+    /// <summary>
+    /// The heating part of <c>Hospital:onEndDay</c>: work on the boiler, perhaps a disaster, and the day's share of
+    /// the month's heating bill, which is the heat × 10 × the radiators × 7.5 over the month.
+    /// </summary>
+    /// <param name="random">The simulation's random numbers.</param>
+    /// <param name="radiators">The radiators in the hospital.</param>
+    /// <param name="handymen">The handymen the hospital employs.</param>
+    /// <param name="daysInMonth">Days in the month that the day ends.</param>
+    internal void OnEndDayHeating(SimRandom random, int radiators, int handymen, int daysInMonth)
+    {
+        FixBoiler(radiators, handymen);
+        DisasterlessDays--;
+        if (DisasterlessDays <= 0)
+        {
+            ScheduleNextDisaster(random);
+
+            // 1 is no disaster; the vomit wave (4) is not there in CorsixTH either.
+            switch (random.NextInclusive(1, 3))
+            {
+                case 2:
+                    BreakBoiler(random, MaxRadiatorHeat, radiators, handymen);
+                    break;
+                case 3:
+                    BreakBoiler(random, 0, radiators, handymen);
+                    break;
+            }
+        }
+
+        AccruedHeating += RadiatorHeat * radiators * 7.5m / daysInMonth;
+    }
+
+    /// <summary><c>Hospital:onEndMonth</c> after the wages: the month's heating is paid, rounded, unless it rounds to nothing.</summary>
+    internal void PayHeating(long tick)
+    {
+        var heating = RoundHalfUp(AccruedHeating);
+        if (heating > 0)
+        {
+            Spend(tick, heating, TransactionKind.Heating, string.Empty);
+            AccruedHeating = 0;
+        }
+    }
+
+    /// <summary>
+    /// <c>Hospital:boilerBreakdown</c>: an open hospital with radiators and too few handymen to look after them (one per
+    /// 8 radiators) has its boiler break, stuck at <paramref name="brokenHeat"/>, with 10 to 30 repairs to do.
+    /// </summary>
+    private void BreakBoiler(SimRandom random, int brokenHeat, int radiators, int handymen)
+    {
+        if (!IsOpen || IsHeatingBroken || radiators == 0 || radiators <= 8 * handymen)
+        {
+            return;
+        }
+
+        SavedRadiatorHeat = RadiatorHeat;
+        RadiatorHeat = brokenHeat;
+        BoilerRepairCount = random.NextInclusive(10, 30);
+        IsHeatingBroken = true;
+    }
+
+    /// <summary><c>Hospital:_fixBoiler</c>: a day's repairs, the more the more handymen there are for the radiators.</summary>
+    private void FixBoiler(int radiators, int handymen)
+    {
+        if (!IsHeatingBroken)
+        {
+            return;
+        }
+
+        BoilerRepairCount -= radiators < 5 * handymen ? 3 : radiators < 8 * handymen ? 2 : 1;
+        if (BoilerRepairCount <= 0)
+        {
+            RadiatorHeat = SavedRadiatorHeat;
+            IsHeatingBroken = false;
+        }
+    }
+
+    /// <summary>
     /// <c>Hospital:onEndMonth</c> after the wages: the month's interest on the loan and the overdraft is paid, rounded,
     /// unless it rounds to nothing, in which case it waits for the next month.
     /// </summary>
@@ -978,6 +1104,12 @@ public sealed class Hospital
             writer.WriteString(room);
         }
 
+        writer.WriteInt32(RadiatorHeat);
+        writer.WriteBool(IsHeatingBroken);
+        writer.WriteInt32(SavedRadiatorHeat);
+        writer.WriteInt32(BoilerRepairCount);
+        writer.WriteInt32(DisasterlessDays);
+        WriteDecimal(writer, AccruedHeating);
         writer.WriteBool(IsOpen);
         writer.WriteInt32(OpenTimer);
         writer.WriteInt32(OpenTickTimer);
@@ -1014,7 +1146,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.BuyLand)
+            if (kind > (byte)TransactionKind.Heating)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -1069,6 +1201,12 @@ public sealed class Hospital
             hospital._discoveredRooms.Add(reader.ReadString());
         }
 
+        hospital.RadiatorHeat = reader.ReadInt32();
+        hospital.IsHeatingBroken = reader.ReadBool();
+        hospital.SavedRadiatorHeat = reader.ReadInt32();
+        hospital.BoilerRepairCount = reader.ReadInt32();
+        hospital.DisasterlessDays = reader.ReadInt32();
+        hospital.AccruedHeating = ReadDecimal(reader);
         hospital.IsOpen = reader.ReadBool();
         hospital.OpenTimer = reader.ReadInt32();
         hospital.OpenTickTimer = reader.ReadInt32();
