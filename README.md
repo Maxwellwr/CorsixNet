@@ -37,6 +37,7 @@ first original level:
 | U | Cycle sprite smoothing: original, 2x, 4x |
 | Home | Reset camera |
 | B | Build a GP's office: drag out the area, then click a wall for the door (Esc steps back) |
+| 1 / 2 / 3 | Place a desk, cabinet or chair (E turns it, Esc cancels) |
 | H | Spawn a patient at the cursor |
 | G | Spawn ten patients in the hospital |
 | Left click | Select a patient, or send the selected one walking |
@@ -46,7 +47,8 @@ first original level:
 
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
-initial view. `--upscale 2` (or 4) starts with smoothed sprites. `--demo` builds a GP's office near the start and adds twenty patients, half of them outside,
+initial view. `--upscale 2` (or 4) starts with smoothed sprites. `--capture shot.png` saves
+the map view to a PNG after a few seconds and quits, which works even when the screen is locked. `--demo` builds and furnishes a GP's office near the start and adds twenty patients, half of them outside,
 wandering into and around the hospital.
 
 ### Multiplayer

@@ -77,6 +77,9 @@ public struct MapTile
     /// <summary>Entity id of the room the tile belongs to, or 0.</summary>
     public int RoomId { get; set; }
 
+    /// <summary>Entity id of the object standing on the tile, or 0. Use positions do not count.</summary>
+    public int ObjectId { get; set; }
+
     public readonly bool Has(TileFlags flags) => (Flags & flags) == flags;
 
     public void Set(TileFlags flags, bool value)

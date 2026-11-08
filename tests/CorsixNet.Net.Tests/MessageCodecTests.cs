@@ -13,6 +13,7 @@ public class MessageCodecTests
         new RejectMessage("full"),
         new CommandRequestMessage(new WalkToCommand(3, new(4, 5))),
         new CommandRequestMessage(new BuildRoomCommand(new RoomPlan("gp", new TileRect(1, 2, 4, 5), new DoorPlacement(new(3, 7), EdgeOrientation.North)))),
+        new CommandRequestMessage(new PlaceObjectCommand("desk", new(6, 7), Direction.West)),
         new ScheduledCommandMessage(new ScheduledCommand(10, 2, 1, new SpawnHumanoidCommand(new(1, 2)))),
         new AdvanceMessage(123),
         new StateHashMessage(64, 0xDEADBEEFCAFEF00D),

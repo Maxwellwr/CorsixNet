@@ -8,6 +8,7 @@ using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -26,8 +27,8 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// PgUp/PgDn previous/next level (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
-/// Space pause (local games). B builds a GP's office. In a network game, commands go through
-/// the server.
+/// Space pause (local games). B builds a GP's office; 1, 2, 3 place a desk, cabinet or chair
+/// (E turns it). In a network game, commands go through the server.
 /// </remarks>
 internal sealed class MapViewScreen : IScreen
 {
@@ -56,6 +57,12 @@ internal sealed class MapViewScreen : IScreen
     private readonly EntranceDoorDrawing _doors;
     private readonly Dictionary<TilePosition, List<Entity>> _entitiesByTile = [];
     private readonly BuildRoomTool _buildTool = new();
+    private readonly PlaceObjectTool _placeTool = new();
+    private readonly ObjectDrawing _objects;
+
+    /// <summary>Objects the demo still has to place in its GP's office, one at a time.</summary>
+    private readonly Queue<string> _demoFurniture = new();
+    private int _demoFurnitureExpected;
     private readonly List<TilePosition> _hospitalTiles = [];
 
     // Test controls choose targets at random; the choices reach the simulation as commands.
@@ -73,6 +80,7 @@ internal sealed class MapViewScreen : IScreen
     private bool _demoPending;
     private int? _selected;
     private LevelMap? _preparedMap;
+    private string? _capturePath;
 
     /// <summary>Creates the view for a local game on <paramref name="levels"/>, or for <paramref name="networkSession"/> if given.</summary>
     public MapViewScreen(
@@ -96,12 +104,20 @@ internal sealed class MapViewScreen : IScreen
         _animations = new AnimationRenderer(device, AnimationSet.Load(install), install.LoadSpriteSheet("DATA", "VSPR-0", complex: false), palette, upscale);
         _humanoids = new HumanoidDrawing(_animations);
         _doors = new EntranceDoorDrawing(_animations);
+        _objects = new ObjectDrawing(_animations);
         _diamond = CreateDiamond(device);
         _pixel = new Texture2D(device, 1, 1);
         _pixel.SetData([Color.White]);
 
         _overlay = overlay;
         _demoPending = demo;
+        if (demo)
+        {
+            foreach (var item in new[] { "desk", "cabinet", "chair" })
+            {
+                _demoFurniture.Enqueue(item);
+            }
+        }
         if (networkSession is not null)
         {
             _session = networkSession;
@@ -116,6 +132,12 @@ internal sealed class MapViewScreen : IScreen
     }
 
     public bool ExitRequested { get; private set; }
+
+    /// <summary>
+    /// Saves the next rendered map view (without the status bar) to a PNG file. The off-screen
+    /// buffer is used, so this works even when the window cannot be seen, e.g. on a locked screen.
+    /// </summary>
+    public void RequestCapture(string path) => _capturePath = path;
 
     private Simulation? Simulation => _session?.Simulation;
 
@@ -159,6 +181,10 @@ internal sealed class MapViewScreen : IScreen
             if (_buildTool.IsActive)
             {
                 _buildTool.Back();
+            }
+            else if (_placeTool.IsActive)
+            {
+                _placeTool.Cancel();
             }
             else
             {
@@ -266,7 +292,24 @@ internal sealed class MapViewScreen : IScreen
             _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) => DrawEntities(batch, tile, anchorX, anchorY));
             DrawOverlay(batch, map, view);
             _buildTool.DrawPreview(batch, _diamond, _hoveredTile is { } hovered ? new TilePosition(hovered.X, hovered.Y) : null);
+            _placeTool.DrawFootprint(batch, _diamond);
+            if (_placeTool.Ghost is { } ghost && Simulation is { } ghostSimulation)
+            {
+                _objects.Draw(batch, ghost.ObjectType, ghost.Tile, ghost.Orientation, ghostSimulation.Tick, ghost.Tint);
+            }
+
             batch.End();
+            if (_capturePath is { } capturePath && _target is not null)
+            {
+                using (var file = File.Create(capturePath))
+                {
+                    _target.SaveAsPng(file, _target.Width, _target.Height);
+                }
+
+                Console.WriteLine($"Saved {_target.Width}x{_target.Height} capture to {capturePath}");
+                _capturePath = null;
+                ExitRequested = true;
+            }
         }
 
         _device.SetRenderTarget(null);
@@ -399,6 +442,42 @@ internal sealed class MapViewScreen : IScreen
         _wander = true;
     }
 
+    /// <summary>
+    /// Places the demo's furniture in its GP's office, one object at a time: each placement is
+    /// checked against the state that includes the previous object.
+    /// </summary>
+    private void FurnishDemoRoom()
+    {
+        if (_session is null || Simulation is not { } simulation || _demoFurniture.Count == 0)
+        {
+            return;
+        }
+
+        var room = simulation.Entities.OfType<Room>().FirstOrDefault();
+        if (room is null || simulation.Entities.OfType<RoomObject>().Count() < _demoFurnitureExpected)
+        {
+            return;
+        }
+
+        var objectId = _demoFurniture.Dequeue();
+        for (var y = room.Area.Y; y < room.Area.Bottom; y++)
+        {
+            for (var x = room.Area.X; x < room.Area.Right; x++)
+            {
+                foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
+                {
+                    var tile = new TilePosition(x, y);
+                    if (ObjectPlacer.Check(simulation, objectId, tile, orientation, _session.Player) == ObjectPlacementProblem.None)
+                    {
+                        _session.Submit(new PlaceObjectCommand(objectId, tile, orientation));
+                        _demoFurnitureExpected++;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     /// <summary>Finds the valid room plan closest to <paramref name="near"/>, trying a few sizes and every door position.</summary>
     private RoomPlan? FindRoomSpot(LevelMap map, RoomDefinition room, TilePosition near)
     {
@@ -478,7 +557,7 @@ internal sealed class MapViewScreen : IScreen
         _target = new RenderTarget2D(_device, size.X, size.Y);
     }
 
-    /// <summary>Runs the session and the input-free test controls (wandering).</summary>
+    /// <summary>Runs the session and the input-free test controls (wandering, demo furnishing).</summary>
     private void AdvanceSession(GameTime gameTime)
     {
         if (_session is null)
@@ -488,6 +567,7 @@ internal sealed class MapViewScreen : IScreen
 
         _session.Update(gameTime.ElapsedGameTime);
         PrepareMapIfReady();
+        FurnishDemoRoom();
         if (Simulation is not { } simulation || !_wander || _hospitalTiles.Count == 0 || _session.IsPaused)
         {
             return;
@@ -522,7 +602,34 @@ internal sealed class MapViewScreen : IScreen
 
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom("gp") is { } gp)
         {
+            _placeTool.Cancel();
             _buildTool.Start(gp);
+        }
+
+        foreach (var (key, objectId) in new[] { (Keys.D1, "desk"), (Keys.D2, "cabinet"), (Keys.D3, "chair") })
+        {
+            if (pressed(key) && !_buildTool.IsActive && simulation.Content.FindObject(objectId) is { } definition)
+            {
+                _placeTool.Start(definition);
+            }
+        }
+
+        if (pressed(Keys.E))
+        {
+            _placeTool.Turn();
+        }
+
+        if (_placeTool.IsActive)
+        {
+            // While placing, the left mouse button belongs to the placement tool.
+            var placeAt = _hoveredTile is { } point ? new TilePosition(point.X, point.Y) : (TilePosition?)null;
+            var placeClicked = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released;
+            if (_placeTool.Update(simulation, _session.Player, placeAt, placeClicked) is { } place)
+            {
+                _session.Submit(place);
+            }
+
+            return;
         }
 
         if (_buildTool.IsActive)
@@ -587,6 +694,7 @@ internal sealed class MapViewScreen : IScreen
                 Humanoid humanoid => HumanoidDrawing.DrawTile(humanoid),
                 EntranceDoor door => door.Tile,
                 RoomDoor door => door.Tile,
+                RoomObject placed => ObjectDrawing.DrawTile(simulation.Content, placed.ObjectType, placed.Tile, placed.Orientation),
                 _ => null,
             };
             if (tile is not { } position)
@@ -620,6 +728,9 @@ internal sealed class MapViewScreen : IScreen
                     break;
                 case Humanoid humanoid:
                     _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
+                    break;
+                case RoomObject placed:
+                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, Color.White);
                     break;
                 case RoomDoor roomDoor:
                     var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
@@ -705,10 +816,15 @@ internal sealed class MapViewScreen : IScreen
             return _buildTool.Status;
         }
 
+        if (_placeTool.IsActive)
+        {
+            return _placeTool.Status;
+        }
+
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanPause == true ? "   Space: pause" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   1 2 3: desk cabinet chair   H: spawn   G: spawn 10   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];

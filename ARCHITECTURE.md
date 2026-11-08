@@ -145,6 +145,35 @@ The client's build tool calls the same check for its preview. Building follows C
 - a `RoomDoor` entity opens the wall at the door;
 - travel flags and shadows are recomputed (`LevelMap.UpdatePathfinding`, `UpdateShadows`).
 
+## Objects
+
+`ObjectDefinition` gives each object type a footprint per facing direction, taken from
+CorsixTH's `objects/*.lua`. The footprint is a list of tiles relative to the placement tile,
+and each tile has flags:
+
+- **complete cell:** the object fills the tile, so all four sides must be free;
+- **use position:** the tile stays passable, and someone stands there to use the object;
+- **need side:** the object needs that side of the tile free;
+- **shareable:** another object's use position may overlap the tile.
+
+The render attach offset says which tile's drawing pass draws the object, which decides what it
+overlaps. The animation itself is still drawn from the placement tile; CorsixTH does the same by
+shifting the animation back by the attach tile's screen offset.
+
+`PlaceObjectCommand` places an object if `ObjectPlacer.Check` allows it:
+
+- the object must fit its place: a room whose type lists it, or a corridor for corridor objects;
+- every footprint tile must be in that room, on the player's land, and buildable (passable for
+  use positions);
+- the sides the footprint covers must still be buildable;
+- a use position must not overlap another object's use position or a door's walkway;
+- every use position in the room must stay reachable from the door, checked by a flood fill on
+  a provisional placement.
+
+Placing marks the footprint as CorsixTH's `occupyTilesByObjectFootprintAt` does. Room doors
+keep the tiles on both sides clear. The client's placement tool previews with the same check
+and draws objects with their idle animations, mirroring east and north for south and west.
+
 ## Saves
 
 Saves are explicit, versioned serialization of simulation state. CorsixTH saves by
@@ -249,7 +278,7 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
    ported from CorsixTH; humanoids walking; entrance doors from map files. *(done)*
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows. *(done)*
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
-   *(in progress: room building done; objects, staff and patient flow to come)*
+   *(in progress: room building and object placement done; staff and patient flow to come)*
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
    music and video.
 

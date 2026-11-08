@@ -46,6 +46,49 @@ public sealed class Room : Entity
     }
 }
 
+/// <summary>An object placed by a player, such as a desk; standing in a room or, for corridor objects, outside one.</summary>
+public sealed class RoomObject : Entity
+{
+    public RoomObject(int id, string objectType, TilePosition tile, Direction orientation, int roomId)
+        : base(id)
+    {
+        ObjectType = objectType;
+        Tile = tile;
+        Orientation = orientation;
+        RoomId = roomId;
+    }
+
+    public override EntityKind Kind => EntityKind.RoomObject;
+
+    /// <summary>Id of the object's <see cref="Definitions.ObjectDefinition"/>.</summary>
+    public string ObjectType { get; }
+
+    /// <summary>The tile the object was placed on; its footprint is relative to this tile.</summary>
+    public TilePosition Tile { get; }
+
+    public Direction Orientation { get; }
+
+    /// <summary>Entity id of the room the object stands in, or 0 in a corridor.</summary>
+    public int RoomId { get; }
+
+    public override void Update(Simulation simulation)
+    {
+    }
+
+    internal static RoomObject ReadState(int id, SimReader reader)
+    {
+        return new RoomObject(id, reader.ReadString(), reader.ReadTile(), (Direction)reader.ReadByte(), reader.ReadInt32());
+    }
+
+    protected override void WriteState(SimWriter writer)
+    {
+        writer.WriteString(ObjectType);
+        writer.WriteTile(Tile);
+        writer.WriteByte((byte)Orientation);
+        writer.WriteInt32(RoomId);
+    }
+}
+
 /// <summary>The door of a room, standing in a gap of the room's wall.</summary>
 public sealed class RoomDoor : Entity
 {
@@ -69,7 +112,16 @@ public sealed class RoomDoor : Entity
     {
     }
 
-    /// <summary>Opens the wall at the door's edge and marks the edge as a tall door edge, as CorsixTH's <c>Door:setTile</c> does.</summary>
+    /// <summary>The tile on the far side of the door's edge from <see cref="Tile"/>.</summary>
+    public TilePosition OtherSide => Edge == EdgeOrientation.North ? Tile with { Y = Tile.Y - 1 } : Tile with { X = Tile.X - 1 };
+
+    /// <summary>Of the two tiles the door connects, the one inside <paramref name="area"/>.</summary>
+    public TilePosition InsideTile(TileRect area) => area.Contains(Tile) ? Tile : OtherSide;
+
+    /// <summary>
+    /// Opens the wall at the door's edge, marks the edge as a tall door edge and keeps the tiles on
+    /// both sides clear of objects, as CorsixTH's <c>Door:setTile</c> does.
+    /// </summary>
     internal void Place(LevelMap map)
     {
         ref var tile = ref map[Tile.X, Tile.Y];
@@ -82,6 +134,12 @@ public sealed class RoomDoor : Entity
         {
             tile.WestWall = 0;
             tile.Set(TileFlags.DoorWest | TileFlags.TallWest, true);
+        }
+
+        tile.Set(TileFlags.Buildable, false);
+        if (map.Contains(OtherSide.X, OtherSide.Y))
+        {
+            map[OtherSide.X, OtherSide.Y].Set(TileFlags.Buildable, false);
         }
     }
 

@@ -1,5 +1,6 @@
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Serialization;
 
@@ -11,6 +12,7 @@ public enum CommandKind : ushort
     SpawnHumanoid = 1,
     WalkTo = 2,
     BuildRoom = 3,
+    PlaceObject = 4,
 }
 
 /// <summary>
@@ -38,6 +40,7 @@ public abstract record Command
             CommandKind.SpawnHumanoid => new SpawnHumanoidCommand(reader.ReadTile()),
             CommandKind.WalkTo => new WalkToCommand(reader.ReadInt32(), reader.ReadTile()),
             CommandKind.BuildRoom => BuildRoomCommand.ReadArguments(reader),
+            CommandKind.PlaceObject => new PlaceObjectCommand(reader.ReadString(), reader.ReadTile(), (Direction)reader.ReadByte()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -111,6 +114,27 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
         writer.WriteInt32(Plan.Area.Height);
         writer.WriteTile(Plan.Door.Tile);
         writer.WriteByte((byte)Plan.Door.Edge);
+    }
+}
+
+/// <summary>Places an object, if the placement is valid for the issuing player when the command executes.</summary>
+public sealed record PlaceObjectCommand(string ObjectType, TilePosition Tile, Direction Orientation) : Command
+{
+    public override CommandKind Kind => CommandKind.PlaceObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (ObjectPlacer.Check(simulation, ObjectType, Tile, Orientation, player) == ObjectPlacementProblem.None)
+        {
+            ObjectPlacer.Place(simulation, simulation.Content.FindObject(ObjectType)!, Tile, Orientation);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteString(ObjectType);
+        writer.WriteTile(Tile);
+        writer.WriteByte((byte)Orientation);
     }
 }
 

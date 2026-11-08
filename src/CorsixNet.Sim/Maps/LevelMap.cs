@@ -223,6 +223,7 @@ public sealed class LevelMap
             writer.WriteUInt32((uint)tile.Flags);
             writer.WriteUInt16(tile.Parcel);
             writer.WriteInt32(tile.RoomId);
+            writer.WriteInt32(tile.ObjectId);
         }
     }
 
@@ -263,6 +264,7 @@ public sealed class LevelMap
                 Flags = (TileFlags)reader.ReadUInt32(),
                 Parcel = reader.ReadUInt16(),
                 RoomId = reader.ReadInt32(),
+                ObjectId = reader.ReadInt32(),
             };
         }
 

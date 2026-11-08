@@ -1,0 +1,66 @@
+using CorsixNet.Client.Rendering;
+using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Maps;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace CorsixNet.Client.Maps;
+
+/// <summary>Draws placed objects with their idle animations, as CorsixTH's <c>Object:initOrientation</c> does.</summary>
+/// <remarks>
+/// An object's animation is drawn from the anchor of the tile it was placed on, but during the drawing
+/// pass of its render attach tile, which decides what it overlaps. CorsixTH achieves the same by
+/// attaching the animation to the render attach tile and shifting it back by that tile's screen offset
+/// (the animation_offset computed in <c>entities/object.lua</c>).
+/// </remarks>
+internal sealed class ObjectDrawing
+{
+    /// <summary>Idle animations from CorsixTH's <c>objects/*.lua</c>; south and west mirror east and north.</summary>
+    private static readonly Dictionary<string, (int North, int East)> IdleAnimations = new(StringComparer.Ordinal)
+    {
+        ["desk"] = (48, 50),
+        ["cabinet"] = (80, 82),
+        ["chair"] = (686, 688),
+    };
+
+    private static readonly byte[] NoLayers = [];
+
+    private readonly AnimationRenderer _renderer;
+
+    public ObjectDrawing(AnimationRenderer renderer)
+    {
+        _renderer = renderer;
+    }
+
+    /// <summary>The tile whose drawing pass draws the object (its render attach position); only the drawing order depends on it.</summary>
+    public static TilePosition DrawTile(GameContent content, string objectType, TilePosition tile, Direction orientation)
+    {
+        var offset = content.FindObject(objectType)?.Orientations.GetValueOrDefault(orientation)?.RenderAttach ?? default;
+        return new TilePosition(tile.X + offset.X, tile.Y + offset.Y);
+    }
+
+    /// <summary>Draws an object placed on <paramref name="tile"/>.</summary>
+    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint)
+    {
+        var anchorX = 32 * (tile.X - tile.Y);
+        var anchorY = 16 * (tile.X + tile.Y);
+        if (!IdleAnimations.TryGetValue(objectType, out var animations))
+        {
+            return;
+        }
+
+        // Directions without their own animation mirror the opposite one (CorsixTH's orient_mirror).
+        var (animation, flip) = orientation switch
+        {
+            Direction.North => (animations.North, false),
+            Direction.East => (animations.East, false),
+            Direction.South => (animations.East, true),
+            _ => (animations.North, true),
+        };
+        var set = _renderer.Animations;
+        var first = set.FirstFrame(animation);
+        var frame = set.Advance(first, (int)(tick % set.Length(first)));
+        _renderer.DrawFrame(batch, frame, anchorX, anchorY, NoLayers, flip, tint);
+    }
+}

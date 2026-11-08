@@ -44,6 +44,12 @@ internal sealed class AnimationRenderer : IDisposable
     /// <param name="flipHorizontally">Mirror the whole frame around the anchor.</param>
     public void DrawFrame(SpriteBatch batch, int frame, int x, int y, ReadOnlySpan<byte> layers, bool flipHorizontally)
     {
+        DrawFrame(batch, frame, x, y, layers, flipHorizontally, Color.White);
+    }
+
+    /// <summary>Draws a frame tinted by <paramref name="tint"/> (premultiplied), for example semi-transparent for previews.</summary>
+    public void DrawFrame(SpriteBatch batch, int frame, int x, int y, ReadOnlySpan<byte> layers, bool flipHorizontally, Color tint)
+    {
         foreach (var element in Animations.Elements(frame))
         {
             if (!IsVisible(element, layers))
@@ -76,10 +82,10 @@ internal sealed class AnimationRenderer : IDisposable
                 effects |= SpriteEffects.FlipVertically;
             }
 
-            var tint = (flags & Alpha50) != 0 ? Color.White * 0.5f
-                : (flags & Alpha75) != 0 ? Color.White * 0.25f
-                : Color.White;
-            _sprites.Draw(batch, element.Sprite, new Vector2(left, y + element.Y), tint, effects);
+            var elementTint = (flags & Alpha50) != 0 ? tint * 0.5f
+                : (flags & Alpha75) != 0 ? tint * 0.25f
+                : tint;
+            _sprites.Draw(batch, element.Sprite, new Vector2(left, y + element.Y), elementTint, effects);
         }
     }
 

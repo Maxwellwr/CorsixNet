@@ -17,8 +17,9 @@ const string Usage = """
       --map PATH        Show a map file from disk, e.g. a CorsixTH .map file
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
-      --demo            Build a GP's office and add twenty patients wandering around the hospital
+      --demo            Build and furnish a GP's office and add twenty patients wandering around
       --upscale N       Smooth sprites with the MMPX pixel art filter: 1 (original), 2 or 4 (key U)
+      --capture FILE    After a few seconds, save the map view to a PNG file and quit
       --sprite-viewer   Browse sprite sheets instead of maps
       --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
 
@@ -42,6 +43,7 @@ var zoom = 1f;
 var overlay = MapOverlay.None;
 var demo = false;
 var upscale = 1;
+string? capturePath = null;
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -91,6 +93,9 @@ for (var i = 0; i < args.Length; i++)
         case "--sheet" when i + 1 < args.Length:
             initialSheet = args[++i];
             spriteViewer = true;
+            break;
+        case "--capture" when i + 1 < args.Length:
+            capturePath = Path.GetFullPath(args[++i]);
             break;
         case "--sprite-viewer":
             spriteViewer = true;
@@ -194,7 +199,17 @@ else
         return 1;
     }
 
-    createScreen = device => new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale);
+    createScreen = device =>
+    {
+        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale);
+        if (capturePath is not null)
+        {
+            // Give the demo time to build and furnish its room before capturing.
+            _ = Task.Delay(TimeSpan.FromSeconds(6)).ContinueWith(_ => screen.RequestCapture(capturePath), TaskScheduler.Default);
+        }
+
+        return screen;
+    };
 }
 
 using var game = new CorsixNetGame($"CorsixNet - {install.RootPath}", createScreen);
