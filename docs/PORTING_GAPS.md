@@ -112,8 +112,8 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 - Bank manager screen (`fullscreen/bank_manager.lua`); loans, their limit, interest and overdraft interest are done
   (L and Shift+L in the client).
 - Bank statement window showing the transaction log (data exists, no UI).
-- Casebook: per-disease price percentage, concentrate research, drug ratings (`fullscreen/drug_casebook.lua`).
-  Partial: price percent is fixed at 100 %.
+- Casebook window: per-disease prices, concentrate research, drug ratings (`fullscreen/drug_casebook.lua`).
+  Partial: prices can be set by command (`SetTreatmentPriceCommand`), but there is no window to set them.
 - Reputation: changes from VIPs, emergencies, autopsies, room explosions, the year-end award and staff kicked out;
   the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
   price, prices far from what patients expect, and the price rise above 500 are done.

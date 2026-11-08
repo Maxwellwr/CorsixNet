@@ -386,8 +386,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   (always at or below the standard price, with chance `e^(-4 * overprice)` above it) and pays it when the
   staff is done: into the bank as a `Treatment` transaction, or, if insured, owed by the insurance company,
   which pays two months later at a month's end. The price is the level's `StartPrice` (a pseudo disease's
-  own price) with 4.5 % inflation a year, times the player's percentage in the casebook (100 % until the
-  casebook window exists), and with a reputation above 500 times reputation / 500.
+  own price) with 4.5 % inflation a year, times the player's percentage in the casebook (50–200 %, set with
+  `SetTreatmentPriceCommand` for a known disease or diagnosis; building a diagnosis room makes its diagnosis
+  known, as CorsixTH's `World:markRoomAsBuilt` does), and with a reputation above 500 times reputation / 500.
   A disease cured in the pharmacy has the level's drug rating as its cure effectiveness and costs the drug's
   price (`gbv.StartRating` and `gbv.StartCost`, both 100) for each cure (`TransactionKind.DrugCost`, paid to one
   of five drug companies at random); research improving them is not there yet.

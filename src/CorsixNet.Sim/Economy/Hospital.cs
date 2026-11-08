@@ -150,6 +150,12 @@ public sealed class DiseaseCase
     /// <summary>The standard price in percent; the player may set 50 to 200.</summary>
     public const int StandardPrice = 100;
 
+    /// <summary>The lowest price the player may set, in percent.</summary>
+    public const int MinPrice = 50;
+
+    /// <summary>The highest price the player may set, in percent.</summary>
+    public const int MaxPrice = 200;
+
     /// <summary>Cure effectiveness of a disease cured without a drug.</summary>
     public const int FullEffectiveness = 100;
 
@@ -426,6 +432,23 @@ public sealed class Hospital
         }
 
         return entry;
+    }
+
+    /// <summary>
+    /// Sets the price of a disease or diagnosis the hospital knows, held to <see cref="DiseaseCase.MinPrice"/> to
+    /// <see cref="DiseaseCase.MaxPrice"/> percent; one it does not know is not in the casebook to set.
+    /// </summary>
+    /// <returns>Whether the price was set.</returns>
+    public bool SetTreatmentPrice(DiseaseDefinition disease, DiseaseRules rules, int percent)
+    {
+        var entry = CaseOf(disease, rules);
+        if (!entry.Discovered)
+        {
+            return false;
+        }
+
+        entry.PricePercent = Math.Clamp(percent, DiseaseCase.MinPrice, DiseaseCase.MaxPrice);
+        return true;
     }
 
     /// <summary>
