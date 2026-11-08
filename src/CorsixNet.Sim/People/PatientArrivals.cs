@@ -78,6 +78,12 @@ public sealed class PatientArrivals
     /// </summary>
     internal void SpawnPatients(Simulation simulation)
     {
+        // As in CorsixTH, patients come to the first hospital, and only once it has opened.
+        if (simulation.Hospitals.Count == 0 || !simulation.Hospitals[0].IsOpen)
+        {
+            return;
+        }
+
         var count = _spawnHours[GameDate.FromHours(simulation.Tick + 1).Hour];
         for (var i = 0; i < count; i++)
         {

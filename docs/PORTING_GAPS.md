@@ -103,7 +103,6 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   to the first hospital.
 - Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
 - Floating dollar signs when a patient pays.
-- Opening countdown before the hospital opens (`world.lua`).
 
 ## 5. Economy, bank, loans, prices
 

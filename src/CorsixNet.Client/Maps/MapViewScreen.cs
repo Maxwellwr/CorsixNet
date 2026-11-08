@@ -488,6 +488,9 @@ internal sealed class MapViewScreen : IScreen
             return;
         }
 
+        // The demo does not wait a hundred days for the hospital to open.
+        _session.Submit(new OpenHospitalCommand());
+
         var start = map.GetCameraTile(Math.Min(_session.Player, map.PlayerCount - 1));
         var outside = new List<TilePosition>();
         for (var y = Math.Max(0, start.Y - 12); y <= Math.Min(map.Height - 1, start.Y + 12); y++)
@@ -841,6 +844,12 @@ internal sealed class MapViewScreen : IScreen
             _wander = !_wander;
         }
 
+        // Until the watch window exists, O opens the hospital early, as clicking the watch's button does.
+        if (pressed(Keys.O) && _session.Player < simulation.Hospitals.Count && !simulation.Hospitals[_session.Player].IsOpen)
+        {
+            _session.Submit(new OpenHospitalCommand());
+        }
+
         // Until the build window exists: B builds a GP's office, Shift+B a pharmacy, Ctrl+B general diagnosis.
         var wasBuilding = _buildTool.IsActive;
         var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
@@ -1160,6 +1169,13 @@ internal sealed class MapViewScreen : IScreen
         }
 
         var date = DateText(simulation.Date);
+        if (_session.Player < simulation.Hospitals.Count && simulation.Hospitals[_session.Player] is { IsOpen: false } hospital)
+        {
+            // Stands in for CorsixTH's opening watch; whole days rounded up.
+            var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;
+            date += string.Create(CultureInfo.InvariantCulture, $", opens in {days} days (O: now)");
+        }
+
         var speed = GameSpeeds.Name(_session.Speed);
         var width = Math.Max(_text.Measure(date).Width, _text.Measure(speed).Width) + 16;
         var box = new Rectangle(viewport.Width - width, 0, width, StatusHeight);

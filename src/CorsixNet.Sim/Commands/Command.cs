@@ -23,6 +23,7 @@ public enum CommandKind : ushort
     Meander = 9,
     MarkBlueprint = 10,
     UnmarkBlueprint = 11,
+    OpenHospital = 12,
 }
 
 /// <summary>
@@ -58,6 +59,7 @@ public abstract record Command
             CommandKind.Meander => new MeanderCommand(reader.ReadInt32()),
             CommandKind.MarkBlueprint => new MarkBlueprintCommand(reader.ReadString(), new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())),
             CommandKind.UnmarkBlueprint => new UnmarkBlueprintCommand(),
+            CommandKind.OpenHospital => new OpenHospitalCommand(),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -162,6 +164,27 @@ public sealed record MarkBlueprintCommand(string RoomType, TileRect Area) : Comm
         writer.WriteInt32(Area.Y);
         writer.WriteInt32(Area.Width);
         writer.WriteInt32(Area.Height);
+    }
+}
+
+/// <summary>
+/// The player opens their hospital before the opening watch has run down, as clicking the button on CorsixTH's
+/// watch does (<c>UIWatch:onCountdownEnd</c>).
+/// </summary>
+public sealed record OpenHospitalCommand : Command
+{
+    public override CommandKind Kind => CommandKind.OpenHospital;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[player].Open();
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
     }
 }
 
