@@ -508,7 +508,11 @@ public class PatientFlowTests
         map.UpdatePathfinding();
         map.UpdateShadows();
         rules ??= new LevelRules(1_000_000, [KeyValuePair.Create("gp", 2500)], [KeyValuePair.Create(ReceptionDesks.ObjectId, 600)]);
-        return new Simulation(map, seed: 3, BaseGameContent.Create(), rules);
+        var simulation = new Simulation(map, seed: 3, BaseGameContent.Create(), rules);
+
+        // Open at once rather than after the hundred days of the opening watch.
+        simulation.Schedule(0, new OpenHospitalCommand());
+        return simulation;
     }
 
     private static void Run(Simulation simulation, Command command)

@@ -91,7 +91,7 @@ Not done yet:
 
 - M5: hire window (the original's staff list with faces), staff names and descriptions from the
   language files, staff meandering, hiring a receptionist straight onto a desk, benches, queue
-  priorities, staff called through a dispatcher, the hospital's opening countdown.
+  priorities, staff called through a dispatcher.
 - Patients: diagnosis rooms other than general diagnosis, the crash trolley split over two tiles as
   CorsixTH draws it, treatment rooms other than the pharmacy (inflation for bloaty heads,
   psychiatry for TV personalities), faxes asking what to do with a patient, the casebook window

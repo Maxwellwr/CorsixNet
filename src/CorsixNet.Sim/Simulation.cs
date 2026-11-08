@@ -26,7 +26,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 10;
+    private const int FormatVersion = 11;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -164,6 +164,12 @@ public sealed class Simulation
         for (var i = 0; i < count && i < _entities.Count; i++)
         {
             _entities[i].Update(this);
+        }
+
+        // The opening watch counts down after the entities, as CorsixTH's UI windows tick after them.
+        foreach (var hospital in _hospitals)
+        {
+            hospital.TickOpeningWatch();
         }
 
         // People who have left the map go now, as CorsixTH's _flushDestroyedEntities.

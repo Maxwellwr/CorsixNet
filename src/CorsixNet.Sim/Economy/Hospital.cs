@@ -99,6 +99,15 @@ public sealed class Hospital
 
     private const int MaxCases = 256;
 
+    /// <summary>
+    /// Hours per segment of the opening watch: CorsixTH's <c>UIWatch</c> runs 100 days over 13 segments
+    /// (<c>TICK_DAYS</c>, <c>TIMER_SEGMENTS</c>), rounded down.
+    /// </summary>
+    public const int OpeningTickRate = 100 * 50 / 13;
+
+    /// <summary>Segments of the opening watch (CorsixTH's <c>open_timer</c> starts at 12).</summary>
+    public const int OpeningSegments = 12;
+
     private readonly List<Transaction> _transactions = [];
     private readonly SortedDictionary<string, DiseaseCase> _casebook = new(StringComparer.Ordinal);
 
@@ -131,6 +140,21 @@ public sealed class Hospital
 
     /// <summary>Year ends so far, each of which raised prices by the inflation rate.</summary>
     public int InflationYears { get; private set; }
+
+    /// <summary>
+    /// Whether the hospital has opened, so that patients come (CorsixTH's <c>Hospital.opened</c>): when the opening
+    /// watch has run down, or when the player opened it early.
+    /// </summary>
+    public bool IsOpen { get; private set; }
+
+    /// <summary>The opening watch's segments still to go, from 12 down to −1 (CorsixTH's <c>open_timer</c>).</summary>
+    public int OpenTimer { get; private set; } = OpeningSegments;
+
+    /// <summary>Hours left in the current segment of the opening watch (CorsixTH's <c>tick_timer</c>).</summary>
+    private int OpenTickTimer { get; set; } = OpeningTickRate;
+
+    /// <summary>Hours until the hospital opens by itself; 0 once open.</summary>
+    public int HoursUntilOpen => IsOpen ? 0 : OpenTimer < 0 ? 1 : OpenTickTimer + 1 + (OpenTimer * (OpeningTickRate + 1)) + 1;
 
     /// <summary>Casebook entries made so far, by disease id.</summary>
     public IReadOnlyDictionary<string, DiseaseCase> Casebook => _casebook;
@@ -262,6 +286,35 @@ public sealed class Hospital
         }
     }
 
+    /// <summary>Opens the hospital (CorsixTH's <c>Hospital:open</c>), when the watch runs down or the player clicks it.</summary>
+    internal void Open() => IsOpen = true;
+
+    /// <summary>
+    /// One hour of the opening watch, as CorsixTH's <c>UIWatch:onWorldTick</c> for "initial_opening": each segment
+    /// takes <see cref="OpeningTickRate"/> + 1 hours, and an hour after the last one the hospital opens.
+    /// </summary>
+    internal void TickOpeningWatch()
+    {
+        if (IsOpen)
+        {
+            return;
+        }
+
+        if (OpenTickTimer == 0 && OpenTimer >= 0)
+        {
+            OpenTickTimer = OpeningTickRate;
+            OpenTimer--;
+        }
+        else if (OpenTimer == -1)
+        {
+            Open();
+        }
+        else
+        {
+            OpenTickTimer--;
+        }
+    }
+
     /// <summary><c>Hospital:onEndYear</c>: prices go up by the inflation rate.</summary>
     internal void OnEndYear() => InflationYears++;
 
@@ -282,6 +335,9 @@ public sealed class Hospital
         writer.WriteInt32(Cured);
         writer.WriteInt32(Deaths);
         writer.WriteInt32(InflationYears);
+        writer.WriteBool(IsOpen);
+        writer.WriteInt32(OpenTimer);
+        writer.WriteInt32(OpenTickTimer);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)
@@ -324,6 +380,9 @@ public sealed class Hospital
         hospital.Cured = reader.ReadInt32();
         hospital.Deaths = reader.ReadInt32();
         hospital.InflationYears = reader.ReadInt32();
+        hospital.IsOpen = reader.ReadBool();
+        hospital.OpenTimer = reader.ReadInt32();
+        hospital.OpenTickTimer = reader.ReadInt32();
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)
