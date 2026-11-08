@@ -542,28 +542,48 @@ internal sealed class MapViewScreen : IScreen
 
         var objectId = _demoFurniture.Dequeue();
         var confirm = _demoFurniture.Count == 0;
-        for (var y = room.Area.Y; y < room.Area.Bottom; y++)
+        foreach (var tile in DemoFurnitureTiles(room.Area, objectId))
         {
-            for (var x = room.Area.X; x < room.Area.Right; x++)
+            foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
             {
-                foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
+                if (ObjectPlacer.Check(simulation, objectId, tile, orientation, _session.Player) == ObjectPlacementProblem.None)
                 {
-                    var tile = new TilePosition(x, y);
-                    if (ObjectPlacer.Check(simulation, objectId, tile, orientation, _session.Player) == ObjectPlacementProblem.None)
+                    _session.Submit(new PlaceObjectCommand(objectId, tile, orientation));
+                    _demoFurnitureExpected++;
+                    if (confirm)
                     {
-                        _session.Submit(new PlaceObjectCommand(objectId, tile, orientation));
-                        _demoFurnitureExpected++;
-                        if (confirm)
-                        {
-                            // Commands of one tick run in order, so the room is complete when this runs.
-                            _session.Submit(new ConfirmRoomCommand(room.Id));
-                        }
-
-                        return;
+                        // Commands of one tick run in order, so the room is complete when this runs.
+                        _session.Submit(new ConfirmRoomCommand(room.Id));
                     }
+
+                    return;
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// The tiles of the demo room in the order they are tried for an object: row by row from the back. The
+    /// patient's chair keeps off the south and east walls, which are drawn in front of it and would hide the
+    /// patient sitting on it.
+    /// </summary>
+    private static IEnumerable<TilePosition> DemoFurnitureTiles(TileRect area, string objectId)
+    {
+        var tiles = new List<TilePosition>();
+        for (var y = area.Y; y < area.Bottom; y++)
+        {
+            for (var x = area.X; x < area.Right; x++)
+            {
+                tiles.Add(new TilePosition(x, y));
+            }
+        }
+
+        if (!string.Equals(objectId, "chair", StringComparison.Ordinal))
+        {
+            return tiles;
+        }
+
+        return tiles.OrderBy(tile => (tile.Y == area.Bottom - 1 ? 1 : 0) + (tile.X == area.Right - 1 ? 1 : 0));
     }
 
     /// <summary>

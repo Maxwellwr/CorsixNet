@@ -1,7 +1,11 @@
 // Spending, receiving, the transaction log and monthly wages ported from CorsixTH CorsixTH/Lua/hospital.lua
-// (Hospital:spendMoney, Hospital:receiveMoney, Hospital:logTransaction, Hospital:onEndMonth).
+// (Hospital:spendMoney, Hospital:receiveMoney, Hospital:logTransaction, Hospital:onEndMonth); the casebook,
+// treatment prices and insurance from the same file (Hospital:Hospital, Hospital:receiveMoneyForTreatment,
+// Hospital:getTreatmentPrice, Hospital:addInsuranceMoney, Hospital:onEndYear).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using System.Globalization;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.Economy;
@@ -14,6 +18,12 @@ public enum TransactionKind : byte
     BuildRoom = 2,
     HireStaff = 3,
     Wages = 4,
+
+    /// <summary>A patient paid for a diagnosis or a cure; the subject is the (pseudo) disease.</summary>
+    Treatment = 5,
+
+    /// <summary>An insurance company paid what it owed from two months ago; the subject is its number (1 to 3).</summary>
+    Insurance = 6,
 }
 
 /// <summary>One entry of a hospital's transaction log.</summary>
@@ -24,13 +34,55 @@ public enum TransactionKind : byte
 /// <param name="Balance">The balance afterwards.</param>
 public readonly record struct Transaction(long Tick, TransactionKind Kind, string Subject, int Amount, long Balance);
 
-/// <summary>A player's hospital: for now, its money.</summary>
+/// <summary>
+/// The hospital's casebook entry for a disease or a diagnosis (CorsixTH's <c>disease_casebook</c>): the
+/// price the player set, whether the disease is known, and what it earned.
+/// </summary>
+public sealed class DiseaseCase
+{
+    /// <summary>The standard price in percent; the player may set 50 to 200.</summary>
+    public const int StandardPrice = 100;
+
+    internal DiseaseCase(string diseaseId, bool discovered)
+    {
+        DiseaseId = diseaseId;
+        Discovered = discovered;
+    }
+
+    public string DiseaseId { get; }
+
+    /// <summary>The price as a percentage of the standard price (CorsixTH's <c>price</c>, a multiplier).</summary>
+    public int PricePercent { get; internal set; } = StandardPrice;
+
+    /// <summary>Whether the hospital knows the disease, so that it can be guessed and shows in the casebook.</summary>
+    public bool Discovered { get; internal set; }
+
+    /// <summary>Money received for it so far, insurance payments included.</summary>
+    public long MoneyEarned { get; internal set; }
+}
+
+/// <summary>A player's hospital: its money, its casebook and what insurance companies owe it.</summary>
 public sealed class Hospital
 {
     /// <summary>How many transactions the log keeps; CorsixTH keeps about 20.</summary>
     public const int LogLength = 20;
 
+    /// <summary>Insurance companies a hospital deals with.</summary>
+    public const int InsuranceCompanies = 3;
+
+    /// <summary>Months an insurance company keeps what it owes: payments of one month are paid two months later.</summary>
+    private const int InsuranceMonths = 3;
+
+    /// <summary>Yearly inflation of prices (CorsixTH's <c>inflation_rate</c>).</summary>
+    private const decimal InflationRate = 0.045m;
+
+    private const int MaxCases = 256;
+
     private readonly List<Transaction> _transactions = [];
+    private readonly SortedDictionary<string, DiseaseCase> _casebook = new(StringComparer.Ordinal);
+
+    /// <summary>What each insurance company owes: this month, last month and the month before.</summary>
+    private readonly long[,] _insuranceOwed = new long[InsuranceCompanies, InsuranceMonths];
 
     internal Hospital(int player, long balance)
     {
@@ -46,6 +98,55 @@ public sealed class Hospital
 
     /// <summary>The latest transactions, newest first.</summary>
     public IReadOnlyList<Transaction> Transactions => _transactions;
+
+    /// <summary>Patients who came to the hospital so far (CorsixTH's <c>num_visitors</c>).</summary>
+    public int Visitors { get; internal set; }
+
+    /// <summary>Year ends so far, each of which raised prices by the inflation rate.</summary>
+    public int InflationYears { get; private set; }
+
+    /// <summary>Casebook entries made so far, by disease id.</summary>
+    public IReadOnlyDictionary<string, DiseaseCase> Casebook => _casebook;
+
+    /// <summary>What insurance company <paramref name="company"/> (1 to 3) owes in all.</summary>
+    public long InsuranceOwed(int company)
+    {
+        long owed = 0;
+        for (var month = 0; month < InsuranceMonths; month++)
+        {
+            owed += _insuranceOwed[company - 1, month];
+        }
+
+        return owed;
+    }
+
+    /// <summary>The casebook entry for a disease, made on first use: discovered if the level makes it known.</summary>
+    public DiseaseCase CaseOf(DiseaseDefinition disease, DiseaseRules rules)
+    {
+        if (!_casebook.TryGetValue(disease.Id, out var entry))
+        {
+            entry = new DiseaseCase(disease.Id, rules.IsKnown(disease.ExpertiseId));
+            _casebook.Add(disease.Id, entry);
+        }
+
+        return entry;
+    }
+
+    /// <summary>
+    /// <c>Hospital:getTreatmentPrice</c>: the standard price with inflation, times the player's percentage, rounded
+    /// up. Reputation is not modelled yet; at CorsixTH's starting reputation of 500 it does not change the price.
+    /// </summary>
+    public int TreatmentPrice(DiseaseDefinition disease, DiseaseRules rules)
+    {
+        var inflation = 1m;
+        for (var i = 0; i < InflationYears; i++)
+        {
+            inflation *= 1 + InflationRate;
+        }
+
+        var price = rules.CurePrice(disease) * inflation * CaseOf(disease, rules).PricePercent / DiseaseCase.StandardPrice;
+        return (int)decimal.Ceiling(price);
+    }
 
     internal void Spend(long tick, int amount, TransactionKind kind, string subject)
     {
@@ -71,6 +172,54 @@ public sealed class Hospital
         }
     }
 
+    /// <summary>
+    /// <c>Hospital:receiveMoneyForTreatment</c>: the patient pays, or their insurance company owes it until two
+    /// months later.
+    /// </summary>
+    /// <param name="tick">When.</param>
+    /// <param name="entry">The casebook entry of what was paid for.</param>
+    /// <param name="amount">What the patient agreed to pay.</param>
+    /// <param name="insuranceCompany">The patient's insurance company (1 to 3), or 0 when they pay themselves.</param>
+    internal void ReceiveForTreatment(long tick, DiseaseCase entry, int amount, int insuranceCompany)
+    {
+        if (insuranceCompany > 0)
+        {
+            _insuranceOwed[insuranceCompany - 1, 0] += amount;
+        }
+        else
+        {
+            Receive(tick, amount, TransactionKind.Treatment, entry.DiseaseId);
+        }
+
+        entry.MoneyEarned += amount;
+    }
+
+    /// <summary>
+    /// The insurance part of <c>Hospital:onEndMonth</c>: each company pays what it owed from two months ago, and
+    /// a new month begins with nothing owed.
+    /// </summary>
+    internal void PayInsurance(long tick)
+    {
+        for (var company = 0; company < InsuranceCompanies; company++)
+        {
+            var payout = _insuranceOwed[company, InsuranceMonths - 1];
+            if (payout > 0)
+            {
+                Receive(tick, checked((int)payout), TransactionKind.Insurance, (company + 1).ToString(CultureInfo.InvariantCulture));
+            }
+
+            for (var month = InsuranceMonths - 1; month > 0; month--)
+            {
+                _insuranceOwed[company, month] = _insuranceOwed[company, month - 1];
+            }
+
+            _insuranceOwed[company, 0] = 0;
+        }
+    }
+
+    /// <summary><c>Hospital:onEndYear</c>: prices go up by the inflation rate.</summary>
+    internal void OnEndYear() => InflationYears++;
+
     internal void Write(SimWriter writer)
     {
         writer.WriteInt64(Balance);
@@ -83,6 +232,25 @@ public sealed class Hospital
             writer.WriteInt32(transaction.Amount);
             writer.WriteInt64(transaction.Balance);
         }
+
+        writer.WriteInt32(Visitors);
+        writer.WriteInt32(InflationYears);
+        for (var company = 0; company < InsuranceCompanies; company++)
+        {
+            for (var month = 0; month < InsuranceMonths; month++)
+            {
+                writer.WriteInt64(_insuranceOwed[company, month]);
+            }
+        }
+
+        writer.WriteInt32(_casebook.Count);
+        foreach (var entry in _casebook.Values)
+        {
+            writer.WriteString(entry.DiseaseId);
+            writer.WriteInt32(entry.PricePercent);
+            writer.WriteBool(entry.Discovered);
+            writer.WriteInt64(entry.MoneyEarned);
+        }
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -93,12 +261,35 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Wages)
+            if (kind > (byte)TransactionKind.Insurance)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
 
             hospital._transactions.Add(new Transaction(tick, (TransactionKind)kind, reader.ReadString(), reader.ReadInt32(), reader.ReadInt64()));
+        }
+
+        hospital.Visitors = reader.ReadInt32();
+        hospital.InflationYears = reader.ReadInt32();
+        for (var company = 0; company < InsuranceCompanies; company++)
+        {
+            for (var month = 0; month < InsuranceMonths; month++)
+            {
+                hospital._insuranceOwed[company, month] = reader.ReadInt64();
+            }
+        }
+
+        var cases = reader.ReadCount(MaxCases);
+        for (var i = 0; i < cases; i++)
+        {
+            var id = reader.ReadString();
+            var entry = new DiseaseCase(id, discovered: false) { PricePercent = reader.ReadInt32() };
+            entry.Discovered = reader.ReadBool();
+            entry.MoneyEarned = reader.ReadInt64();
+            if (!hospital._casebook.TryAdd(id, entry))
+            {
+                throw new InvalidDataException($"Casebook entry '{id}' is given twice.");
+            }
         }
 
         return hospital;

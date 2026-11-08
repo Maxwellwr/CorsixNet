@@ -166,7 +166,7 @@ public static class ReceptionDesks
             {
                 state.Queue.Pop(simulation);
                 state.Queue.VisitorCount++;
-                patient.OnSeenAtReception();
+                patient.OnSeenAtReception(simulation, front);
             }
         }
 

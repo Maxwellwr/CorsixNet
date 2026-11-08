@@ -4,6 +4,7 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Calendar;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Serialization;
@@ -96,6 +97,9 @@ public sealed class PatientArrivals
             return null;
         }
 
+        // The disease is chosen first, even when no patient comes after all.
+        var hospital = simulation.Hospitals[player];
+        var disease = PatientCare.NewPatientDisease(simulation, hospital);
         var desks = ReceptionDesks.OfHospital(simulation, player, staffedOnly: true).ToList();
         if (desks.Count == 0)
         {
@@ -106,8 +110,16 @@ public sealed class PatientArrivals
             ? closest
             : _spawnPoints[simulation.Random.Next(_spawnPoints.Count)];
         HadPatients = true;
-        var patient = simulation.AddEntity(id => Humanoid.CreateRandomPatient(id, spawn, simulation.Random, player));
-        patient.Behaviour = new PatientBehaviour();
+        var look = disease?.Look ?? PatientLook.Standard;
+        var patient = simulation.AddEntity(id => Humanoid.CreatePatient(id, spawn, simulation.Random, look, player));
+        var behaviour = new PatientBehaviour();
+        if (disease is not null)
+        {
+            behaviour.SetDisease(disease, PatientCare.ChooseInsuranceCompany(simulation.Random));
+        }
+
+        patient.Behaviour = behaviour;
+        hospital.Visitors++;
         return patient;
     }
 

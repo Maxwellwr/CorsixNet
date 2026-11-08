@@ -1,6 +1,9 @@
+using CorsixNet.Content.Levels;
+using CorsixNet.Formats.Tests;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
@@ -93,6 +96,81 @@ public class PatientFlowTests
     }
 
     [Fact]
+    public void PatientsComeWithADiseasePayTheGpAndGetDiagnosed()
+    {
+        var simulation = NewStaffedHospital();
+        var hospital = simulation.Hospitals[0];
+        var diagnosed = new HashSet<string>();
+        var waited = new HashSet<int>();
+        var balanceBefore = hospital.Balance;
+
+        for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            foreach (var humanoid in simulation.Entities.OfType<Humanoid>())
+            {
+                if (humanoid.Behaviour is PatientBehaviour patient)
+                {
+                    Assert.NotNull(patient.Disease);
+                    Assert.False(patient.Disease.IsPseudo);
+                    if (patient.IsDiagnosed)
+                    {
+                        diagnosed.Add(patient.DiseaseId);
+                    }
+
+                    if (patient.Phase == PatientPhase.Waiting)
+                    {
+                        waited.Add(humanoid.Id);
+                    }
+                }
+            }
+        }
+
+        var gp = hospital.Casebook[DiseaseCatalog.GpDiagnosis];
+        var visits = simulation.Entities.OfType<Room>().Single().DoorQueue!.VisitorCount;
+        Assert.True(gp.MoneyEarned >= 100 * (visits - 1), $"The GP earned {gp.MoneyEarned} from {visits} visits.");
+        Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.Treatment, Subject: DiseaseCatalog.GpDiagnosis, Amount: 100 });
+        Assert.True(hospital.Visitors >= 10);
+        Assert.NotEmpty(diagnosed);
+        Assert.NotEmpty(waited);
+
+        // Each diagnosed disease is now known to the hospital.
+        Assert.All(diagnosed, id => Assert.True(hospital.Casebook[id].Discovered));
+    }
+
+    [Fact]
+    public void OnLevelOneTheGpDiagnosesPatientsAndIsPaid()
+    {
+        var install = RealGameData.Require();
+        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var simulation = NewStaffedHospital(rules);
+        var levelDiseases = rules.Diseases.AvailableDiseases().Select(d => d.Id).ToHashSet();
+        var seen = new Dictionary<int, PatientBehaviour>();
+
+        for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            foreach (var humanoid in simulation.Entities.OfType<Humanoid>())
+            {
+                if (humanoid.Behaviour is PatientBehaviour { DiagnosisProgress: > 0 } patient)
+                {
+                    seen[humanoid.Id] = patient;
+                }
+            }
+        }
+
+        Assert.True(seen.Count >= 5, $"Only {seen.Count} patients saw the GP.");
+        Assert.All(seen.Values, patient => Assert.Contains(patient.DiseaseId, levelDiseases));
+
+        // Level one's diseases are easy to diagnose (MaxDiagDiff 100 to 300): the GP gets at least 0.28 of the way
+        // at once, and often all of it. Diagnosed patients go on to wait for a treatment room, which cannot be built
+        // yet; the others wait for a diagnosis room, or for the player's decision.
+        Assert.Contains(seen.Values, p => p is { IsDiagnosed: true, Seeking: RoomSeek.Treatment, DiagnosisProgress: PatientCare.FullDiagnosis });
+        Assert.All(seen.Values.Where(p => !p.IsDiagnosed), p => Assert.InRange(p.DiagnosisProgress, 280, PatientCare.FullDiagnosis - 1));
+        Assert.True(simulation.Hospitals[0].Casebook[DiseaseCatalog.GpDiagnosis].MoneyEarned >= 100 * (seen.Count - 1));
+    }
+
+    [Fact]
     public void AQueueLinesUpOnNeighbouringTiles()
     {
         var simulation = NewHospital();
@@ -143,9 +221,9 @@ public class PatientFlowTests
     private static RoomObject Desk(Simulation simulation) => simulation.Entities.OfType<RoomObject>().Single(o => o.Desk is not null);
 
     /// <summary>A hospital with a GP's office, a doctor, a receptionist and a staffed reception desk.</summary>
-    private static Simulation NewStaffedHospital()
+    private static Simulation NewStaffedHospital(LevelRules? rules = null)
     {
-        var simulation = NewHospital();
+        var simulation = NewHospital(rules);
         Run(simulation, new BuildRoomCommand(new RoomPlan("gp", GpArea, new DoorPlacement(new(6, GpArea.Bottom), EdgeOrientation.North))));
         var room = simulation.Entities.OfType<Room>().Single();
         foreach (var type in new[] { "desk", "cabinet", "chair" })
@@ -191,7 +269,7 @@ public class PatientFlowTests
     /// A map of grass with a hospital building in the middle (tiles 2 to 21), all of it the player's;
     /// patients come from the edges.
     /// </summary>
-    private static Simulation NewHospital()
+    private static Simulation NewHospital(LevelRules? rules = null)
     {
         var map = new LevelMap(Size, Size, playerCount: 1);
         map.ParcelCount = 2;
@@ -213,7 +291,7 @@ public class PatientFlowTests
 
         map.UpdatePathfinding();
         map.UpdateShadows();
-        var rules = new LevelRules(1_000_000, [KeyValuePair.Create("gp", 2500)], [KeyValuePair.Create(ReceptionDesks.ObjectId, 600)]);
+        rules ??= new LevelRules(1_000_000, [KeyValuePair.Create("gp", 2500)], [KeyValuePair.Create(ReceptionDesks.ObjectId, 600)]);
         return new Simulation(map, seed: 3, BaseGameContent.Create(), rules);
     }
 
