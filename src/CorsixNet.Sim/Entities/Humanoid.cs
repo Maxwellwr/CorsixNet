@@ -60,6 +60,8 @@ public sealed class Humanoid : Entity
 
     private readonly List<TilePosition> _path = [];
     private readonly byte[] _layers = new byte[LayerCount];
+    private int _doorTicks;
+    private TilePosition _doorExit;
 
     public Humanoid(int id, TilePosition tile, HumanoidType type = HumanoidType.StandardMalePatient, ReadOnlySpan<byte> layers = default)
         : base(id)
@@ -122,7 +124,13 @@ public sealed class Humanoid : Entity
     private bool RawWalk { get; set; }
 
     /// <summary>Whether the humanoid is walking or about to take another step.</summary>
-    public bool IsMoving => IsStepping || _path.Count > 0;
+    public bool IsMoving => IsStepping || IsCrossingDoor || _path.Count > 0;
+
+    /// <summary>
+    /// Whether the humanoid is going through a room door, as CorsixTH's <c>navigateDoor</c>: their
+    /// <see cref="ActionAnimation"/> shows the door (<see cref="HiddenObjectId"/>) opening and closing.
+    /// </summary>
+    public bool IsCrossingDoor => _doorTicks > 0;
 
     /// <summary>
     /// Variant chosen for each animation layer: which head, clothes and so on are drawn.
@@ -143,14 +151,16 @@ public sealed class Humanoid : Entity
     /// <summary>Ticks elapsed in the current step, from 0 to <see cref="TicksPerStep"/> − 1.</summary>
     public int StepProgress { get; private set; }
 
-    /// <summary>The tile the current step leads to; equals <see cref="Tile"/> when not stepping.</summary>
-    public TilePosition StepTarget => IsStepping ? Neighbour(Tile, Facing) : Tile;
+    /// <summary>
+    /// The tile the current step (or the way through a door) leads to; equals <see cref="Tile"/> when not stepping.
+    /// </summary>
+    public TilePosition StepTarget => IsCrossingDoor ? _doorExit : IsStepping ? Neighbour(Tile, Facing) : Tile;
 
     /// <summary>Tiles still to walk to after the current step, in order.</summary>
     public IReadOnlyList<TilePosition> RemainingPath => _path;
 
     /// <summary>The final tile of the walk, or null when not walking anywhere.</summary>
-    public TilePosition? Destination => _path.Count > 0 ? _path[^1] : IsStepping ? StepTarget : null;
+    public TilePosition? Destination => _path.Count > 0 ? _path[^1] : IsStepping || IsCrossingDoor ? StepTarget : null;
 
     /// <summary>
     /// Plans a walk to <paramref name="target"/>, continuing from the end of any step in progress.
@@ -168,7 +178,11 @@ public sealed class Humanoid : Entity
     {
         _path.Clear();
         RawWalk = false;
-        ClearActionAnimation();
+        if (!IsCrossingDoor)
+        {
+            ClearActionAnimation();
+        }
+
         if (found)
         {
             for (var i = 1; i < path.Count; i++)
@@ -223,6 +237,12 @@ public sealed class Humanoid : Entity
     internal void PlaceAt(TilePosition tile)
     {
         _path.Clear();
+        if (IsCrossingDoor)
+        {
+            _doorTicks = 0;
+            ClearActionAnimation();
+        }
+
         IsStepping = false;
         StepProgress = 0;
         Tile = tile;
@@ -251,6 +271,19 @@ public sealed class Humanoid : Entity
 
     public override void Update(Simulation simulation)
     {
+        if (IsCrossingDoor)
+        {
+            _doorTicks--;
+            if (_doorTicks > 0)
+            {
+                return;
+            }
+
+            // Through the door: carry on from the far side in the same tick, as action_walk_tick_door does.
+            Tile = _doorExit;
+            ClearActionAnimation();
+        }
+
         if (IsStepping)
         {
             StepProgress++;
@@ -294,15 +327,90 @@ public sealed class Humanoid : Entity
             direction = DirectionTo(Tile, next)!.Value;
         }
 
+        var door = RoomDoorBetween(simulation, Tile, direction);
+        var doorAnimations = door is null ? null : simulation.Content.FindDoorAnimations(Type);
+        if (door is not null && doorAnimations is not null && IsDoorInUse(simulation, door))
+        {
+            // Someone else is going through; wait on this side until the door is free (CorsixTH's door.user).
+            Facing = direction;
+            return;
+        }
+
         _path.RemoveAt(0);
         Facing = direction;
-        IsStepping = true;
-        StepProgress = 0;
 
         // As in CorsixTH's walk action, objects watching the tiles (entrance doors) learn of
         // the move when the step starts: first the tile entered, then the tile left.
         simulation.NotifyOccupantChange(next, 1);
         simulation.NotifyOccupantChange(Tile, -1);
+
+        if (door is not null && doorAnimations is not null)
+        {
+            CrossDoor(simulation, door, doorAnimations, direction, next);
+            return;
+        }
+
+        IsStepping = true;
+        StepProgress = 0;
+    }
+
+    /// <summary>
+    /// Goes through a room door as CorsixTH's <c>navigateDoor</c> (<c>humanoid_actions/walk.lua</c>): the humanoid stands on
+    /// the door's tile while its door animation plays, the door itself hidden (<c>Door:setUser</c>), and comes out on
+    /// <paramref name="exit"/> when the animation ends. Going north or west uses the leaving animation, east or south the
+    /// entering one, mirrored for west and south.
+    /// </summary>
+    private void CrossDoor(Simulation simulation, RoomDoor door, DoorAnimations animations, Direction direction, TilePosition exit)
+    {
+        var animation = direction is Direction.North or Direction.West ? animations.Leaving : animations.Entering;
+        Tile = door.Tile;
+        IsStepping = false;
+        StepProgress = 0;
+        _doorExit = exit;
+        _doorTicks = animation.Length;
+        SetActionAnimation(simulation, animation, direction is Direction.West or Direction.South, door.Tile, door.Tile, door.Id);
+    }
+
+    /// <summary>The room door on the edge crossed by a step from <paramref name="start"/> towards <paramref name="direction"/>, if any.</summary>
+    private static RoomDoor? RoomDoorBetween(Simulation simulation, TilePosition start, Direction direction)
+    {
+        var map = simulation.Map;
+        var (doorTile, edge) = direction switch
+        {
+            Direction.North => (start, EdgeOrientation.North),
+            Direction.West => (start, EdgeOrientation.West),
+            Direction.South => (start with { Y = start.Y + 1 }, EdgeOrientation.North),
+            _ => (start with { X = start.X + 1 }, EdgeOrientation.West),
+        };
+        var flag = edge == EdgeOrientation.North ? TileFlags.DoorNorth : TileFlags.DoorWest;
+        if (!map.Contains(doorTile.X, doorTile.Y) || !map[doorTile.X, doorTile.Y].Has(flag))
+        {
+            return null;
+        }
+
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is RoomDoor door && door.Tile == doorTile && door.Edge == edge)
+            {
+                return door;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Whether another humanoid is going through <paramref name="door"/>.</summary>
+    private bool IsDoorInUse(Simulation simulation, RoomDoor door)
+    {
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Humanoid { IsCrossingDoor: true } other && other.Id != Id && other.HiddenObjectId == door.Id)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     internal static Humanoid ReadState(int id, SimReader reader)
@@ -329,6 +437,8 @@ public sealed class Humanoid : Entity
             RawWalk = reader.ReadBool(),
             IsDespawning = reader.ReadBool(),
             IsHidden = reader.ReadBool(),
+            _doorTicks = reader.ReadInt32(),
+            _doorExit = reader.ReadTile(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -366,6 +476,8 @@ public sealed class Humanoid : Entity
         writer.WriteBool(RawWalk);
         writer.WriteBool(IsDespawning);
         writer.WriteBool(IsHidden);
+        writer.WriteInt32(_doorTicks);
+        writer.WriteTile(_doorExit);
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)
         {

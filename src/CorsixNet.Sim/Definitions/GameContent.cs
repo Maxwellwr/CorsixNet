@@ -1,4 +1,14 @@
+using CorsixNet.Sim.Entities;
+
 namespace CorsixNet.Sim.Definitions;
+
+/// <summary>
+/// How a kind of humanoid goes through a room door, as CorsixTH's <c>door_animations</c> (<c>entities/humanoid.lua</c>):
+/// the humanoid's animation shows the door opening and closing behind them.
+/// </summary>
+/// <param name="Entering">Going through towards the camera, east or (mirrored) south.</param>
+/// <param name="Leaving">Going through away from the camera, north or (mirrored) west.</param>
+public sealed record DoorAnimations(AnimationRef Entering, AnimationRef Leaving);
 
 /// <summary>Block sprites for the walls of a room type, as in CorsixTH's <c>walls/*.lua</c>.</summary>
 /// <param name="InsideNorth">North wall seen from inside the room.</param>
@@ -51,12 +61,27 @@ public sealed class GameContent
     private readonly Dictionary<string, ObjectDefinition> _objects;
     private readonly HashSet<ushort> _externalWallSprites;
     private readonly HashSet<ushort> _windowSprites;
+    private readonly Dictionary<HumanoidType, DoorAnimations> _doorAnimations;
 
     /// <param name="rooms">Room types the player can build.</param>
     /// <param name="externalWallSprites">Sprites of the hospital's outer walls, which rooms keep rather than replace.</param>
     /// <param name="objects">Object types the player can place.</param>
-    public GameContent(IEnumerable<RoomDefinition> rooms, IEnumerable<ushort> externalWallSprites, IEnumerable<ObjectDefinition>? objects = null)
+    /// <param name="doorAnimations">How each kind of humanoid goes through a room door; the others simply walk through.</param>
+    public GameContent(
+        IEnumerable<RoomDefinition> rooms,
+        IEnumerable<ushort> externalWallSprites,
+        IEnumerable<ObjectDefinition>? objects = null,
+        IReadOnlyDictionary<HumanoidType, DoorAnimations>? doorAnimations = null)
     {
+        _doorAnimations = [];
+        foreach (var type in Enum.GetValues<HumanoidType>())
+        {
+            if (doorAnimations?.GetValueOrDefault(type) is { } animations)
+            {
+                _doorAnimations[type] = animations;
+            }
+        }
+
         _rooms = rooms.ToDictionary(room => room.Id, StringComparer.Ordinal);
         _objects = (objects ?? []).ToDictionary(obj => obj.Id, StringComparer.Ordinal);
         _externalWallSprites = [.. externalWallSprites];
@@ -79,4 +104,7 @@ public sealed class GameContent
 
     /// <summary>Whether <paramref name="sprite"/> is a room window of any room type.</summary>
     public bool IsWindowWall(ushort sprite) => _windowSprites.Contains(sprite);
+
+    /// <summary>How humanoids of <paramref name="type"/> go through a room door, or null if they have no door animations.</summary>
+    public DoorAnimations? FindDoorAnimations(HumanoidType type) => _doorAnimations.GetValueOrDefault(type);
 }
