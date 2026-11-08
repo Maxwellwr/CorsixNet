@@ -861,6 +861,26 @@ internal sealed class MapViewScreen : IScreen
         {
             _session.Submit(shift ? new RepayCommand(ctrl) : new BorrowCommand(ctrl));
         }
+
+        // Until the town map exists, N buys the parcel under the cursor.
+        if (pressed(Keys.N) && _hoveredTile is { } landAt)
+        {
+            var parcel = simulation.Map[landAt.X, landAt.Y].Parcel;
+            var price = simulation.ParcelPrice(parcel);
+            if (!simulation.IsParcelPurchasable(parcel, _session.Player))
+            {
+                ShowNotice($"Parcel {parcel} is not for sale");
+            }
+            else if (price > simulation.Hospitals[_session.Player].Balance)
+            {
+                ShowNotice($"Not enough money for parcel {parcel}: it costs {MoneyText.Format(price)}");
+            }
+            else
+            {
+                _session.Submit(new PurchaseParcelCommand(parcel));
+            }
+        }
+
         var roomToBuild = shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
