@@ -245,7 +245,8 @@ internal sealed class MapViewScreen : IScreen
             ResetCamera();
         }
 
-        if (Pressed(Keys.O))
+        // Shift+O opens the hospital early instead.
+        if (Pressed(Keys.O) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
         {
             _overlay = (MapOverlay)(((int)_overlay + 1) % Enum.GetValues<MapOverlay>().Length);
         }
@@ -844,8 +845,8 @@ internal sealed class MapViewScreen : IScreen
             _wander = !_wander;
         }
 
-        // Until the watch window exists, O opens the hospital early, as clicking the watch's button does.
-        if (pressed(Keys.O) && _session.Player < simulation.Hospitals.Count && !simulation.Hospitals[_session.Player].IsOpen)
+        // Until the watch window exists, Shift+O opens the hospital early, as clicking the watch's button does.
+        if (pressed(Keys.O) && (keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift)) && _session.Player < simulation.Hospitals.Count && !simulation.Hospitals[_session.Player].IsOpen)
         {
             _session.Submit(new OpenHospitalCommand());
         }
@@ -854,6 +855,12 @@ internal sealed class MapViewScreen : IScreen
         var wasBuilding = _buildTool.IsActive;
         var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         var ctrl = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
+
+        // Until the bank manager exists: L borrows 5,000, Shift+L pays 5,000 back; with Ctrl as much as allowed.
+        if (pressed(Keys.L))
+        {
+            _session.Submit(shift ? new RepayCommand(ctrl) : new BorrowCommand(ctrl));
+        }
         var roomToBuild = shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
@@ -1146,8 +1153,10 @@ internal sealed class MapViewScreen : IScreen
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
             ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{OutcomeText(simulation.Hospitals[_session.Player])}")
+                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
             : string.Empty;
+
+        static string LoanText(Hospital hospital) => hospital.Loan > 0 ? $"   loan {MoneyText.Format(hospital.Loan)}" : string.Empty;
 
         static string OutcomeText(Hospital hospital) => hospital.Outcome switch
         {
@@ -1180,7 +1189,7 @@ internal sealed class MapViewScreen : IScreen
         {
             // Stands in for CorsixTH's opening watch; whole days rounded up.
             var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;
-            date += string.Create(CultureInfo.InvariantCulture, $", opens in {days} days (O: now)");
+            date += string.Create(CultureInfo.InvariantCulture, $", opens in {days} days (Shift+O: now)");
         }
 
         var speed = GameSpeeds.Name(_session.Speed);

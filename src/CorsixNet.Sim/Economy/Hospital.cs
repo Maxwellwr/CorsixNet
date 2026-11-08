@@ -41,6 +41,18 @@ public enum TransactionKind : byte
 
     /// <summary>The year's award money less its fines, which may be negative (CorsixTH's <c>eoy_bonus_penalty</c>).</summary>
     AwardBonus = 9,
+
+    /// <summary>Money borrowed from the bank (<c>bank_loan</c>).</summary>
+    Loan = 10,
+
+    /// <summary>Money paid back to the bank (<c>loan_repayment</c>).</summary>
+    LoanRepayment = 11,
+
+    /// <summary>The month's interest on the loan (<c>loan_interest</c>).</summary>
+    LoanInterest = 12,
+
+    /// <summary>The month's interest on an overdrawn balance (<c>overdraft</c>).</summary>
+    Overdraft = 13,
 }
 
 /// <summary>A trophy, award or fine of the year end (CorsixTH's annual report).</summary>
@@ -205,6 +217,15 @@ public sealed class Hospital
     /// <summary>The reputation a disease starts with in the casebook, and above which prices rise with it.</summary>
     public const int AverageReputation = 500;
 
+    /// <summary>The bank's yearly interest in hundredths of a percent (the level files' <c>InterestRate</c>, base_config.lua's 100).</summary>
+    public const int DefaultInterestRate = 100;
+
+    /// <summary>What overdrafts cost on top of the interest, likewise (<c>OverdraftDiff</c>, base_config.lua's 200).</summary>
+    public const int DefaultOverdraftDifferential = 200;
+
+    /// <summary>The steps in which money is borrowed and paid back.</summary>
+    public const int LoanStep = 5000;
+
     /// <summary>What a hospital is worth at the start besides its land (CorsixTH's <c>+ 20000</c>).</summary>
     public const int StartValueBesidesLand = 20000;
 
@@ -231,8 +252,10 @@ public sealed class Hospital
 
     private readonly List<YearEndAward> _lastYearAwards = [];
 
-    internal Hospital(int player, long balance, int reputation = AverageReputation, long value = 0)
+    internal Hospital(int player, long balance, int reputation = AverageReputation, long value = 0, int interestRate = DefaultInterestRate, int overdraftDifferential = DefaultOverdraftDifferential)
     {
+        InterestRate = interestRate;
+        OverdraftDifferential = overdraftDifferential;
         Player = player;
         Balance = balance;
         Reputation = Math.Clamp(reputation, MinReputation, MaxReputation);
@@ -245,6 +268,27 @@ public sealed class Hospital
     /// rooms and objects, less what objects were sold for.
     /// </summary>
     public long Value { get; private set; }
+
+    /// <summary>What the hospital owes the bank (CorsixTH's <c>loan</c>).</summary>
+    public long Loan { get; private set; }
+
+    /// <summary>The bank's yearly interest on the loan, in hundredths of a percent.</summary>
+    public int InterestRate { get; private set; }
+
+    /// <summary>What an overdraft costs a year on top of <see cref="InterestRate"/>, in hundredths of a percent.</summary>
+    public int OverdraftDifferential { get; private set; }
+
+    /// <summary>
+    /// What the hospital may owe the bank (<c>UIBankManager:increaseLoan</c>): a third of its value, rounded down to
+    /// 5,000, and 10,000 more.
+    /// </summary>
+    public long MaxLoan => (long)decimal.Floor(Value * 0.33m / LoanStep) * LoanStep + 10000;
+
+    /// <summary>Interest on the loan run up this month (CorsixTH's <c>acc_loan_interest</c>).</summary>
+    private decimal AccruedLoanInterest { get; set; }
+
+    /// <summary>Interest on the overdraft run up this month (<c>acc_overdraft</c>).</summary>
+    private decimal AccruedOverdraft { get; set; }
 
     /// <summary>Patients who came this year (CorsixTH's <c>num_visitors_ty</c>).</summary>
     public int VisitorsThisYear { get; internal set; }
@@ -601,6 +645,75 @@ public sealed class Hospital
         }
     }
 
+    /// <summary>Borrows 5,000, or as much as allowed, if the loan may grow by 5,000 (<c>UIBankManager:increaseLoan</c>).</summary>
+    internal void Borrow(long tick, bool asMuchAsAllowed)
+    {
+        var max = MaxLoan;
+        if (Loan + LoanStep > max)
+        {
+            return;
+        }
+
+        var amount = asMuchAsAllowed ? max - Loan : LoanStep;
+        Loan += amount;
+        Receive(tick, checked((int)amount), TransactionKind.Loan, string.Empty);
+    }
+
+    /// <summary>
+    /// Pays back 5,000, or with <paramref name="asMuchAsPossible"/> and more than 5,000 in the bank as much of the loan
+    /// as the balance allows in steps of 5,000, if there is a loan and the money (<c>UIBankManager:decreaseLoan</c>).
+    /// </summary>
+    internal void Repay(long tick, bool asMuchAsPossible)
+    {
+        long amount = LoanStep;
+        if (asMuchAsPossible && Balance > LoanStep)
+        {
+            amount = Math.Min(Loan, Balance / LoanStep * LoanStep);
+        }
+
+        if (Loan > 0 && Balance >= amount)
+        {
+            Loan -= amount;
+            Spend(tick, checked((int)amount), TransactionKind.LoanRepayment, string.Empty);
+        }
+    }
+
+    /// <summary>
+    /// <c>Hospital:onEndDay</c>: a day's interest on the loan, and on the overdraft if the balance is below zero, is run
+    /// up (a year is 365 days).
+    /// </summary>
+    internal void OnEndDay()
+    {
+        AccruedLoanInterest += Loan * (InterestRate / 10000m) / 365;
+        if (Balance < 0)
+        {
+            AccruedOverdraft += -Balance * ((InterestRate + OverdraftDifferential) / 10000m) / 365;
+        }
+    }
+
+    /// <summary>
+    /// <c>Hospital:onEndMonth</c> after the wages: the month's interest on the loan and the overdraft is paid, rounded,
+    /// unless it rounds to nothing, in which case it waits for the next month.
+    /// </summary>
+    internal void PayInterest(long tick)
+    {
+        var interest = RoundHalfUp(AccruedLoanInterest);
+        if (interest > 0)
+        {
+            Spend(tick, interest, TransactionKind.LoanInterest, string.Empty);
+            AccruedLoanInterest = 0;
+        }
+
+        var overdraft = RoundHalfUp(AccruedOverdraft);
+        if (overdraft > 0)
+        {
+            Spend(tick, overdraft, TransactionKind.Overdraft, string.Empty);
+            AccruedOverdraft = 0;
+        }
+    }
+
+    private static int RoundHalfUp(decimal value) => (int)decimal.Floor(value + 0.5m);
+
     /// <summary>Records that the hospital won or lost; the first outcome stands.</summary>
     internal void End(EndOutcome outcome, EndGoal? lostTo)
     {
@@ -805,6 +918,11 @@ public sealed class Hospital
             writer.WriteInt32(award.Reputation);
         }
 
+        writer.WriteInt64(Loan);
+        writer.WriteInt32(InterestRate);
+        writer.WriteInt32(OverdraftDifferential);
+        WriteDecimal(writer, AccruedLoanInterest);
+        WriteDecimal(writer, AccruedOverdraft);
         writer.WriteByte((byte)Outcome);
         writer.WriteBool(LostTo is not null);
         if (LostTo is { } lostTo)
@@ -853,7 +971,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.AwardBonus)
+            if (kind > (byte)TransactionKind.Overdraft)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -885,6 +1003,11 @@ public sealed class Hospital
             hospital._lastYearAwards.Add(new((YearEndAwardKind)kind, reader.ReadInt32(), reader.ReadInt32()));
         }
 
+        hospital.Loan = reader.ReadInt64();
+        hospital.InterestRate = reader.ReadInt32();
+        hospital.OverdraftDifferential = reader.ReadInt32();
+        hospital.AccruedLoanInterest = ReadDecimal(reader);
+        hospital.AccruedOverdraft = ReadDecimal(reader);
         var outcome = reader.ReadByte();
         if (outcome > (byte)EndOutcome.Lost)
         {
@@ -930,6 +1053,19 @@ public sealed class Hospital
         }
 
         return hospital;
+    }
+
+    private static void WriteDecimal(SimWriter writer, decimal value)
+    {
+        foreach (var bits in decimal.GetBits(value))
+        {
+            writer.WriteInt32(bits);
+        }
+    }
+
+    private static decimal ReadDecimal(SimReader reader)
+    {
+        return new decimal([reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()]);
     }
 
     private void Log(Transaction transaction)

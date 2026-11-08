@@ -24,6 +24,8 @@ public enum CommandKind : ushort
     MarkBlueprint = 10,
     UnmarkBlueprint = 11,
     OpenHospital = 12,
+    Borrow = 13,
+    Repay = 14,
 }
 
 /// <summary>
@@ -60,6 +62,8 @@ public abstract record Command
             CommandKind.MarkBlueprint => new MarkBlueprintCommand(reader.ReadString(), new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())),
             CommandKind.UnmarkBlueprint => new UnmarkBlueprintCommand(),
             CommandKind.OpenHospital => new OpenHospitalCommand(),
+            CommandKind.Borrow => new BorrowCommand(reader.ReadBool()),
+            CommandKind.Repay => new RepayCommand(reader.ReadBool()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -387,4 +391,42 @@ public sealed record ScheduledCommand(long Tick, long Sequence, int Player, Comm
     {
         return new ScheduledCommand(reader.ReadInt64(), reader.ReadInt64(), reader.ReadInt32(), Command.Read(reader));
     }
+}
+
+/// <summary>
+/// The player borrows 5,000 from the bank, or with <paramref name="AsMuchAsAllowed"/> up to the limit, as the bank
+/// manager's button does with Ctrl (CorsixTH's <c>UIBankManager:increaseLoan</c>).
+/// </summary>
+public sealed record BorrowCommand(bool AsMuchAsAllowed) : Command
+{
+    public override CommandKind Kind => CommandKind.Borrow;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[player].Borrow(simulation.Tick, AsMuchAsAllowed);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteBool(AsMuchAsAllowed);
+}
+
+/// <summary>
+/// The player pays back 5,000, or with <paramref name="AsMuchAsPossible"/> as much as the bank balance allows in
+/// steps of 5,000 (CorsixTH's <c>UIBankManager:decreaseLoan</c>).
+/// </summary>
+public sealed record RepayCommand(bool AsMuchAsPossible) : Command
+{
+    public override CommandKind Kind => CommandKind.Repay;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[player].Repay(simulation.Tick, AsMuchAsPossible);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteBool(AsMuchAsPossible);
 }

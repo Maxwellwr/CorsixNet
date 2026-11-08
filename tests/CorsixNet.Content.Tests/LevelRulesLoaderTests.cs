@@ -30,6 +30,8 @@ public class LevelRulesLoaderTests
             #towns[3].StartCash 50000
             #town.StartRep 450
             #towns[3].StartRep 600
+            #towns[3].InterestRate 300
+            #town.OverdraftDiff 250
             #gbv.LandCostPerTile 40
             #awards_trophies.CuresAward 30
             #rooms[7].Cost 2280
@@ -47,6 +49,8 @@ public class LevelRulesLoaderTests
         Assert.Equal(10000, LevelRulesLoader.FromConfig(config, null, content).StartCash);
         Assert.Equal(LevelRulesLoader.DefaultStartCash, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, content).StartCash);
         Assert.Equal(600, rules.StartReputation);
+        Assert.Equal((300, 250), (rules.InterestRate, rules.OverdraftDifferential));
+        Assert.Equal(Hospital.DefaultInterestRate, LevelRulesLoader.FromConfig(config, 4, content).InterestRate);
         Assert.Equal(40, rules.LandCostPerTile);
         Assert.Equal(30, rules.Awards[AwardRules.CuresAward]);
         Assert.Equal(AwardRules.Default[AwardRules.CuresBonus], rules.Awards[AwardRules.CuresBonus]);

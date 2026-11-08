@@ -404,6 +404,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   trophies (`TransactionKind.TrophyBonus`), awards and fines (`AwardBonus`, which may be negative) and
   reputation for the hospital's value; then the year's counts start afresh and prices rise. The results stay
   in `Hospital.LastYearAwards` until the annual report screen exists.
+- **Loans** (`Hospital`, from `hospital.lua` and `bank_manager.lua`). A hospital borrows and pays back in steps
+  of 5,000 (`BorrowCommand`, `RepayCommand`) up to a third of its value, rounded down to 5,000, plus 10,000.
+  Each day runs up the loan's interest at the level's `InterestRate` (hundredths of a percent a year, 365 days)
+  and, below zero, the overdraft's at that plus `OverdraftDiff`; both are paid at the month's end after the
+  wages, rounded, unless they round to nothing. A hospital with a loan does not win.
 - **Winning and losing** (`EndConditions`, from `endconditions.lua`). The level's `win_criteria` and
   `lose_criteria` become goals in groups; a hospital meeting every goal of a win group wins, one meeting every goal
   of a lose group loses. Wins are looked for at the end of March, June and September and at the year end, losses

@@ -85,7 +85,9 @@ public static partial class LevelRulesLoader
             .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
         return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config), startReputation,
             AwardsFromConfig(config), config.GetInt("gbv.LandCostPerTile") ?? LevelRules.DefaultLandCostPerTile,
-            EndConditionsFromConfig(config, startCash, startReputation));
+            EndConditionsFromConfig(config, startCash, startReputation),
+            TownInt(config, levelNumber, "InterestRate") ?? Hospital.DefaultInterestRate,
+            TownInt(config, levelNumber, "OverdraftDiff") ?? Hospital.DefaultOverdraftDifferential);
     }
 
     /// <summary>
@@ -267,5 +269,11 @@ public static partial class LevelRulesLoader
         }
 
         return goals;
+    }
+
+    /// <summary>A setting of the level's own <c>towns[n]</c> entry, else of <c>town</c>.</summary>
+    private static int? TownInt(LevelConfig config, int? levelNumber, string name)
+    {
+        return (levelNumber is { } level ? config.GetInt($"towns[{level}].{name}") : null) ?? config.GetInt($"town.{name}");
     }
 }

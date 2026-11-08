@@ -44,6 +44,8 @@ public sealed class LevelRules
     /// <param name="awards">Trophy and award settings; by default <see cref="AwardRules.Default"/>.</param>
     /// <param name="landCostPerTile">What a tile of land is worth (<c>gbv.LandCostPerTile</c>).</param>
     /// <param name="endConditions">The goals to win and lose by; by default none.</param>
+    /// <param name="interestRate">The bank's yearly interest in hundredths of a percent (<c>InterestRate</c>).</param>
+    /// <param name="overdraftDifferential">What overdrafts cost on top, likewise (<c>OverdraftDiff</c>).</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -54,8 +56,12 @@ public sealed class LevelRules
         int startReputation = Hospital.AverageReputation,
         AwardRules? awards = null,
         int landCostPerTile = DefaultLandCostPerTile,
-        EndConditions? endConditions = null)
+        EndConditions? endConditions = null,
+        int interestRate = Hospital.DefaultInterestRate,
+        int overdraftDifferential = Hospital.DefaultOverdraftDifferential)
     {
+        InterestRate = interestRate;
+        OverdraftDifferential = overdraftDifferential;
         EndConditions = endConditions ?? EndConditions.None;
         Awards = awards ?? AwardRules.Default;
         LandCostPerTile = landCostPerTile;
@@ -83,6 +89,12 @@ public sealed class LevelRules
 
     /// <summary>The goals to win and lose the level by.</summary>
     public EndConditions EndConditions { get; }
+
+    /// <summary>The bank's yearly interest on loans, in hundredths of a percent.</summary>
+    public int InterestRate { get; }
+
+    /// <summary>What an overdraft costs a year on top of the interest, in hundredths of a percent.</summary>
+    public int OverdraftDifferential { get; }
 
     /// <summary>Salaries and who is available for hire when.</summary>
     public StaffRules Staff { get; }
@@ -135,6 +147,8 @@ public sealed class LevelRules
         writer.WriteInt32(LandCostPerTile);
         Awards.Write(writer);
         EndConditions.Write(writer);
+        writer.WriteInt32(InterestRate);
+        writer.WriteInt32(OverdraftDifferential);
         WriteCosts(writer, _roomCosts);
         WriteCosts(writer, _objectCosts);
         Staff.Write(writer);
@@ -155,6 +169,8 @@ public sealed class LevelRules
         var landCostPerTile = reader.ReadInt32();
         var awards = AwardRules.Read(reader);
         var endConditions = EndConditions.Read(reader);
+        var interestRate = reader.ReadInt32();
+        var overdraftDifferential = reader.ReadInt32();
         var rooms = ReadCosts(reader);
         var objects = ReadCosts(reader);
         var staff = StaffRules.Read(reader);
@@ -164,7 +180,7 @@ public sealed class LevelRules
             population[i] = new PopulationChange(reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation, awards, landCostPerTile, endConditions);
+        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)
