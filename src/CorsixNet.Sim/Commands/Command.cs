@@ -21,6 +21,8 @@ public enum CommandKind : ushort
     CancelRoom = 7,
     HireStaff = 8,
     Meander = 9,
+    MarkBlueprint = 10,
+    UnmarkBlueprint = 11,
 }
 
 /// <summary>
@@ -54,6 +56,8 @@ public abstract record Command
             CommandKind.CancelRoom => new CancelRoomCommand(reader.ReadInt32()),
             CommandKind.HireStaff => new HireStaffCommand(ReadStaffClass(reader), reader.ReadInt32(), reader.ReadTile()),
             CommandKind.Meander => new MeanderCommand(reader.ReadInt32()),
+            CommandKind.MarkBlueprint => new MarkBlueprintCommand(reader.ReadString(), new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())),
+            CommandKind.UnmarkBlueprint => new UnmarkBlueprintCommand(),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -130,10 +134,58 @@ public sealed record MeanderCommand(int HumanoidId) : Command
 }
 
 /// <summary>
+/// The player is done with a blueprint's area and goes on to its door: its tiles are marked for people to keep off
+/// and those on them are told to leave, as CorsixTH's <c>UIEditRoom:_enterDoorPhase</c> does. Replaces the player's
+/// previous blueprint, if any. Ignored if the area cannot be built on by the player.
+/// </summary>
+public sealed record MarkBlueprintCommand(string RoomType, TileRect Area) : Command
+{
+    public override CommandKind Kind => CommandKind.MarkBlueprint;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (ConstructionSite.Of(simulation, player) is { IsWaiting: true })
+        {
+            return;
+        }
+
+        if (RoomBuilder.CheckArea(simulation.Map, simulation.Content.FindRoom(RoomType), Area, player) == RoomPlanProblem.None)
+        {
+            ConstructionSite.Mark(simulation, player, Area);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteString(RoomType);
+        writer.WriteInt32(Area.X);
+        writer.WriteInt32(Area.Y);
+        writer.WriteInt32(Area.Width);
+        writer.WriteInt32(Area.Height);
+    }
+}
+
+/// <summary>
+/// The player goes back from a blueprint's door or windows to its area, or gives up while waiting for people to
+/// leave it: the tiles are no longer avoided (CorsixTH's <c>UIEditRoom:returnToWallPhase</c>).
+/// </summary>
+public sealed record UnmarkBlueprintCommand : Command
+{
+    public override CommandKind Kind => CommandKind.UnmarkBlueprint;
+
+    public override void Execute(Simulation simulation, int player) => ConstructionSite.Of(simulation, player)?.Unmark(simulation);
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+    }
+}
+
+/// <summary>
 /// Builds a room, if the plan is valid for the issuing player when the command executes and their
-/// hospital can afford the whole room. The objects it needs are bought at once. The room starts
-/// inactive: its owner furnishes it, then confirms it (paying for the room) or cancels it (selling
-/// the objects back).
+/// hospital can afford the whole room. As in CorsixTH, the room is built once the people on its
+/// blueprint have left (<see cref="ConstructionSite"/>), at once if nobody is in the way. The objects
+/// it needs are bought then. The room starts inactive: its owner furnishes it, then confirms it
+/// (paying for the room) or cancels it (selling the objects back).
 /// </summary>
 public sealed record BuildRoomCommand(RoomPlan Plan) : Command
 {
@@ -141,51 +193,30 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
 
     public override void Execute(Simulation simulation, int player)
     {
-        if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) == RoomPlanProblem.None
-            && simulation.Content.FindRoom(Plan.RoomType) is { } room
-            && RoomPurchases.CanAfford(simulation, room, player))
+        if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) != RoomPlanProblem.None
+            || simulation.Content.FindRoom(Plan.RoomType) is not { } room
+            || !RoomPurchases.CanAfford(simulation, room, player))
         {
-            RoomBuilder.Build(simulation, Plan, room);
-            RoomPurchases.BuyNeededObjects(simulation, room, player);
-        }
-    }
-
-    internal static BuildRoomCommand ReadArguments(SimReader reader)
-    {
-        var roomType = reader.ReadString();
-        var area = new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
-        var door = ReadEdge(reader);
-        var windows = new DoorPlacement[reader.ReadCount(RoomPlan.MaxWindows)];
-        for (var i = 0; i < windows.Length; i++)
-        {
-            windows[i] = ReadEdge(reader);
+            return;
         }
 
-        return new BuildRoomCommand(new RoomPlan(roomType, area, door, windows));
-    }
-
-    protected override void WriteArguments(SimWriter writer)
-    {
-        writer.WriteString(Plan.RoomType);
-        writer.WriteInt32(Plan.Area.X);
-        writer.WriteInt32(Plan.Area.Y);
-        writer.WriteInt32(Plan.Area.Width);
-        writer.WriteInt32(Plan.Area.Height);
-        WriteEdge(writer, Plan.Door);
-        writer.WriteInt32(Plan.WindowList.Count);
-        foreach (var window in Plan.WindowList)
+        var site = ConstructionSite.Of(simulation, player);
+        if (site is { IsWaiting: true })
         {
-            WriteEdge(writer, window);
+            return;
         }
+
+        if (site is null || site.Area != Plan.Area)
+        {
+            site = ConstructionSite.Mark(simulation, player, Plan.Area);
+        }
+
+        site.Complete(simulation, Plan);
     }
 
-    private static DoorPlacement ReadEdge(SimReader reader) => new(reader.ReadTile(), (EdgeOrientation)reader.ReadByte());
+    internal static BuildRoomCommand ReadArguments(SimReader reader) => new(RoomPlanSerializer.Read(reader));
 
-    private static void WriteEdge(SimWriter writer, DoorPlacement edge)
-    {
-        writer.WriteTile(edge.Tile);
-        writer.WriteByte((byte)edge.Edge);
-    }
+    protected override void WriteArguments(SimWriter writer) => RoomPlanSerializer.Write(writer, Plan);
 }
 
 /// <summary>

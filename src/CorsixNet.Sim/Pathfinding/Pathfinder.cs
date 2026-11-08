@@ -108,7 +108,7 @@ public sealed class Pathfinder
             var x = node % _width;
             var y = node / _width;
             var flags = map[x, y];
-            if (!flags.Has(TileFlags.DoNotIdle) && flags.Has(TileFlags.Passable | TileFlags.Hospital))
+            if (!flags.Has(TileFlags.DoNotIdle) && !flags.Has(TileFlags.AvoidTile) && flags.Has(TileFlags.Passable | TileFlags.Hospital))
             {
                 if (n == 0)
                 {
@@ -210,15 +210,17 @@ public sealed class Pathfinder
     /// <summary><see cref="RecordNeighbourIfPassable"/> with the idle finder's guess of 0.</summary>
     private void RecordIdleNeighbour(LevelMap map, int node, int neighbour)
     {
-        if (!map[neighbour % _width, neighbour / _width].Has(TileFlags.Passable))
+        var flags = map[neighbour % _width, neighbour / _width];
+        if (!flags.Has(TileFlags.Passable))
         {
             return;
         }
 
+        var neighbourCost = NeighbourCost(flags);
         if (_previous[neighbour] == neighbour)
         {
             _previous[neighbour] = node;
-            _cost[neighbour] = _cost[node] + 1;
+            _cost[neighbour] = _cost[node] + neighbourCost;
             _distance[neighbour] = _distance[node] + 1;
             _guess[neighbour] = 0;
             _dirty[_dirtyCount++] = neighbour;
@@ -227,7 +229,7 @@ public sealed class Pathfinder
         else if (_cost[node] + 1 < _cost[neighbour])
         {
             _previous[neighbour] = node;
-            _cost[neighbour] = _cost[node] + 1;
+            _cost[neighbour] = _cost[node] + neighbourCost;
             _distance[neighbour] = _distance[node] + 1;
             OpenHeapPromote(neighbour);
         }
@@ -312,12 +314,13 @@ public sealed class Pathfinder
 
     private void RecordNeighbourIfPassable(LevelMap map, int node, int neighbour)
     {
-        if (_visited[neighbour] || !map[neighbour % _width, neighbour / _width].Has(TileFlags.Passable))
+        var flags = map[neighbour % _width, neighbour / _width];
+        if (_visited[neighbour] || !flags.Has(TileFlags.Passable))
         {
             return;
         }
 
-        const int neighbourCost = 1;
+        var neighbourCost = NeighbourCost(flags);
         if (_previous[neighbour] == neighbour)
         {
             _previous[neighbour] = node;
@@ -335,6 +338,13 @@ public sealed class Pathfinder
             OpenHeapPromote(neighbour);
         }
     }
+
+    /// <summary>
+    /// What a step onto the tile costs: 128 on a tile to avoid, 1 otherwise. As in CorsixTH, an
+    /// already reached node is only improved when its cost exceeds the new one by more than 1,
+    /// whatever the step really costs (<c>record_neighbour_if_passable</c>).
+    /// </summary>
+    private static int NeighbourCost(MapTile tile) => tile.Has(TileFlags.AvoidTile) ? 128 : 1;
 
     /// <summary>Manhattan distance, as diagonal moves are not allowed.</summary>
     private int GuessDistance(int node)

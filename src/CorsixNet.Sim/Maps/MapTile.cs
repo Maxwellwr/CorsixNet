@@ -57,6 +57,13 @@ public enum TileFlags : uint
     /// <summary>Nobody waits here: a door's walkway (CorsixTH's <c>doNotIdle</c>).</summary>
     DoNotIdle = 1 << 19,
 
+    /// <summary>
+    /// People keep off the tile if they can: it lies in a room's blueprint (CorsixTH's <c>avoidTile</c>).
+    /// Paths through it cost 128 times as much, nobody idles there, and someone walking onto it from
+    /// outside plans their way again.
+    /// </summary>
+    AvoidTile = 1 << 20,
+
     CanTravelAll = CanTravelNorth | CanTravelEast | CanTravelSouth | CanTravelWest,
 }
 

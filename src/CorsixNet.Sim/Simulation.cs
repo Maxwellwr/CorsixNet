@@ -7,6 +7,7 @@ using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Pathfinding;
 using CorsixNet.Sim.People;
+using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Serialization;
 using CorsixNet.Sim.Staff;
 
@@ -25,7 +26,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 9;
+    private const int FormatVersion = 10;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -166,7 +167,8 @@ public sealed class Simulation
         }
 
         // People who have left the map go now, as CorsixTH's _flushDestroyedEntities.
-        _entities.RemoveAll(entity => entity is Humanoid { IsDespawning: true });
+        // So do construction sites that are done: removing them during the loop would skip an entity.
+        _entities.RemoveAll(entity => entity is Humanoid { IsDespawning: true } or ConstructionSite { IsDone: true });
 
         Tick++;
     }

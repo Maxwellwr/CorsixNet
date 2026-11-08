@@ -62,6 +62,7 @@ public sealed class Humanoid : Entity
     private readonly byte[] _layers = new byte[LayerCount];
     private int _doorTicks;
     private TilePosition _doorExit;
+    private TilePosition? _resumeTo;
 
     public Humanoid(int id, TilePosition tile, HumanoidType type = HumanoidType.StandardMalePatient, ReadOnlySpan<byte> layers = default)
         : base(id)
@@ -177,6 +178,7 @@ public sealed class Humanoid : Entity
     internal bool FollowPath(IReadOnlyList<TilePosition> path, bool found = true)
     {
         _path.Clear();
+        _resumeTo = null;
         RawWalk = false;
         if (!IsCrossingDoor)
         {
@@ -201,6 +203,7 @@ public sealed class Humanoid : Entity
     internal void RawStepTo(TilePosition next)
     {
         _path.Clear();
+        _resumeTo = null;
         _path.Add(next);
         RawWalk = true;
         ClearActionAnimation();
@@ -237,6 +240,7 @@ public sealed class Humanoid : Entity
     internal void PlaceAt(TilePosition tile)
     {
         _path.Clear();
+        _resumeTo = null;
         if (IsCrossingDoor)
         {
             _doorTicks = 0;
@@ -299,6 +303,16 @@ public sealed class Humanoid : Entity
 
         if (_path.Count == 0)
         {
+            if (_resumeTo is { } resume)
+            {
+                // Out of a blueprint's way: back to where the humanoid was going (LeaveArea).
+                _resumeTo = null;
+                if (resume != Tile && WalkTo(simulation, resume) && _path.Count > 0)
+                {
+                    return;
+                }
+            }
+
             Behaviour?.Update(simulation, this);
             return;
         }
@@ -325,6 +339,26 @@ public sealed class Humanoid : Entity
 
             next = _path[0];
             direction = DirectionTo(Tile, next)!.Value;
+        }
+        else if (!RawWalk && !simulation.Map[Tile.X, Tile.Y].Has(TileFlags.AvoidTile) && simulation.Map[next.X, next.Y].Has(TileFlags.AvoidTile))
+        {
+            // About to walk into a blueprint: plan again, as walk.lua's action_walk_tick does, which goes around
+            // it where it can. CorsixTH keeps planning again for as long as the new path still leads into the
+            // blueprint; here the new path is taken as it is.
+            var destination = _path[^1];
+            if (!WalkTo(simulation, destination) || _path.Count == 0)
+            {
+                _path.Clear();
+                return;
+            }
+
+            next = _path[0];
+            if (DirectionTo(Tile, next) is not { } replanned || !CanTravel(simulation.Map, Tile, replanned))
+            {
+                return;
+            }
+
+            direction = replanned;
         }
 
         var door = RoomDoorBetween(simulation, Tile, direction);
@@ -369,6 +403,72 @@ public sealed class Humanoid : Entity
         _doorExit = exit;
         _doorTicks = animation.Length;
         SetActionAnimation(simulation, animation, direction is Direction.West or Direction.South, door.Tile, door.Tile, door.Id);
+    }
+
+    /// <summary>
+    /// Whether the humanoid is inside the rectangle from (<paramref name="x1"/>, <paramref name="y1"/>) to
+    /// (<paramref name="x2"/>, <paramref name="y2"/>), or walking into it from its border, as CorsixTH's
+    /// <c>Humanoid:isObscuringArea</c>. A blueprint passes the tiles of its walls, one tile beyond the room's area.
+    /// </summary>
+    public bool IsObscuringArea(int x1, int x2, int y1, int y2)
+    {
+        var (x, y) = (Tile.X, Tile.Y);
+        if (x < x1 || x > x2 || y < y1 || y > y2)
+        {
+            return false;
+        }
+
+        if (x == x1 || x == x2 || y == y1 || y == y2)
+        {
+            // On the border: only someone walking into the rectangle is in the way. CorsixTH looks at the tile
+            // the walk is heading for, which is the tile stood on while not stepping.
+            if (!IsMoving)
+            {
+                return false;
+            }
+
+            var next = StepTarget;
+            if (x1 >= next.X || next.X >= x2 || y1 >= next.Y || next.Y >= y2)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Gets out of the way of a blueprint whose tiles are marked <see cref="TileFlags.AvoidTile"/>, as CorsixTH's
+    /// <c>Humanoid:leaveArea</c>: everyone in a queue is sent to their place again (which is no longer in the
+    /// blueprint); anyone else walks to a nearby idle tile, which is never in a blueprint, and someone who was on
+    /// their way somewhere goes on there afterwards.
+    /// </summary>
+    internal void LeaveArea(Simulation simulation)
+    {
+        foreach (var entity in simulation.Entities)
+        {
+            var queue = entity switch
+            {
+                RoomObject { Desk: { } desk } => desk.Queue,
+                Room { DoorQueue: { } doorQueue } => doorQueue,
+                _ => null,
+            };
+            if (queue is not null && queue.Contains(Id))
+            {
+                queue.Arrange(simulation);
+                return;
+            }
+        }
+
+        // A walk to somewhere is resumed after a single meander (CorsixTH queues MeanderAction():setCount(1)
+        // before it); someone just wandering about picks a new place to wander to, outside the blueprint.
+        TilePosition? resume = Behaviour is not null && IsMoving ? Destination : null;
+        var start = StepTarget;
+        if (simulation.Pathfinder.TryFindIdleTile(simulation.Map, start, simulation.Random.NextInclusive(1, 24), out var tile) && tile != start)
+        {
+            WalkTo(simulation, tile);
+            _resumeTo = resume;
+        }
     }
 
     /// <summary>The room door on the edge crossed by a step from <paramref name="start"/> towards <paramref name="direction"/>, if any.</summary>
@@ -439,6 +539,7 @@ public sealed class Humanoid : Entity
             IsHidden = reader.ReadBool(),
             _doorTicks = reader.ReadInt32(),
             _doorExit = reader.ReadTile(),
+            _resumeTo = reader.ReadBool() ? reader.ReadTile() : null,
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -478,6 +579,12 @@ public sealed class Humanoid : Entity
         writer.WriteBool(IsHidden);
         writer.WriteInt32(_doorTicks);
         writer.WriteTile(_doorExit);
+        writer.WriteBool(_resumeTo is not null);
+        if (_resumeTo is { } resumeTo)
+        {
+            writer.WriteTile(resumeTo);
+        }
+
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)
         {

@@ -100,8 +100,8 @@ Not done yet:
 - Money: buying land, loans and interest, hospital value (used by win criteria), bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and
-  buy buttons); steps are keys and the status line for now. Cursor shapes per step. CorsixTH's
-  clear-area step (people inside a new blueprint get walled in today). Buying extra objects.
+  buy buttons); steps are keys and the status line for now. Cursor shapes per step. Buying extra
+  objects.
 
 ## What we learnt about the original game
 
