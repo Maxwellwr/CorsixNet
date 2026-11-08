@@ -37,14 +37,17 @@ public sealed class LevelRules
     /// <param name="staff">Salaries and staff for hire; by default the original game's settings.</param>
     /// <param name="population">How the number of patients per month changes; by default CorsixTH's base_config.lua.</param>
     /// <param name="diseases">Which diseases come and their prices; by default <see cref="DiseaseRules.Default"/>.</param>
+    /// <param name="startReputation">Each hospital's reputation at the start (the level files' <c>StartRep</c>).</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
         IEnumerable<KeyValuePair<string, int>> objectCosts,
         StaffRules? staff = null,
         IEnumerable<PopulationChange>? population = null,
-        DiseaseRules? diseases = null)
+        DiseaseRules? diseases = null,
+        int startReputation = Hospital.AverageReputation)
     {
+        StartReputation = startReputation;
         Diseases = diseases ?? DiseaseRules.Default;
         StartCash = startCash;
         Staff = staff ?? StaffRules.Default;
@@ -56,6 +59,9 @@ public sealed class LevelRules
     }
 
     public int StartCash { get; }
+
+    /// <summary>Each hospital's reputation at the start, from 0 to 1000.</summary>
+    public int StartReputation { get; }
 
     /// <summary>Salaries and who is available for hire when.</summary>
     public StaffRules Staff { get; }
@@ -104,6 +110,7 @@ public sealed class LevelRules
     internal void Write(SimWriter writer)
     {
         writer.WriteInt32(StartCash);
+        writer.WriteInt32(StartReputation);
         WriteCosts(writer, _roomCosts);
         WriteCosts(writer, _objectCosts);
         Staff.Write(writer);
@@ -120,6 +127,7 @@ public sealed class LevelRules
     internal static LevelRules Read(SimReader reader)
     {
         var startCash = reader.ReadInt32();
+        var startReputation = reader.ReadInt32();
         var rooms = ReadCosts(reader);
         var objects = ReadCosts(reader);
         var staff = StaffRules.Read(reader);
@@ -129,7 +137,7 @@ public sealed class LevelRules
             population[i] = new PopulationChange(reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader));
+        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

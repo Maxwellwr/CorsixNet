@@ -387,7 +387,13 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   staff is done: into the bank as a `Treatment` transaction, or, if insured, owed by the insurance company,
   which pays two months later at a month's end. The price is the level's `StartPrice` (a pseudo disease's
   own price) with 4.5 % inflation a year, times the player's percentage in the casebook (100 % until the
-  casebook window exists). Reputation is not modelled; at CorsixTH's starting 500 it does not change prices.
+  casebook window exists), and with a reputation above 500 times reputation / 500.
+- **Reputation** (`Hospital`, from `hospital.lua`). The hospital starts at the level's `StartRep` (500) and each
+  non-pseudo disease at 500. A cure adds 1, a death takes 4, a patient sent home or giving up waiting 3
+  (`Kicked`, also counted in the disease's `TurnedAway`), one refusing a price 2 (`OverPriced`); both count in
+  `NotCured`. The disease's reputation always changes; the hospital's always for a move towards 500 and
+  otherwise with a chance that falls to 0 at 0 and 1000. A patient paying themselves now and then finds a price
+  far below or above what they expect from the reputation and the cure's effectiveness (+1 or −2).
   A disease cured in the pharmacy has the level's drug rating as its cure effectiveness and costs the drug's
   price (`gbv.StartRating` and `gbv.StartCost`, both 100) for each cure (`TransactionKind.DrugCost`, paid to one
   of five drug companies at random); research improving them is not there yet.

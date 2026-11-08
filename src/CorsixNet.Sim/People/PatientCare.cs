@@ -122,6 +122,7 @@ public static class PatientCare
             ReceiveMoneyForTreatment(simulation, humanoid, patient, room.RoomType);
             if (DiseaseCatalog.Find(DiseaseCatalog.GpDiagnosis) is { } consultation && !AgreesToPay(simulation, humanoid, patient, consultation))
             {
+                NotCured(simulation, humanoid, patient, ReputationChange.OverPriced);
                 patient.SetNextGoHome();
             }
             else
@@ -156,6 +157,7 @@ public static class PatientCare
         if (IsTreatmentEffective(simulation, room, patient, entry))
         {
             // Patient:cure and goHome("cured") with Hospital:updateCuredCounts.
+            hospital.ChangeReputation(simulation.Random, ReputationChange.Cured, entry);
             hospital.Cured++;
             entry.Recoveries++;
             patient.SetNextGoHome();
@@ -165,6 +167,7 @@ public static class PatientCare
             // Patient:die with Hospital:humanoidDeath.
             hospital.Deaths++;
             entry.Fatalities++;
+            hospital.ChangeReputation(simulation.Random, ReputationChange.Death, entry);
             patient.SetNextDie();
         }
 
@@ -216,6 +219,7 @@ public static class PatientCare
             }
             else
             {
+                NotCured(simulation, humanoid, patient, ReputationChange.OverPriced);
                 patient.SetNextGoHome();
             }
 
@@ -226,6 +230,7 @@ public static class PatientCare
         var rooms = patient.AvailableDiagnosisRooms;
         if (rooms.Count == 0)
         {
+            NotCured(simulation, humanoid, patient, ReputationChange.Kicked);
             patient.SetNextGoHome();
             return;
         }
@@ -238,8 +243,24 @@ public static class PatientCare
         }
         else
         {
+            NotCured(simulation, humanoid, patient, ReputationChange.OverPriced);
             patient.SetNextGoHome();
         }
+    }
+
+    /// <summary>
+    /// <c>Hospital:updateNotCuredCounts</c> from <c>Patient:goHome</c>: the patient goes home without a cure, sent home or
+    /// because of the price, which changes the reputation for their disease.
+    /// </summary>
+    internal static void NotCured(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, ReputationChange reason)
+    {
+        if (patient.Disease is not { } disease)
+        {
+            return;
+        }
+
+        var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
+        hospital.UpdateNotCuredCounts(simulation.Random, reason, hospital.CaseOf(disease, simulation.Rules.Diseases));
     }
 
     /// <summary>Marks the patient diagnosed; the hospital now knows the disease (<c>Patient:setDiagnosed</c>, <c>discoverDisease</c>).</summary>
@@ -270,7 +291,14 @@ public static class PatientCare
         var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
         var rules = simulation.Rules.Diseases;
         var amount = patient.PayAmount > 0 ? patient.PayAmount : hospital.TreatmentPrice(paidFor, rules);
-        hospital.ReceiveForTreatment(simulation.Tick, hospital.CaseOf(paidFor, rules), amount, patient.InsuranceCompany);
+        var entry = hospital.CaseOf(paidFor, rules);
+        if (patient.InsuranceCompany == 0)
+        {
+            // A patient paying themselves may find the price too high or low.
+            hospital.ComputePriceLevelImpact(simulation.Random, entry);
+        }
+
+        hospital.ReceiveForTreatment(simulation.Tick, entry, amount, patient.InsuranceCompany);
         patient.PayAmount = 0;
     }
 

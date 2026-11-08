@@ -113,7 +113,9 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 - Bank statement window showing the transaction log (data exists, no UI).
 - Casebook: per-disease price percentage, concentrate research, drug ratings (`fullscreen/drug_casebook.lua`).
   Partial: price percent is fixed at 100 %.
-- Reputation: changes from cures, deaths, VIPs, prices, cleanliness; effect on arrivals and prices (`hospital.lua`).
+- Reputation: changes from VIPs, emergencies, autopsies, room explosions, the year-end award and staff kicked out;
+  the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
+  price, prices far from what patients expect, and the price rise above 500 are done.
 - Hospital value (used by win criteria), monthly/yearly accounting, end-of-year bonuses and awards money.
 - Buying land: plot purchase from the town map, plot prices (`fullscreen/town_map.lua`).
 - Heating costs and heating level (`fullscreen/town_map.lua`, radiators).

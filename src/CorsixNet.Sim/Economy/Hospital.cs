@@ -1,7 +1,10 @@
 // Spending, receiving, the transaction log and monthly wages ported from CorsixTH CorsixTH/Lua/hospital.lua
 // (Hospital:spendMoney, Hospital:receiveMoney, Hospital:logTransaction, Hospital:onEndMonth); the casebook,
 // treatment prices and insurance from the same file (Hospital:Hospital, Hospital:receiveMoneyForTreatment,
-// Hospital:getTreatmentPrice, Hospital:addInsuranceMoney, Hospital:onEndYear).
+// Hospital:getTreatmentPrice, Hospital:addInsuranceMoney, Hospital:onEndYear); reputation from the same file
+// (reputation_changes, Hospital:changeReputation, unconditionalChangeReputation, isReputationChangeAllowed,
+// getReputationChangeLikelihood, computePriceLevelImpact, updateNotCuredCounts) and entities/humanoids/patient.lua
+// (Patient:getPriceDistortion).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -30,6 +33,25 @@ public enum TransactionKind : byte
     /// names one of five companies at random.
     /// </summary>
     DrugCost = 7,
+}
+
+/// <summary>Why a hospital's reputation changes, as the keys of CorsixTH's <c>reputation_changes</c>.</summary>
+public enum ReputationChange : byte
+{
+    /// <summary>A patient was cured (+1).</summary>
+    Cured,
+
+    /// <summary>A patient died (−4).</summary>
+    Death,
+
+    /// <summary>A patient was sent home or gave up waiting (−3).</summary>
+    Kicked,
+
+    /// <summary>A patient found the price too high (−2).</summary>
+    OverPriced,
+
+    /// <summary>A patient found the price low (+1).</summary>
+    UnderPriced,
 }
 
 /// <summary>One entry of a hospital's transaction log.</summary>
@@ -80,6 +102,15 @@ public sealed class DiseaseCase
 
     /// <summary>Money received for it so far, insurance payments included.</summary>
     public long MoneyEarned { get; internal set; }
+
+    /// <summary>
+    /// The hospital's reputation for this disease, which starts at 500 and moves with the hospital's (CorsixTH's
+    /// casebook <c>reputation</c>); null for a diagnosis, which goes by the hospital's reputation.
+    /// </summary>
+    public int? Reputation { get; internal set; }
+
+    /// <summary>Patients with it who were sent home or gave up (CorsixTH's <c>turned_away</c>).</summary>
+    public int TurnedAway { get; internal set; }
 }
 
 /// <summary>A player's hospital: its money, its casebook and what insurance companies owe it.</summary>
@@ -108,16 +139,33 @@ public sealed class Hospital
     /// <summary>Segments of the opening watch (CorsixTH's <c>open_timer</c> starts at 12).</summary>
     public const int OpeningSegments = 12;
 
+    /// <summary>The reputation a disease starts with in the casebook, and above which prices rise with it.</summary>
+    public const int AverageReputation = 500;
+
+    public const int MinReputation = 0;
+
+    public const int MaxReputation = 1000;
+
+    /// <summary>
+    /// Price distortion below which a patient may find a price low, at medium difficulty (CorsixTH's
+    /// <c>under_priced_thresholds</c>: −0.3, −0.4, −0.5).
+    /// </summary>
+    private const decimal UnderPricedThreshold = -0.4m;
+
+    /// <summary>Price distortion above which a patient may find a price too high, at medium difficulty (0.4, 0.3, 0.2).</summary>
+    private const decimal OverPricedThreshold = 0.3m;
+
     private readonly List<Transaction> _transactions = [];
     private readonly SortedDictionary<string, DiseaseCase> _casebook = new(StringComparer.Ordinal);
 
     /// <summary>What each insurance company owes: this month, last month and the month before.</summary>
     private readonly long[,] _insuranceOwed = new long[InsuranceCompanies, InsuranceMonths];
 
-    internal Hospital(int player, long balance)
+    internal Hospital(int player, long balance, int reputation = AverageReputation)
     {
         Player = player;
         Balance = balance;
+        Reputation = Math.Clamp(reputation, MinReputation, MaxReputation);
     }
 
     /// <summary>The player (0-based) the hospital belongs to.</summary>
@@ -137,6 +185,12 @@ public sealed class Hospital
 
     /// <summary>Patients who died so far (CorsixTH's <c>num_deaths</c>).</summary>
     public int Deaths { get; internal set; }
+
+    /// <summary>Patients who went home without a cure so far: sent home, gave up or found it too dear (CorsixTH's <c>not_cured</c>).</summary>
+    public int NotCured { get; internal set; }
+
+    /// <summary>The hospital's reputation, from 0 to 1000; levels start at their <c>StartRep</c>, usually 500.</summary>
+    public int Reputation { get; private set; }
 
     /// <summary>Year ends so far, each of which raised prices by the inflation rate.</summary>
     public int InflationYears { get; private set; }
@@ -179,7 +233,7 @@ public sealed class Hospital
     {
         if (!_casebook.TryGetValue(disease.Id, out var entry))
         {
-            entry = new DiseaseCase(disease.Id, rules.IsKnown(disease.ExpertiseId));
+            entry = new DiseaseCase(disease.Id, rules.IsKnown(disease.ExpertiseId)) { Reputation = disease.IsPseudo ? null : AverageReputation };
             if (disease.TreatmentRooms is ["pharmacy", ..])
             {
                 entry.CureEffectiveness = rules.DrugStartRating;
@@ -193,8 +247,8 @@ public sealed class Hospital
     }
 
     /// <summary>
-    /// <c>Hospital:getTreatmentPrice</c>: the standard price with inflation, times the player's percentage, rounded
-    /// up. Reputation is not modelled yet; at CorsixTH's starting reputation of 500 it does not change the price.
+    /// <c>Hospital:getTreatmentPrice</c>: the standard price with inflation, times the player's percentage, and with a
+    /// reputation for the disease above 500 times reputation / 500, rounded up.
     /// </summary>
     public int TreatmentPrice(DiseaseDefinition disease, DiseaseRules rules)
     {
@@ -204,7 +258,14 @@ public sealed class Hospital
             inflation *= 1 + InflationRate;
         }
 
-        var price = rules.CurePrice(disease) * inflation * CaseOf(disease, rules).PricePercent / DiseaseCase.StandardPrice;
+        var entry = CaseOf(disease, rules);
+        var price = rules.CurePrice(disease) * inflation * entry.PricePercent / DiseaseCase.StandardPrice;
+        var reputation = entry.Reputation ?? Reputation;
+        if (reputation >= AverageReputation)
+        {
+            price = price * reputation / AverageReputation;
+        }
+
         return (int)decimal.Ceiling(price);
     }
 
@@ -286,6 +347,113 @@ public sealed class Hospital
         }
     }
 
+    /// <summary>
+    /// <c>Hospital:changeReputation</c>: the hospital's reputation changes if <see cref="IsReputationChangeAllowed"/>
+    /// says so, and the disease's always.
+    /// </summary>
+    internal void ChangeReputation(SimRandom random, ReputationChange reason, DiseaseCase? entry = null)
+    {
+        var amount = reason switch
+        {
+            ReputationChange.Cured => 1,
+            ReputationChange.Death => -4,
+            ReputationChange.Kicked => -3,
+            ReputationChange.OverPriced => -2,
+            _ => 1,
+        };
+        if (IsReputationChangeAllowed(random, amount))
+        {
+            Reputation = Math.Clamp(Reputation + amount, MinReputation, MaxReputation);
+        }
+
+        if (entry is { Reputation: { } diseaseReputation })
+        {
+            // CorsixTH does not keep a disease's reputation within 0 to 1000.
+            entry.Reputation = diseaseReputation + amount;
+        }
+    }
+
+    /// <summary>
+    /// <c>Hospital:isReputationChangeAllowed</c>: a gain at or below 500 and a loss at or above it always count; otherwise
+    /// the change counts with a chance that falls to 0 towards 0 and 1000 (<c>getReputationChangeLikelihood</c>).
+    /// </summary>
+    private bool IsReputationChangeAllowed(SimRandom random, int amount)
+    {
+        if ((amount > 0 && Reputation <= AverageReputation) || (amount < 0 && Reputation >= AverageReputation) || amount == 0)
+        {
+            return true;
+        }
+
+        return random.NextUInt32() / 4294967296m <= ReputationChangeLikelihood;
+    }
+
+    /// <summary>
+    /// <c>Hospital:getReputationChangeLikelihood</c>: 1 − (a·x² − b·x + c) with x the reputation, which is 1 at 500
+    /// and 0 at 0 and 1000.
+    /// </summary>
+    public decimal ReputationChangeLikelihood
+    {
+        get
+        {
+            const decimal a = 0.000004008m;
+            const decimal b = 0.004008m;
+            const decimal c = 1m;
+            decimal x = Reputation;
+            return 1 - ((a * x * x) - (b * x) + c);
+        }
+    }
+
+    /// <summary>
+    /// <c>Hospital:updateNotCuredCounts</c>: a patient went home without a cure, sent home (<see cref="ReputationChange.Kicked"/>)
+    /// or because of the price (<see cref="ReputationChange.OverPriced"/>).
+    /// </summary>
+    internal void UpdateNotCuredCounts(SimRandom random, ReputationChange reason, DiseaseCase entry)
+    {
+        ChangeReputation(random, reason, entry);
+        NotCured++;
+        if (reason == ReputationChange.Kicked)
+        {
+            entry.TurnedAway++;
+        }
+    }
+
+    /// <summary>
+    /// <c>Hospital:computePriceLevelImpact</c> for a patient paying themselves, with <c>Patient:getPriceDistortion</c>:
+    /// the price level (0 at half price, 1 at double) against what the patient expects from the reputation for the
+    /// disease, the cure's effectiveness and their happiness. Now and then a price far off what they expect changes the
+    /// reputation. Patients' happiness is not modelled yet: it counts as full, and the price does not change it.
+    /// </summary>
+    internal void ComputePriceLevelImpact(SimRandom random, DiseaseCase entry)
+    {
+        const decimal happinessWeight = 0.1m;
+        const decimal reputationWeight = 0.6m;
+        const decimal effectivenessWeight = 0.3m;
+        const decimal happiness = 1m;
+        var reputation = entry.Reputation ?? Reputation;
+        var expected = (happinessWeight * happiness) + (reputationWeight * reputation / 1000m) + (effectivenessWeight * entry.CureEffectiveness / 100m);
+        var priceLevel = (((entry.PricePercent / 100m) - 0.5m) / 3) * 2;
+        var distortion = priceLevel - expected;
+        if (distortion < UnderPricedThreshold)
+        {
+            if (random.NextInclusive(1, 100) == 1)
+            {
+                ChangeReputation(random, ReputationChange.UnderPriced);
+            }
+        }
+        else if (distortion > OverPricedThreshold)
+        {
+            if (random.NextInclusive(1, 100) == 1)
+            {
+                ChangeReputation(random, ReputationChange.OverPriced);
+            }
+        }
+        else if (Math.Abs(distortion) <= 0.15m)
+        {
+            // CorsixTH lets the adviser praise fair prices now and then; the chance is drawn all the same.
+            random.NextInclusive(1, 200);
+        }
+    }
+
     /// <summary>Opens the hospital (CorsixTH's <c>Hospital:open</c>), when the watch runs down or the player clicks it.</summary>
     internal void Open() => IsOpen = true;
 
@@ -334,6 +502,8 @@ public sealed class Hospital
         writer.WriteInt32(Visitors);
         writer.WriteInt32(Cured);
         writer.WriteInt32(Deaths);
+        writer.WriteInt32(NotCured);
+        writer.WriteInt32(Reputation);
         writer.WriteInt32(InflationYears);
         writer.WriteBool(IsOpen);
         writer.WriteInt32(OpenTimer);
@@ -357,6 +527,9 @@ public sealed class Hospital
             writer.WriteInt32(entry.DrugCost);
             writer.WriteInt32(entry.Recoveries);
             writer.WriteInt32(entry.Fatalities);
+            writer.WriteBool(entry.Reputation is not null);
+            writer.WriteInt32(entry.Reputation ?? 0);
+            writer.WriteInt32(entry.TurnedAway);
         }
     }
 
@@ -379,6 +552,8 @@ public sealed class Hospital
         hospital.Visitors = reader.ReadInt32();
         hospital.Cured = reader.ReadInt32();
         hospital.Deaths = reader.ReadInt32();
+        hospital.NotCured = reader.ReadInt32();
+        hospital.Reputation = reader.ReadInt32();
         hospital.InflationYears = reader.ReadInt32();
         hospital.IsOpen = reader.ReadBool();
         hospital.OpenTimer = reader.ReadInt32();
@@ -402,6 +577,10 @@ public sealed class Hospital
             entry.DrugCost = reader.ReadInt32();
             entry.Recoveries = reader.ReadInt32();
             entry.Fatalities = reader.ReadInt32();
+            var hasReputation = reader.ReadBool();
+            var reputation = reader.ReadInt32();
+            entry.Reputation = hasReputation ? reputation : null;
+            entry.TurnedAway = reader.ReadInt32();
             if (!hospital._casebook.TryAdd(id, entry))
             {
                 throw new InvalidDataException($"Casebook entry '{id}' is given twice.");
