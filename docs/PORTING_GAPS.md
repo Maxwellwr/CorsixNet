@@ -125,7 +125,8 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   down are done. The temperature of tiles (`th_map.cpp`'s `updateTemperatures`) and patients and staff feeling it
   are not; nor is the adviser's warning when the boiler breaks.
 - Research spending and its effect on drug ratings and new equipment (`research_department.lua`, `fullscreen/research_policy.lua`).
-- Graphs of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`).
+- Graphs window of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`); the monthly
+  figures it draws are recorded (`Hospital.Statistics`).
 
 ## 6. Interface, windows, faxes, adviser
 
