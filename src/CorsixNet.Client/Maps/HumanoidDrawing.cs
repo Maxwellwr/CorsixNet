@@ -27,6 +27,8 @@ internal sealed class HumanoidDrawing
         [HumanoidType.Nurse] = (1206, 1208, 1650, 1652),
         [HumanoidType.Handyman] = (1858, 1860, 1866, 1868),
         [HumanoidType.Receptionist] = (3668, 3670, 3676, 3678),
+        [HumanoidType.StrippedMalePatient] = (818, 820, 826, 828),
+        [HumanoidType.StrippedFemalePatient] = (834, 836, 842, 844),
     };
 
     private readonly AnimationRenderer _renderer;

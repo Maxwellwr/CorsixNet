@@ -21,6 +21,7 @@ public class PatientFlowTests
     private const int Size = 24;
     private static readonly TileRect GpArea = new(5, 5, 4, 4);
     private static readonly TileRect PharmacyArea = new(12, 5, 4, 4);
+    private static readonly TileRect GeneralDiagArea = new(3, 13, 5, 5);
 
     [Fact]
     public void NoPatientsComeWithoutAStaffedReceptionDesk()
@@ -263,6 +264,103 @@ public class PatientFlowTests
     }
 
     [Fact]
+    public void OnLevelOneGeneralDiagnosisExaminesPatientsAndSendsThemBackToTheGp()
+    {
+        var install = RealGameData.Require();
+        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var simulation = NewStaffedHospital(rules);
+        BuildGeneralDiagnosis(simulation);
+        var hospital = simulation.Hospitals[0];
+        var examined = new HashSet<int>();
+        var undressedWalking = false;
+        var clothesHung = false;
+        var backAtGp = new HashSet<int>();
+
+        for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            clothesHung |= simulation.Entities.OfType<RoomObject>().Any(o => o is { ObjectType: "screen", HangingClothes: not null });
+            foreach (var humanoid in simulation.Entities.OfType<Humanoid>())
+            {
+                if (humanoid.Behaviour is not PatientBehaviour patient)
+                {
+                    continue;
+                }
+
+                undressedWalking |= humanoid.IsMoving && humanoid.Type is HumanoidType.StrippedMalePatient or HumanoidType.StrippedFemalePatient;
+
+                // On the trolley the patient's animation shows the doctor, who is hidden meanwhile.
+                if (patient is { Phase: PatientPhase.OnTrolley, TrolleyUse: { } use } && simulation.FindEntity(use.UseWithId) is Humanoid { IsHidden: true, Type: HumanoidType.Doctor })
+                {
+                    examined.Add(humanoid.Id);
+                }
+
+                if (examined.Contains(humanoid.Id) && patient is { Seeking: RoomSeek.Gp, Phase: PatientPhase.UsingObject })
+                {
+                    Assert.Contains(humanoid.Type, new[] { HumanoidType.StandardMalePatient, HumanoidType.StandardFemalePatient });
+                    backAtGp.Add(humanoid.Id);
+                }
+            }
+        }
+
+        Assert.True(examined.Count >= 3, $"Only {examined.Count} patients were examined.");
+        Assert.True(undressedWalking);
+        Assert.True(clothesHung);
+        Assert.NotEmpty(backAtGp);
+        Assert.True(hospital.Casebook["diag_general_diag"].MoneyEarned >= 150 * (examined.Count - 1));
+        Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.Treatment, Subject: "diag_general_diag" });
+    }
+
+    [Fact]
+    public void WithGeneralDiagnosisAndAPharmacyMorePatientsAreCured()
+    {
+        var install = RealGameData.Require();
+        int Cured(bool generalDiagnosis)
+        {
+            var simulation = NewStaffedHospital(LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()), weakDoctor: true);
+            BuildPharmacy(simulation);
+            if (generalDiagnosis)
+            {
+                BuildGeneralDiagnosis(simulation);
+            }
+
+            StepFor(simulation, 5 * 31 * GameDate.HoursPerDay);
+            return simulation.Hospitals[0].Cured;
+        }
+
+        var without = Cured(generalDiagnosis: false);
+        var with = Cured(generalDiagnosis: true);
+        Assert.True(with > without, $"{with} cured with general diagnosis, {without} without.");
+    }
+
+    [Fact]
+    public void ASavedGameWithAPatientOnTheTrolleyContinuesIdentically()
+    {
+        var install = RealGameData.Require();
+        var simulation = NewStaffedHospital(LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()));
+        BuildGeneralDiagnosis(simulation);
+        for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            if (simulation.Entities.Any(e => e is Humanoid { Behaviour: PatientBehaviour { Phase: PatientPhase.OnTrolley } }))
+            {
+                break;
+            }
+        }
+
+        Assert.Contains(simulation.Entities, e => e is Humanoid { Behaviour: PatientBehaviour { Phase: PatientPhase.OnTrolley } });
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var loaded = Simulation.Load(stream, BaseGameContent.Create());
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+
+        StepFor(simulation, 5 * GameDate.HoursPerDay);
+        StepFor(loaded, 5 * GameDate.HoursPerDay);
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+    }
+
+    [Fact]
     public void AQueueLinesUpOnNeighbouringTiles()
     {
         var simulation = NewHospital();
@@ -313,7 +411,7 @@ public class PatientFlowTests
     private static RoomObject Desk(Simulation simulation) => simulation.Entities.OfType<RoomObject>().Single(o => o.Desk is not null);
 
     /// <summary>A hospital with a GP's office, a doctor, a receptionist and a staffed reception desk.</summary>
-    private static Simulation NewStaffedHospital(LevelRules? rules = null)
+    private static Simulation NewStaffedHospital(LevelRules? rules = null, bool weakDoctor = false)
     {
         var simulation = NewHospital(rules);
         Run(simulation, new BuildRoomCommand(new RoomPlan("gp", GpArea, new DoorPlacement(new(6, GpArea.Bottom), EdgeOrientation.North))));
@@ -325,7 +423,10 @@ public class PatientFlowTests
 
         Run(simulation, new ConfirmRoomCommand(room.Id));
         Assert.True(room.IsActive);
-        Run(simulation, new HireStaffCommand(StaffClass.Doctor, 0, new(15, 15)));
+        // A weak GP leaves level one's patients short of a diagnosis, so that they need a diagnosis room.
+        var doctors = simulation.AvailableStaff(StaffClass.Doctor);
+        var doctor = weakDoctor ? doctors.Select((profile, index) => (profile.Skill, index)).Min().index : 0;
+        Run(simulation, new HireStaffCommand(StaffClass.Doctor, doctor, new(15, 15)));
         Run(simulation, new HireStaffCommand(StaffClass.Receptionist, 0, new(16, 15)));
         PlaceReceptionDesk(simulation);
         return simulation;
@@ -340,6 +441,18 @@ public class PatientFlowTests
         Run(simulation, new ConfirmRoomCommand(room.Id));
         Assert.True(room.IsActive);
         Run(simulation, new HireStaffCommand(StaffClass.Nurse, 0, new(15, 16)));
+    }
+
+    /// <summary>General diagnosis south-west of the GP's office, with a second doctor.</summary>
+    private static void BuildGeneralDiagnosis(Simulation simulation)
+    {
+        Run(simulation, new BuildRoomCommand(new RoomPlan("general_diag", GeneralDiagArea, new DoorPlacement(new(5, GeneralDiagArea.Y), EdgeOrientation.North))));
+        var room = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "general_diag");
+        PlaceAnywhere(simulation, "screen", GeneralDiagArea);
+        PlaceAnywhere(simulation, "crash_trolley", GeneralDiagArea);
+        Run(simulation, new ConfirmRoomCommand(room.Id));
+        Assert.True(room.IsActive);
+        Run(simulation, new HireStaffCommand(StaffClass.Doctor, 0, new(14, 16)));
     }
 
     private static RoomObject PlaceReceptionDesk(Simulation simulation)

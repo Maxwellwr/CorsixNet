@@ -27,7 +27,12 @@ internal sealed class ObjectDrawing
         ["chair"] = (686, 688, false),
         ["reception_desk"] = (2062, 2064, false),
         ["pharmacy_cabinet"] = (1578, 1578, true),
+        ["crash_trolley"] = (3838, 3838, true),
+        ["screen"] = (1022, 1022, false),
     };
+
+    /// <summary>The screen with a patient's clothes hanging on it (screen.lua's second idle animation, 1204).</summary>
+    private const int ScreenWithClothes = 1204;
 
     private static readonly byte[] NoLayers = [];
 
@@ -46,7 +51,8 @@ internal sealed class ObjectDrawing
     }
 
     /// <summary>Draws an object placed on <paramref name="tile"/>.</summary>
-    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint)
+    /// <param name="hangingClothes">For a screen, the clothes (layer 1) hanging on it, or null.</param>
+    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint, byte? hangingClothes = null)
     {
         var anchorX = 32 * (tile.X - tile.Y);
         var anchorY = 16 * (tile.X + tile.Y);
@@ -63,9 +69,16 @@ internal sealed class ObjectDrawing
             Direction.South => (animations.East, !animations.EastMirrorsNorth),
             _ => (animations.North, true),
         };
+        var layers = NoLayers;
+        if (hangingClothes is { } clothes)
+        {
+            animation = ScreenWithClothes;
+            layers = [0, clothes];
+        }
+
         var set = _renderer.Animations;
         var first = set.FirstFrame(animation);
         var frame = set.Advance(first, (int)(tick % set.Length(first)));
-        _renderer.DrawFrame(batch, frame, anchorX, anchorY, NoLayers, flip, tint);
+        _renderer.DrawFrame(batch, frame, anchorX, anchorY, layers, flip, tint);
     }
 }

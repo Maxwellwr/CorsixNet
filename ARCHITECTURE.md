@@ -314,13 +314,22 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   times 1.5 (fatigue is always 0), `d` a random 1 to 3, very skilled doctors up to five times as much.
   At 1.0 (the default `stop_procedure` policy) the patient is diagnosed, the hospital knows the disease, and
   they look for its treatment rooms; otherwise the GP sends them to one of the disease's diagnosis rooms.
-  Only the GP's office and the pharmacy work so far (`RoomVisits.IsSupported`), so diagnosis rooms are never
+  Only the GP's office, general diagnosis and the pharmacy work so far (`RoomVisits.IsSupported`), so other diagnosis rooms are never
   found: as in CorsixTH's `seek_room.lua` with the default policies, a patient below 0.1 goes home, one below
   0.9 or with a disease the hospital does not know waits, and one above has the disease guessed. Waiting
   patients step off to a free spot and give up after 60 days; when a room of the kind they wait for starts
   working, they go to it (`RoomVisits.OnRoomActivated`). CorsixTH's faxes asking the player what to do are not
   there yet. A doctor of middling skill and little attention to detail gets level one's patients only about
-  three quarters of the way, so without diagnosis rooms many of them wait.
+  three quarters of the way, so without general diagnosis many of them wait.
+- **General diagnosis** (`PatientBehaviour.GeneralDiagnosisStep`, from `rooms/general_diag.lua` and
+  `use_screen.lua`). The room sends for a free doctor, who waits at the crash trolley's secondary use position
+  (CorsixTH's doctor meanders meanwhile). The patient undresses behind the screen (the screen's animation shows them;
+  they become a stripped patient, `Humanoid.Type` changes, and their clothes hang on the screen,
+  `RoomObject.HangingClothes`), lies down on the trolley (the trolley's multi-use with the doctor, who is hidden; one
+  of three animation variants), walks back and dresses. Then the room is done with them: they get further in the
+  diagnosis, pay for it and, if they agree to the GP's price, go back to the GP, whose next visit often completes
+  the diagnosis. Without the doctor they dress, leave and look for the room again. CorsixTH draws the trolley split
+  over two tiles; here it is drawn from its own tile, so during the examination its top can show over the wall.
 - **The pharmacy** (`NurseBehaviour`, from `rooms/pharmacy.lua`). The room sends for the nearest free nurse
   (each supported room type names the kind of staff it needs and the object a patient is seen at). She waits
   at the cabinet's use position (CorsixTH's nurse meanders about the room meanwhile). The patient walks to the
@@ -354,13 +363,13 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   phases; a direction without its own mirrors the opposite one. Each phase plays the user's animation and the
   other one's secondary animation, or hides the other one (`Humanoid.IsHidden`) when the user's animation shows
   them too, and lasts as long as the longer of the two. The user takes on the other one's layers 0 to 4 for the
-  use. Prolonged use and the morphs of invisible patients are not ported yet.
+  use, or a patient using it with a member of staff takes on their layer 5. Where CorsixTH lists animations for the phases, one variant is picked for the whole use. Prolonged use and the morphs of invisible patients are not ported yet.
 
 The client buys a reception desk with F (a stand-in for the original's corridor furnishing window),
 draws use animations, and puts a receptionist facing away from the viewer in front of the desk on its
-tile, otherwise behind it. B builds a GP's office and Shift+B a pharmacy until the build window exists; the
+tile, otherwise behind it. B builds a GP's office, Shift+B a pharmacy and Ctrl+B general diagnosis until the build window exists; the
 status line shows how many patients were cured and died. `--demo` hires the most skilled candidate of each kind,
-places a desk once its GP's office works and builds and furnishes a pharmacy. `--speed` starts a local game at
+places a desk once its GP's office works and builds and furnishes a pharmacy, then general diagnosis with a second doctor. `--speed` starts a local game at
 another speed, which helps watching patients come and go.
 
 ## Saves

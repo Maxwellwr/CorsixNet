@@ -32,6 +32,11 @@ public enum HumanoidType : byte
     Nurse = 4,
     Handyman = 5,
     Receptionist = 6,
+
+    /// <summary>A male patient undressed behind the screen (CorsixTH's three "Stripped Male Patient" classes look the same).</summary>
+    StrippedMalePatient = 7,
+
+    StrippedFemalePatient = 8,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -65,7 +70,8 @@ public sealed class Humanoid : Entity
         layers[..Math.Min(layers.Length, LayerCount)].CopyTo(_layers);
     }
 
-    public HumanoidType Type { get; }
+    /// <summary>The kind of person; a patient changes it when undressing and dressing (CorsixTH's <c>setType</c>).</summary>
+    public HumanoidType Type { get; internal set; }
 
     /// <summary>The member of staff's profile, or null for anyone who is not staff.</summary>
     public StaffProfile? Profile { get; private init; }
