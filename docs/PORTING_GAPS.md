@@ -19,7 +19,6 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Facilities: staff room, toilets, training room, research department | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Room availability by level (`rooms[n]` / `towns` settings) and by research (rooms to be discovered) | `world.lua` (`available_rooms`), `research_department.lua` |
 | Editing a finished room (back to blueprint: resize, move the door; add, move or remove objects), deleting a room | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
-| Clear-area step: humanoids inside a new blueprint are told to leave (today they get walled in) | `dialogs/edit_room.lua` (`clearArea`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
 | Room-specific rules: doors that can't be used while busy (swing doors of the operating theatre, ward), rooms that need two staff (operating theatre), max patients per room (ward beds) | `rooms/*.lua`, `objects/doors/*` |
 | Room information windows (staff in room, queue length, room "health") | `dialogs/queue_dialog.lua`, `dialogs/information.lua` |

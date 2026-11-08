@@ -70,6 +70,8 @@ internal sealed class BuildRoomTool
     private int _roomId;
     private string? _message;
     private RoomBlueprint? _blueprint;
+    private TileRect? _markedArea;
+    private int _player;
 
     private ObjectDefinition? _placing;
     private Direction _orientation;
@@ -122,6 +124,7 @@ internal sealed class BuildRoomTool
         _problem = RoomPlanProblem.None;
         _message = null;
         _blueprint = null;
+        _markedArea = null;
         StopPlacing();
     }
 
@@ -133,12 +136,13 @@ internal sealed class BuildRoomTool
             return null;
         }
 
+        _player = player;
         var command = _phase switch
         {
             Phase.Blueprint => UpdateBlueprint(simulation, player, input),
             Phase.Door => UpdateDoor(simulation, player, input),
             Phase.Windows => UpdateWindows(simulation, player, input),
-            Phase.Waiting => UpdateWaiting(simulation, player),
+            Phase.Waiting => UpdateWaiting(simulation, player, input),
             Phase.Objects => UpdateObjects(simulation, player, input),
             _ => null,
         };
@@ -162,7 +166,9 @@ internal sealed class BuildRoomTool
                 : $"{name}: drag the blueprint's edges to resize it, its middle to move it{Explain(_problem)}{message}   Enter: done   Esc: cancel",
             Phase.Door => $"{name}: place the door{Explain(_problem)}{message}   Esc: back to the blueprint",
             Phase.Windows => $"{name}: place windows if you like, click one again to remove it{Explain(_problem)}{message}   Enter: done   Esc: back to the blueprint",
-            Phase.Waiting => $"{name}: building...",
+            Phase.Waiting => simulation is not null && ConstructionSite.Of(simulation, _player) is { IsWaiting: true, Watched.Count: > 0 }
+                ? $"{name}: waiting for people to leave the site   Esc: back to the blueprint"
+                : $"{name}: building...",
             Phase.Objects => ObjectsStatus(simulation),
             _ => string.Empty,
         };
@@ -317,11 +323,17 @@ internal sealed class BuildRoomTool
     {
         if (input.Back)
         {
-            _phase = Phase.Blueprint;
-            return null;
+            return BackToBlueprint();
         }
 
         var area = _area!.Value;
+        if (_markedArea != area)
+        {
+            // As CorsixTH's door phase begins: people are told to leave the blueprint (again, after the room was taken down).
+            _markedArea = area;
+            return new MarkBlueprintCommand(_room!.Id, area);
+        }
+
         _door = input.Hovered is { } tile ? RoomBuilder.WallNear(area, tile, input.FractionX, input.FractionY) : null;
         _problem = _door is { } door ? RoomBuilder.CheckDoor(simulation.Map, simulation.Content, area, door) : RoomPlanProblem.DoorNotOnPerimeter;
         if (!input.LeftPressed || _door is null || _problem != RoomPlanProblem.None)
@@ -343,9 +355,8 @@ internal sealed class BuildRoomTool
     {
         if (input.Back)
         {
-            _phase = Phase.Blueprint;
             _windows.Clear();
-            return null;
+            return BackToBlueprint();
         }
 
         var area = _area!.Value;
@@ -392,14 +403,40 @@ internal sealed class BuildRoomTool
         return new BuildRoomCommand(_sentPlan);
     }
 
-    /// <summary>Waits for the room to appear in the simulation, which happens a few ticks after the command is sent.</summary>
-    private Command? UpdateWaiting(Simulation simulation, int player)
+    /// <summary>Back from the door or windows to the blueprint: the area is no longer avoided.</summary>
+    private UnmarkBlueprintCommand BackToBlueprint()
     {
+        _phase = Phase.Blueprint;
+        _markedArea = null;
+        return new UnmarkBlueprintCommand();
+    }
+
+    /// <summary>
+    /// Waits for the room to appear in the simulation, which happens a few ticks after the command is sent, or
+    /// later if people have to leave the site first.
+    /// </summary>
+    private Command? UpdateWaiting(Simulation simulation, int player, BuildInput input)
+    {
+        var site = ConstructionSite.Of(simulation, player);
+        if (site is { IsWaiting: true })
+        {
+            if (input.Back)
+            {
+                // CorsixTH lets the player go back to the blueprint while waiting for the area to clear.
+                _windows.Clear();
+                return BackToBlueprint();
+            }
+
+            _sentTick = simulation.Tick;
+            return null;
+        }
+
         var room = simulation.Entities.OfType<Room>().FirstOrDefault(r =>
             !r.IsActive && r.Area == _sentPlan!.Area && r.RoomType == _sentPlan.RoomType && RoomBuilder.IsOwnedBy(simulation.Map, r, player));
         if (room is not null)
         {
             _roomId = room.Id;
+            _markedArea = null;
             _phase = Phase.Objects;
             _pending.Clear();
             StopPlacing();

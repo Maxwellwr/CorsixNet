@@ -167,6 +167,18 @@ The client's build tool calls the same check for its preview. Building follows C
 - a `RoomDoor` entity opens the wall at the door;
 - travel flags and shadows are recomputed (`LevelMap.UpdatePathfinding`, `UpdateShadows`).
 
+Before walls go up, the site is cleared of people, as in CorsixTH's `UIEditRoom` (`clearArea`).
+When the player goes from the blueprint to its door, `MarkBlueprintCommand` starts the player's
+`ConstructionSite`: the blueprint's tiles get `TileFlags.AvoidTile` and everyone on them, or
+walking into them from the wall tiles around, is told to leave (`Humanoid.LeaveArea`): people in a
+queue are sent to their places again, anyone else walks to a nearby idle tile and, if they were on
+their way somewhere, goes on there afterwards. Avoided tiles cost 128 in the pathfinder, are never
+idle tiles, and someone about to walk onto one from outside plans their way again. Going back to the
+blueprint sends `UnmarkBlueprintCommand`. `BuildRoomCommand` completes the site's plan: the room is
+built at once if those told to leave are gone and nobody else is in the way, otherwise the site
+looks again after an hour and then every ten hours, and builds the room (buying its objects) once
+everyone it watches has left. Like CorsixTH, it does not look for people who walked in meanwhile.
+
 A new room is inactive, like a CorsixTH room while its edit dialog is open. Its owner furnishes
 it with `PlaceObjectCommand` and `PickUpObjectCommand`, then sends `ConfirmRoomCommand`, which
 activates the room once all its needed objects stand in it. `CancelRoomCommand` takes an

@@ -5,6 +5,7 @@
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.Rooms;
 
@@ -610,5 +611,46 @@ public static class RoomBuilder
         {
             tile.WestWall = replacement;
         }
+    }
+}
+
+/// <summary>Reads and writes room plans, in commands and saved games.</summary>
+internal static class RoomPlanSerializer
+{
+    public static RoomPlan Read(SimReader reader)
+    {
+        var roomType = reader.ReadString();
+        var area = new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        var door = ReadEdge(reader);
+        var windows = new DoorPlacement[reader.ReadCount(RoomPlan.MaxWindows)];
+        for (var i = 0; i < windows.Length; i++)
+        {
+            windows[i] = ReadEdge(reader);
+        }
+
+        return new RoomPlan(roomType, area, door, windows);
+    }
+
+    public static void Write(SimWriter writer, RoomPlan plan)
+    {
+        writer.WriteString(plan.RoomType);
+        writer.WriteInt32(plan.Area.X);
+        writer.WriteInt32(plan.Area.Y);
+        writer.WriteInt32(plan.Area.Width);
+        writer.WriteInt32(plan.Area.Height);
+        WriteEdge(writer, plan.Door);
+        writer.WriteInt32(plan.WindowList.Count);
+        foreach (var window in plan.WindowList)
+        {
+            WriteEdge(writer, window);
+        }
+    }
+
+    private static DoorPlacement ReadEdge(SimReader reader) => new(reader.ReadTile(), (EdgeOrientation)reader.ReadByte());
+
+    private static void WriteEdge(SimWriter writer, DoorPlacement edge)
+    {
+        writer.WriteTile(edge.Tile);
+        writer.WriteByte((byte)edge.Edge);
     }
 }
