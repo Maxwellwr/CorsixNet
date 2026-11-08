@@ -1,3 +1,4 @@
+using System.Globalization;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
@@ -26,7 +27,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 15;
+    private const int FormatVersion = 16;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -37,6 +38,12 @@ public sealed class Simulation
     private readonly List<ScheduledCommand> _pending = [];
     private readonly List<MapObjectPlacement> _delayedObjects = [];
     private readonly Hospital[] _hospitals;
+
+    /// <summary>
+    /// Which parcels touch, by passable tiles of the map as the level began (CorsixTH's
+    /// <c>parcel_adjacency_matrix</c>), as parcel × parcel count + parcel.
+    /// </summary>
+    private bool[] _parcelAdjacency = [];
 
     /// <summary>Candidates for hire per <see cref="StaffClass"/>, shared by every hospital as in CorsixTH.</summary>
     private readonly List<StaffProfile>[] _availableStaff = [[], [], [], []];
@@ -58,6 +65,7 @@ public sealed class Simulation
             _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand, Rules.InterestRate, Rules.OverdraftDifferential);
         }
 
+        _parcelAdjacency = ParcelAdjacency(map);
         MakeAvailableStaff(0);
         Arrivals = PatientArrivals.Start(this);
     }
@@ -389,6 +397,12 @@ public sealed class Simulation
             simulation._delayedObjects.Add(MapObjectPlacement.Read(reader));
         }
 
+        simulation._parcelAdjacency = new bool[map.ParcelCount * map.ParcelCount];
+        for (var i = 0; i < simulation._parcelAdjacency.Length; i++)
+        {
+            simulation._parcelAdjacency[i] = reader.ReadBool();
+        }
+
         return simulation;
     }
 
@@ -457,6 +471,101 @@ public sealed class Simulation
         foreach (var placement in _delayedObjects)
         {
             placement.Write(writer);
+        }
+
+        foreach (var adjacent in _parcelAdjacency)
+        {
+            writer.WriteBool(adjacent);
+        }
+    }
+
+    /// <summary>
+    /// <c>level_map::is_parcel_purchasable</c>: a parcel nobody owns, other than the outside (0), that touches one of
+    /// the player's parcels or the outside.
+    /// </summary>
+    /// <param name="parcel">The parcel.</param>
+    /// <param name="player">The player, 0-based.</param>
+    public bool IsParcelPurchasable(int parcel, int player)
+    {
+        var count = Map.ParcelCount;
+        if (parcel <= 0 || parcel >= count || Map.GetParcelOwner(parcel) != 0)
+        {
+            return false;
+        }
+
+        for (var other = 0; other < count; other++)
+        {
+            if ((other == 0 || Map.GetParcelOwner(other) == player + 1) && _parcelAdjacency[(parcel * count) + other])
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>What a parcel costs (CorsixTH's <c>Map:getParcelPrice</c>): its tiles at the level's land cost per tile.</summary>
+    public long ParcelPrice(int parcel) => (long)Map.ParcelTileCount(parcel) * Rules.LandCostPerTile;
+
+    /// <summary>
+    /// <c>Hospital:purchasePlot</c>: the player buys a parcel they may buy and can afford; it adds its price to the
+    /// hospital's value.
+    /// </summary>
+    internal void PurchaseParcel(int parcel, int player)
+    {
+        if (player < 0 || player >= _hospitals.Length || !IsParcelPurchasable(parcel, player))
+        {
+            return;
+        }
+
+        var hospital = _hospitals[player];
+        var price = ParcelPrice(parcel);
+        if (price <= hospital.Balance)
+        {
+            SetParcelOwner(parcel, player + 1);
+            hospital.Spend(Tick, checked((int)price), TransactionKind.BuyLand, parcel.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    /// <summary>
+    /// <c>level_map::make_adjacency_matrix</c>: every parcel touches itself, and two parcels touch where passable tiles
+    /// of each are side by side.
+    /// </summary>
+    private static bool[] ParcelAdjacency(LevelMap map)
+    {
+        var count = map.ParcelCount;
+        var adjacency = new bool[count * count];
+        for (var i = 0; i < count; i++)
+        {
+            adjacency[(i * count) + i] = true;
+        }
+
+        for (var y = 0; y < map.Height; y++)
+        {
+            for (var x = 0; x < map.Width; x++)
+            {
+                if (x > 0)
+                {
+                    TestAdjacent(map, adjacency, map[x, y], map[x - 1, y]);
+                }
+
+                if (y > 0)
+                {
+                    TestAdjacent(map, adjacency, map[x, y], map[x, y - 1]);
+                }
+            }
+        }
+
+        return adjacency;
+
+        static void TestAdjacent(LevelMap map, bool[] adjacency, MapTile tile, MapTile other)
+        {
+            var count = map.ParcelCount;
+            if (tile.Parcel != other.Parcel && tile.Parcel < count && other.Parcel < count && tile.Has(TileFlags.Passable) && other.Has(TileFlags.Passable))
+            {
+                adjacency[(tile.Parcel * count) + other.Parcel] = true;
+                adjacency[tile.Parcel + (other.Parcel * count)] = true;
+            }
         }
     }
 

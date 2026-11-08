@@ -26,6 +26,7 @@ public enum CommandKind : ushort
     OpenHospital = 12,
     Borrow = 13,
     Repay = 14,
+    PurchaseParcel = 15,
 }
 
 /// <summary>
@@ -64,6 +65,7 @@ public abstract record Command
             CommandKind.OpenHospital => new OpenHospitalCommand(),
             CommandKind.Borrow => new BorrowCommand(reader.ReadBool()),
             CommandKind.Repay => new RepayCommand(reader.ReadBool()),
+            CommandKind.PurchaseParcel => new PurchaseParcelCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -429,4 +431,14 @@ public sealed record RepayCommand(bool AsMuchAsPossible) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteBool(AsMuchAsPossible);
+}
+
+/// <summary>The player buys a parcel of land, as clicking it on CorsixTH's town map does (<c>UITownMap</c>).</summary>
+public sealed record PurchaseParcelCommand(int Parcel) : Command
+{
+    public override CommandKind Kind => CommandKind.PurchaseParcel;
+
+    public override void Execute(Simulation simulation, int player) => simulation.PurchaseParcel(Parcel, player);
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Parcel);
 }

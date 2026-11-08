@@ -53,6 +53,9 @@ public enum TransactionKind : byte
 
     /// <summary>The month's interest on an overdrawn balance (<c>overdraft</c>).</summary>
     Overdraft = 13,
+
+    /// <summary>A parcel of land was bought; the subject is its number (<c>buy_land</c>).</summary>
+    BuyLand = 14,
 }
 
 /// <summary>A trophy, award or fine of the year end (CorsixTH's annual report).</summary>
@@ -438,12 +441,12 @@ public sealed class Hospital
     }
 
     /// <summary>
-    /// Pays money out; what is paid for a room or an object adds to the hospital's value (CorsixTH's
+    /// Pays money out; what is paid for land, a room or an object adds to the hospital's value (CorsixTH's
     /// <c>spendMoney</c> with <c>changeValue</c>).
     /// </summary>
     internal void Spend(long tick, int amount, TransactionKind kind, string subject)
     {
-        if (kind is TransactionKind.BuyObject or TransactionKind.BuildRoom)
+        if (kind is TransactionKind.BuyObject or TransactionKind.BuildRoom or TransactionKind.BuyLand)
         {
             Value += amount;
         }
@@ -971,7 +974,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Overdraft)
+            if (kind > (byte)TransactionKind.BuyLand)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }

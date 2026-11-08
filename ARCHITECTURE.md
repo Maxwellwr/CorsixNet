@@ -409,6 +409,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   Each day runs up the loan's interest at the level's `InterestRate` (hundredths of a percent a year, 365 days)
   and, below zero, the overdraft's at that plus `OverdraftDiff`; both are paid at the month's end after the
   wages, rounded, unless they round to nothing. A hospital with a loan does not win.
+- **Land** (`Simulation.PurchaseParcel`, from `hospital.lua` and `th_map.cpp`). A parcel nobody owns may be
+  bought when it touches the outside or the buyer's land by passable tiles of the map as the level began; it
+  costs its tiles at `gbv.LandCostPerTile` and adds that to the hospital's value (`PurchaseParcelCommand`).
 - **Winning and losing** (`EndConditions`, from `endconditions.lua`). The level's `win_criteria` and
   `lose_criteria` become goals in groups; a hospital meeting every goal of a win group wins, one meeting every goal
   of a lose group loses. Wins are looked for at the end of March, June and September and at the year end, losses
