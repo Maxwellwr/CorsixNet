@@ -110,11 +110,13 @@ public sealed class EntranceDoor : Entity
         ref var tile = ref map[Tile.X, Tile.Y];
         tile.Set(Orientation == EdgeOrientation.North ? TileFlags.TallNorth : TileFlags.TallWest, true);
         tile.Set(TileFlags.Buildable, false);
+        tile.Set(TileFlags.DoNotIdle, true);
         foreach (var position in KeepClearTiles)
         {
             if (map.Contains(position.X, position.Y))
             {
                 map[position.X, position.Y].Set(TileFlags.Buildable, false);
+                map[position.X, position.Y].Set(TileFlags.DoNotIdle, true);
             }
         }
     }

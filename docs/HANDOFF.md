@@ -63,12 +63,18 @@ Done and committed:
 - Game calendar (`GameDate`, from the tick, as CorsixTH's date.lua): monthly wages and new
   candidates for hire at the end of each month. Game speeds as CorsixTH's (keys 1-5, Space/P,
   Z held), local games only; date and speed in a box at the top right.
+- Patient flow (see ARCHITECTURE.md, "Patients and their visit"): reception desk bought with F, a
+  receptionist goes to it; patients arrive by the level's `popn` schedule, queue at the desk, go to
+  the GP's office, queue at its door, sit on the chair until the doctor (cabinet-desk cycle) is done,
+  then go home. Use animations of desk, cabinet and chair. Save format version 5.
 
 Not done yet:
 
 - M5: hire window (the original's staff list with faces), staff names and descriptions from the
-  language files, staff behaviour (meandering, going to rooms), reception desk (and placing a receptionist on it),
-  patient flow (reception, queue at the door, GP consultation).
+  language files, staff meandering, hiring a receptionist straight onto a desk, diseases, diagnosis
+  and paying for treatment, benches, queue priorities, staff called through a dispatcher, the
+  hospital's opening countdown. In `--demo` screenshots the GP's patient chair
+  (and the patient on it) could not be seen; probably hidden by the room's south or east wall, to check.
 - Money: buying land, loans and interest, hospital value (used by win criteria), bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and

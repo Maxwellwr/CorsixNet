@@ -1,4 +1,5 @@
 // Values from CorsixTH CorsixTH/Lua/rooms/*.lua, CorsixTH/Lua/walls/*.lua and CorsixTH/Lua/objects/*.lua.
+// Animation lengths are the frame counts of those animations in the original's VSTART-1/VFRA-1.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Definitions;
@@ -16,32 +17,104 @@ public static class BaseGameContent
     /// <summary>The "white" wall set (walls/white.lua).</summary>
     public static readonly WallSet WhiteWalls = new(InsideNorth: 82, InsideWest: 83, OutsideNorth: 90, OutsideWest: 91, WindowNorth: 128, WindowWest: 129);
 
-    /// <summary>The doctor's desk (objects/desk.lua).</summary>
-    public static readonly ObjectDefinition Desk = new("desk", "Desk", ObjectType: 1, new Dictionary<Direction, ObjectOrientation>
-    {
-        [Direction.North] = new([new(-2, -1, CompleteCell), new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, -1, NeedNorthSide), new(0, 0, UsePosition)], (0, -1)),
-        [Direction.East] = new([new(0, -2, NeedEastSide), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, UsePosition), new(0, 0, CompleteCell), new(-1, -2, UsePosition)], (0, -1)),
-        [Direction.South] = new([new(0, -1, UsePosition), new(-2, 0, NeedSouthSide), new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell), new(-2, -1, UsePosition)], (-2, 0)),
-        [Direction.West] = new([new(-1, -2, CompleteCell), new(0, 0, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, NeedWestSide)], (-1, 0)),
-    });
+    /// <summary>The doctor's desk (objects/desk.lua). The doctor's chair is part of it.</summary>
+    public static readonly ObjectDefinition Desk = new(
+        "desk",
+        "Desk",
+        ObjectType: 1,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(-2, -1, CompleteCell), new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, -1, NeedNorthSide), new(0, 0, UsePosition)], (0, -1)),
+            [Direction.East] = new(
+                [new(0, -2, NeedEastSide), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, UsePosition), new(0, 0, CompleteCell), new(-1, -2, UsePosition)],
+                (0, -1),
+                UsePosition: (-1, 0),
+                FinishUsePosition: (-1, -2)),
+            [Direction.South] = new(
+                [new(0, -1, UsePosition), new(-2, 0, NeedSouthSide), new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell), new(-2, -1, UsePosition)],
+                (-2, 0),
+                UsePosition: (0, -1),
+                FinishUsePosition: (-2, -1)),
+            [Direction.West] = new([new(-1, -2, CompleteCell), new(0, 0, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, NeedWestSide)], (-1, 0)),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations>
+        {
+            // 72 (normal use) is meant to happen far more often than 718 (head scratching).
+            [HumanoidType.Doctor] = new(new(56, 18), [.. Enumerable.Repeat(new AnimationRef(72, 4), 11), new(718, 17)], new(64, 13)),
+        },
+        UsageEast: new Dictionary<HumanoidType, UseAnimations>
+        {
+            [HumanoidType.Doctor] = new(new(58, 18), [new(74, 9)], new(66, 9)),
+        });
 
     /// <summary>The filing cabinet (objects/cabinet.lua).</summary>
-    public static readonly ObjectDefinition Cabinet = new("cabinet", "Cabinet", ObjectType: 2, new Dictionary<Direction, ObjectOrientation>
-    {
-        [Direction.North] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)]),
-        [Direction.East] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
-        [Direction.South] = new([new(0, 0, CompleteCell), new(0, -1, UsePosition)]),
-        [Direction.West] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)]),
-    });
+    public static readonly ObjectDefinition Cabinet = new(
+        "cabinet",
+        "Cabinet",
+        ObjectType: 2,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
+            [Direction.South] = new([new(0, 0, CompleteCell), new(0, -1, UsePosition)]),
+            [Direction.West] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(88, 10)], null) },
+        UsageEast: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(90, 14)], null) });
 
     /// <summary>The patient's chair (objects/chair.lua).</summary>
-    public static readonly ObjectDefinition Chair = new("chair", "Chair", ObjectType: 6, new Dictionary<Direction, ObjectOrientation>
-    {
-        [Direction.North] = new([new(0, 0, CompleteCell), new(0, -1, UsePosition | Shareable)]),
-        [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition | Shareable)]),
-        [Direction.South] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition | Shareable)]),
-        [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition | Shareable)]),
-    });
+    public static readonly ObjectDefinition Chair = new(
+        "chair",
+        "Chair",
+        ObjectType: 6,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, -1, UsePosition | Shareable)]),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition | Shareable)]),
+            [Direction.South] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition | Shareable)]),
+            [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition | Shareable)]),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations>
+        {
+            [HumanoidType.StandardMalePatient] = new(new(678, 2), [new(702, 1)], new(694, 2)),
+            [HumanoidType.StandardFemalePatient] = new(new(2824, 2), [new(2814, 1)], new(2832, 2)),
+        },
+        UsageEast: new Dictionary<HumanoidType, UseAnimations>
+        {
+            // Not talking, nodding and talking, weighted 16 : 3 : 1 as chair.lua's make_list does.
+            [HumanoidType.StandardMalePatient] = new(new(680, 2), ChairTalk(new(704, 1), new(736, 2), new(744, 27)), new(696, 2)),
+            [HumanoidType.StandardFemalePatient] = new(new(2826, 2), ChairTalk(new(2818, 1), new(3002, 2), new(2994, 13)), new(2834, 2)),
+        },
+        WalkInToUse: true);
+
+    /// <summary>
+    /// The reception desk (objects/reception_desk.lua). Patients queue at its use position; the
+    /// receptionist comes from the secondary use position and stands on the desk's own tile.
+    /// </summary>
+    public static readonly ObjectDefinition ReceptionDesk = new(
+        "reception_desk",
+        "Reception Desk",
+        ObjectType: 11,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(0, 0), new(0, -1, UsePosition), new(0, 1, UsePosition), new(1, 0, NeedNorthSide | NeedSouthSide), new(-1, 0, NeedNorthSide | NeedSouthSide)],
+                UsePosition: (0, -1),
+                SecondaryUsePosition: (0, 1)),
+            [Direction.East] = new(
+                [new(0, 0), new(0, -1, NeedWestSide | NeedEastSide), new(0, 1, NeedWestSide | NeedEastSide), new(1, 0, UsePosition), new(-1, 0, UsePosition)],
+                UsePosition: (1, 0),
+                SecondaryUsePosition: (-1, 0)),
+            [Direction.South] = new(
+                [new(0, 0), new(0, -1, UsePosition), new(0, 1, UsePosition), new(1, 0, NeedNorthSide | NeedSouthSide), new(-1, 0, NeedNorthSide | NeedSouthSide)],
+                UsePosition: (0, 1),
+                SecondaryUsePosition: (0, -1)),
+            [Direction.West] = new(
+                [new(0, 0), new(0, -1, NeedWestSide | NeedEastSide), new(0, 1, NeedWestSide | NeedEastSide), new(1, 0, UsePosition), new(-1, 0, UsePosition)],
+                UsePosition: (-1, 0),
+                SecondaryUsePosition: (1, 0)),
+        },
+        CorridorObject: true);
 
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
@@ -60,5 +133,10 @@ public static class BaseGameContent
         114, 116, 118, 120, 142, 115, 119, 117, 121, 143,
     ];
 
-    public static GameContent Create() => new([GpOffice], ExternalWalls, [Desk, Cabinet, Chair]);
+    public static GameContent Create() => new([GpOffice], ExternalWalls, [Desk, Cabinet, Chair, ReceptionDesk]);
+
+    private static AnimationRef[] ChairTalk(AnimationRef quiet, AnimationRef nodding, AnimationRef talking)
+    {
+        return [.. Enumerable.Repeat(quiet, 16), .. Enumerable.Repeat(nodding, 3), talking];
+    }
 }

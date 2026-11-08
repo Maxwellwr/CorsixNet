@@ -159,16 +159,32 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
     }
 }
 
-/// <summary>Places an object, if the placement is valid for the issuing player when the command executes.</summary>
+/// <summary>
+/// Places an object, if the placement is valid for the issuing player when the command executes. An object
+/// for a corridor, such as a reception desk, is bought here, and only if the hospital can afford it.
+/// </summary>
 public sealed record PlaceObjectCommand(string ObjectType, TilePosition Tile, Direction Orientation) : Command
 {
     public override CommandKind Kind => CommandKind.PlaceObject;
 
     public override void Execute(Simulation simulation, int player)
     {
-        if (ObjectPlacer.Check(simulation, ObjectType, Tile, Orientation, player) == ObjectPlacementProblem.None)
+        if (ObjectPlacer.Check(simulation, ObjectType, Tile, Orientation, player) != ObjectPlacementProblem.None)
         {
-            ObjectPlacer.Place(simulation, simulation.Content.FindObject(ObjectType)!, Tile, Orientation);
+            return;
+        }
+
+        // Objects in rooms were bought with the room; corridor objects are bought as they are placed.
+        var corridor = simulation.Map[Tile.X, Tile.Y].RoomId == 0;
+        if (corridor && !RoomPurchases.CanAffordObject(simulation, ObjectType, player))
+        {
+            return;
+        }
+
+        ObjectPlacer.Place(simulation, simulation.Content.FindObject(ObjectType)!, Tile, Orientation);
+        if (corridor)
+        {
+            RoomPurchases.BuyObject(simulation, ObjectType, player);
         }
     }
 

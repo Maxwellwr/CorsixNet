@@ -11,6 +11,7 @@ using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 using Microsoft.Xna.Framework;
@@ -77,6 +78,8 @@ internal sealed class MapViewScreen : IScreen
     private readonly EntranceDoorDrawing _doors;
     private readonly Dictionary<TilePosition, List<Entity>> _entitiesByTile = [];
     private readonly BuildRoomTool _buildTool = new();
+    private readonly FurnishCorridorTool _furnishTool = new();
+    private readonly HashSet<int> _hiddenObjects = [];
     private readonly ObjectDrawing _objects;
 
     /// <summary>Objects the demo still has to place in its GP's office, one at a time.</summary>
@@ -105,6 +108,7 @@ internal sealed class MapViewScreen : IScreen
     private long _buildReminderUntil;
     private bool _wander;
     private bool _demoPending;
+    private bool _demoDeskPending;
     private int? _selected;
     private LevelMap? _preparedMap;
     private string? _capturePath;
@@ -141,6 +145,7 @@ internal sealed class MapViewScreen : IScreen
 
         _overlay = overlay;
         _demoPending = demo;
+        _demoDeskPending = demo;
         if (demo)
         {
             foreach (var item in new[] { "desk", "cabinet", "chair" })
@@ -208,7 +213,7 @@ internal sealed class MapViewScreen : IScreen
 
         if (Pressed(Keys.Escape))
         {
-            if (_buildTool.IsActive)
+            if (_buildTool.IsActive || _furnishTool.IsActive)
             {
                 _buildBack = true;
             }
@@ -319,7 +324,7 @@ internal sealed class MapViewScreen : IScreen
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
             CollectEntitiesByTile();
             // The object being placed is drawn in the same order as placed objects, so walls in front hide it.
-            var ghost = _buildTool.Ghost;
+            var ghost = _buildTool.Ghost ?? _furnishTool.Ghost;
             var ghostTile = ghost is { } g && Simulation is { } ghostSimulation ? ObjectDrawing.DrawTile(ghostSimulation.Content, g.ObjectType, g.Tile, g.Orientation) : (TilePosition?)null;
             var blueprint = _buildTool.Blueprint;
             _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) =>
@@ -337,7 +342,7 @@ internal sealed class MapViewScreen : IScreen
             });
             DrawOverlay(batch, map, view);
             _buildTool.DrawPreview(batch, _diamond);
-            if (_buildTool.IsActive && _hoveredTile is { } cell)
+            if ((_buildTool.IsActive || _furnishTool.IsActive) && _hoveredTile is { } cell)
             {
                 // While building, the tile under the cursor has a red outline, as in CorsixTH's UIEditRoom:draw.
                 batch.Draw(_cellOutline, new Vector2((32 * (cell.X - cell.Y)) - 32, 16 * (cell.X + cell.Y)), CellOutlineColor);
@@ -371,7 +376,7 @@ internal sealed class MapViewScreen : IScreen
 
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
         var viewport = _device.Viewport;
-        var building = _buildTool.IsActive;
+        var building = _buildTool.IsActive || _furnishTool.IsActive;
         batch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, StatusHeight), building ? BuildModeColor : Color.Black);
         if (building)
         {
@@ -489,7 +494,8 @@ internal sealed class MapViewScreen : IScreen
         }
 
         // Build a GP's office first, so that spawned patients cannot appear inside its walls.
-        if (Simulation?.Content.FindRoom("gp") is { } gp && FindRoomSpot(map, gp, start) is { } plan)
+        var roomPlan = Simulation?.Content.FindRoom("gp") is { } gp ? FindRoomSpot(map, gp, start) : null;
+        if (roomPlan is { } plan)
         {
             _session.Submit(new BuildRoomCommand(plan));
         }
@@ -501,7 +507,9 @@ internal sealed class MapViewScreen : IScreen
         }
 
         // Hire one of each kind of staff and place them near the camera, so that they can be seen.
+        // Not inside the room, which is built first: receptionists may not go into rooms.
         var nearby = _hospitalTiles
+            .Where(tile => roomPlan is not { } built || !new TileRect(built.Area.X - 1, built.Area.Y - 1, built.Area.Width + 2, built.Area.Height + 2).Contains(tile))
             .OrderBy(tile => Math.Abs(tile.X - start.X) + Math.Abs(tile.Y - start.Y))
             .ThenBy(tile => tile.Y)
             .ThenBy(tile => tile.X)
@@ -553,6 +561,33 @@ internal sealed class MapViewScreen : IScreen
 
                         return;
                     }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Once the demo's GP's office works, buys a reception desk near the camera, so that patients start to
+    /// arrive and the hired receptionist goes to it.
+    /// </summary>
+    private void PlaceDemoReceptionDesk()
+    {
+        if (!_demoDeskPending || _session is null || Simulation is not { } simulation
+            || !simulation.Entities.OfType<Room>().Any(room => room.IsActive))
+        {
+            return;
+        }
+
+        _demoDeskPending = false;
+        var start = simulation.Map.GetCameraTile(Math.Min(_session.Player, simulation.Map.PlayerCount - 1));
+        foreach (var tile in _hospitalTiles.OrderBy(t => Math.Abs(t.X - start.X) + Math.Abs(t.Y - start.Y)).ThenBy(t => t.Y).ThenBy(t => t.X))
+        {
+            foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
+            {
+                if (ObjectPlacer.Check(simulation, ReceptionDesks.ObjectId, tile, orientation, _session.Player) == ObjectPlacementProblem.None)
+                {
+                    _session.Submit(new PlaceObjectCommand(ReceptionDesks.ObjectId, tile, orientation));
+                    return;
                 }
             }
         }
@@ -648,6 +683,7 @@ internal sealed class MapViewScreen : IScreen
         _session.Update(gameTime.ElapsedGameTime);
         PrepareMapIfReady();
         FurnishDemoRoom();
+        PlaceDemoReceptionDesk();
         if (Simulation is not { } simulation || !_wander || _hospitalTiles.Count == 0 || _session.IsPaused)
         {
             return;
@@ -655,7 +691,8 @@ internal sealed class MapViewScreen : IScreen
 
         foreach (var humanoid in simulation.Entities.OfType<Humanoid>())
         {
-            if (humanoid.Destination is null && humanoid.Id != _selected && _random.Next(60) == 0)
+            // People with something to do (patients on a visit, staff at work) are left to it.
+            if (humanoid.Behaviour is null && humanoid.Destination is null && humanoid.Id != _selected && _random.Next(60) == 0)
             {
                 _session.Submit(new WalkToCommand(humanoid.Id, _hospitalTiles[_random.Next(_hospitalTiles.Count)]));
             }
@@ -747,7 +784,13 @@ internal sealed class MapViewScreen : IScreen
             _rightPressedAt = new Point(mouse.X, mouse.Y);
         }
 
-        if (_buildTool.IsActive)
+        if (pressed(Keys.F) && !_buildTool.IsActive && !_furnishTool.IsActive
+            && simulation.Content.FindObject(ReceptionDesks.ObjectId) is { } receptionDesk)
+        {
+            _furnishTool.Start(receptionDesk);
+        }
+
+        if (_buildTool.IsActive || _furnishTool.IsActive)
         {
             // While building, the mouse belongs to the build tool; a right click (not a drag, which pans) turns objects.
             var leftDown = mouse.LeftButton == ButtonState.Pressed;
@@ -765,7 +808,8 @@ internal sealed class MapViewScreen : IScreen
                 pressed(Keys.Enter),
                 back,
                 pressed(Keys.P));
-            if (_buildTool.Update(simulation, _session.Player, input) is { } command)
+            var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
+            if (tool is { } command)
             {
                 _session.Submit(command);
             }
@@ -844,8 +888,23 @@ internal sealed class MapViewScreen : IScreen
             return;
         }
 
+        // An object in use is drawn as part of its user's animation (CorsixTH's makeInvisible).
+        _hiddenObjects.Clear();
         foreach (var entity in simulation.Entities)
         {
+            if (entity is Humanoid { HiddenObjectId: not 0 and var hidden })
+            {
+                _hiddenObjects.Add(hidden);
+            }
+        }
+
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is RoomObject hiddenObject && _hiddenObjects.Contains(hiddenObject.Id))
+            {
+                continue;
+            }
+
             TilePosition? tile = entity switch
             {
                 Humanoid humanoid => HumanoidDrawing.DrawTile(humanoid),
@@ -866,6 +925,19 @@ internal sealed class MapViewScreen : IScreen
             }
 
             list.Add(entity);
+        }
+
+        // A receptionist stands on the desk's own tile. Facing north or west (away from the viewer) they are
+        // drawn after the desk, otherwise behind it (CorsixTH's action_staff_reception_idle_phase).
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Humanoid { Behaviour: ReceptionistBehaviour { Phase: ReceptionistPhase.Staffing } staffing } receptionist
+                && simulation.FindEntity(staffing.DeskId) is RoomObject desk
+                && _entitiesByTile.TryGetValue(receptionist.Tile, out var list) && list.Remove(desk))
+            {
+                var index = list.IndexOf(receptionist);
+                list.Insert(receptionist.Facing is Direction.North or Direction.West ? index : index + 1, desk);
+            }
         }
     }
 
@@ -901,7 +973,7 @@ internal sealed class MapViewScreen : IScreen
     private void DrawOverlay(SpriteBatch batch, LevelMap map, Rectangle view)
     {
         // While building, the blueprint and the object being placed show where the cursor is, as in the original.
-        var hovered = _buildTool.IsActive ? null : _hoveredTile;
+        var hovered = _buildTool.IsActive || _furnishTool.IsActive ? null : _hoveredTile;
         var (firstScanline, lastScanline) = MapRenderer.VisibleScanlines(map, view);
         for (var s = firstScanline; s <= lastScanline; s++)
         {
@@ -1015,6 +1087,11 @@ internal sealed class MapViewScreen : IScreen
             return $"BUILD MODE{reminder}   {_buildTool.Status(Simulation)}";
         }
 
+        if (_furnishTool.IsActive)
+        {
+            return $"BUILD MODE   {_furnishTool.Status(Simulation)}";
+        }
+
         if (_notice is not null && Environment.TickCount64 < _noticeUntil)
         {
             return _notice;
@@ -1023,7 +1100,7 @@ internal sealed class MapViewScreen : IScreen
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-5: speed   Z: hold to speed up" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];

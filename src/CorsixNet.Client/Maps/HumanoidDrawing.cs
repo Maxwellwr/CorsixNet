@@ -1,4 +1,5 @@
 using CorsixNet.Client.Rendering;
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using Microsoft.Xna.Framework.Graphics;
@@ -42,6 +43,11 @@ internal sealed class HumanoidDrawing
     /// </summary>
     public static TilePosition DrawTile(Humanoid humanoid)
     {
+        if (humanoid.ActionAnimation is not null)
+        {
+            return humanoid.ActionDrawTile;
+        }
+
         return humanoid.IsStepping && humanoid.Facing is Direction.East or Direction.South
             ? humanoid.StepTarget
             : humanoid.Tile;
@@ -53,6 +59,12 @@ internal sealed class HumanoidDrawing
     /// <summary>Draws the humanoid relative to the anchor of its <see cref="DrawTile"/>.</summary>
     public void Draw(SpriteBatch batch, Humanoid humanoid, int anchorX, int anchorY, long tick)
     {
+        if (humanoid.ActionAnimation is { } action)
+        {
+            DrawAction(batch, humanoid, action, tick);
+            return;
+        }
+
         var animations = WalkAnimations.GetValueOrDefault(humanoid.Type, WalkAnimations[HumanoidType.StandardMalePatient]);
         var p = humanoid.StepProgress;
         int animation;
@@ -100,5 +112,26 @@ internal sealed class HumanoidDrawing
         }
 
         _renderer.DrawFrame(batch, frame, anchorX + offsetX, anchorY + offsetY, layers, flip);
+    }
+
+    /// <summary>
+    /// Draws the animation of using an object, from the tile the simulation gives (the object's, or the use
+    /// position's), one frame per tick from when it started, as CorsixTH's use object action sets it.
+    /// </summary>
+    private void DrawAction(SpriteBatch batch, Humanoid humanoid, AnimationRef action, long tick)
+    {
+        _current.Remove(humanoid.Id);
+        var set = _renderer.Animations;
+        var first = set.FirstFrame(action.Id);
+        var elapsed = Math.Max(0, tick - humanoid.ActionAnimationStart);
+        var frame = set.Advance(first, (int)(elapsed % set.Length(first)));
+        Span<byte> layers = stackalloc byte[Humanoid.LayerCount];
+        for (var i = 0; i < layers.Length; i++)
+        {
+            layers[i] = humanoid.Layers[i];
+        }
+
+        var tile = humanoid.ActionAnimationTile;
+        _renderer.DrawFrame(batch, frame, 32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y), layers, humanoid.ActionAnimationFlip);
     }
 }
