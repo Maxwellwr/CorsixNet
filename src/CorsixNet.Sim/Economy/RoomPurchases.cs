@@ -37,6 +37,21 @@ public static class RoomPurchases
     }
 
     /// <summary>Pays for the room itself when it is confirmed; its objects were paid for already.</summary>
+    /// <summary>
+    /// Whether <paramref name="player"/> can buy an object for a corridor: the hospital needs its whole price
+    /// (CorsixTH's <c>UIFurnishCorridor:purchase</c>).
+    /// </summary>
+    public static bool CanAffordObject(Simulation simulation, string objectId, int player)
+    {
+        return HospitalOf(simulation, player) is { } hospital && hospital.Balance >= simulation.Rules.ObjectCost(objectId);
+    }
+
+    /// <summary>Pays for an object bought for a corridor.</summary>
+    internal static void BuyObject(Simulation simulation, string objectId, int player)
+    {
+        HospitalOf(simulation, player)?.Spend(simulation.Tick, simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
+    }
+
     internal static void PayForRoom(Simulation simulation, RoomDefinition room, int player)
     {
         HospitalOf(simulation, player)?.Spend(simulation.Tick, simulation.Rules.RoomCost(room.Id), TransactionKind.BuildRoom, room.Id);

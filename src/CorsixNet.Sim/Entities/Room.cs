@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Serialization;
 
@@ -58,8 +59,30 @@ public sealed class Room : Entity
     /// <summary>The original state of <paramref name="tile"/>, which must lie in the area.</summary>
     public OriginalTile OriginalTileAt(TilePosition tile) => OriginalTiles[((tile.Y - Area.Y) * Area.Width) + (tile.X - Area.X)];
 
+    /// <summary>Patients waiting at the door; created when the room is confirmed.</summary>
+    public HumanoidQueue? DoorQueue { get; internal set; }
+
+    /// <summary>The member of staff in the room, or on the way to it; 0 for none.</summary>
+    public int StaffId { get; internal set; }
+
+    /// <summary>Whether the member of staff has come in (CorsixTH counts staff in the room for its staff criteria).</summary>
+    public bool StaffPresent { get; internal set; }
+
+    /// <summary>The patient in the room, or let in from the queue and on the way; 0 for none.</summary>
+    public int PatientId { get; internal set; }
+
+    /// <summary>
+    /// How many more times the doctor may fail to conclude the consultation before the patient is dealt with
+    /// anyway (CorsixTH's <c>GPRoom.max_times</c>).
+    /// </summary>
+    public int MaxTimes { get; internal set; }
+
     public override void Update(Simulation simulation)
     {
+        if (IsActive)
+        {
+            RoomVisits.Update(simulation, this);
+        }
     }
 
     internal static Room ReadState(int id, SimReader reader)
@@ -75,7 +98,17 @@ public sealed class Room : Entity
             tiles[i] = new OriginalTile(reader.ReadUInt16(), (TileFlags)reader.ReadUInt32());
         }
 
-        return new Room(id, roomType, area, tiles) { DoorId = doorId, IsActive = active, DoorOutsideWasBuildable = outsideBuildable };
+        return new Room(id, roomType, area, tiles)
+        {
+            DoorId = doorId,
+            IsActive = active,
+            DoorOutsideWasBuildable = outsideBuildable,
+            DoorQueue = reader.ReadBool() ? HumanoidQueue.Read(reader) : null,
+            StaffId = reader.ReadInt32(),
+            StaffPresent = reader.ReadBool(),
+            PatientId = reader.ReadInt32(),
+            MaxTimes = reader.ReadInt32(),
+        };
     }
 
     protected override void WriteState(SimWriter writer)
@@ -93,6 +126,13 @@ public sealed class Room : Entity
             writer.WriteUInt16(tile.Floor);
             writer.WriteUInt32((uint)tile.Flags);
         }
+
+        writer.WriteBool(DoorQueue is not null);
+        DoorQueue?.Write(writer);
+        writer.WriteInt32(StaffId);
+        writer.WriteBool(StaffPresent);
+        writer.WriteInt32(PatientId);
+        writer.WriteInt32(MaxTimes);
     }
 }
 
@@ -121,13 +161,23 @@ public sealed class RoomObject : Entity
     /// <summary>Entity id of the room the object stands in, or 0 in a corridor.</summary>
     public int RoomId { get; }
 
+    /// <summary>The reception desk's receptionist and queue, if the object is a reception desk.</summary>
+    public ReceptionDeskState? Desk { get; internal set; }
+
     public override void Update(Simulation simulation)
     {
+        if (Desk is not null)
+        {
+            ReceptionDesks.Update(simulation, this);
+        }
     }
 
     internal static RoomObject ReadState(int id, SimReader reader)
     {
-        return new RoomObject(id, reader.ReadString(), reader.ReadTile(), (Direction)reader.ReadByte(), reader.ReadInt32());
+        return new RoomObject(id, reader.ReadString(), reader.ReadTile(), (Direction)reader.ReadByte(), reader.ReadInt32())
+        {
+            Desk = reader.ReadBool() ? ReceptionDeskState.Read(reader) : null,
+        };
     }
 
     protected override void WriteState(SimWriter writer)
@@ -136,6 +186,8 @@ public sealed class RoomObject : Entity
         writer.WriteTile(Tile);
         writer.WriteByte((byte)Orientation);
         writer.WriteInt32(RoomId);
+        writer.WriteBool(Desk is not null);
+        Desk?.Write(writer);
     }
 }
 
@@ -187,9 +239,11 @@ public sealed class RoomDoor : Entity
         }
 
         tile.Set(TileFlags.Buildable, false);
+        tile.Set(TileFlags.DoNotIdle, true);
         if (map.Contains(OtherSide.X, OtherSide.Y))
         {
             map[OtherSide.X, OtherSide.Y].Set(TileFlags.Buildable, false);
+            map[OtherSide.X, OtherSide.Y].Set(TileFlags.DoNotIdle, true);
         }
     }
 
@@ -198,6 +252,12 @@ public sealed class RoomDoor : Entity
     {
         ref var tile = ref map[Tile.X, Tile.Y];
         tile.Set(Edge == EdgeOrientation.North ? TileFlags.DoorNorth | TileFlags.TallNorth : TileFlags.DoorWest | TileFlags.TallWest, false);
+        tile.Set(TileFlags.DoNotIdle, false);
+        if (map.Contains(OtherSide.X, OtherSide.Y))
+        {
+            map[OtherSide.X, OtherSide.Y].Set(TileFlags.DoNotIdle, false);
+        }
+
         var outside = area.Contains(Tile) ? OtherSide : Tile;
         if (map.Contains(outside.X, outside.Y))
         {

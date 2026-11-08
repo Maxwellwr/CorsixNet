@@ -71,6 +71,168 @@ public sealed class Pathfinder
         }
     }
 
+    /// <summary>Length in steps of a shortest path between two tiles, or null if there is none.</summary>
+    public int? FindDistance(LevelMap map, TilePosition start, TilePosition end)
+    {
+        var path = new List<TilePosition>();
+        return TryFindPath(map, start, end, path) ? path.Count - 1 : null;
+    }
+
+    /// <summary>
+    /// Finds a tile to wait on near <paramref name="start"/>, as CorsixTH's <c>idle_tile_finder::find_idle_tile</c>:
+    /// a passable hospital tile that is not a door's walkway, searching outwards without passing through
+    /// doors. The search prefers tiles next to the previous one, so consecutive <paramref name="n"/> give
+    /// a line of neighbouring tiles: the places of a queue.
+    /// </summary>
+    /// <param name="map">The map to search.</param>
+    /// <param name="start">Where the queue starts.</param>
+    /// <param name="n">Which suitable tile to return, counting from 0.</param>
+    /// <param name="tile">The tile found.</param>
+    /// <returns>Whether any suitable tile was found; with fewer than <paramref name="n"/> + 1, the last one is returned.</returns>
+    public bool TryFindIdleTile(LevelMap map, TilePosition start, int n, out TilePosition tile)
+    {
+        tile = default;
+        if (!map.Contains(start.X, start.Y))
+        {
+            return false;
+        }
+
+        _destinationX = start.X;
+        _destinationY = start.Y;
+        var node = Init(map, start);
+        _guess[node] = 0;
+        int? possible = null;
+        while (true)
+        {
+            _visited[node] = true;
+            var x = node % _width;
+            var y = node / _width;
+            var flags = map[x, y];
+            if (!flags.Has(TileFlags.DoNotIdle) && flags.Has(TileFlags.Passable | TileFlags.Hospital))
+            {
+                if (n == 0)
+                {
+                    tile = new TilePosition(x, y);
+                    return true;
+                }
+
+                possible = node;
+                n--;
+            }
+
+            var best = SearchIdleNeighbours(map, node, start);
+            if (_openHeap.Count == 0)
+            {
+                break;
+            }
+
+            if (best >= 0)
+            {
+                // Promote the best neighbour to the front of the open list, so that sequential n
+                // give neighbouring results.
+                _guess[best] = -_distance[best];
+                OpenHeapPromote(best);
+            }
+
+            node = PopFromOpenHeap();
+        }
+
+        if (possible is { } result)
+        {
+            tile = new TilePosition(result % _width, result / _width);
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// The neighbour step of <c>idle_tile_finder::try_node</c>: neighbours are recorded unless a door is in
+    /// between, and of the neighbours reached so far the one nearest to the start is returned (−1 for none).
+    /// CorsixTH compares Euclidean distances; squared distances order the same.
+    /// </summary>
+    private int SearchIdleNeighbours(LevelMap map, int node, TilePosition start)
+    {
+        var x = node % _width;
+        var y = node / _width;
+        var tile = map[x, y];
+        var best = -1;
+        var bestDistance = 0;
+
+        void Try(int neighbour, bool door)
+        {
+            if (_visited[neighbour])
+            {
+                return;
+            }
+
+            if (!door)
+            {
+                RecordIdleNeighbour(map, node, neighbour);
+            }
+
+            if (_previous[neighbour] != neighbour)
+            {
+                var dx = (neighbour % _width) - start.X;
+                var dy = (neighbour / _width) - start.Y;
+                var distance = (dx * dx) + (dy * dy);
+                if (best < 0 || distance < bestDistance)
+                {
+                    best = neighbour;
+                    bestDistance = distance;
+                }
+            }
+        }
+
+        if (tile.Has(TileFlags.CanTravelWest))
+        {
+            Try(node - 1, tile.Has(TileFlags.DoorWest));
+        }
+
+        if (tile.Has(TileFlags.CanTravelEast))
+        {
+            Try(node + 1, map[x + 1, y].Has(TileFlags.DoorWest));
+        }
+
+        if (tile.Has(TileFlags.CanTravelNorth))
+        {
+            Try(node - _width, tile.Has(TileFlags.DoorNorth));
+        }
+
+        if (tile.Has(TileFlags.CanTravelSouth))
+        {
+            Try(node + _width, map[x, y + 1].Has(TileFlags.DoorNorth));
+        }
+
+        return best;
+    }
+
+    /// <summary><see cref="RecordNeighbourIfPassable"/> with the idle finder's guess of 0.</summary>
+    private void RecordIdleNeighbour(LevelMap map, int node, int neighbour)
+    {
+        if (!map[neighbour % _width, neighbour / _width].Has(TileFlags.Passable))
+        {
+            return;
+        }
+
+        if (_previous[neighbour] == neighbour)
+        {
+            _previous[neighbour] = node;
+            _cost[neighbour] = _cost[node] + 1;
+            _distance[neighbour] = _distance[node] + 1;
+            _guess[neighbour] = 0;
+            _dirty[_dirtyCount++] = neighbour;
+            PushToOpenHeap(neighbour);
+        }
+        else if (_cost[node] + 1 < _cost[neighbour])
+        {
+            _previous[neighbour] = node;
+            _cost[neighbour] = _cost[node] + 1;
+            _distance[neighbour] = _distance[node] + 1;
+            OpenHeapPromote(neighbour);
+        }
+    }
+
     private int Index(int x, int y) => (y * _width) + x;
 
     private int Init(LevelMap map, TilePosition start)

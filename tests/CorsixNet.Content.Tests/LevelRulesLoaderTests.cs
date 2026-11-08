@@ -2,6 +2,7 @@ using System.Text;
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Content.Tests;
@@ -118,5 +119,24 @@ public class LevelRulesLoaderTests
 
         Assert.Equal(40000, simulation.Hospitals[0].Balance);
         Assert.Equal(2280, simulation.Rules.RoomCost("gp"));
+    }
+
+    [Fact]
+    public void ReadsTheOriginalLevelOnePopulation()
+    {
+        var install = RealGameData.Require();
+
+        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+
+        // FULL01.SAM: 3 patients the first month, one more each month until month 7, and so on.
+        Assert.Equal([new(0, 3), new(1, 1), new(7, 0), new(14, 1), new(21, 0)], rules.Population);
+    }
+
+    [Fact]
+    public void ThePopulationFallsBackOnCorsixThsDefaults()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("#popn[0].Month.Change 0 2\n"));
+
+        Assert.Equal([new(0, 2), new(1, 1), new(27, 0)], LevelRulesLoader.PopulationFromConfig(config));
     }
 }

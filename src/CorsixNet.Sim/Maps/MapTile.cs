@@ -54,6 +54,9 @@ public enum TileFlags : uint
     /// <summary>A room door stands on the west edge.</summary>
     DoorWest = 1 << 18,
 
+    /// <summary>Nobody waits here: a door's walkway (CorsixTH's <c>doNotIdle</c>).</summary>
+    DoNotIdle = 1 << 19,
+
     CanTravelAll = CanTravelNorth | CanTravelEast | CanTravelSouth | CanTravelWest,
 }
 

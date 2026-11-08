@@ -22,6 +22,7 @@ internal sealed class ObjectDrawing
         ["desk"] = (48, 50),
         ["cabinet"] = (80, 82),
         ["chair"] = (686, 688),
+        ["reception_desk"] = (2062, 2064),
     };
 
     private static readonly byte[] NoLayers = [];

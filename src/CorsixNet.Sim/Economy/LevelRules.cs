@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
 using CorsixNet.Sim.Staff;
 
@@ -15,6 +16,10 @@ namespace CorsixNet.Sim.Economy;
 /// </remarks>
 public sealed class LevelRules
 {
+    /// <summary>CorsixTH's base_config.lua: 4 patients the first month, then one more each month, capped from month 27.</summary>
+    /// <remarks>Declared before <see cref="Free"/>, which uses it.</remarks>
+    private static readonly PopulationChange[] DefaultPopulation = [new(0, 4), new(1, 1), new(27, 0)];
+
     /// <summary>No money at the start and everything free, staff included.</summary>
     public static readonly LevelRules Free = new(0, [], [], StaffRules.Free);
 
@@ -29,14 +34,17 @@ public sealed class LevelRules
     /// <param name="roomCosts">Cost of each room type by room id, without its objects.</param>
     /// <param name="objectCosts">Cost of each object type by object id.</param>
     /// <param name="staff">Salaries and staff for hire; by default the original game's settings.</param>
+    /// <param name="population">How the number of patients per month changes; by default CorsixTH's base_config.lua.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
         IEnumerable<KeyValuePair<string, int>> objectCosts,
-        StaffRules? staff = null)
+        StaffRules? staff = null,
+        IEnumerable<PopulationChange>? population = null)
     {
         StartCash = startCash;
         Staff = staff ?? StaffRules.Default;
+        Population = [.. population ?? DefaultPopulation];
         _roomCosts = Sorted(roomCosts);
         _objectCosts = Sorted(objectCosts);
         _roomLookup = _roomCosts.ToDictionary(entry => entry.Id, entry => entry.Cost, StringComparer.Ordinal);
@@ -47,6 +55,12 @@ public sealed class LevelRules
 
     /// <summary>Salaries and who is available for hire when.</summary>
     public StaffRules Staff { get; }
+
+    /// <summary>
+    /// The level's <c>popn</c> entries in file order: patients in the first month, then from which month on the number
+    /// changes by how much each month.
+    /// </summary>
+    public IReadOnlyList<PopulationChange> Population { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -86,6 +100,12 @@ public sealed class LevelRules
         WriteCosts(writer, _roomCosts);
         WriteCosts(writer, _objectCosts);
         Staff.Write(writer);
+        writer.WriteInt32(Population.Count);
+        foreach (var entry in Population)
+        {
+            writer.WriteInt32(entry.Month);
+            writer.WriteInt32(entry.Change);
+        }
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -94,7 +114,13 @@ public sealed class LevelRules
         var rooms = ReadCosts(reader);
         var objects = ReadCosts(reader);
         var staff = StaffRules.Read(reader);
-        return new LevelRules(startCash, rooms, objects, staff);
+        var population = new PopulationChange[reader.ReadCount(MaxEntries)];
+        for (var i = 0; i < population.Length; i++)
+        {
+            population[i] = new PopulationChange(reader.ReadInt32(), reader.ReadInt32());
+        }
+
+        return new LevelRules(startCash, rooms, objects, staff, population);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

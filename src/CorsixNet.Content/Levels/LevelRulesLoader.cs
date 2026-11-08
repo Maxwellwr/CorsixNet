@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using CorsixNet.Formats;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Economy;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Content.Levels;
@@ -69,7 +70,30 @@ public static partial class LevelRulesLoader
         var objects = content.Objects
             .Where(definition => config.GetInt($"objects[{definition.ObjectType}].StartCost") is not null)
             .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
-        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config));
+        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config));
+    }
+
+    /// <summary>
+    /// The <c>popn[n].Month</c> and <c>popn[n].Change</c> entries, read on top of CorsixTH's base_config.lua entries
+    /// index by index; the list goes on as long as the indices do without a gap.
+    /// </summary>
+    public static IReadOnlyList<PopulationChange> PopulationFromConfig(LevelConfig config)
+    {
+        var defaults = LevelRules.Free.Population;
+        var entries = new List<PopulationChange>();
+        while (true)
+        {
+            var i = entries.Count;
+            var fallback = i < defaults.Count ? defaults[i] : (PopulationChange?)null;
+            var month = config.GetInt($"popn[{i}].Month") ?? fallback?.Month;
+            var change = config.GetInt($"popn[{i}].Change") ?? fallback?.Change;
+            if (month is null || change is null)
+            {
+                return entries;
+            }
+
+            entries.Add(new PopulationChange(month.Value, change.Value));
+        }
     }
 
     /// <summary>

@@ -6,6 +6,7 @@ using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Pathfinding;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
 using CorsixNet.Sim.Staff;
 
@@ -24,7 +25,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 4;
+    private const int FormatVersion = 5;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -55,6 +56,7 @@ public sealed class Simulation
         }
 
         MakeAvailableStaff(0);
+        Arrivals = PatientArrivals.Start(this);
     }
 
     private Simulation(LevelMap map, SimRandom random, GameContent content, LevelRules rules)
@@ -71,6 +73,9 @@ public sealed class Simulation
 
     /// <summary>The level's money settings. Part of the saved state.</summary>
     public LevelRules Rules { get; }
+
+    /// <summary>When patients arrive. Part of the saved state.</summary>
+    public PatientArrivals Arrivals { get; private set; } = null!;
 
     /// <summary>Each player's hospital, by player (0-based).</summary>
     public IReadOnlyList<Hospital> Hospitals => _hospitals;
@@ -151,12 +156,17 @@ public sealed class Simulation
             OnEndDay();
         }
 
+        Arrivals.SpawnPatients(this);
+
         // Entities added during this loop are updated from the next tick on.
         var count = _entities.Count;
         for (var i = 0; i < count && i < _entities.Count; i++)
         {
             _entities[i].Update(this);
         }
+
+        // People who have left the map go now, as CorsixTH's _flushDestroyedEntities.
+        _entities.RemoveAll(entity => entity is Humanoid { IsDespawning: true });
 
         Tick++;
     }
@@ -333,6 +343,8 @@ public sealed class Simulation
             simulation._hospitals[player] = Hospital.Read(reader, player);
         }
 
+        simulation.Arrivals = PatientArrivals.Read(reader);
+
         foreach (var pool in simulation._availableStaff)
         {
             var count = reader.ReadCount(MaxAvailableStaff);
@@ -405,6 +417,8 @@ public sealed class Simulation
             hospital.Write(writer);
         }
 
+        Arrivals.Write(writer);
+
         foreach (var pool in _availableStaff)
         {
             writer.WriteInt32(pool.Count);
@@ -437,13 +451,15 @@ public sealed class Simulation
     }
 
     /// <summary>
-    /// The end of the current day, as CorsixTH's <c>World:onTick</c> handles it. At the end of a month
-    /// every hospital pays its staff's wages (<c>Hospital:onEndMonth</c>), then the candidates for hire
+    /// The end of the current day, as CorsixTH's <c>World:onTick</c> handles it: the next day's patient arrivals
+    /// get their hours (<c>World:onEndDay</c>). At the end of a month every hospital pays its staff's wages
+    /// (<c>Hospital:onEndMonth</c>), then the next month's arrivals are planned and the candidates for hire
     /// are replaced (<c>World:onEndMonth</c>).
     /// </summary>
     private void OnEndDay()
     {
         var date = Date;
+        Arrivals.OnEndDay(this);
         if (!date.IsLastDayOfMonth)
         {
             return;
@@ -463,6 +479,7 @@ public sealed class Simulation
             hospital.PayWages(Tick, wages[hospital.Player]);
         }
 
+        Arrivals.OnEndMonth(this);
         MakeAvailableStaff(date.MonthOfGame);
     }
 

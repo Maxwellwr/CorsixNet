@@ -5,6 +5,7 @@
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
 
 namespace CorsixNet.Sim.Objects;
@@ -102,6 +103,7 @@ public static class ObjectPlacer
         var roomId = map[tile.X, tile.Y].RoomId;
         var placed = simulation.AddEntity(id => new RoomObject(id, definition.Id, tile, orientation, roomId));
         Occupy(map, tile, definition.Orientations[orientation], placed.Id);
+        ReceptionDesks.OnPlaced(simulation, placed);
         return placed;
     }
 

@@ -265,6 +265,54 @@ CorsixTH's free build mode.
   `Humanoid` with the profile and the employing player. In CorsixTH choosing and placing are two
   steps and cancelling puts the candidate back at the end of the list; here they are one command.
 
+## Patients and their visit
+
+What humanoids do beyond walking lives in `Sim.People`. CorsixTH strings humanoid actions together in
+an action queue of Lua closures; here each kind of humanoid has a small state machine
+(`HumanoidBehaviour`: `PatientBehaviour`, `ReceptionistBehaviour`, `DoctorBehaviour`), which is easy to
+save explicitly. A behaviour runs on every tick in which its humanoid is not walking.
+
+- **Arrivals** (`PatientArrivals`, from `world.lua`). The spawn rate starts at the level's
+  `popn[0].Change` patients a month and changes at the end of each month by the `popn` entry for that
+  month. The month's patients are spread over its days with Poisson-distributed gaps (`math.p_random`,
+  done with `decimal` here to stay deterministic); at the end of each day the next day's patients get
+  random hours. A patient only arrives at a hospital with a staffed reception desk, at one of up to 8
+  spawn points per map edge from which the hospital can be reached; the first one by the shortest way
+  to a desk. As in CorsixTH every patient goes to the first hospital for now. The opening countdown is
+  not modelled, so the hospital is open from the start.
+- **Reception desk** (`ReceptionDesks`, from `objects/reception_desk.lua`). A corridor object, bought
+  when it is placed (`PlaceObjectCommand` charges corridor objects; the hospital needs the price in the
+  bank). A desk without staff sends for the nearest receptionist without a desk; they walk to the
+  desk's secondary use position and step onto its tile. Patients queue at the use position. The first
+  in line is seen once they have stood there 4 hours plus up to a day, less the more skilled the
+  receptionist (`4 + 50 * (1 - skill)`).
+- **Queues** (`HumanoidQueue`, from `queue.lua` and the queue action). The n-th in line stands on the
+  n-th tile of `Pathfinder.TryFindIdleTile`, a port of CorsixTH's `find_idle_tile`, which yields a line
+  of neighbouring tiles that keeps off door walkways (`TileFlags.DoNotIdle`), and faces the one ahead.
+  No priorities and no benches yet.
+- **Seeking a desk or a room** scores each candidate by path distance plus ten tiles per person queueing
+  or on the way (a room with its staff in gets 50 tiles off, a full queue 1000 on). A patient joins a
+  desk's queue once within 6 tiles of it; further away they walk towards it until they are.
+- **The GP's office** (`RoomVisits`, `DoctorBehaviour`, from `room.lua` and `rooms/gp.lua`). An active
+  room without staff sends for the nearest free doctor (CorsixTH's call dispatcher is not ported). The
+  doctor goes back and forth between the cabinet and the desk; at the desk they stay for
+  `random(3 + 5 * (1 - skill), 8 + 10 * (1 - skill))` rounds of the desk animation (consultants
+  longer). Patients queue at the door and go in one at a time once the doctor is in. A patient sits on
+  the chair; each time the doctor's desk time runs out, they conclude with probability
+  `0.7 + 0.3 * skill`, at the latest after three failures. Diseases, diagnosis and payment come later:
+  for now every patient goes home after the GP, leaving through a random spawn point.
+- **Using objects** (`ObjectUse`, from `use_object.lua`). The object's usage animations
+  (`ObjectDefinition.UsageNorth` and `UsageEast`, mirrored for south and west) say how long each phase
+  lasts: one tick per frame, with the lengths of the original's animations in `BaseGameContent` (a
+  real-data test checks them). A use is prolonged, repeating the in-use animation until interrupted,
+  when the object has begin, in-use and finish animations. Chairs are walked onto first. While an object
+  is in use, the humanoid's `ActionAnimation` says what the client draws, from which tile, and that the
+  object itself is hidden, as CorsixTH's `makeInvisible`.
+
+The client buys a reception desk with F (a stand-in for the original's corridor furnishing window),
+draws use animations, and puts a receptionist facing away from the viewer in front of the desk on its
+tile, otherwise behind it. `--demo` also places a desk once its GP's office works.
+
 ## Saves
 
 Saves are explicit, versioned serialization of simulation state. CorsixTH saves by
@@ -372,7 +420,8 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows. *(done)*
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
    *(in progress: room building in the original's steps (blueprint, door, windows, furniture,
-   confirm), paying for rooms and hiring staff done; reception desk and patient flow to come)*
+   confirm), paying for rooms, hiring staff, the calendar and wages, the reception desk and patients
+   arriving, queueing and seeing the GP done; diseases and diagnosis to come)*
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
    music and video.
 

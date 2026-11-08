@@ -6,6 +6,7 @@
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
 
 namespace CorsixNet.Sim.Staff;
 
@@ -111,6 +112,12 @@ public static class StaffHiring
     {
         var profile = simulation.TakeAvailableStaff(staffClass, index);
         var staff = simulation.AddEntity(id => Humanoid.CreateStaff(id, tile, profile, player));
+        staff.Behaviour = staffClass switch
+        {
+            StaffClass.Doctor => new DoctorBehaviour(),
+            StaffClass.Receptionist => new ReceptionistBehaviour(),
+            _ => null,
+        };
         simulation.Hospitals[player].Spend(simulation.Tick, profile.Wage, TransactionKind.HireStaff, staffClass.ToString());
         return staff;
     }

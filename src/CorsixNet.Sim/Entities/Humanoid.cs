@@ -1,4 +1,6 @@
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
 using CorsixNet.Sim.Staff;
 
@@ -70,6 +72,45 @@ public sealed class Humanoid : Entity
     /// <summary>The player (0-based) whose hospital employs the member of staff, or −1.</summary>
     public int Employer { get; private init; } = -1;
 
+    /// <summary>The player (0-based) whose hospital the humanoid works at or visits, or −1.</summary>
+    public int HospitalPlayer { get; private init; } = -1;
+
+    /// <summary>What the humanoid is doing: a patient's visit or a member of staff's job. Null for none.</summary>
+    public HumanoidBehaviour? Behaviour { get; internal set; }
+
+    /// <summary>
+    /// The animation the humanoid plays while using an object, or null while walking or standing;
+    /// the client then draws it from <see cref="ActionAnimationTile"/>.
+    /// </summary>
+    public AnimationRef? ActionAnimation { get; private set; }
+
+    /// <summary>Whether <see cref="ActionAnimation"/> is drawn mirrored.</summary>
+    public bool ActionAnimationFlip { get; private set; }
+
+    /// <summary>The tick <see cref="ActionAnimation"/> started on.</summary>
+    public long ActionAnimationStart { get; private set; }
+
+    /// <summary>The tile <see cref="ActionAnimation"/> is drawn from.</summary>
+    public TilePosition ActionAnimationTile { get; private set; }
+
+    /// <summary>The tile whose drawing pass draws <see cref="ActionAnimation"/>.</summary>
+    public TilePosition ActionDrawTile { get; private set; }
+
+    /// <summary>
+    /// The object the humanoid is using, which is not drawn on its own meanwhile: the use animation
+    /// shows it (CorsixTH's <c>makeInvisible</c>). 0 for none.
+    /// </summary>
+    public int HiddenObjectId { get; private set; }
+
+    /// <summary>Whether the humanoid has left the map and is about to be removed.</summary>
+    public bool IsDespawning { get; internal set; }
+
+    /// <summary>Whether the current walk may cross impassable tiles, as CorsixTH's <c>HumanoidRawWalk</c>.</summary>
+    private bool RawWalk { get; set; }
+
+    /// <summary>Whether the humanoid is walking or about to take another step.</summary>
+    public bool IsMoving => IsStepping || _path.Count > 0;
+
     /// <summary>
     /// Variant chosen for each animation layer: which head, clothes and so on are drawn.
     /// </summary>
@@ -106,10 +147,17 @@ public sealed class Humanoid : Entity
     {
         var path = new List<TilePosition>();
         var found = simulation.Pathfinder.TryFindPath(simulation.Map, StepTarget, target, path);
+        return FollowPath(path, found);
+    }
+
+    /// <summary>Walks along <paramref name="path"/>, whose first tile is where the humanoid is or is stepping to.</summary>
+    internal bool FollowPath(IReadOnlyList<TilePosition> path, bool found = true)
+    {
         _path.Clear();
+        RawWalk = false;
+        ClearActionAnimation();
         if (found)
         {
-            // The first tile of the path is where the humanoid already is (or is stepping to).
             for (var i = 1; i < path.Count; i++)
             {
                 _path.Add(path[i]);
@@ -117,6 +165,72 @@ public sealed class Humanoid : Entity
         }
 
         return found;
+    }
+
+    /// <summary>
+    /// Takes one step to a neighbouring tile whether or not it is passable, as CorsixTH's
+    /// <c>HumanoidRawWalk</c>: onto a chair, or behind the reception desk.
+    /// </summary>
+    internal void RawStepTo(TilePosition next)
+    {
+        _path.Clear();
+        _path.Add(next);
+        RawWalk = true;
+        ClearActionAnimation();
+    }
+
+    /// <summary>Stops walking after the current step.</summary>
+    internal void StopWalking() => _path.Clear();
+
+    /// <summary>Turns to face <paramref name="direction"/> while standing.</summary>
+    internal void Face(Direction direction) => Facing = direction;
+
+    /// <summary>Turns towards a neighbouring (or any) tile, as CorsixTH's queue action picks an idle direction.</summary>
+    internal void FaceTowards(TilePosition tile)
+    {
+        if (tile.Y < Tile.Y)
+        {
+            Facing = Direction.North;
+        }
+        else if (tile.Y > Tile.Y)
+        {
+            Facing = Direction.South;
+        }
+        else if (tile.X > Tile.X)
+        {
+            Facing = Direction.East;
+        }
+        else if (tile.X < Tile.X)
+        {
+            Facing = Direction.West;
+        }
+    }
+
+    /// <summary>Puts the humanoid on a tile without walking, as CorsixTH's <c>setTilePositionSpeed</c>.</summary>
+    internal void PlaceAt(TilePosition tile)
+    {
+        _path.Clear();
+        IsStepping = false;
+        StepProgress = 0;
+        Tile = tile;
+    }
+
+    /// <summary>Starts an animation of using an object.</summary>
+    internal void SetActionAnimation(Simulation simulation, AnimationRef animation, bool flip, TilePosition tile, TilePosition drawTile, int hiddenObject)
+    {
+        ActionAnimation = animation;
+        ActionAnimationFlip = flip;
+        ActionAnimationStart = simulation.Tick;
+        ActionAnimationTile = tile;
+        ActionDrawTile = drawTile;
+        HiddenObjectId = hiddenObject;
+    }
+
+    /// <summary>Goes back to walking and standing animations.</summary>
+    internal void ClearActionAnimation()
+    {
+        ActionAnimation = null;
+        HiddenObjectId = 0;
     }
 
     public override void Update(Simulation simulation)
@@ -136,10 +250,20 @@ public sealed class Humanoid : Entity
 
         if (_path.Count == 0)
         {
+            Behaviour?.Update(simulation, this);
             return;
         }
 
         var next = _path[0];
+        if (RawWalk && DirectionTo(Tile, next) is { } rawDirection)
+        {
+            _path.RemoveAt(0);
+            Facing = rawDirection;
+            IsStepping = true;
+            StepProgress = 0;
+            return;
+        }
+
         if (DirectionTo(Tile, next) is not { } direction || !CanTravel(simulation.Map, Tile, direction))
         {
             // The map changed under the planned path; plan again towards the same destination.
@@ -176,14 +300,18 @@ public sealed class Humanoid : Entity
         }
 
         var employer = reader.ReadInt32();
+        var hospital = reader.ReadInt32();
         var profile = reader.ReadBool() ? StaffProfile.Read(reader) : null;
         var humanoid = new Humanoid(id, tile, type, layers)
         {
             Employer = employer,
+            HospitalPlayer = hospital,
             Profile = profile,
             Facing = (Direction)reader.ReadByte(),
             IsStepping = reader.ReadBool(),
             StepProgress = reader.ReadInt32(),
+            RawWalk = reader.ReadBool(),
+            IsDespawning = reader.ReadBool(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -192,6 +320,17 @@ public sealed class Humanoid : Entity
             humanoid._path.Add(reader.ReadTile());
         }
 
+        if (reader.ReadBool())
+        {
+            humanoid.ActionAnimation = new AnimationRef(reader.ReadInt32(), reader.ReadInt32());
+            humanoid.ActionAnimationFlip = reader.ReadBool();
+            humanoid.ActionAnimationStart = reader.ReadInt64();
+            humanoid.ActionAnimationTile = reader.ReadTile();
+            humanoid.ActionDrawTile = reader.ReadTile();
+            humanoid.HiddenObjectId = reader.ReadInt32();
+        }
+
+        humanoid.Behaviour = HumanoidBehaviour.Read(reader);
         return humanoid;
     }
 
@@ -201,23 +340,40 @@ public sealed class Humanoid : Entity
         writer.WriteByte((byte)Type);
         writer.WriteBytes(_layers);
         writer.WriteInt32(Employer);
+        writer.WriteInt32(HospitalPlayer);
         writer.WriteBool(Profile is not null);
         Profile?.Write(writer);
         writer.WriteByte((byte)Facing);
         writer.WriteBool(IsStepping);
         writer.WriteInt32(StepProgress);
+        writer.WriteBool(RawWalk);
+        writer.WriteBool(IsDespawning);
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)
         {
             writer.WriteTile(tile);
         }
+
+        writer.WriteBool(ActionAnimation is not null);
+        if (ActionAnimation is { } animation)
+        {
+            writer.WriteInt32(animation.Id);
+            writer.WriteInt32(animation.Length);
+            writer.WriteBool(ActionAnimationFlip);
+            writer.WriteInt64(ActionAnimationStart);
+            writer.WriteTile(ActionAnimationTile);
+            writer.WriteTile(ActionDrawTile);
+            writer.WriteInt32(HiddenObjectId);
+        }
+
+        HumanoidBehaviour.Write(writer, Behaviour);
     }
 
     /// <summary>
     /// Creates a standard patient with a random appearance, using the same choices as
     /// CorsixTH's disease setup (for example <c>diseases/broken_wind.lua</c>).
     /// </summary>
-    public static Humanoid CreateRandomPatient(int id, TilePosition tile, SimRandom random)
+    public static Humanoid CreateRandomPatient(int id, TilePosition tile, SimRandom random, int hospitalPlayer = -1)
     {
         Span<byte> layers = stackalloc byte[LayerCount];
         HumanoidType type;
@@ -234,7 +390,7 @@ public sealed class Humanoid : Entity
         }
 
         layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
-        return new Humanoid(id, tile, type, layers);
+        return new Humanoid(id, tile, type, layers) { HospitalPlayer = hospitalPlayer };
     }
 
     /// <summary>
@@ -252,7 +408,7 @@ public sealed class Humanoid : Entity
             StaffClass.Handyman => HumanoidType.Handyman,
             _ => HumanoidType.Receptionist,
         };
-        return new Humanoid(id, tile, type, layers) { Profile = profile, Employer = employer };
+        return new Humanoid(id, tile, type, layers) { Profile = profile, Employer = employer, HospitalPlayer = employer };
     }
 
     internal static TilePosition Neighbour(TilePosition tile, Direction direction)
