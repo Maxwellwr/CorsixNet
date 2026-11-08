@@ -1,5 +1,6 @@
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Serialization;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.Entities;
 
@@ -24,6 +25,10 @@ public enum HumanoidType : byte
 {
     StandardMalePatient = 1,
     StandardFemalePatient = 2,
+    Doctor = 3,
+    Nurse = 4,
+    Handyman = 5,
+    Receptionist = 6,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -36,8 +41,14 @@ public sealed class Humanoid : Entity
     /// <summary>Ticks to walk from one tile to the next at normal speed.</summary>
     public const int TicksPerStep = 8;
 
-    /// <summary>Number of appearance layers (head, clothes, shoes and two more) a humanoid sets.</summary>
-    public const int LayerCount = 5;
+    /// <summary>
+    /// Number of appearance layers a humanoid sets: 0 to 4 for patients (head, clothes, shoes and two
+    /// more) and 5 for staff (skin colour of doctors).
+    /// </summary>
+    public const int LayerCount = 6;
+
+    /// <summary>The animation layer that <see cref="StaffProfile.Layer5"/> sets.</summary>
+    public const int StaffLayer = 5;
 
     private readonly List<TilePosition> _path = [];
     private readonly byte[] _layers = new byte[LayerCount];
@@ -52,6 +63,12 @@ public sealed class Humanoid : Entity
     }
 
     public HumanoidType Type { get; }
+
+    /// <summary>The member of staff's profile, or null for anyone who is not staff.</summary>
+    public StaffProfile? Profile { get; private init; }
+
+    /// <summary>The player (0-based) whose hospital employs the member of staff, or −1.</summary>
+    public int Employer { get; private init; } = -1;
 
     /// <summary>
     /// Variant chosen for each animation layer: which head, clothes and so on are drawn.
@@ -158,8 +175,12 @@ public sealed class Humanoid : Entity
             layers[i] = reader.ReadByte();
         }
 
+        var employer = reader.ReadInt32();
+        var profile = reader.ReadBool() ? StaffProfile.Read(reader) : null;
         var humanoid = new Humanoid(id, tile, type, layers)
         {
+            Employer = employer,
+            Profile = profile,
             Facing = (Direction)reader.ReadByte(),
             IsStepping = reader.ReadBool(),
             StepProgress = reader.ReadInt32(),
@@ -179,6 +200,9 @@ public sealed class Humanoid : Entity
         writer.WriteTile(Tile);
         writer.WriteByte((byte)Type);
         writer.WriteBytes(_layers);
+        writer.WriteInt32(Employer);
+        writer.WriteBool(Profile is not null);
+        Profile?.Write(writer);
         writer.WriteByte((byte)Facing);
         writer.WriteBool(IsStepping);
         writer.WriteInt32(StepProgress);
@@ -211,6 +235,24 @@ public sealed class Humanoid : Entity
 
         layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
         return new Humanoid(id, tile, type, layers);
+    }
+
+    /// <summary>
+    /// Creates a newly hired member of staff, as CorsixTH's <c>Staff:setProfile</c> does: the type
+    /// follows the class and layer 5 comes from the profile.
+    /// </summary>
+    public static Humanoid CreateStaff(int id, TilePosition tile, StaffProfile profile, int employer)
+    {
+        Span<byte> layers = stackalloc byte[LayerCount];
+        layers[StaffLayer] = profile.Layer5;
+        var type = profile.Class switch
+        {
+            StaffClass.Nurse => HumanoidType.Nurse,
+            StaffClass.Doctor => HumanoidType.Doctor,
+            StaffClass.Handyman => HumanoidType.Handyman,
+            _ => HumanoidType.Receptionist,
+        };
+        return new Humanoid(id, tile, type, layers) { Profile = profile, Employer = employer };
     }
 
     internal static TilePosition Neighbour(TilePosition tile, Direction direction)

@@ -23,7 +23,11 @@ room building rules, windows, room removal, blueprints and wall sets (`RoomPlan.
 `CorsixTH/Src/th_lua_map.cpp` and `CorsixTH/Src/th_map.cpp`), level settings and money
 (`LevelConfig.cs`, `LevelRulesLoader.cs`, `Hospital.cs`, `RoomPurchases.cs`, from
 `CorsixTH/Lua/map.lua`, `CorsixTH/Lua/hospital.lua`, `CorsixTH/Lua/world.lua`,
-`CorsixTH/Lua/base_config.lua` and `CorsixTH/Lua/dialogs/*.lua`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
+`CorsixTH/Lua/base_config.lua` and `CorsixTH/Lua/dialogs/*.lua`), staff profiles, salaries,
+candidates for hire and hiring (`StaffProfile.cs`, `StaffRules.cs`, `StaffHiring.cs`, `Simulation.cs`,
+`LevelRulesLoader.cs`, from `CorsixTH/Lua/staff_profile.lua`, `CorsixTH/Lua/world.lua`,
+`CorsixTH/Lua/hospital.lua`, `CorsixTH/Lua/base_config.lua`, `CorsixTH/Lua/dialogs/hire_staff.lua`
+and `CorsixTH/Lua/dialogs/place_staff.lua`), walk timing and animation numbers (`Humanoid.cs`, `HumanoidDrawing.cs`, from
 `CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and
 the RNC decompressor modifications (`Rnc.cs`).
 

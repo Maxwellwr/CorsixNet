@@ -24,8 +24,10 @@ the new session has absorbed it.
 
 ## Environment
 
-- Original game (EA version) on the first computer: `D:\Games\Theme Hospital`, data in
-  `data\Game` (DATA, QDATA, LEVELS, ...). `ThemeHospitalInstall.Locate()` finds it, or set
+- Original game (EA version) on the first computer: `D:\Games\Theme Hospital`, on the second
+  `C:\Games\Theme Hospital`; data in `data\Game` (DATA, QDATA, LEVELS, ...). While DOSBox runs the
+  original, `RncTests.DecompressesEveryCompressedGameFile` fails: it reads every file of the install
+  and `DOSBOX\stderr.txt` is locked. `ThemeHospitalInstall.Locate()` finds it, or set
   `CORSIXNET_TH_PATH`. Real-data tests skip without it.
 - CorsixTH checkout: `C:\repos\github\CorsixTH`.
 - Commands: `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`.
@@ -53,11 +55,18 @@ Done and committed:
   sold back on cancel). Balance in the client's top line. Save format version 3.
 - Build UI: red outline on the tile under the cursor while building; the object being placed is
   attached to the cursor by its anchor tile and follows it tile by tile.
+- Staff hiring (see ARCHITECTURE.md, "Staff"): `StaffProfile` (skill in thousandths), `StaffRules`
+  from the level files, candidates for hire at game start, `HireStaffCommand` with CorsixTH's
+  placement check, one month's salary paid on hiring, staff types and walk animations in the client.
+  Debug keys 1-4 hire the first doctor, nurse, handyman or receptionist onto the hovered tile;
+  `--demo` hires one of each. Save format version 4.
 
 Not done yet:
 
-- M5: staff (doctor, receptionist), reception desk, patient flow (reception, queue at the door,
-  GP consultation).
+- M5: hire window (the original's staff list with faces), staff names and descriptions from the
+  language files, refreshing the candidates every month (needs a game calendar), monthly salaries,
+  staff behaviour (meandering, going to rooms), reception desk (and placing a receptionist on it),
+  patient flow (reception, queue at the door, GP consultation).
 - Money: buying land, loans and interest, hospital value (used by win criteria), bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and

@@ -12,12 +12,13 @@ public enum TransactionKind : byte
     BuyObject = 0,
     SellObject = 1,
     BuildRoom = 2,
+    HireStaff = 3,
 }
 
 /// <summary>One entry of a hospital's transaction log.</summary>
 /// <param name="Tick">When it happened.</param>
 /// <param name="Kind">What it was for.</param>
-/// <param name="Subject">Id of the room or object type it was for.</param>
+/// <param name="Subject">Id of the room or object type it was for, or the staff class of a hire.</param>
 /// <param name="Amount">Money received (positive) or spent (negative).</param>
 /// <param name="Balance">The balance afterwards.</param>
 public readonly record struct Transaction(long Tick, TransactionKind Kind, string Subject, int Amount, long Balance);
@@ -79,7 +80,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.BuildRoom)
+            if (kind > (byte)TransactionKind.HireStaff)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }

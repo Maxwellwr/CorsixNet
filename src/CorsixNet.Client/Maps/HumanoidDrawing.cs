@@ -22,6 +22,10 @@ internal sealed class HumanoidDrawing
     {
         [HumanoidType.StandardMalePatient] = (16, 18, 24, 26),
         [HumanoidType.StandardFemalePatient] = (0, 2, 8, 10),
+        [HumanoidType.Doctor] = (32, 34, 40, 42),
+        [HumanoidType.Nurse] = (1206, 1208, 1650, 1652),
+        [HumanoidType.Handyman] = (1858, 1860, 1866, 1868),
+        [HumanoidType.Receptionist] = (3668, 3670, 3676, 3678),
     };
 
     private readonly AnimationRenderer _renderer;

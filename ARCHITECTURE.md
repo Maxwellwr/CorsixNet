@@ -222,6 +222,38 @@ for the GP's office), objects through their object type. Without level files eve
 
 Otherwise the balance may go below zero.
 
+## Staff
+
+Staff follow CorsixTH's `staff_profile.lua`. A `StaffProfile` has a class (`StaffClass`: nurse,
+doctor, handyman, receptionist, numbered as the level files' `staff[n]`), a skill, a doctor's
+abilities (psychiatrist, surgeon, researcher; junior and consultant follow from the skill), a wage
+and looks (face parts for the staff window, animation layer 5 for a doctor's skin colour). CorsixTH
+keeps skill as a number from 0 to 1; here it is in thousandths, like the thresholds in the level
+files, so the simulation needs no floating point. Names and descriptions come from the language
+files and are left to the client.
+
+The staff settings travel in `LevelRules.Staff` (`StaffRules`): minimum salaries, the salary
+additions per ability (`gbv.SalaryAdd[3..8]`), `gbv.SalaryAbilityDivisor`, the junior and
+consultant thresholds, and the `staff_levels` entries, which say from which month how many people of
+each class are for hire and how often a doctor has each ability. An entry may leave values out; they
+come from the latest earlier entry. `LevelRulesLoader` reads them on top of CorsixTH's
+base_config.lua defaults. Without level files (`LevelRules.Free`) staff work for nothing, as in
+CorsixTH's free build mode.
+
+- A doctor's abilities are rolled "one in n" from the entry for the month; a junior's skill is put
+  below the junior threshold, a consultant's above the consultant threshold, everyone else's between.
+- The wage is the class's minimum salary plus skill divided by `SalaryAbilityDivisor`, plus for a
+  doctor the addition of each ability (or the plain doctor's addition), never below the minimum.
+- The candidates for hire (`Simulation.AvailableStaff`) are made when the game starts, as CorsixTH's
+  `makeAvailableStaff(0)`. As in CorsixTH, all hospitals hire from the same list. Refreshing the
+  list every month comes with the game calendar.
+- `HireStaffCommand(class, index, tile)` hires a candidate if the hospital has a month's salary in
+  the bank and `StaffHiring.CheckPlacement` accepts the tile: a passable tile in the player's
+  hospital, in a room only if its door can be reached, and never in a room for receptionists. Hiring
+  pays the first month's salary (`TransactionKind.HireStaff`). The new member of staff is a
+  `Humanoid` with the profile and the employing player. In CorsixTH choosing and placing are two
+  steps and cancelling puts the candidate back at the end of the list; here they are one command.
+
 ## Saves
 
 Saves are explicit, versioned serialization of simulation state. CorsixTH saves by
@@ -329,7 +361,7 @@ its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
 5. **M4** Two-client lockstep prototype. This validates the architecture before content grows. *(done)*
 6. **M5** Build mode and a first complete room (GP's office), reception → GP patient flow.
    *(in progress: room building in the original's steps (blueprint, door, windows, furniture,
-   confirm) and paying for rooms done; staff and patient flow to come)*
+   confirm), paying for rooms and hiring staff done; reception desk and patient flow to come)*
 7. **M6+** Content breadth: diseases, staff, finances, events, campaign, AI hospitals, auctions,
    music and video.
 

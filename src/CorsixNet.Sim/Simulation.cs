@@ -6,6 +6,7 @@ using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Pathfinding;
 using CorsixNet.Sim.Serialization;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim;
 
@@ -21,16 +22,20 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 3;
+    private const int FormatVersion = 4;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
     private const int MaxPendingCommands = 1 << 20;
+    private const int MaxAvailableStaff = 1 << 16;
 
     private readonly List<Entity> _entities = [];
     private readonly List<ScheduledCommand> _pending = [];
     private readonly List<MapObjectPlacement> _delayedObjects = [];
     private readonly Hospital[] _hospitals;
+
+    /// <summary>Candidates for hire per <see cref="StaffClass"/>, shared by every hospital as in CorsixTH.</summary>
+    private readonly List<StaffProfile>[] _availableStaff = [[], [], [], []];
 
     /// <summary>Entity to tell when someone walks onto or off a tile. Derived from the entities; not saved.</summary>
     private readonly Dictionary<TilePosition, int> _occupantObservers = [];
@@ -46,6 +51,8 @@ public sealed class Simulation
         {
             _hospitals[player] = new Hospital(player, Rules.StartCash);
         }
+
+        MakeAvailableStaff(0);
     }
 
     private Simulation(LevelMap map, SimRandom random, GameContent content, LevelRules rules)
@@ -65,6 +72,12 @@ public sealed class Simulation
 
     /// <summary>Each player's hospital, by player (0-based).</summary>
     public IReadOnlyList<Hospital> Hospitals => _hospitals;
+
+    /// <summary>
+    /// The candidates for hire of a class, in the order the hire window lists them. Every hospital
+    /// hires from the same candidates, as in CorsixTH's <c>world.available_staff</c>.
+    /// </summary>
+    public IReadOnlyList<StaffProfile> AvailableStaff(StaffClass staffClass) => _availableStaff[(int)staffClass];
 
     /// <summary>Number of ticks completed since the game started.</summary>
     public long Tick { get; private set; }
@@ -205,6 +218,33 @@ public sealed class Simulation
         Map.UpdateShadows();
     }
 
+    /// <summary>
+    /// Replaces the candidates for hire with new random ones for <paramref name="month"/> of the game,
+    /// as CorsixTH's <c>World:makeAvailableStaff</c> does at the start and every month.
+    /// </summary>
+    public void MakeAvailableStaff(int month)
+    {
+        foreach (var staffClass in StaffClasses.HireOrder)
+        {
+            var pool = _availableStaff[(int)staffClass];
+            pool.Clear();
+            var count = Rules.Staff.AvailableCount(staffClass, month);
+            for (var i = 0; i < count; i++)
+            {
+                pool.Add(StaffProfile.CreateRandom(staffClass, month, Rules.Staff, Random));
+            }
+        }
+    }
+
+    /// <summary>Takes a candidate out of the list for hire.</summary>
+    internal StaffProfile TakeAvailableStaff(StaffClass staffClass, int index)
+    {
+        var pool = _availableStaff[(int)staffClass];
+        var profile = pool[index];
+        pool.RemoveAt(index);
+        return profile;
+    }
+
     /// <summary>Tells the entity watching <paramref name="tile"/>, if any, that its occupant count changed.</summary>
     internal void NotifyOccupantChange(TilePosition tile, int delta)
     {
@@ -282,6 +322,15 @@ public sealed class Simulation
             simulation._hospitals[player] = Hospital.Read(reader, player);
         }
 
+        foreach (var pool in simulation._availableStaff)
+        {
+            var count = reader.ReadCount(MaxAvailableStaff);
+            for (var i = 0; i < count; i++)
+            {
+                pool.Add(StaffProfile.Read(reader));
+            }
+        }
+
         var entityCount = reader.ReadCount(MaxEntities);
         for (var i = 0; i < entityCount; i++)
         {
@@ -343,6 +392,15 @@ public sealed class Simulation
         foreach (var hospital in _hospitals)
         {
             hospital.Write(writer);
+        }
+
+        foreach (var pool in _availableStaff)
+        {
+            writer.WriteInt32(pool.Count);
+            foreach (var profile in pool)
+            {
+                profile.Write(writer);
+            }
         }
 
         writer.WriteInt32(_entities.Count);

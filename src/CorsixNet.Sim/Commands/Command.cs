@@ -4,6 +4,7 @@ using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Serialization;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.Commands;
 
@@ -17,6 +18,7 @@ public enum CommandKind : ushort
     PickUpObject = 5,
     ConfirmRoom = 6,
     CancelRoom = 7,
+    HireStaff = 8,
 }
 
 /// <summary>
@@ -48,11 +50,18 @@ public abstract record Command
             CommandKind.PickUpObject => new PickUpObjectCommand(reader.ReadInt32()),
             CommandKind.ConfirmRoom => new ConfirmRoomCommand(reader.ReadInt32()),
             CommandKind.CancelRoom => new CancelRoomCommand(reader.ReadInt32()),
+            CommandKind.HireStaff => new HireStaffCommand(ReadStaffClass(reader), reader.ReadInt32(), reader.ReadTile()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
 
     protected abstract void WriteArguments(SimWriter writer);
+
+    private static StaffClass ReadStaffClass(SimReader reader)
+    {
+        var staffClass = reader.ReadByte();
+        return staffClass < StaffClasses.Count ? (StaffClass)staffClass : throw new InvalidDataException($"Unknown staff class {staffClass}.");
+    }
 }
 
 /// <summary>Debug command: places a patient with a random appearance on a passable tile.</summary>
@@ -226,6 +235,36 @@ public sealed record CancelRoomCommand(int RoomId) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>
+/// Hires candidate <paramref name="Index"/> of the list for <paramref name="Class"/> and places them
+/// on <paramref name="Tile"/>, if the issuing player's hospital can afford a month's salary and the
+/// tile is a valid place when the command executes. Hiring pays the first month's salary.
+/// </summary>
+/// <remarks>
+/// CorsixTH takes the candidate off the list when the player clicks "hire" and puts them back at the
+/// end of the list if placing is cancelled. Here choosing and placing are one command, so the list
+/// only changes when someone is actually hired.
+/// </remarks>
+public sealed record HireStaffCommand(StaffClass Class, int Index, TilePosition Tile) : Command
+{
+    public override CommandKind Kind => CommandKind.HireStaff;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (StaffHiring.Check(simulation, Class, Index, Tile, player) == StaffHireProblem.None)
+        {
+            StaffHiring.Hire(simulation, Class, Index, Tile, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteByte((byte)Class);
+        writer.WriteInt32(Index);
+        writer.WriteTile(Tile);
+    }
 }
 
 /// <summary>A command stamped with the tick it executes on and its order within that tick.</summary>

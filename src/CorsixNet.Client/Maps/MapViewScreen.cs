@@ -11,6 +11,7 @@ using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
+using CorsixNet.Sim.Staff;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -437,7 +438,10 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
-    /// <summary>Spawns twenty patients, half inside and half outside near the camera, and lets them wander.</summary>
+    /// <summary>
+    /// Spawns twenty patients, half inside and half outside near the camera, hires one of each kind of
+    /// staff, and lets them wander.
+    /// </summary>
     private void StartDemo(LevelMap map)
     {
         if (_session is null || _hospitalTiles.Count == 0)
@@ -469,6 +473,18 @@ internal sealed class MapViewScreen : IScreen
         {
             var pool = i % 2 == 0 || outside.Count == 0 ? _hospitalTiles : outside;
             _session.Submit(new SpawnHumanoidCommand(pool[_random.Next(pool.Count)]));
+        }
+
+        // Hire one of each kind of staff and place them near the camera, so that they can be seen.
+        var nearby = _hospitalTiles
+            .OrderBy(tile => Math.Abs(tile.X - start.X) + Math.Abs(tile.Y - start.Y))
+            .ThenBy(tile => tile.Y)
+            .ThenBy(tile => tile.X)
+            .Take(40)
+            .ToList();
+        foreach (var staffClass in StaffClasses.HireOrder)
+        {
+            _session.Submit(new HireStaffCommand(staffClass, 0, nearby[_random.Next(nearby.Count)]));
         }
 
         _wander = true;
@@ -690,6 +706,29 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(new SpawnHumanoidCommand(new TilePosition(spawnAt.X, spawnAt.Y)));
         }
 
+        // Debug hiring until the hire window exists: 1 to 4 hire the first doctor, nurse, handyman or
+        // receptionist on the list and place them on the tile under the cursor.
+        (Keys Key, StaffClass Class)[] hireKeys =
+        [
+            (Keys.D1, StaffClass.Doctor), (Keys.D2, StaffClass.Nurse), (Keys.D3, StaffClass.Handyman), (Keys.D4, StaffClass.Receptionist),
+        ];
+        foreach (var (key, staffClass) in hireKeys)
+        {
+            if (pressed(key) && _hoveredTile is { } hireAt)
+            {
+                var tile = new TilePosition(hireAt.X, hireAt.Y);
+                var problem = StaffHiring.Check(simulation, staffClass, 0, tile, _session.Player);
+                if (problem == StaffHireProblem.None)
+                {
+                    _session.Submit(new HireStaffCommand(staffClass, 0, tile));
+                }
+                else
+                {
+                    ShowNotice($"Cannot hire a {staffClass}: {problem}");
+                }
+            }
+        }
+
         if (pressed(Keys.G) && _hospitalTiles.Count > 0)
         {
             for (var i = 0; i < 10; i++)
@@ -877,7 +916,7 @@ internal sealed class MapViewScreen : IScreen
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanPause == true ? "   Space: pause" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office   H: spawn   G: spawn 10   1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];

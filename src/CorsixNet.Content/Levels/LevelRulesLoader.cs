@@ -1,7 +1,8 @@
 // Which level files are read, and where starting cash and costs come from, ported from CorsixTH
 // CorsixTH/Lua/map.lua (Map:_loadOriginalCampaignLevel), CorsixTH/Lua/hospital.lua (Hospital:Hospital,
 // Hospital:getObjectBuildCost) and CorsixTH/Lua/world.lua (World:getAvailableRooms); the fallback
-// starting cash is CorsixTH/Lua/base_config.lua's town.StartCash.
+// starting cash is CorsixTH/Lua/base_config.lua's town.StartCash, and the staff settings fall back
+// to the same file's staff, gbv and staff_levels.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -9,6 +10,7 @@ using System.Text.RegularExpressions;
 using CorsixNet.Formats;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Economy;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Content.Levels;
 
@@ -27,9 +29,14 @@ public static partial class LevelRulesLoader
     /// <summary>
     /// The level number of an original level map such as <c>LEVEL.L1</c>, or null for other maps.
     /// </summary>
+    /// <remarks>
+    /// Both '/' and '\' separate directories here, whatever the platform: <see cref="Path.GetFileName(string)"/>
+    /// keeps a Windows path whole on Linux and macOS.
+    /// </remarks>
     public static int? LevelNumber(string mapFileName)
     {
-        var match = OriginalLevel().Match(Path.GetFileName(mapFileName));
+        var fileName = mapFileName[(mapFileName.LastIndexOfAny(['/', '\\']) + 1)..];
+        var match = OriginalLevel().Match(fileName);
         return match.Success ? int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) : null;
     }
 
@@ -62,7 +69,65 @@ public static partial class LevelRulesLoader
         var objects = content.Objects
             .Where(definition => config.GetInt($"objects[{definition.ObjectType}].StartCost") is not null)
             .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
-        return new LevelRules(startCash, rooms, objects);
+        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config));
+    }
+
+    /// <summary>
+    /// The staff settings: <c>staff[n].MinSalary</c>, <c>gbv.SalaryAdd[3]</c> to <c>[8]</c>,
+    /// <c>gbv.SalaryAbilityDivisor</c>, <c>gbv.DoctorThreshold</c>, <c>gbv.ConsultantThreshold</c> and
+    /// the <c>staff_levels</c> entries. What the files leave out comes from CorsixTH's base_config.lua,
+    /// on which CorsixTH reads the level files.
+    /// </summary>
+    public static StaffRules StaffFromConfig(LevelConfig config)
+    {
+        var defaults = StaffRules.Default;
+        var minSalaries = new int[StaffClasses.Count];
+        for (var i = 0; i < minSalaries.Length; i++)
+        {
+            minSalaries[i] = config.GetInt($"staff[{i}].MinSalary") ?? defaults.MinSalary((StaffClass)i);
+        }
+
+        var salaryAdds = new int[StaffRules.LastSalaryAdd - StaffRules.FirstSalaryAdd + 1];
+        for (var i = 0; i < salaryAdds.Length; i++)
+        {
+            var index = StaffRules.FirstSalaryAdd + i;
+            salaryAdds[i] = config.GetInt($"gbv.SalaryAdd[{index}]") ?? defaults.SalaryAdd(index);
+        }
+
+        // CorsixTH requires the divisor to be above 0; a file that breaks this keeps the default.
+        var divisor = config.GetInt("gbv.SalaryAbilityDivisor") is { } given and > 0 ? given : defaults.SalaryAbilityDivisor;
+
+        // staff_levels[0] is base_config's entry with the files' values on top; later entries exist as
+        // far as the files give their months without a gap, as Lua's length operator counts them.
+        var levels = new List<StaffLevel> { StaffLevelFromConfig(config, 0, defaults.Levels[0]) };
+        while (config.GetInt($"staff_levels[{levels.Count}].Month") is not null)
+        {
+            levels.Add(StaffLevelFromConfig(config, levels.Count, null));
+        }
+
+        return new StaffRules(
+            minSalaries,
+            salaryAdds,
+            divisor,
+            config.GetInt("gbv.DoctorThreshold") ?? defaults.DoctorThreshold,
+            config.GetInt("gbv.ConsultantThreshold") ?? defaults.ConsultantThreshold,
+            levels);
+    }
+
+    private static StaffLevel StaffLevelFromConfig(LevelConfig config, int index, StaffLevel? fallback)
+    {
+        int? Get(string field, int? value) => config.GetInt($"staff_levels[{index}].{field}") ?? value;
+        return new StaffLevel(
+            Get("Month", fallback?.Month) ?? 0,
+            Get("Doctors", fallback?.Doctors),
+            Get("Nurses", fallback?.Nurses),
+            Get("Handymen", fallback?.Handymen),
+            Get("Receptionists", fallback?.Receptionists),
+            Get("ShrkRate", fallback?.ShrkRate),
+            Get("SurgRate", fallback?.SurgRate),
+            Get("RschRate", fallback?.RschRate),
+            Get("JrRate", fallback?.JrRate),
+            Get("ConsRate", fallback?.ConsRate));
     }
 
     /// <summary>The money settings for an original level map such as <c>LEVEL.L1</c>, or for any other map.</summary>

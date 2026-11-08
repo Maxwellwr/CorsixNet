@@ -1,11 +1,12 @@
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Serialization;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.Economy;
 
 /// <summary>
-/// The money settings of a level, from its level files: starting cash and what rooms and objects
-/// cost. Unlike <see cref="GameContent"/>, they differ between levels, so they are part of the
+/// The money settings of a level, from its level files: starting cash, what rooms and objects
+/// cost, and the staff settings (salaries, who is available for hire). Unlike <see cref="GameContent"/>, they differ between levels, so they are part of the
 /// saved state.
 /// </summary>
 /// <remarks>
@@ -14,8 +15,8 @@ namespace CorsixNet.Sim.Economy;
 /// </remarks>
 public sealed class LevelRules
 {
-    /// <summary>No money at the start and everything free.</summary>
-    public static readonly LevelRules Free = new(0, [], []);
+    /// <summary>No money at the start and everything free, staff included.</summary>
+    public static readonly LevelRules Free = new(0, [], [], StaffRules.Free);
 
     private const int MaxEntries = 1024;
 
@@ -27,9 +28,15 @@ public sealed class LevelRules
     /// <param name="startCash">Each hospital's balance at the start.</param>
     /// <param name="roomCosts">Cost of each room type by room id, without its objects.</param>
     /// <param name="objectCosts">Cost of each object type by object id.</param>
-    public LevelRules(int startCash, IEnumerable<KeyValuePair<string, int>> roomCosts, IEnumerable<KeyValuePair<string, int>> objectCosts)
+    /// <param name="staff">Salaries and staff for hire; by default the original game's settings.</param>
+    public LevelRules(
+        int startCash,
+        IEnumerable<KeyValuePair<string, int>> roomCosts,
+        IEnumerable<KeyValuePair<string, int>> objectCosts,
+        StaffRules? staff = null)
     {
         StartCash = startCash;
+        Staff = staff ?? StaffRules.Default;
         _roomCosts = Sorted(roomCosts);
         _objectCosts = Sorted(objectCosts);
         _roomLookup = _roomCosts.ToDictionary(entry => entry.Id, entry => entry.Cost, StringComparer.Ordinal);
@@ -37,6 +44,9 @@ public sealed class LevelRules
     }
 
     public int StartCash { get; }
+
+    /// <summary>Salaries and who is available for hire when.</summary>
+    public StaffRules Staff { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -75,6 +85,7 @@ public sealed class LevelRules
         writer.WriteInt32(StartCash);
         WriteCosts(writer, _roomCosts);
         WriteCosts(writer, _objectCosts);
+        Staff.Write(writer);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -82,7 +93,8 @@ public sealed class LevelRules
         var startCash = reader.ReadInt32();
         var rooms = ReadCosts(reader);
         var objects = ReadCosts(reader);
-        return new LevelRules(startCash, rooms, objects);
+        var staff = StaffRules.Read(reader);
+        return new LevelRules(startCash, rooms, objects, staff);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)
