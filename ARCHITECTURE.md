@@ -269,7 +269,7 @@ CorsixTH's free build mode.
 
 What humanoids do beyond walking lives in `Sim.People`. CorsixTH strings humanoid actions together in
 an action queue of Lua closures; here each kind of humanoid has a small state machine
-(`HumanoidBehaviour`: `PatientBehaviour`, `ReceptionistBehaviour`, `DoctorBehaviour`), which is easy to
+(`HumanoidBehaviour`: `PatientBehaviour`, `ReceptionistBehaviour`, `DoctorBehaviour`, `NurseBehaviour`), which is easy to
 save explicitly. A behaviour runs on every tick in which its humanoid is not walking.
 
 - **Arrivals** (`PatientArrivals`, from `world.lua`). The spawn rate starts at the level's
@@ -314,17 +314,34 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   times 1.5 (fatigue is always 0), `d` a random 1 to 3, very skilled doctors up to five times as much.
   At 1.0 (the default `stop_procedure` policy) the patient is diagnosed, the hospital knows the disease, and
   they look for its treatment rooms; otherwise the GP sends them to one of the disease's diagnosis rooms.
-  Only the GP's office works so far (`RoomVisits.IsSupported`), so other rooms are never found: as in
-  CorsixTH's `seek_room.lua` with the default policies, a patient below 0.1 goes home, one below 0.9 or
-  with a disease the hospital does not know waits, and one above has the disease guessed. Waiting patients
-  step off to a free spot and give up after 60 days; CorsixTH's faxes asking the player what to do, and
-  patients going to a room built meanwhile, are not there yet.
+  Only the GP's office and the pharmacy work so far (`RoomVisits.IsSupported`), so diagnosis rooms are never
+  found: as in CorsixTH's `seek_room.lua` with the default policies, a patient below 0.1 goes home, one below
+  0.9 or with a disease the hospital does not know waits, and one above has the disease guessed. Waiting
+  patients step off to a free spot and give up after 60 days; when a room of the kind they wait for starts
+  working, they go to it (`RoomVisits.OnRoomActivated`). CorsixTH's faxes asking the player what to do are not
+  there yet. A doctor of middling skill and little attention to detail gets level one's patients only about
+  three quarters of the way, so without diagnosis rooms many of them wait.
+- **The pharmacy** (`NurseBehaviour`, from `rooms/pharmacy.lua`). The room sends for the nearest free nurse
+  (each supported room type names the kind of staff it needs and the object a patient is seen at). She waits
+  at the cabinet's use position (CorsixTH's nurse meanders about the room meanwhile). The patient walks to the
+  cabinet's secondary use position and faces her; she then uses the cabinet with them (see "Using objects")
+  with a random flask colour on layer 3, and the room is done with the patient.
+- **Treatment** (`PatientCare.DealtWith`, `TreatDisease`, from `room.lua` and `patient.lua`). After a treatment
+  room the patient goes on to the disease's next treatment room, or after the last one is treated: they pay what
+  they agreed to at the GP, and the cure works if `effectiveness × diagnosis progress`, moved by up to a tenth of
+  what is left to 100 (at least 20) by the staff's service quality (`0.7 × skill + 0.2 × (1 − fatigue) + 0.1 ×
+  happiness`, fatigue 0 and happiness 1 for now), reaches a random 1 to 100. A cured patient goes home and counts
+  in the hospital's `Cured` and the disease's `Recoveries`; otherwise the patient dies (`Deaths`, `Fatalities`) and,
+  as dying is not animated yet, vanishes outside the room. Either way the hospital pays for the drug.
 - **Payment** (`Hospital`, from `hospital.lua`). Before each room the patient agrees to pay its current price
   (always at or below the standard price, with chance `e^(-4 * overprice)` above it) and pays it when the
   staff is done: into the bank as a `Treatment` transaction, or, if insured, owed by the insurance company,
   which pays two months later at a month's end. The price is the level's `StartPrice` (a pseudo disease's
   own price) with 4.5 % inflation a year, times the player's percentage in the casebook (100 % until the
   casebook window exists). Reputation is not modelled; at CorsixTH's starting 500 it does not change prices.
+  A disease cured in the pharmacy has the level's drug rating as its cure effectiveness and costs the drug's
+  price (`gbv.StartRating` and `gbv.StartCost`, both 100) for each cure (`TransactionKind.DrugCost`, paid to one
+  of five drug companies at random); research improving them is not there yet.
 - **Using objects** (`ObjectUse`, from `use_object.lua`). The object's usage animations
   (`ObjectDefinition.UsageNorth` and `UsageEast`, mirrored for south and west) say how long each phase
   lasts: one tick per frame, with the lengths of the original's animations in `BaseGameContent` (a
@@ -332,10 +349,19 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   when the object has begin, in-use and finish animations. Chairs are walked onto first. While an object
   is in use, the humanoid's `ActionAnimation` says what the client draws, from which tile, and that the
   object itself is hidden, as CorsixTH's `makeInvisible`.
+- **Two people using an object** (`MultiObjectUse`, from `multi_use_object.lua`). `ObjectDefinition.MultiUsage`
+  gives, per facing direction and pair of humanoid types, the begin phases, the in-use phase and the finish
+  phases; a direction without its own mirrors the opposite one. Each phase plays the user's animation and the
+  other one's secondary animation, or hides the other one (`Humanoid.IsHidden`) when the user's animation shows
+  them too, and lasts as long as the longer of the two. The user takes on the other one's layers 0 to 4 for the
+  use. Prolonged use and the morphs of invisible patients are not ported yet.
 
 The client buys a reception desk with F (a stand-in for the original's corridor furnishing window),
 draws use animations, and puts a receptionist facing away from the viewer in front of the desk on its
-tile, otherwise behind it. `--demo` also places a desk once its GP's office works.
+tile, otherwise behind it. B builds a GP's office and Shift+B a pharmacy until the build window exists; the
+status line shows how many patients were cured and died. `--demo` hires the most skilled candidate of each kind,
+places a desk once its GP's office works and builds and furnishes a pharmacy. `--speed` starts a local game at
+another speed, which helps watching patients come and go.
 
 ## Saves
 

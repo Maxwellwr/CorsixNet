@@ -150,8 +150,8 @@ public static partial class LevelRulesLoader
 
     /// <summary>
     /// The disease settings: <c>expertise[n].StartPrice</c>, <c>.Known</c> and <c>.MaxDiagDiff</c>, <c>visuals[n]</c>,
-    /// <c>non_visuals[n]</c>, <c>visuals_available[n]</c>, <c>non_visuals_available[n]</c>, <c>gbv.HoldVisualMonths</c>
-    /// and <c>gbv.HoldVisualPeepCount</c>, on top of CorsixTH's base_config.lua.
+    /// <c>non_visuals[n]</c>, <c>visuals_available[n]</c>, <c>non_visuals_available[n]</c>, <c>gbv.HoldVisualMonths</c>,
+    /// <c>gbv.HoldVisualPeepCount</c>, <c>gbv.StartRating</c> and <c>gbv.StartCost</c>, on top of CorsixTH's base_config.lua.
     /// </summary>
     public static DiseaseRules DiseasesFromConfig(LevelConfig config)
     {
@@ -179,7 +179,9 @@ public static partial class LevelRulesLoader
             Values("visuals_available", DiseaseRules.VisualsCount, BaseVisualsAvailable),
             Values("non_visuals_available", DiseaseRules.NonVisualsCount, null),
             config.GetInt("gbv.HoldVisualMonths") ?? BaseHoldVisualMonths,
-            config.GetInt("gbv.HoldVisualPeepCount") ?? BaseHoldVisualPeepCount);
+            config.GetInt("gbv.HoldVisualPeepCount") ?? BaseHoldVisualPeepCount,
+            config.GetInt("gbv.StartRating") ?? DiseaseRules.BaseDrugStartRating,
+            config.GetInt("gbv.StartCost") ?? DiseaseRules.BaseDrugStartCost);
     }
 
     private static StaffLevel StaffLevelFromConfig(LevelConfig config, int index, StaffLevel? fallback)

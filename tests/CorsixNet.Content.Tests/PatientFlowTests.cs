@@ -20,6 +20,7 @@ public class PatientFlowTests
 {
     private const int Size = 24;
     private static readonly TileRect GpArea = new(5, 5, 4, 4);
+    private static readonly TileRect PharmacyArea = new(12, 5, 4, 4);
 
     [Fact]
     public void NoPatientsComeWithoutAStaffedReceptionDesk()
@@ -171,6 +172,97 @@ public class PatientFlowTests
     }
 
     [Fact]
+    public void OnLevelOneTheNurseCuresPatientsInThePharmacy()
+    {
+        var install = RealGameData.Require();
+        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var simulation = NewStaffedHospital(rules);
+        BuildPharmacy(simulation);
+        var hospital = simulation.Hospitals[0];
+        var pharmacyDiseases = rules.Diseases.AvailableDiseases().Where(d => d.TreatmentRooms is ["pharmacy"]).Select(d => d.Id).ToHashSet();
+        var treatedTogether = false;
+
+        for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            foreach (var humanoid in simulation.Entities.OfType<Humanoid>())
+            {
+                // While the nurse gets the drink with the patient, her animation shows them both and the patient is hidden.
+                if (humanoid.Behaviour is NurseBehaviour { Phase: NursePhase.Treating, Use: { } use }
+                    && simulation.FindEntity(use.UseWithId) is Humanoid { IsHidden: true } patient
+                    && humanoid.ActionAnimation?.Id is 1630 or 3104)
+                {
+                    Assert.Equal(PatientPhase.StandingAtObject, ((PatientBehaviour)patient.Behaviour!).Phase);
+                    treatedTogether = true;
+                }
+            }
+        }
+
+        Assert.True(treatedTogether);
+        Assert.True(hospital.Cured >= 3, $"Only {hospital.Cured} patients were cured.");
+        var cures = hospital.Casebook.Values.Where(c => pharmacyDiseases.Contains(c.DiseaseId)).ToList();
+        Assert.Equal(hospital.Cured + hospital.Deaths, cures.Sum(c => c.Recoveries + c.Fatalities));
+        Assert.All(cures, c => Assert.Equal((100, 100), (c.CureEffectiveness, c.DrugCost)));
+        Assert.Contains(cures, c => c.MoneyEarned >= rules.Diseases.StartPrice(DiseaseCatalog.Find(c.DiseaseId)!.ExpertiseId));
+        Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.DrugCost, Amount: -100 });
+    }
+
+    [Fact]
+    public void PatientsWaitingForTreatmentGoToAPharmacyBuiltLater()
+    {
+        var install = RealGameData.Require();
+        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var simulation = NewStaffedHospital(rules);
+        Humanoid? waiting = null;
+        for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay && waiting is null; tick++)
+        {
+            simulation.Step();
+            waiting = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Behaviour is PatientBehaviour
+            {
+                Phase: PatientPhase.Waiting, Seeking: RoomSeek.Treatment, Disease.TreatmentRooms: ["pharmacy"],
+            });
+        }
+
+        Assert.NotNull(waiting);
+        BuildPharmacy(simulation);
+        var pharmacy = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "pharmacy");
+        var patient = (PatientBehaviour)waiting.Behaviour!;
+        for (var tick = 0; tick < 20 * GameDate.HoursPerDay && patient.TargetId != pharmacy.Id; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.Equal(pharmacy.Id, patient.TargetId);
+    }
+
+    [Fact]
+    public void ASavedGameWithATreatmentGoingOnContinuesIdentically()
+    {
+        var install = RealGameData.Require();
+        var simulation = NewStaffedHospital(LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()));
+        BuildPharmacy(simulation);
+        for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            if (simulation.Entities.Any(e => e is Humanoid { Behaviour: NurseBehaviour { Phase: NursePhase.Treating } }))
+            {
+                break;
+            }
+        }
+
+        Assert.Contains(simulation.Entities, e => e is Humanoid { Behaviour: NurseBehaviour { Phase: NursePhase.Treating } });
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var loaded = Simulation.Load(stream, BaseGameContent.Create());
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+
+        StepFor(simulation, 5 * GameDate.HoursPerDay);
+        StepFor(loaded, 5 * GameDate.HoursPerDay);
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+    }
+
+    [Fact]
     public void AQueueLinesUpOnNeighbouringTiles()
     {
         var simulation = NewHospital();
@@ -237,6 +329,17 @@ public class PatientFlowTests
         Run(simulation, new HireStaffCommand(StaffClass.Receptionist, 0, new(16, 15)));
         PlaceReceptionDesk(simulation);
         return simulation;
+    }
+
+    /// <summary>A pharmacy east of the GP's office, with a nurse.</summary>
+    private static void BuildPharmacy(Simulation simulation)
+    {
+        Run(simulation, new BuildRoomCommand(new RoomPlan("pharmacy", PharmacyArea, new DoorPlacement(new(13, PharmacyArea.Bottom), EdgeOrientation.North))));
+        var room = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "pharmacy");
+        PlaceAnywhere(simulation, "pharmacy_cabinet", PharmacyArea);
+        Run(simulation, new ConfirmRoomCommand(room.Id));
+        Assert.True(room.IsActive);
+        Run(simulation, new HireStaffCommand(StaffClass.Nurse, 0, new(15, 16)));
     }
 
     private static RoomObject PlaceReceptionDesk(Simulation simulation)

@@ -116,6 +116,30 @@ public static class BaseGameContent
         },
         CorridorObject: true);
 
+    /// <summary>
+    /// The pharmacy cabinet (objects/pharmacy_cabinet.lua). The nurse stands at the use position and hands the patient,
+    /// who stands at the secondary use position, a drink; only north and east facings exist, and the east one mirrors
+    /// the north one's animations.
+    /// </summary>
+    public static readonly ObjectDefinition PharmacyCabinet = new(
+        "pharmacy_cabinet",
+        "Pharmacy Cabinet",
+        ObjectType: 39,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(0, 0, CompleteCell), new(0, 1, UsePosition), new(0, 2, UsePosition), new(-1, 1, UsePosition)],
+                UsePosition: (0, 1),
+                SecondaryUsePosition: (-1, 1),
+                AnimateFromUsePosition: true),
+            [Direction.East] = new(
+                [new(0, 0, CompleteCell), new(1, 0, UsePosition), new(2, 0, UsePosition), new(1, -1, UsePosition)],
+                UsePosition: (1, 0),
+                SecondaryUsePosition: (1, -1),
+                AnimateFromUsePosition: true),
+        },
+        MultiUsage: PharmacyMultiUsage());
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -126,6 +150,16 @@ public static class BaseGameContent
         NeededObjects: new Dictionary<string, int> { ["desk"] = 1, ["cabinet"] = 1, ["chair"] = 1 },
         LevelConfigId: 7);
 
+    /// <summary>The pharmacy (rooms/pharmacy.lua).</summary>
+    public static readonly RoomDefinition Pharmacy = new(
+        "pharmacy",
+        "Pharmacy",
+        MinimumSize: 4,
+        FloorSprite: 19,
+        WhiteWalls,
+        NeededObjects: new Dictionary<string, int> { ["pharmacy_cabinet"] = 1 },
+        LevelConfigId: 11);
+
     /// <summary>Sprites of the hospital's outer walls (walls/external.lua).</summary>
     private static readonly ushort[] ExternalWalls =
     [
@@ -133,7 +167,30 @@ public static class BaseGameContent
         114, 116, 118, 120, 142, 115, 119, 117, 121, 143,
     ];
 
-    public static GameContent Create() => new([GpOffice], ExternalWalls, [Desk, Cabinet, Chair, ReceptionDesk]);
+    public static GameContent Create() => new([GpOffice, Pharmacy], ExternalWalls, [Desk, Cabinet, Chair, ReceptionDesk, PharmacyCabinet]);
+
+    /// <summary>
+    /// pharmacy_cabinet.lua's <c>anim_set</c>: the nurse's own begin and finish animations around the ones showing her with
+    /// the patient (<paramref name="begin"/>, <paramref name="finish"/>); the patient idles (<paramref name="idle"/>) while
+    /// she gets the drink and drinks it (<paramref name="inUse"/>) while she waits. Defined for north and south.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), MultiUseAnimations>> PharmacyMultiUsage()
+    {
+        static MultiUseAnimations AnimSet(AnimationRef begin, AnimationRef finish, AnimationRef idle, AnimationRef inUse)
+        {
+            return new MultiUseAnimations(
+                [new(new(1590, 22), idle), new(new(1594, 42), idle), new(begin)],
+                new(new(1666, 1), inUse),
+                [new(finish), new(new(1598, 9), idle)]);
+        }
+
+        var north = new Dictionary<(HumanoidType, HumanoidType), MultiUseAnimations>
+        {
+            [(HumanoidType.Nurse, HumanoidType.StandardMalePatient)] = AnimSet(new(1630, 25), new(1638, 10), new(26, 1), new(1662, 26)),
+            [(HumanoidType.Nurse, HumanoidType.StandardFemalePatient)] = AnimSet(new(3104, 25), new(3112, 10), new(10, 1), new(3108, 26)),
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
 
     private static AnimationRef[] ChairTalk(AnimationRef quiet, AnimationRef nodding, AnimationRef talking)
     {

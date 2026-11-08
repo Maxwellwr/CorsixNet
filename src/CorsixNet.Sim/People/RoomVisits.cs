@@ -26,8 +26,18 @@ public static class RoomVisits
     /// <summary>How often the GP may fail to conclude before the patient is dealt with anyway.</summary>
     internal const int GpMaxTimes = 3;
 
-    /// <summary>The object a patient uses in the GP's office.</summary>
-    private const string PatientObjectType = "chair";
+    /// <summary>The pharmacy's room type.</summary>
+    internal const string PharmacyRoom = "pharmacy";
+
+    /// <summary>
+    /// What each room type patients can be seen in needs: the kind of staff it sends for (CorsixTH's
+    /// <c>required_staff</c>) and the object the patient is seen at.
+    /// </summary>
+    private static readonly Dictionary<string, (BehaviourKind Staff, string PatientObject)> Rules = new(StringComparer.Ordinal)
+    {
+        [PatientBehaviour.FirstRoom] = (BehaviourKind.Doctor, "chair"),
+        [PharmacyRoom] = (BehaviourKind.Nurse, "pharmacy_cabinet"),
+    };
 
     /// <summary>How many tiles further a patient walks for one person fewer in the queue.</summary>
     private const int TileFactor = 10;
@@ -54,8 +64,19 @@ public static class RoomVisits
         return simulation.Entities.OfType<RoomObject>().FirstOrDefault(o => o.RoomId == roomId && string.Equals(o.ObjectType, objectType, StringComparison.Ordinal));
     }
 
-    /// <summary>The object a patient uses in the room.</summary>
-    internal static RoomObject? PatientObject(Simulation simulation, int roomId) => FindObject(simulation, roomId, PatientObjectType);
+    /// <summary>The object a patient is seen at in the room: the GP's chair, the pharmacy cabinet.</summary>
+    internal static RoomObject? PatientObject(Simulation simulation, Room room)
+    {
+        return Rules.TryGetValue(room.RoomType, out var rules) ? FindObject(simulation, room.Id, rules.PatientObject) : null;
+    }
+
+    /// <summary>Where the patient stands to be seen at <paramref name="placed"/>: its secondary use position if it has one.</summary>
+    internal static TilePosition SecondaryUseTile(Simulation simulation, RoomObject placed)
+    {
+        var layout = simulation.Content.FindObject(placed.ObjectType)?.Orientations[placed.Orientation];
+        var use = layout?.SecondaryUsePosition ?? layout?.Use ?? default;
+        return new TilePosition(placed.Tile.X + use.X, placed.Tile.Y + use.Y);
+    }
 
     internal static void Update(Simulation simulation, Room room)
     {
@@ -100,18 +121,36 @@ public static class RoomVisits
         return best;
     }
 
-    /// <summary>Whether patients can be seen in rooms of this type yet; only the GP's office works so far.</summary>
-    public static bool IsSupported(string roomType) => string.Equals(roomType, PatientBehaviour.FirstRoom, StringComparison.Ordinal);
+    /// <summary>Whether patients can be seen in rooms of this type yet: the GP's office and the pharmacy so far.</summary>
+    public static bool IsSupported(string roomType) => Rules.ContainsKey(roomType);
 
     /// <summary>
-    /// The GP's loop callback found the patient seen: they pay, get further in their diagnosis, get up and leave,
-    /// and the doctor goes on (<c>GPRoom:dealtWithPatient</c>).
+    /// The staff is done with the patient: after the GP they pay and get further in their diagnosis, after a treatment
+    /// they pay and are cured; then they get up and leave, and the staff goes on (<c>Room:dealtWithPatient</c>).
     /// </summary>
     internal static void DealtWithPatient(Simulation simulation, Room room)
     {
         if (simulation.FindEntity(room.PatientId) is Humanoid { Behaviour: PatientBehaviour patient } humanoid)
         {
             patient.DealtWith(simulation, room, humanoid);
+        }
+    }
+
+    /// <summary>A room started working: the patients of its hospital who wait for a room of its kind go to look for it.</summary>
+    internal static void OnRoomActivated(Simulation simulation, Room room)
+    {
+        if (!IsSupported(room.RoomType))
+        {
+            return;
+        }
+
+        var owner = Owner(simulation, room);
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Humanoid { Behaviour: PatientBehaviour patient } humanoid && humanoid.HospitalPlayer == owner)
+            {
+                patient.OnRoomBuilt(room.RoomType);
+            }
         }
     }
 
@@ -137,10 +176,10 @@ public static class RoomVisits
         return queue is { IsFull: true } ? score + 1000 : score;
     }
 
-    /// <summary>Sends the nearest doctor without a room, of the room's hospital, to the room.</summary>
+    /// <summary>Sends the nearest member of staff of the kind the room needs, without a room, of the room's hospital, to the room.</summary>
     private static void CallStaff(Simulation simulation, Room room)
     {
-        if (simulation.FindEntity(room.DoorId) is not RoomDoor door)
+        if (!Rules.TryGetValue(room.RoomType, out var rules) || simulation.FindEntity(room.DoorId) is not RoomDoor door)
         {
             return;
         }
@@ -151,15 +190,16 @@ public static class RoomVisits
         var nearestDistance = 0;
         foreach (var entity in simulation.Entities)
         {
-            if (entity is not Humanoid { Behaviour: DoctorBehaviour { RoomId: 0 } } doctor || doctor.Employer != owner)
+            if (entity is not Humanoid { Behaviour: { } behaviour } staff || behaviour is not IRoomStaff { RoomId: 0 } || behaviour.Kind != rules.Staff
+                || staff.Employer != owner)
             {
                 continue;
             }
 
-            if (simulation.Pathfinder.FindDistance(simulation.Map, doctor.StepTarget, target) is { } distance
+            if (simulation.Pathfinder.FindDistance(simulation.Map, staff.StepTarget, target) is { } distance
                 && (nearest is null || distance < nearestDistance))
             {
-                nearest = doctor;
+                nearest = staff;
                 nearestDistance = distance;
             }
         }
@@ -167,7 +207,7 @@ public static class RoomVisits
         if (nearest is not null)
         {
             room.StaffId = nearest.Id;
-            ((DoctorBehaviour)nearest.Behaviour!).GoToRoom(simulation, nearest, room, target);
+            ((IRoomStaff)nearest.Behaviour!).GoToRoom(simulation, nearest, room, target);
         }
     }
 

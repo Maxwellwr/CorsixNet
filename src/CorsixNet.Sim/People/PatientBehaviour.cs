@@ -38,6 +38,12 @@ public enum PatientPhase : byte
 
     UsingObject,
 
+    /// <summary>
+    /// Standing at the room's object while the staff uses it with them, such as the nurse handing out a drink at the
+    /// pharmacy cabinet.
+    /// </summary>
+    StandingAtObject,
+
     /// <summary>Walking out of the room's door.</summary>
     LeavingRoom,
 
@@ -60,19 +66,33 @@ public enum RoomSeek : byte
     /// <summary>One of the disease's diagnosis rooms, preferably the one the GP chose.</summary>
     Diagnosis,
 
-    /// <summary>The first room of the disease's treatment.</summary>
+    /// <summary>The next room of the disease's treatment.</summary>
     Treatment,
+}
+
+/// <summary>What a patient does once out of the room they are in.</summary>
+internal enum AfterRoom : byte
+{
+    GoHome,
+
+    /// <summary>Looks for the room in <see cref="PatientBehaviour.Seeking"/>.</summary>
+    SeekRoom,
+
+    /// <summary>The treatment failed and the patient dies.</summary>
+    Die,
 }
 
 /// <summary>
 /// A patient's visit: find a reception desk and queue there; when the receptionist has seen them, go to
 /// the GP's office, queue at its door and sit down on the chair until the doctor is done. The GP diagnoses
 /// the patient's disease (see <see cref="PatientCare"/>), and they go on to a diagnosis or treatment room.
+/// In the pharmacy they stand at the cabinet until the nurse has given them their drink, pay and go home cured.
 /// </summary>
 /// <remarks>
-/// Only the GP's office works so far. A patient sent to any other room finds none and, as in CorsixTH when
-/// the room is missing, waits for it or for the player's decision (the faxes are not there yet), then goes
-/// home; a patient hardly diagnosed goes home at once, one diagnosed far enough has their disease guessed.
+/// Only the GP's office and the pharmacy work so far. A patient sent to any other room finds none and, as in
+/// CorsixTH when the room is missing, waits for it or for the player's decision (the faxes are not there yet),
+/// then goes home; a patient hardly diagnosed goes home at once, one diagnosed far enough has their disease
+/// guessed. A waiting patient goes to a room of the kind they wait for as soon as one is built.
 /// </remarks>
 public sealed class PatientBehaviour : HumanoidBehaviour
 {
@@ -131,6 +151,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     /// <summary>Whether the patient sits on the room's object, being seen (CorsixTH's <c>user_of</c>).</summary>
     public bool IsBeingSeen => Phase == PatientPhase.UsingObject && Use is { IsUsing: true };
 
+    /// <summary>Whether the patient stands at the room's object, ready for the staff to use it with them.</summary>
+    public bool IsReadyForStaff => Phase == PatientPhase.StandingAtObject && !IsDealtWith;
+
+    /// <summary>How many rooms of the treatment the patient has been through (CorsixTH's <c>cure_rooms_visited</c>).</summary>
+    public int CureRoomsVisited { get; internal set; }
+
     /// <summary>Hours the patient still waits for a missing desk or room (CorsixTH's <c>waiting</c>); −1 when not waiting.</summary>
     private int Waiting { get; set; } = -1;
 
@@ -143,8 +169,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     /// </summary>
     private int DiagnosisRoomIndex { get; set; } = -1;
 
-    /// <summary>Whether the patient goes on to another room after leaving the current one, rather than home.</summary>
-    private bool SeekAfterRoom { get; set; }
+    /// <summary>What the patient does after leaving the current room.</summary>
+    private AfterRoom Next { get; set; }
 
     /// <summary>Whether the room's staff is done with the patient (CorsixTH's <c>just_dealt_with</c>).</summary>
     private bool IsDealtWith { get; set; }
@@ -175,19 +201,17 @@ public sealed class PatientBehaviour : HumanoidBehaviour
                 EnterRoom(simulation, humanoid);
                 break;
             case PatientPhase.WalkingToObject:
-                if (RoomVisits.PatientObject(simulation, TargetId) is { } placed)
-                {
-                    Phase = PatientPhase.UsingObject;
-                    Use = ObjectUse.Start(simulation, humanoid, placed);
-                }
-                else
+                ArriveAtObject(simulation, humanoid);
+                break;
+            case PatientPhase.UsingObject:
+                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
                 {
                     LeaveRoom(simulation, humanoid);
                 }
 
                 break;
-            case PatientPhase.UsingObject:
-                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+            case PatientPhase.StandingAtObject:
+                if (IsDealtWith)
                 {
                     LeaveRoom(simulation, humanoid);
                 }
@@ -199,14 +223,20 @@ public sealed class PatientBehaviour : HumanoidBehaviour
                     room.PatientId = 0;
                 }
 
-                if (SeekAfterRoom)
+                switch (Next)
                 {
-                    Phase = PatientPhase.SeekRoom;
-                    TargetId = 0;
-                }
-                else
-                {
-                    GoHome(simulation, humanoid);
+                    case AfterRoom.SeekRoom:
+                        Phase = PatientPhase.SeekRoom;
+                        TargetId = 0;
+                        break;
+                    case AfterRoom.Die:
+                        // Dying (falling down, and the trip to heaven or hell) is not animated yet: the patient is gone.
+                        TargetId = 0;
+                        humanoid.IsDespawning = true;
+                        break;
+                    default:
+                        GoHome(simulation, humanoid);
+                        break;
                 }
 
                 break;
@@ -267,13 +297,27 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     /// <summary>After leaving the room, the patient goes home.</summary>
     internal void SetNextGoHome()
     {
-        SeekAfterRoom = false;
+        Next = AfterRoom.GoHome;
     }
 
-    /// <summary>After leaving the room, the patient looks for the first room of their treatment.</summary>
+    /// <summary>After leaving the room, the patient dies.</summary>
+    internal void SetNextDie()
+    {
+        Next = AfterRoom.Die;
+    }
+
+    /// <summary>After leaving a diagnosis room, the patient goes back to the GP.</summary>
+    internal void SetNextGp()
+    {
+        Next = AfterRoom.SeekRoom;
+        Seeking = RoomSeek.Gp;
+        DiagnosisRoomIndex = -1;
+    }
+
+    /// <summary>After leaving the room, the patient looks for the next room of their treatment.</summary>
     internal void SetNextTreatment()
     {
-        SeekAfterRoom = true;
+        Next = AfterRoom.SeekRoom;
         Seeking = RoomSeek.Treatment;
         DiagnosisRoomIndex = -1;
     }
@@ -281,9 +325,33 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     /// <summary>After leaving the room, the patient looks for the diagnosis room the GP chose.</summary>
     internal void SetNextDiagnosis(int index)
     {
-        SeekAfterRoom = true;
+        Next = AfterRoom.SeekRoom;
         Seeking = RoomSeek.Diagnosis;
         DiagnosisRoomIndex = index;
+    }
+
+    /// <summary>
+    /// A room of <paramref name="roomType"/> started working: a patient waiting for such a room goes to look for it, as
+    /// CorsixTH's seek room action does when a room is built (<c>action_seek_room_interrupt</c>'s build callback).
+    /// </summary>
+    internal void OnRoomBuilt(string roomType)
+    {
+        if (Phase != PatientPhase.Waiting || Disease is not { } disease)
+        {
+            return;
+        }
+
+        var wanted = Seeking switch
+        {
+            RoomSeek.Treatment => disease.TreatmentRooms.Contains(roomType, StringComparer.Ordinal),
+            RoomSeek.Diagnosis => _availableDiagnosisRooms.Contains(roomType, StringComparer.Ordinal),
+            _ => false,
+        };
+        if (wanted)
+        {
+            Phase = PatientPhase.SeekRoom;
+            Waiting = -1;
+        }
     }
 
     /// <summary>Goes to a place in a queue, then turns to face <paramref name="face"/>.</summary>
@@ -306,14 +374,14 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     internal void LetIn(Simulation simulation, Humanoid humanoid, Room room, RoomDoor door)
     {
         IsDealtWith = false;
-        SeekAfterRoom = false;
+        Next = AfterRoom.GoHome;
         Phase = PatientPhase.EnteringRoom;
         TargetId = room.Id;
         humanoid.WalkTo(simulation, door.InsideTile(room.Area));
     }
 
     /// <summary>
-    /// The doctor is done with the patient: what comes next is decided, and they get up and leave (CorsixTH's
+    /// The staff is done with the patient: what comes next is decided, and they get up and leave (CorsixTH's
     /// <c>dealtWithPatient</c>). A second call for the same visit is ignored, as CorsixTH's <c>just_dealt_with</c> does.
     /// </summary>
     internal void DealtWith(Simulation simulation, Room room, Humanoid humanoid)
@@ -324,7 +392,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         }
 
         IsDealtWith = true;
-        PatientCare.GpDealtWith(simulation, room, humanoid, this);
+        PatientCare.DealtWith(simulation, room, humanoid, this);
         Use?.Interrupt();
     }
 
@@ -463,14 +531,14 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     }
 
     /// <summary>
-    /// <c>action_seek_room_find_room</c> for treatment: every room of the treatment must be there. If one is
-    /// missing, the patient waits for it, or for the player to send them home.
+    /// <c>action_seek_room_find_room</c> for treatment: before the first room every room of the treatment must be
+    /// there, later only the next one. If one is missing, the patient waits for it, or for the player to send them home.
     /// </summary>
     private void SeekTreatmentRoom(Simulation simulation, Humanoid humanoid)
     {
-        if (Disease is not { TreatmentRooms: [var first, ..] } disease
-            || disease.TreatmentRooms.Any(roomType => FindRoom(simulation, humanoid, roomType) is null)
-            || !GoToBestRoom(simulation, humanoid, first))
+        if (Disease is not { } disease || CureRoomsVisited >= disease.TreatmentRooms.Count
+            || (CureRoomsVisited == 0 && disease.TreatmentRooms.Any(roomType => FindRoom(simulation, humanoid, roomType) is null))
+            || !GoToBestRoom(simulation, humanoid, disease.TreatmentRooms[CureRoomsVisited]))
         {
             StartWaiting(simulation, humanoid);
         }
@@ -532,18 +600,50 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         queue.Push(simulation, humanoid);
     }
 
-    /// <summary>Through the door: walk to the room's object (GPRoom:commandEnteringPatient).</summary>
+    /// <summary>
+    /// Through the door: walk to the room's object, the GP's chair (<c>GPRoom:commandEnteringPatient</c>) or the
+    /// pharmacy cabinet's patient side (<c>PharmacyRoom:commandEnteringPatient</c>).
+    /// </summary>
     private void EnterRoom(Simulation simulation, Humanoid humanoid)
     {
-        if (simulation.FindEntity(TargetId) is not Room room || RoomVisits.PatientObject(simulation, room.Id) is not { } placed)
+        if (simulation.FindEntity(TargetId) is not Room room || RoomVisits.PatientObject(simulation, room) is not { } placed)
         {
             LeaveRoom(simulation, humanoid);
             return;
         }
 
-        room.MaxTimes = RoomVisits.GpMaxTimes;
         Phase = PatientPhase.WalkingToObject;
+        if (string.Equals(room.RoomType, RoomVisits.PharmacyRoom, StringComparison.Ordinal))
+        {
+            humanoid.WalkTo(simulation, RoomVisits.SecondaryUseTile(simulation, placed));
+            return;
+        }
+
+        room.MaxTimes = RoomVisits.GpMaxTimes;
         humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, placed));
+    }
+
+    /// <summary>
+    /// At the object: sit down on the GP's chair, or stand at the pharmacy cabinet facing the nurse's side (east of a
+    /// cabinet facing north, otherwise south) until she has given the drink.
+    /// </summary>
+    private void ArriveAtObject(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.FindEntity(TargetId) is not Room room || RoomVisits.PatientObject(simulation, room) is not { } placed)
+        {
+            LeaveRoom(simulation, humanoid);
+            return;
+        }
+
+        if (string.Equals(room.RoomType, RoomVisits.PharmacyRoom, StringComparison.Ordinal))
+        {
+            Phase = PatientPhase.StandingAtObject;
+            humanoid.Face(placed.Orientation == Direction.North ? Direction.East : Direction.South);
+            return;
+        }
+
+        Phase = PatientPhase.UsingObject;
+        Use = ObjectUse.Start(simulation, humanoid, placed);
     }
 
     private void LeaveRoom(Simulation simulation, Humanoid humanoid)
@@ -611,8 +711,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         writer.WriteInt32(InsuranceCompany);
         writer.WriteByte((byte)Seeking);
         writer.WriteInt32(DiagnosisRoomIndex);
-        writer.WriteBool(SeekAfterRoom);
+        writer.WriteByte((byte)Next);
         writer.WriteBool(IsDealtWith);
+        writer.WriteInt32(CureRoomsVisited);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -645,8 +746,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         patient.InsuranceCompany = reader.ReadInt32();
         patient.Seeking = (RoomSeek)reader.ReadByte();
         patient.DiagnosisRoomIndex = reader.ReadInt32();
-        patient.SeekAfterRoom = reader.ReadBool();
+        patient.Next = (AfterRoom)reader.ReadByte();
         patient.IsDealtWith = reader.ReadBool();
+        patient.CureRoomsVisited = reader.ReadInt32();
         return patient;
     }
 }

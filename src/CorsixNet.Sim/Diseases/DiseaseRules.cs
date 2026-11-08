@@ -36,6 +36,12 @@ public sealed class DiseaseRules
         700, 700, 700, 350, 700, 1000, 700, 1000, 700, 1000, 700, 700, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
 
+    /// <summary>base_config.lua's <c>gbv.StartRating</c>.</summary>
+    public const int BaseDrugStartRating = 100;
+
+    /// <summary>base_config.lua's <c>gbv.StartCost</c>.</summary>
+    public const int BaseDrugStartCost = 100;
+
     private readonly int[] _startPrices;
     private readonly bool[] _known;
     private readonly int[] _maxDiagDiffs;
@@ -53,6 +59,8 @@ public sealed class DiseaseRules
     /// <param name="nonVisualsAvailable">The month of the game after which each non-visual disease may appear.</param>
     /// <param name="holdVisualMonths">No visual diseases while the month of the game is below this (<c>gbv.HoldVisualMonths</c>).</param>
     /// <param name="holdVisualPeepCount">No visual diseases until this many patients came (<c>gbv.HoldVisualPeepCount</c>).</param>
+    /// <param name="drugStartRating">How effective a drug is, in percent (<c>gbv.StartRating</c>).</param>
+    /// <param name="drugStartCost">What a drug costs per cure (<c>gbv.StartCost</c>).</param>
     public DiseaseRules(
         IReadOnlyList<int> startPrices,
         IReadOnlyList<bool> known,
@@ -62,7 +70,9 @@ public sealed class DiseaseRules
         IReadOnlyList<int> visualsAvailable,
         IReadOnlyList<int> nonVisualsAvailable,
         int holdVisualMonths,
-        int holdVisualPeepCount)
+        int holdVisualPeepCount,
+        int drugStartRating = BaseDrugStartRating,
+        int drugStartCost = BaseDrugStartCost)
     {
         _startPrices = Copy(startPrices, ExpertiseCount + 1, nameof(startPrices));
         _known = [.. known];
@@ -78,6 +88,8 @@ public sealed class DiseaseRules
         _nonVisualsAvailable = Copy(nonVisualsAvailable, NonVisualsCount, nameof(nonVisualsAvailable));
         HoldVisualMonths = holdVisualMonths;
         HoldVisualPeepCount = holdVisualPeepCount;
+        DrugStartRating = drugStartRating;
+        DrugStartCost = drugStartCost;
     }
 
     /// <summary>
@@ -98,6 +110,12 @@ public sealed class DiseaseRules
     public int HoldVisualMonths { get; }
 
     public int HoldVisualPeepCount { get; }
+
+    /// <summary>How effective a newly available drug is, in percent (<c>gbv.StartRating</c>).</summary>
+    public int DrugStartRating { get; }
+
+    /// <summary>What a newly available drug costs per cure (<c>gbv.StartCost</c>).</summary>
+    public int DrugStartCost { get; }
 
     /// <summary>The level's <c>StartPrice</c> of an <c>expertise</c> entry.</summary>
     public int StartPrice(int expertiseId) => _startPrices[expertiseId];
@@ -168,6 +186,8 @@ public sealed class DiseaseRules
         WriteAll(writer, _nonVisualsAvailable);
         writer.WriteInt32(HoldVisualMonths);
         writer.WriteInt32(HoldVisualPeepCount);
+        writer.WriteInt32(DrugStartRating);
+        writer.WriteInt32(DrugStartCost);
     }
 
     internal static DiseaseRules Read(SimReader reader)
@@ -190,6 +210,8 @@ public sealed class DiseaseRules
             ReadAll(reader, NonVisualsCount),
             ReadAll(reader, VisualsCount),
             ReadAll(reader, NonVisualsCount),
+            reader.ReadInt32(),
+            reader.ReadInt32(),
             reader.ReadInt32(),
             reader.ReadInt32());
     }

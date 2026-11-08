@@ -72,15 +72,24 @@ Done and committed:
   their insurance pays two months later); diagnosed patients wait for a treatment room, the others for a
   diagnosis room or go home, as CorsixTH's default policies say. The demo's patient chair keeps off the
   front walls. Save format version 6.
+- Pharmacy and treatment (see ARCHITECTURE.md, "The pharmacy", "Treatment", "Two people using an
+  object"): Shift+B builds a pharmacy, a nurse goes to its cabinet and gives diagnosed patients their drink
+  (the cabinet's multi-use animations, patient drawn into the nurse's); they pay, are cured or die, and the
+  drug is paid for. Patients waiting for a room go to one built later. The status line counts cures and
+  deaths; `--demo` builds a pharmacy and hires the best candidates; `--speed` sets the starting speed.
+  Save format version 7. Live-checked with `--demo --speed AndThenSomeMore`: keyboard input injected from a
+  Remote Control session does not reach the window, hence `--speed`.
 
 Not done yet:
 
 - M5: hire window (the original's staff list with faces), staff names and descriptions from the
   language files, staff meandering, hiring a receptionist straight onto a desk, benches, queue
   priorities, staff called through a dispatcher, the hospital's opening countdown.
-- Patients: diagnosis and treatment rooms other than the GP's office, faxes asking what to do with a
-  patient, the casebook window (prices), floating dollar signs, looks of visual diseases (new humanoid
-  types in the client), health, deaths, reputation and the price's effect on it.
+- Patients: diagnosis rooms (general diagnosis first: on level one a middling GP leaves most patients
+  below 0.9, so they wait), treatment rooms other than the pharmacy (inflation for bloaty heads,
+  psychiatry for TV personalities), faxes asking what to do with a patient, the casebook window
+  (prices), floating dollar signs, looks of visual diseases (new humanoid types in the client), health,
+  the death animation, reputation and the price's effect on it, drug research.
 - Money: buying land, loans and interest, hospital value (used by win criteria), bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and

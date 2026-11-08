@@ -115,6 +115,7 @@ public static class StaffHiring
         staff.Behaviour = staffClass switch
         {
             StaffClass.Doctor => new DoctorBehaviour(),
+            StaffClass.Nurse => new NurseBehaviour(),
             StaffClass.Receptionist => new ReceptionistBehaviour(),
             _ => null,
         };

@@ -71,6 +71,27 @@ public readonly record struct AnimationRef(int Id, int Length);
 /// </summary>
 public sealed record UseAnimations(AnimationRef? Begin, IReadOnlyList<AnimationRef> InUse, AnimationRef? Finish);
 
+/// <summary>
+/// One phase of two people using an object together: the animation of the one who uses it, and the animation the
+/// other one plays meanwhile, or null when they are hidden because the first animation shows them too.
+/// </summary>
+public readonly record struct MultiUsePhase(AnimationRef Primary, AnimationRef? Secondary = null)
+{
+    /// <summary>How long the phase lasts: the longer of the two animations, as CorsixTH's multi-use action.</summary>
+    public int Length => Secondary is { } secondary ? Math.Max(Primary.Length, secondary.Length) : Primary.Length;
+}
+
+/// <summary>
+/// How two kinds of humanoid use an object together, as CorsixTH's <c>multi_usage_animations</c>: the begin
+/// phases (<c>begin_use</c> to <c>begin_use_5</c>), the in-use phase and the finish phases (<c>finish_use</c> to
+/// <c>finish_use_5</c>), each played once.
+/// </summary>
+public sealed record MultiUseAnimations(IReadOnlyList<MultiUsePhase> Begin, MultiUsePhase InUse, IReadOnlyList<MultiUsePhase> Finish)
+{
+    /// <summary>All phases in order.</summary>
+    public IEnumerable<MultiUsePhase> Phases => Begin.Append(InUse).Concat(Finish);
+}
+
 /// <summary>A kind of object the player can place, as in CorsixTH's <c>objects/*.lua</c>.</summary>
 /// <param name="Id">Stable identifier used in commands and saves, e.g. "desk".</param>
 /// <param name="Name">Name shown to the player.</param>
@@ -80,6 +101,10 @@ public sealed record UseAnimations(AnimationRef? Begin, IReadOnlyList<AnimationR
 /// <param name="UsageNorth">Animations of use when the object faces north (and, mirrored, west), by kind of humanoid.</param>
 /// <param name="UsageEast">Animations of use when the object faces east (and, mirrored, south), by kind of humanoid.</param>
 /// <param name="WalkInToUse">Whether the user walks from the use position onto the object first (CorsixTH's <c>walk_in_to_use</c>).</param>
+/// <param name="MultiUsage">
+/// Animations of two people using the object together, per facing direction and by the kinds of the one using it
+/// and the one with them. A direction without its own mirrors the opposite one, as CorsixTH's <c>orient_mirror</c>.
+/// </param>
 public sealed record ObjectDefinition(
     string Id,
     string Name,
@@ -88,8 +113,41 @@ public sealed record ObjectDefinition(
     bool CorridorObject = false,
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageNorth = null,
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageEast = null,
-    bool WalkInToUse = false)
+    bool WalkInToUse = false,
+    IReadOnlyDictionary<Direction, IReadOnlyDictionary<(HumanoidType Primary, HumanoidType Secondary), MultiUseAnimations>>? MultiUsage = null)
 {
+    /// <summary>
+    /// The animations for <paramref name="primary"/> using the object facing <paramref name="orientation"/> with
+    /// <paramref name="secondary"/>, and whether they are mirrored (<c>action_multi_use_object_start</c>).
+    /// </summary>
+    public (MultiUseAnimations Animations, bool Flip)? MultiUse(Direction orientation, HumanoidType primary, HumanoidType secondary)
+    {
+        if (MultiUsage is null)
+        {
+            return null;
+        }
+
+        var flip = false;
+        if (!MultiUsage.TryGetValue(orientation, out var table))
+        {
+            var mirror = orientation switch
+            {
+                Direction.North => Direction.West,
+                Direction.West => Direction.North,
+                Direction.East => Direction.South,
+                _ => Direction.East,
+            };
+            if (!MultiUsage.TryGetValue(mirror, out table))
+            {
+                return null;
+            }
+
+            flip = true;
+        }
+
+        return table.TryGetValue((primary, secondary), out var animations) ? (animations, flip) : null;
+    }
+
     /// <summary>
     /// The animations for <paramref name="type"/> using the object facing <paramref name="orientation"/>, and
     /// whether they are mirrored; south and west mirror east and north as in CorsixTH.

@@ -26,7 +26,7 @@ public enum DoctorPhase : byte
 /// At the desk, every round of the desk animation counts down; when a patient sits on the chair the doctor
 /// may conclude the consultation, the more likely the more skilled they are.
 /// </summary>
-public sealed class DoctorBehaviour : HumanoidBehaviour
+public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 {
     private const string CabinetType = "cabinet";
     private const string DeskType = "desk";
@@ -44,7 +44,7 @@ public sealed class DoctorBehaviour : HumanoidBehaviour
     /// <summary>The doctor's use of the cabinet or desk, while it lasts.</summary>
     public ObjectUse? Use { get; private set; }
 
-    internal void GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
+    void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         RoomId = room.Id;
         Phase = DoctorPhase.WalkingToRoom;

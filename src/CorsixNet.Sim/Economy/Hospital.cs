@@ -24,6 +24,12 @@ public enum TransactionKind : byte
 
     /// <summary>An insurance company paid what it owed from two months ago; the subject is its number (1 to 3).</summary>
     Insurance = 6,
+
+    /// <summary>
+    /// The drug for a cure in the pharmacy was bought; the subject is the drug company's number (1 to 5), as CorsixTH
+    /// names one of five companies at random.
+    /// </summary>
+    DrugCost = 7,
 }
 
 /// <summary>One entry of a hospital's transaction log.</summary>
@@ -43,11 +49,26 @@ public sealed class DiseaseCase
     /// <summary>The standard price in percent; the player may set 50 to 200.</summary>
     public const int StandardPrice = 100;
 
+    /// <summary>Cure effectiveness of a disease cured without a drug.</summary>
+    public const int FullEffectiveness = 100;
+
     internal DiseaseCase(string diseaseId, bool discovered)
     {
         DiseaseId = diseaseId;
         Discovered = discovered;
     }
+
+    /// <summary>How likely a cure works, in percent (CorsixTH's <c>cure_effectiveness</c>): the drug's rating, otherwise 100.</summary>
+    public int CureEffectiveness { get; internal set; } = FullEffectiveness;
+
+    /// <summary>What the drug of each cure costs, or 0 for a disease not cured with a drug (CorsixTH's <c>drug_cost</c>).</summary>
+    public int DrugCost { get; internal set; }
+
+    /// <summary>Patients cured of it so far.</summary>
+    public int Recoveries { get; internal set; }
+
+    /// <summary>Patients who died of it so far.</summary>
+    public int Fatalities { get; internal set; }
 
     public string DiseaseId { get; }
 
@@ -102,6 +123,12 @@ public sealed class Hospital
     /// <summary>Patients who came to the hospital so far (CorsixTH's <c>num_visitors</c>).</summary>
     public int Visitors { get; internal set; }
 
+    /// <summary>Patients cured so far (CorsixTH's <c>num_cured</c>).</summary>
+    public int Cured { get; internal set; }
+
+    /// <summary>Patients who died so far (CorsixTH's <c>num_deaths</c>).</summary>
+    public int Deaths { get; internal set; }
+
     /// <summary>Year ends so far, each of which raised prices by the inflation rate.</summary>
     public int InflationYears { get; private set; }
 
@@ -120,12 +147,21 @@ public sealed class Hospital
         return owed;
     }
 
-    /// <summary>The casebook entry for a disease, made on first use: discovered if the level makes it known.</summary>
+    /// <summary>
+    /// The casebook entry for a disease, made on first use: discovered if the level makes it known; a disease cured in
+    /// the pharmacy gets the level's drug rating and cost (<c>gbv.StartRating</c>, <c>gbv.StartCost</c>).
+    /// </summary>
     public DiseaseCase CaseOf(DiseaseDefinition disease, DiseaseRules rules)
     {
         if (!_casebook.TryGetValue(disease.Id, out var entry))
         {
             entry = new DiseaseCase(disease.Id, rules.IsKnown(disease.ExpertiseId));
+            if (disease.TreatmentRooms is ["pharmacy", ..])
+            {
+                entry.CureEffectiveness = rules.DrugStartRating;
+                entry.DrugCost = rules.DrugStartCost;
+            }
+
             _casebook.Add(disease.Id, entry);
         }
 
@@ -217,6 +253,15 @@ public sealed class Hospital
         }
     }
 
+    /// <summary><c>Hospital:paySupplierForDrug</c>: the drug of a cure is paid to one of five drug companies.</summary>
+    internal void PayForDrug(long tick, DiseaseCase entry, int company)
+    {
+        if (entry.DrugCost != 0)
+        {
+            Spend(tick, entry.DrugCost, TransactionKind.DrugCost, company.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
     /// <summary><c>Hospital:onEndYear</c>: prices go up by the inflation rate.</summary>
     internal void OnEndYear() => InflationYears++;
 
@@ -234,6 +279,8 @@ public sealed class Hospital
         }
 
         writer.WriteInt32(Visitors);
+        writer.WriteInt32(Cured);
+        writer.WriteInt32(Deaths);
         writer.WriteInt32(InflationYears);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
@@ -250,6 +297,10 @@ public sealed class Hospital
             writer.WriteInt32(entry.PricePercent);
             writer.WriteBool(entry.Discovered);
             writer.WriteInt64(entry.MoneyEarned);
+            writer.WriteInt32(entry.CureEffectiveness);
+            writer.WriteInt32(entry.DrugCost);
+            writer.WriteInt32(entry.Recoveries);
+            writer.WriteInt32(entry.Fatalities);
         }
     }
 
@@ -261,7 +312,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Insurance)
+            if (kind > (byte)TransactionKind.DrugCost)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -270,6 +321,8 @@ public sealed class Hospital
         }
 
         hospital.Visitors = reader.ReadInt32();
+        hospital.Cured = reader.ReadInt32();
+        hospital.Deaths = reader.ReadInt32();
         hospital.InflationYears = reader.ReadInt32();
         for (var company = 0; company < InsuranceCompanies; company++)
         {
@@ -286,6 +339,10 @@ public sealed class Hospital
             var entry = new DiseaseCase(id, discovered: false) { PricePercent = reader.ReadInt32() };
             entry.Discovered = reader.ReadBool();
             entry.MoneyEarned = reader.ReadInt64();
+            entry.CureEffectiveness = reader.ReadInt32();
+            entry.DrugCost = reader.ReadInt32();
+            entry.Recoveries = reader.ReadInt32();
+            entry.Fatalities = reader.ReadInt32();
             if (!hospital._casebook.TryAdd(id, entry))
             {
                 throw new InvalidDataException($"Casebook entry '{id}' is given twice.");
