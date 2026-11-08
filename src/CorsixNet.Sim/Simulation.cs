@@ -26,7 +26,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 13;
+    private const int FormatVersion = 14;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -487,16 +487,45 @@ public sealed class Simulation
 
         foreach (var hospital in _hospitals)
         {
+            // PlayerHospital:onEndMonth looks for a win at the end of March, June and September, before the wages.
+            if (date.Month is 3 or 6 or 9)
+            {
+                CheckEndConditions(hospital, mayLose: false);
+            }
+
             hospital.PayWages(Tick, wages[hospital.Player]);
             hospital.PayInsurance(Tick);
             if (date.IsLastDayOfYear)
             {
                 hospital.OnEndYear(Tick, Random, Rules.Awards);
+
+                // World:onEndYear looks for a loss, and the annual report on closing for a win. CorsixTH means the
+                // loss to come after the trophies and awards but pays them only when the report closes; here both
+                // checks come after them.
+                CheckEndConditions(hospital, mayLose: true);
             }
         }
 
         Arrivals.OnEndMonth(this);
         MakeAvailableStaff(date.MonthOfGame);
+    }
+
+    /// <summary>
+    /// <c>World:checkIfGameWon</c>, or with <paramref name="mayLose"/> the year end's check for a loss followed by one
+    /// for a win. A hospital that has won or lost is not checked again.
+    /// </summary>
+    private void CheckEndConditions(Hospital hospital, bool mayLose)
+    {
+        if (hospital.Outcome != EndOutcome.None)
+        {
+            return;
+        }
+
+        var (outcome, lostTo) = Rules.EndConditions.Check(this, hospital);
+        if (outcome == EndOutcome.Won || (mayLose && outcome == EndOutcome.Lost))
+        {
+            hospital.End(outcome, lostTo);
+        }
     }
 
     private void CreateMapObject(MapObjectPlacement placement)

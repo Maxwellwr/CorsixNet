@@ -149,10 +149,12 @@ MMPX smoothing; everything else is debug keys.
 ## 7. Levels, goals, campaign
 
 **Has:** loading original `LEVEL.Lx` maps and `.SAM` level settings (start cash, prices, staff
-rules, `popn`, disease frequencies and availability), switching levels with Page Up/Down.
+rules, `popn`, disease frequencies and availability, win and lose criteria), switching levels with Page Up/Down.
+Hospitals win and lose by the level's criteria (`endconditions.lua`), and the progress report's content is computed.
 
-- Win and lose criteria (`#win_criteria`, `#lose_criteria`: reputation, balance, cured %, value, deaths),
-  progress report, level completion and the letter to the next level (`endconditions.lua`, `fullscreen/progress_report.lua`).
+- Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
+  (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`). Staff and
+  patient happiness for the criteria count as full until happiness is modelled.
 - Remaining level settings: emergencies (`#emergency_control`), epidemics, VIP and earthquake schedules,
   `computer[n]` AI players, interest rates and overdraft, research settings, room availability, `#gbv`
   values beyond the ones read now.

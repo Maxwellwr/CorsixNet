@@ -404,6 +404,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   trophies (`TransactionKind.TrophyBonus`), awards and fines (`AwardBonus`, which may be negative) and
   reputation for the hospital's value; then the year's counts start afresh and prices rise. The results stay
   in `Hospital.LastYearAwards` until the annual report screen exists.
+- **Winning and losing** (`EndConditions`, from `endconditions.lua`). The level's `win_criteria` and
+  `lose_criteria` become goals in groups; a hospital meeting every goal of a win group wins, one meeting every goal
+  of a lose group loses. Wins are looked for at the end of March, June and September and at the year end, losses
+  only at the year end, after its trophies and awards. The outcome stays in `Hospital.Outcome`; the simulation
+  goes on. `ProgressReport` gives what CorsixTH's progress report shows.
 - **Using objects** (`ObjectUse`, from `use_object.lua`). The object's usage animations
   (`ObjectDefinition.UsageNorth` and `UsageEast`, mirrored for south and west) say how long each phase
   lasts: one tick per frame, with the lengths of the original's animations in `BaseGameContent` (a
