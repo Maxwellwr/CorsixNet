@@ -5,6 +5,7 @@ using CorsixNet.Client.Maps;
 using CorsixNet.Client.Sessions;
 using CorsixNet.Client.SpriteViewer;
 using CorsixNet.Content;
+using CorsixNet.Content.Interface;
 using CorsixNet.Content.Levels;
 using CorsixNet.Content.Saves;
 using CorsixNet.Content.Settings;
@@ -23,7 +24,7 @@ const string Usage = """
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
       --demo            Build and furnish a GP's office and a pharmacy and add twenty patients wandering around
-      --speed NAME      Start a local game at a speed: Pause, Slowest, Slower, Normal, MaxSpeed or AndThenSomeMore
+      --speed NAME      Start a local game at a speed: Pause, Slowest, Slower, Normal, MaxSpeed, AndThenSomeMore or Insane
       --upscale N       Smooth sprites with the MMPX pixel art filter: 1 (original), 2 or 4 (key U)
       --load FILE       Load a saved game, e.g. the quick save or an autosave
       --continue        Load the newest autosave

@@ -1,3 +1,4 @@
+using CorsixNet.Content.Interface;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 

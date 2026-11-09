@@ -1045,7 +1045,7 @@ internal sealed class MapViewScreen : IScreen
         (Keys Key, GameSpeed Speed)[] speedKeys =
         [
             (Keys.D1, GameSpeed.Slowest), (Keys.D2, GameSpeed.Slower), (Keys.D3, GameSpeed.Normal),
-            (Keys.D4, GameSpeed.MaxSpeed), (Keys.D5, GameSpeed.AndThenSomeMore),
+            (Keys.D4, GameSpeed.MaxSpeed), (Keys.D5, GameSpeed.AndThenSomeMore), (Keys.D6, GameSpeed.Insane),
         ];
         foreach (var (key, speed) in speedKeys)
         {
@@ -1865,7 +1865,7 @@ internal sealed class MapViewScreen : IScreen
 
         if (_hoveredTile is not { } position || Map is not { } map)
         {
-            var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-5: speed   Z: hold to speed up" : string.Empty;
+            var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-6: speed   Z: hold to speed up" : string.Empty;
             return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office (Shift: pharmacy, Ctrl: general diagnosis)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 

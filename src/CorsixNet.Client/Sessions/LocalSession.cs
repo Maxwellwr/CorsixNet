@@ -1,4 +1,5 @@
 using System.Globalization;
+using CorsixNet.Content.Interface;
 using CorsixNet.Content.Saves;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
