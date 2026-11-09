@@ -44,6 +44,7 @@ public enum CommandKind : ushort
     GuessPatientCure = 29,
     ChangeQueueSize = 30,
     MoveInQueue = 31,
+    SendPatientToRoom = 32,
 }
 
 /// <summary>
@@ -98,6 +99,7 @@ public abstract record Command
             CommandKind.GuessPatientCure => new GuessPatientCureCommand(reader.ReadInt32()),
             CommandKind.ChangeQueueSize => new ChangeQueueSizeCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.MoveInQueue => new MoveInQueueCommand(reader.ReadInt32(), reader.ReadInt32()),
+            CommandKind.SendPatientToRoom => new SendPatientToRoomCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -771,6 +773,33 @@ public sealed record MoveInQueueCommand(int PatientId, int Position) : Command
     {
         writer.WriteInt32(PatientId);
         writer.WriteInt32(Position);
+    }
+}
+
+/// <summary>
+/// Sends a patient of the issuing player's hospital, on their way to a room or queueing at its door, to another active room
+/// of the same type of that hospital instead (CorsixTH's queue window, a patient dropped on a room in
+/// <c>UIQueue:onMouseUp</c>).
+/// </summary>
+public sealed record SendPatientToRoomCommand(int PatientId, int RoomId) : Command
+{
+    public override CommandKind Kind => CommandKind.SendPatientToRoom;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(PatientId) is Humanoid { Behaviour: PatientBehaviour patient, IsDespawning: false } humanoid
+            && humanoid.HospitalPlayer == player
+            && simulation.FindEntity(RoomId) is Room room
+            && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
+        {
+            patient.SendToRoom(simulation, humanoid, room);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(PatientId);
+        writer.WriteInt32(RoomId);
     }
 }
 

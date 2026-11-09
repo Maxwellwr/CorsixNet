@@ -2,6 +2,7 @@ using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.People;
 using static CorsixNet.Content.Tests.PatientFlowTests;
 
 namespace CorsixNet.Content.Tests;
@@ -52,5 +53,31 @@ public class QueueWindowTests
         var order = queue.Members.ToList();
         Run(simulation, new MoveInQueueCommand(last, queue.Count + 5));
         Assert.Equal(order.Take(queue.Count), queue.Members.Take(order.Count));
+    }
+
+    [Fact]
+    public void APatientCanBeSentToAnotherRoomOfTheSameType()
+    {
+        var simulation = NewStaffedHospital();
+        var first = simulation.Entities.OfType<Room>().Single();
+        var second = BuildSecondGp(simulation);
+        var queue = first.DoorQueue!;
+        for (var hour = 0; hour < 200 * GameDate.HoursPerDay && queue.Count < 2; hour++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(queue.Count >= 2, "No queue of two formed at the GP's door.");
+        var patient = (Humanoid?)simulation.FindEntity(queue.Members[^1]);
+        Assert.NotNull(patient);
+        var behaviour = (PatientBehaviour)patient.Behaviour!;
+
+        // Not to the room they already head for.
+        Run(simulation, new SendPatientToRoomCommand(patient.Id, first.Id));
+        Assert.Equal(first.Id, behaviour.TargetId);
+
+        Run(simulation, new SendPatientToRoomCommand(patient.Id, second.Id));
+        Assert.Equal(second.Id, behaviour.TargetId);
+        Assert.DoesNotContain(patient.Id, queue.Members);
     }
 }

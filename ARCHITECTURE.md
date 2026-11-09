@@ -355,8 +355,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   VIPs and the inspector, then emergency patients (and, with the queue jump cheat, nearly dead ones) go
   ahead of other patients; no benches yet. The queue window's controls are commands:
   `ChangeQueueSizeCommand` makes a door's or desk's queue longer or shorter (0 to 30; a full queue only puts off
-  newcomers) and `MoveInQueueCommand` moves a patient to another place in their queue, whatever their priority.
-  The window itself, and keys for them, are not there yet.
+  newcomers) and `MoveInQueueCommand` moves a patient to another place in their queue, whatever their priority;
+  `SendPatientToRoomCommand` sends a patient on their way to a room, or queueing at it, to another active room of
+  the same type (a patient dropped on a room). The window itself, and keys for them, are not there yet.
 - **Seeking a desk or a room** scores each candidate by path distance plus ten tiles per person queueing
   or on the way (a room with its staff in gets 50 tiles off, a full queue 1000 on). A patient joins a
   desk's queue once within 6 tiles of it; further away they walk towards it until they are.

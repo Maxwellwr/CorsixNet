@@ -106,9 +106,10 @@ Done and committed:
   player's salary and the salary offered on winning (PR #131), the VIP rating counting the litter they
   see (PR #132), patients' thirst and need for the toilet growing (PR #133), the end of the month and
   year cheats (PR #134), the fax code cheats (PR #135), the patient window's send home and guess cure as
-  commands, Q and Shift+Q (PR #136), the queue window's size and reordering as commands (PR #137). No
-  game data in the cloud: real-data tests were skipped there and the client was not run, so these want a
-  look on MSI. Save format version 42.
+  commands, Q and Shift+Q (PR #136), the queue window's size and reordering as commands (PR #137),
+  sending a patient queueing for a room to another room of the same type (PR #138). No game data in the
+  cloud: real-data tests were skipped there and the client was not run, so these want a look on MSI.
+  Save format version 42.
 
 Not done yet:
 

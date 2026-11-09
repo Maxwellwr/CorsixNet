@@ -572,6 +572,29 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>UIQueue:onMouseUp</c>: a patient on their way to a room, or queueing at its door, is dropped on another active
+    /// room of the same type: they leave the queue and head for that room instead (<c>setNextAction(room:createEnterAction)</c>).
+    /// </summary>
+    internal void SendToRoom(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (Phase is not (PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue)
+            || simulation.FindEntity(TargetId) is not Room current
+            || current.Id == room.Id
+            || current.RoomType != room.RoomType
+            || !room.IsActive
+            || simulation.FindEntity(room.DoorId) is not RoomDoor door)
+        {
+            return;
+        }
+
+        LeaveQueue(simulation, humanoid);
+        Waiting = -1;
+        TargetId = room.Id;
+        Phase = PatientPhase.WalkingToRoom;
+        humanoid.WalkTo(simulation, RoomVisits.OutsideTile(room, door));
+    }
+
+    /// <summary>
     /// <c>Patient:setToDying</c> from <c>Hospital:resolveEmergency</c>: an emergency patient not cured, dead or going home
     /// when time is up will die.
     /// </summary>
