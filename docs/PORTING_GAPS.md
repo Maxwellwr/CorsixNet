@@ -95,8 +95,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
 - Queue features: benches (priorities for VIPs, the inspector and emergency patients are done), queue window to reorder or send home,
   patients rerouting to shorter queues (`queue.lua`, `dialogs/queue_dialog.lua`).
-- Patient window: health, happiness, thirst, warmth, diagnosis progress, send home, guess cure
-  (`dialogs/patient.lua`).
+- Patient window: health, happiness, thirst, warmth, diagnosis progress (`dialogs/patient.lua`). Its send home
+  and guess cure buttons are done as commands (`SendPatientHomeCommand`, `GuessPatientCureCommand`; Q and Shift+Q
+  in the client).
 - The fax window for patients asking what to do, its texts (what to build or hire) and the research choice, and the
   policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
   (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers

@@ -40,6 +40,8 @@ public enum CommandKind : ushort
     Vaccinate = 25,
     AnswerPatient = 26,
     ShootRat = 27,
+    SendPatientHome = 28,
+    GuessPatientCure = 29,
 }
 
 /// <summary>
@@ -90,6 +92,8 @@ public abstract record Command
             CommandKind.Vaccinate => new VaccinateCommand(reader.ReadInt32()),
             CommandKind.AnswerPatient => new AnswerPatientCommand(reader.ReadInt32(), ReadPatientAnswer(reader)),
             CommandKind.ShootRat => new ShootRatCommand(reader.ReadInt32()),
+            CommandKind.SendPatientHome => new SendPatientHomeCommand(reader.ReadInt32()),
+            CommandKind.GuessPatientCure => new GuessPatientCureCommand(reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -672,6 +676,44 @@ public sealed record AnswerPatientCommand(int PatientId, PatientAnswer Answer) :
         writer.WriteInt32(PatientId);
         writer.WriteByte((byte)Answer);
     }
+}
+
+/// <summary>
+/// Sends a patient of the issuing player's hospital home from the patient window (CorsixTH's <c>UIPatient:goHome</c>),
+/// counted as kicked out.
+/// </summary>
+public sealed record SendPatientHomeCommand(int PatientId) : Command
+{
+    public override CommandKind Kind => CommandKind.SendPatientHome;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(PatientId) is Humanoid { Behaviour: PatientBehaviour patient, IsDespawning: false } humanoid && humanoid.HospitalPlayer == player)
+        {
+            patient.SendHome(simulation, humanoid);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(PatientId);
+}
+
+/// <summary>
+/// Guesses the cure of a patient of the issuing player's hospital from the patient window (CorsixTH's
+/// <c>UIPatient:guessDisease</c>): diagnosed at once, they go for treatment if they agree to pay.
+/// </summary>
+public sealed record GuessPatientCureCommand(int PatientId) : Command
+{
+    public override CommandKind Kind => CommandKind.GuessPatientCure;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(PatientId) is Humanoid { Behaviour: PatientBehaviour patient, IsDespawning: false } humanoid && humanoid.HospitalPlayer == player)
+        {
+            patient.GuessCure(simulation, humanoid);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(PatientId);
 }
 
 /// <summary>

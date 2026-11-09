@@ -384,6 +384,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   working, they go to it (`RoomVisits.OnRoomActivated`). CorsixTH's faxes asking the player what to do are not
   there yet. A doctor of middling skill and little attention to detail gets level one's patients only about
   three quarters of the way, so without general diagnosis many of them wait.
+- **The patient window's buttons** (`PatientBehaviour.SendHome`, `GuessCure`, from `dialogs/patient.lua`).
+  `SendPatientHomeCommand` sends a patient home, counted as kicked out; `GuessPatientCureCommand` diagnoses a
+  patient whose diagnosis has begun and whose disease the hospital knows, who then goes for treatment if they
+  agree to pay and home otherwise. Neither works on a patient in a room (CorsixTH makes them leave the room). Q and
+  Shift+Q in the client, for the patient by the cursor, until the window exists.
 - **General diagnosis** (`PatientBehaviour.GeneralDiagnosisStep`, from `rooms/general_diag.lua` and
   `use_screen.lua`). The room sends for a free doctor, who waits at the crash trolley's secondary use position
   (CorsixTH's doctor meanders meanwhile). The patient undresses behind the screen (the screen's animation shows them;

@@ -1050,6 +1050,21 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
+        // Until patients can be clicked, Q sends the player's patient nearest the cursor home (within a tile), and
+        // Shift+Q guesses their cure, as the patient window's buttons do.
+        if (pressed(Keys.Q) && _hoveredTile is { } spot)
+        {
+            var chosen = simulation.Entities.OfType<Humanoid>()
+                .Where(h => h.Behaviour is PatientBehaviour && h.HospitalPlayer == _session.Player && !h.IsDespawning)
+                .Where(h => Math.Abs(h.Tile.X - spot.X) <= 1 && Math.Abs(h.Tile.Y - spot.Y) <= 1)
+                .OrderBy(h => Math.Abs(h.Tile.X - spot.X) + Math.Abs(h.Tile.Y - spot.Y))
+                .FirstOrDefault();
+            if (chosen is not null)
+            {
+                _session.Submit(shift ? new GuessPatientCureCommand(chosen.Id) : new SendPatientHomeCommand(chosen.Id));
+            }
+        }
+
         // Until faxes exist, V invites the VIP who asks to visit and Shift+V refuses them.
         if (pressed(Keys.V) && simulation.Hospitals[_session.Player].Vips.IsInvitationPending)
         {
