@@ -2,9 +2,11 @@ using CorsixNet.Client.Ui;
 using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Client.Tests;
@@ -60,6 +62,16 @@ internal sealed class WindowTestHost : IWindowHost
         return Simulation.Entities.OfType<Humanoid>().Last();
     }
 
+    /// <summary>A patient with a cold, as if they had come to the hospital.</summary>
+    public Humanoid AddPatient(int x = 6, int y = 6)
+    {
+        var humanoid = Simulation.AddEntity(id => Humanoid.CreatePatient(id, new TilePosition(x, y), Simulation.Random, PatientLook.Standard, 0));
+        var patient = new PatientBehaviour { Health = 0.9m };
+        patient.SetDisease(DiseaseCatalog.Find("uncommon_cold")!, 0, Simulation.Random);
+        humanoid.Behaviour = patient;
+        return humanoid;
+    }
+
     /// <summary>Clicks the first enabled button of the window with this text.</summary>
     public void Click(UiWindow window, string text, int skip = 0)
     {
@@ -86,7 +98,7 @@ internal sealed class WindowTestHost : IWindowHost
                 if (x is >= 2 and < Size - 2 && y is >= 2 and < Size - 2)
                 {
                     tile.Parcel = 1;
-                    tile.Set(TileFlags.Buildable | TileFlags.Hospital, true);
+                    tile.Set(TileFlags.Buildable | TileFlags.Hospital | TileFlags.BuildableNorth | TileFlags.BuildableEast | TileFlags.BuildableSouth | TileFlags.BuildableWest, true);
                 }
             }
         }
