@@ -104,6 +104,7 @@ internal sealed class MapViewScreen : IScreen
     private readonly FurnishCorridorTool _furnishTool = new();
     private readonly HashSet<int> _hiddenObjects = [];
     private readonly ObjectDrawing _objects;
+    private readonly FloatingDollarDrawing _floatingDollars;
 
     /// <summary>Objects the demo still has to place in its GP's office, one at a time.</summary>
     private readonly Queue<string> _demoFurniture = new();
@@ -174,6 +175,7 @@ internal sealed class MapViewScreen : IScreen
         _humanoids = new HumanoidDrawing(_animations);
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
+        _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
         _pixel = new Texture2D(device, 1, 1);
@@ -292,6 +294,7 @@ internal sealed class MapViewScreen : IScreen
             _blocks.SetScale(scale);
             _animations.SetScale(scale);
             _blueprints.SetScale(scale);
+            _floatingDollars.SetScale(scale);
         }
 
         var pan = Vector2.Zero;
@@ -463,6 +466,7 @@ internal sealed class MapViewScreen : IScreen
         _session?.Dispose();
         _target?.Dispose();
         _blueprints.Dispose();
+        _floatingDollars.Dispose();
         _animations.Dispose();
         _blocks.Dispose();
         _text.Dispose();
@@ -1416,8 +1420,14 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
-        if (Simulation is not { } simulation || !_entitiesByTile.TryGetValue(tile, out var list))
+        if (Simulation is not { } simulation)
         {
+            return;
+        }
+
+        if (!_entitiesByTile.TryGetValue(tile, out var list))
+        {
+            DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
             return;
         }
 
@@ -1448,6 +1458,28 @@ internal sealed class MapViewScreen : IScreen
                     var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
                     _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
                     break;
+            }
+        }
+
+        DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
+    }
+
+    /// <summary>
+    /// The local player's floating dollar signs on <paramref name="tile"/>, over everything else on it (CorsixTH's
+    /// <c>DrawingLayers.FloatingDollars</c>).
+    /// </summary>
+    private void DrawFloatingDollars(SpriteBatch batch, Simulation simulation, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (_session is not { } session)
+        {
+            return;
+        }
+
+        foreach (var sign in simulation.FloatingDollarSigns)
+        {
+            if (sign.Tile == tile && sign.Player == session.Player)
+            {
+                _floatingDollars.Draw(batch, sign, anchorX, anchorY, simulation.Tick);
             }
         }
     }
