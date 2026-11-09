@@ -396,6 +396,61 @@ public static class BaseGameContent
         LevelConfigId: 28,
         AdditionalObjects: ["extinguisher", "radiator", "plant", "bin", "computer", "desk", "cabinet", "analyser"]);
 
+    /// <summary>
+    /// The X-ray (objects/machines/x_ray.lua): the patient walks into it, is X-rayed and walks out; facing south it uses
+    /// the north animations.
+    /// </summary>
+    public static readonly ObjectDefinition XRay = new(
+        "x_ray",
+        "X-Ray",
+        ObjectType: 27,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(-2, -2), new(-1, -2), new(-2, -1), new(-1, -1), new(0, -1), new(1, -1, UsePosition), new(-2, 0), new(-1, 0), new(0, 0)],
+                RenderAttach: (-1, -1),
+                UsePosition: (1, -1)),
+            [Direction.East] = new(
+                [new(-2, -2), new(-1, -2), new(0, -2), new(-2, -1), new(-1, -1), new(0, -1), new(-1, 0), new(0, 0), new(-1, 1, UsePosition)],
+                RenderAttach: (-1, -1),
+                UsePosition: (-1, 1)),
+        },
+        UsageNorth: XRayUse(),
+        UsageSouth: XRayUse());
+
+    /// <summary>
+    /// The radiation shield (objects/radiation_shield.lua): the doctor sits at its console while the patient is X-rayed. Its
+    /// front part (radiation_shield_b) is drawn by the client.
+    /// </summary>
+    public static readonly ObjectDefinition RadiationShield = new(
+        "radiation_shield",
+        "Radiation Shield",
+        ObjectType: 28,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(-2, -1), new(-1, -1), new(0, -1), new(-2, 0), new(-1, 0), new(0, 0, UsePosition), new(-2, 1), new(-1, 1), new(0, 1)],
+                RenderAttach: (0, -1),
+                UsePosition: (0, 0)),
+            [Direction.East] = new(
+                [new(-1, -2), new(0, -2), new(1, -2), new(-1, -1), new(0, -1), new(1, -1), new(-1, 0), new(0, 0, UsePosition), new(1, 0)],
+                RenderAttach: (0, -1),
+                UsePosition: (0, 0)),
+        },
+        UsageNorth: ShieldUse(),
+        UsageSouth: ShieldUse());
+
+    /// <summary>The X-ray room (rooms/x_ray_room.lua): a diagnosis room with a doctor.</summary>
+    public static readonly RoomDefinition XRayRoom = new(
+        "x_ray",
+        "X-Ray",
+        MinimumSize: 6,
+        FloorSprite: 19,
+        YellowWalls,
+        NeededObjects: new Dictionary<string, int> { ["x_ray"] = 1, ["radiation_shield"] = 1 },
+        LevelConfigId: 16,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -450,10 +505,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield],
         DoorAnimations,
         PatientAnimations);
 
@@ -511,6 +566,19 @@ public static class BaseGameContent
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
+
+    /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(new(1964, 27), [new(1960, 2)], new(1992, 16)),
+        [HumanoidType.StandardFemalePatient] = new(new(2948, 27), [new(2952, 2)], new(2956, 16)),
+    };
+
+    /// <summary>radiation_shield.lua's doctor: sits down, pulls the handle, sits idle or pushes buttons, stands up.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> ShieldUse() => new()
+    {
+        [HumanoidType.Doctor] = new(new(798, 13), [new(810, 19), new(814, 20)], new(802, 8), Begin2: new(806, 20)),
+    };
 
     /// <summary>loo.lua's animations for the standard patients: men pick one of two in-use animations.</summary>
     private static Dictionary<HumanoidType, UseAnimations> LooUse() => new()

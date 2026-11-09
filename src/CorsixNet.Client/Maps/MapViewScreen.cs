@@ -104,6 +104,9 @@ internal sealed class MapViewScreen : IScreen
     private readonly HumanoidDrawing _humanoids;
     private readonly EntranceDoorDrawing _doors;
     private readonly Dictionary<TilePosition, List<Entity>> _entitiesByTile = [];
+
+    /// <summary>Objects whose second part (CorsixTH's slave object) is drawn on the tile.</summary>
+    private readonly Dictionary<TilePosition, List<RoomObject>> _slavePartsByTile = [];
     private readonly BuildRoomTool _buildTool = new();
     private readonly FurnishCorridorTool _furnishTool = new();
     private readonly HashSet<int> _hiddenObjects = [];
@@ -1473,6 +1476,11 @@ internal sealed class MapViewScreen : IScreen
             list.Clear();
         }
 
+        foreach (var list in _slavePartsByTile.Values)
+        {
+            list.Clear();
+        }
+
         if (Simulation is not { } simulation)
         {
             return;
@@ -1521,6 +1529,17 @@ internal sealed class MapViewScreen : IScreen
             {
                 list = [];
                 _entitiesByTile[position] = list;
+            }
+
+            if (entity is RoomObject master && ObjectDrawing.SlaveDrawTile(master.ObjectType, master.Tile, master.Orientation) is { } slaveTile)
+            {
+                if (!_slavePartsByTile.TryGetValue(slaveTile, out var slaves))
+                {
+                    slaves = [];
+                    _slavePartsByTile[slaveTile] = slaves;
+                }
+
+                slaves.Add(master);
             }
 
             // Litter lies on the floor, under whatever else is on its tile (CorsixTH's DrawingLayers.Litter).
@@ -1648,6 +1667,7 @@ internal sealed class MapViewScreen : IScreen
 
         if (!_entitiesByTile.TryGetValue(tile, out var list))
         {
+            DrawSlaveParts(batch, tile);
             DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
             return;
         }
@@ -1682,7 +1702,23 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
+        DrawSlaveParts(batch, tile);
         DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
+    }
+
+    /// <summary>The second parts of objects drawn on <paramref name="tile"/>, such as the radiation shield's front.</summary>
+    private void DrawSlaveParts(SpriteBatch batch, TilePosition tile)
+    {
+        if (!_slavePartsByTile.TryGetValue(tile, out var slaves))
+        {
+            return;
+        }
+
+        foreach (var master in slaves)
+        {
+            var tint = master.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
+            _objects.DrawSlave(batch, master.ObjectType, master.Tile, master.Orientation, tint);
+        }
     }
 
     /// <summary>

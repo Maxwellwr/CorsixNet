@@ -38,6 +38,8 @@ internal sealed class ObjectDrawing
         ["drinks_machine"] = new() { [S] = 170, [W] = 172, [N] = 174, [E] = 176 },
         ["loo"] = new() { [N] = 1760, [S] = 1760 },
         ["ultrascanner"] = new() { [N] = 1556, [S] = 1556 },
+        ["x_ray"] = new() { [N] = 1988, [S] = 1988 },
+        ["radiation_shield"] = new() { [N] = 794, [S] = 794 },
         ["computer"] = new() { [N] = 2094, [S] = 2094 },
         ["analyser"] = new() { [N] = 2134, [S] = 2134 },
         ["autopsy"] = new() { [N] = 2146, [S] = 2146 },
@@ -53,6 +55,16 @@ internal sealed class ObjectDrawing
 
     private static readonly byte[] NoLayers = [];
 
+    /// <summary>
+    /// Objects drawn in two parts (CorsixTH's <c>slave_id</c>): the second part's animation, drawn from the same tile but
+    /// during the drawing pass of its own render attach tile, and whether it is mirrored, by facing.
+    /// </summary>
+    private static readonly Dictionary<string, Dictionary<Direction, (int Animation, bool Flip, (int X, int Y) Attach)>> SlaveParts = new(StringComparer.Ordinal)
+    {
+        // radiation_shield_b.lua: the shield's front, east (and west) 1968; north mirrors west.
+        ["radiation_shield"] = new() { [N] = (1968, true, (0, 2)), [E] = (1968, false, (1, 1)) },
+    };
+
     private readonly AnimationRenderer _renderer;
 
     public ObjectDrawing(AnimationRenderer renderer)
@@ -65,6 +77,24 @@ internal sealed class ObjectDrawing
     {
         var offset = content.FindObject(objectType)?.Orientations.GetValueOrDefault(orientation)?.RenderAttach ?? default;
         return new TilePosition(tile.X + offset.X, tile.Y + offset.Y);
+    }
+
+    /// <summary>The tile whose drawing pass draws an object's second part, or null for an object in one part.</summary>
+    public static TilePosition? SlaveDrawTile(string objectType, TilePosition tile, Direction orientation) =>
+        SlaveParts.TryGetValue(objectType, out var parts) && parts.TryGetValue(orientation, out var part)
+            ? new TilePosition(tile.X + part.Attach.X, tile.Y + part.Attach.Y)
+            : null;
+
+    /// <summary>Draws the second part of an object placed on <paramref name="tile"/>, if it has one.</summary>
+    public void DrawSlave(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, Color tint)
+    {
+        if (!SlaveParts.TryGetValue(objectType, out var parts) || !parts.TryGetValue(orientation, out var part))
+        {
+            return;
+        }
+
+        var set = _renderer.Animations;
+        _renderer.DrawFrame(batch, set.FirstFrame(part.Animation), 32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y), NoLayers, part.Flip, tint);
     }
 
     /// <summary>Draws an object placed on <paramref name="tile"/>.</summary>

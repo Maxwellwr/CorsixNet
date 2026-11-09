@@ -55,7 +55,25 @@ public static class RoomVisits
     {
         [GeneralDiagnosisRoom] = TrolleyType,
         [UltrascanRoom] = "ultrascanner",
+        [XRayRoom] = "x_ray",
     };
+
+    /// <summary>The X-ray room's type.</summary>
+    internal const string XRayRoom = "x_ray";
+
+    /// <summary>
+    /// Where the room's doctor waits for the patient: at the X-ray's radiation shield, otherwise the examining object's
+    /// other end (its secondary use position).
+    /// </summary>
+    internal static TilePosition? DoctorStation(Simulation simulation, Room room)
+    {
+        if (string.Equals(room.RoomType, XRayRoom, StringComparison.Ordinal))
+        {
+            return FindObject(simulation, room.Id, "radiation_shield") is { } shield ? UseTile(simulation, shield) : null;
+        }
+
+        return ExaminingObject(simulation, room) is { } examining ? SecondaryUseTile(simulation, examining) : null;
+    }
 
     /// <summary>
     /// What each room type patients can be seen in needs: the kind of staff it sends for (CorsixTH's
@@ -67,6 +85,7 @@ public static class RoomVisits
         [PharmacyRoom] = (BehaviourKind.Nurse, "pharmacy_cabinet"),
         [GeneralDiagnosisRoom] = (BehaviourKind.Doctor, "screen"),
         [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
+        [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
     };
 
     /// <summary>The object the room's patient is examined on with the doctor, or null for rooms without one.</summary>
