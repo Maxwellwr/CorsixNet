@@ -94,8 +94,9 @@ Done and committed:
   statement and graphs figures as text on F2 and F8 (PR #110), hiring a receptionist straight onto a desk
   (PR #111), the menu cheats as a command (PR #112), earthquakes from the level's `quake_control` with
   screen shake (PR #113), tile temperatures (PR #114), warmth and happiness of people (PR #115), plants
-  drooping (PR #116). No game data in the cloud: real-data tests were skipped there and the client was not
-  run, so these want a look on MSI. Save format version 25.
+  drooping (PR #116), rooms' windows and space cheering staff (PR #117). No game data in the cloud: real-
+  data tests were skipped there and the client was not run, so these want a look on MSI. Save format version
+  25.
 
 Not done yet:
 
