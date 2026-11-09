@@ -327,6 +327,75 @@ public static class BaseGameContent
         LevelConfigId: 14,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>The research computer (objects/computer.lua): a doctor works at it from the tile in front.</summary>
+    public static readonly ObjectDefinition Computer = new(
+        "computer",
+        "Computer",
+        ObjectType: 40,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(2098, 24)], null) },
+        UsageSouth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(2098, 24)], null) });
+
+    /// <summary>The atom analyser (objects/analyser.lua): the doctor stands inside its footprint; it stays drawn.</summary>
+    public static readonly ObjectDefinition Analyser = new(
+        "analyser",
+        "Atom Analyser",
+        ObjectType: 41,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(-1, -1), new(0, -1), new(1, -1), new(-1, 0), new(0, 0, UsePosition), new(1, 0)], UsePosition: (0, 0)),
+            [Direction.East] = new([new(-1, -1), new(0, -1), new(-1, 0), new(0, 0, UsePosition), new(-1, 1), new(0, 1)], UsePosition: (0, 0)),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(4878, 24)], null) },
+        UsageSouth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(4878, 24)], null) },
+        VisibleWhileUsed: true);
+
+    /// <summary>
+    /// The auto autopsy (objects/autopsy.lua). Autopsies themselves, the doctor's use with a patient, are not ported yet.
+    /// </summary>
+    public static readonly ObjectDefinition Autopsy = new(
+        "autopsy",
+        "Auto Autopsy",
+        ObjectType: 55,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-2, -1, CompleteCell), new(-2, 0, CompleteCell), new(-2, 1, UsePosition),
+                    new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(-1, 1, UsePosition),
+                    new(0, -1, CompleteCell), new(0, 0, CompleteCell), new(0, 1, UsePosition),
+                ],
+                UsePosition: (0, 1),
+                SecondaryUsePosition: (-2, 1)),
+            [Direction.East] = new(
+                [
+                    new(-1, -2, CompleteCell), new(-1, -1, CompleteCell), new(-1, 0, CompleteCell),
+                    new(0, -2, CompleteCell), new(0, -1, CompleteCell), new(0, 0, CompleteCell),
+                    new(1, -2, UsePosition), new(1, -1, UsePosition), new(1, 0, UsePosition),
+                ],
+                RenderAttach: (-1, 0),
+                UsePosition: (1, 0),
+                SecondaryUsePosition: (1, -2)),
+        });
+
+    /// <summary>
+    /// The research department (rooms/research.lua): researchers work at its desks, cabinets, computers and atom
+    /// analysers; as many researchers as it has desks.
+    /// </summary>
+    public static readonly RoomDefinition ResearchRoom = new(
+        "research",
+        "Research Department",
+        MinimumSize: 5,
+        FloorSprite: 21,
+        GreenWalls,
+        NeededObjects: new Dictionary<string, int> { ["desk"] = 1, ["cabinet"] = 1, ["autopsy"] = 1 },
+        LevelConfigId: 28,
+        AdditionalObjects: ["extinguisher", "radiator", "plant", "bin", "computer", "desk", "cabinet", "analyser"]);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -381,10 +450,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy],
         DoorAnimations,
         PatientAnimations);
 

@@ -38,6 +38,12 @@ public static class RoomVisits
     /// <summary>The object patients lie on in general diagnosis.</summary>
     internal const string TrolleyType = "crash_trolley";
 
+    /// <summary>The research department's room type.</summary>
+    internal const string ResearchRoom = "research";
+
+    /// <summary>What the research department's researchers work at (<c>staff_usage_objects</c>; not the autopsy).</summary>
+    internal static readonly string[] ResearchObjects = ["desk", "cabinet", "computer", "analyser"];
+
     /// <summary>The ultrascan's room type.</summary>
     internal const string UltrascanRoom = "ultrascan";
 
@@ -114,6 +120,12 @@ public static class RoomVisits
         if (string.Equals(room.RoomType, ToiletsRoom, StringComparison.Ordinal))
         {
             TryAdvanceToiletsQueue(simulation, room);
+            return;
+        }
+
+        if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
+        {
+            CallResearchers(simulation, room);
             return;
         }
 
@@ -393,6 +405,94 @@ public static class RoomVisits
         }
 
         return queue is { IsFull: true } ? score + 1000 : score;
+    }
+
+    /// <summary>
+    /// The research department sends for researchers (doctors with the research ability, <c>required_staff</c>
+    /// <c>Researcher</c>) until it has as many as desks (<c>ResearchRoom:roomFinished</c>'s <c>maximum_staff</c>): the
+    /// nearest free one each time.
+    /// </summary>
+    private static void CallResearchers(Simulation simulation, Room room)
+    {
+        if (simulation.FindEntity(room.DoorId) is not RoomDoor door)
+        {
+            return;
+        }
+
+        var desks = 0;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is RoomObject { ObjectType: "desk" } desk && desk.RoomId == room.Id)
+            {
+                desks++;
+            }
+        }
+
+        var owner = Owner(simulation, room);
+        var researchers = 0;
+        Humanoid? nearest = null;
+        var nearestDistance = 0;
+        var target = door.InsideTile(room.Area);
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is not Humanoid { Behaviour: DoctorBehaviour doctor, Profile: { IsResearcher: true } } staff || staff.Employer != owner || staff.IsFired)
+            {
+                continue;
+            }
+
+            if (doctor.RoomId == room.Id)
+            {
+                researchers++;
+            }
+            else if (doctor.RoomId == 0 && simulation.Pathfinder.FindDistance(simulation.Map, staff.StepTarget, target) is { } distance
+                && (nearest is null || distance < nearestDistance))
+            {
+                nearest = staff;
+                nearestDistance = distance;
+            }
+        }
+
+        if (researchers < desks && nearest is not null)
+        {
+            if (room.StaffId == 0)
+            {
+                room.StaffId = nearest.Id;
+            }
+
+            ((IRoomStaff)nearest.Behaviour!).GoToRoom(simulation, nearest, room, target);
+        }
+    }
+
+    /// <summary>
+    /// <c>World:findFreeObjectNearToUse</c> for a researcher: the object they can work at that no other researcher goes to
+    /// or uses, nearest by path, other than the one they just used.
+    /// </summary>
+    internal static RoomObject? FindFreeResearchObject(Simulation simulation, Room room, Humanoid humanoid, int previous)
+    {
+        var taken = new HashSet<int>();
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Humanoid { Behaviour: DoctorBehaviour { ResearchObjectId: > 0 } other } someone && someone.Id != humanoid.Id)
+            {
+                taken.Add(other.ResearchObjectId);
+            }
+        }
+
+        RoomObject? best = null;
+        var bestDistance = 0;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is RoomObject placed && placed.RoomId == room.Id && placed.Id != previous && !taken.Contains(placed.Id)
+                && ResearchObjects.Contains(placed.ObjectType, StringComparer.Ordinal)
+                && simulation.Pathfinder.FindDistance(simulation.Map, humanoid.Tile, UseTile(simulation, placed)) is { } distance
+                && (best is null || distance < bestDistance))
+            {
+                best = placed;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>Sends the nearest member of staff of the kind the room needs, without a room, of the room's hospital, to the room.</summary>

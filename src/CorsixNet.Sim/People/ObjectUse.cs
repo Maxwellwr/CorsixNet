@@ -191,7 +191,8 @@ public sealed class ObjectUse
                 drawTile = new TilePosition(placed.Tile.X + attach.X, placed.Tile.Y + attach.Y);
             }
 
-            humanoid.SetActionAnimation(simulation, animation, found.Flip, tile, drawTile, placed.Id);
+            var hidden = simulation.Content.FindObject(placed.ObjectType)?.VisibleWhileUsed == true ? 0 : placed.Id;
+            humanoid.SetActionAnimation(simulation, animation, found.Flip, tile, drawTile, hidden);
             Timer = animation.Length;
             return;
         }

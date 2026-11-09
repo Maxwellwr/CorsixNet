@@ -1341,7 +1341,7 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
-        var roomToBuild = alt ? "toilets" : shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
+        var roomToBuild = alt && shift ? "research" : alt ? "toilets" : shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
             // As in the original, a room can only be started once discovered and with its whole cost in the bank.
@@ -1927,7 +1927,7 @@ internal sealed class MapViewScreen : IScreen
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-6: speed   Z: hold to speed up" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office (Shift: pharmacy, Ctrl: general diagnosis, Alt: toilets)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office (Shift: pharmacy, Ctrl: general diagnosis, Alt: toilets, Alt+Shift: research)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];

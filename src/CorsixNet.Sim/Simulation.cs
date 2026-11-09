@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 54;
+    private const int FormatVersion = 55;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -791,6 +791,14 @@ public sealed class Simulation
             {
                 (humanoid.Behaviour as VipBehaviour)?.OnEndDay(this, humanoid);
                 Feelings.OnEndDay(this, humanoid);
+
+                // Doctor:tickDay: a researcher in the research department researches, 1,550 points and 1,000 more for full skill.
+                if (humanoid is { Behaviour: DoctorBehaviour { RoomId: > 0 } doctor, Profile: { IsResearcher: true } profile, Employer: var employer, IsFired: false }
+                    && employer >= 0 && employer < _hospitals.Length
+                    && FindEntity(doctor.RoomId) is Room { RoomType: RoomVisits.ResearchRoom } research && research.Area.Contains(humanoid.Tile))
+                {
+                    _hospitals[employer].Research.AddPoints(this, _hospitals[employer], 1550 + (1000 * profile.Skill / StaffProfile.MaxSkill));
+                }
             }
             else if (entity is RoomObject { Plant: { } plant } placed)
             {
