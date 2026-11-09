@@ -152,6 +152,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The windows open over the map (bank, casebook, research, policy, ...).</summary>
     private readonly WindowLayer _windows;
 
+    /// <summary>A button of the room edit panel pressed, for the build tool's next step.</summary>
+    private BuildButton? _buildButton;
+
     /// <summary>The candidate for hire on the cursor, to be placed with a click.</summary>
     private (StaffClass Class, StaffProfile Profile)? _hiring;
 
@@ -242,6 +245,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
         _windows = new WindowLayer(text => _text.Measure(text).Width, _text.LineHeight) { Origin = new Point(8, StatusHeight + 8) };
+        _windows.Open(new BottomPanel(BottomPanelAction));
         var sprites = install.LoadSpriteSheet("DATA", "VSPR-0", complex: false);
         _animations = new AnimationRenderer(device, AnimationSet.Load(install), sprites, palette, upscale);
         _blueprints = new BlueprintDrawing(device, install, _blocks, _animations, sprites, palette);
@@ -1477,6 +1481,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
+        if (_buildTool.IsFurnishing && !_windows.Windows.Any(window => window is RoomEditWindow))
+        {
+            _windows.Open(new RoomEditWindow(_buildTool, button => _buildButton = button));
+        }
+
         if (_buildTool.IsActive || _furnishTool.IsActive)
         {
             // While building, the mouse belongs to the build tool; a right click (not a drag, which pans) turns objects.
@@ -1492,9 +1501,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 leftDown && !leftWasDown,
                 !leftDown && leftWasDown,
                 rightClicked,
-                pressed(Keys.Enter),
-                back,
-                pressed(Keys.P));
+                pressed(Keys.Enter) || TakeButton(BuildButton.Confirm),
+                back || TakeButton(BuildButton.Back),
+                pressed(Keys.P) || TakeButton(BuildButton.PickUp));
             var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
             if (tool is { } command)
             {
@@ -2048,6 +2057,38 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         _windows.CloseAll();
         SelectLevel(next ? Math.Min(_levelIndex + 1, _levels.Count - 1) : _levelIndex);
+    }
+
+    /// <summary>Whether the room edit panel's <paramref name="button"/> was pressed; it counts once.</summary>
+    private bool TakeButton(BuildButton button)
+    {
+        if (_buildButton != button)
+        {
+            return false;
+        }
+
+        _buildButton = null;
+        return true;
+    }
+
+    /// <summary>The bottom panel's buttons that are not windows: the room list and the furnish corridor window.</summary>
+    private void BottomPanelAction(string action)
+    {
+        if (_buildTool.IsActive || _furnishTool.IsActive)
+        {
+            _buildReminderUntil = Environment.TickCount64 + NoticeMilliseconds;
+            return;
+        }
+
+        switch (action)
+        {
+            case "rooms":
+                _roomList = !_roomList;
+                break;
+            case "corridor":
+                _windows.Open(new FurnishCorridorWindow(definition => _furnishTool.Start(definition)));
+                break;
+        }
     }
 
     void IWindowHost.StartHiring(StaffClass staffClass, int index)

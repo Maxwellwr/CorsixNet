@@ -39,7 +39,8 @@ internal sealed class WindowLayer
     /// <summary>The open windows, back to front.</summary>
     public IEnumerable<UiWindow> Windows => _open.Select(open => open.Window);
 
-    public bool Any => _open.Count > 0;
+    /// <summary>Whether a dialog is open; pinned windows such as the bottom panel do not count.</summary>
+    public bool Any => _open.Any(open => !open.Window.IsPinned);
 
     /// <summary>The top-left corner of the area windows open in: below the status bar.</summary>
     public Point Origin { get; set; } = new(8, 44);
@@ -77,16 +78,18 @@ internal sealed class WindowLayer
     /// <returns>Whether there was one to close.</returns>
     public bool CloseTop()
     {
-        if (_open.Count == 0)
+        var index = _open.FindLastIndex(open => !open.Window.IsPinned);
+        if (index < 0)
         {
             return false;
         }
 
-        _open.RemoveAt(_open.Count - 1);
+        _open.RemoveAt(index);
         return true;
     }
 
-    public void CloseAll() => _open.Clear();
+    /// <summary>Closes every dialog; pinned windows stay.</summary>
+    public void CloseAll() => _open.RemoveAll(open => !open.Window.IsPinned);
 
     /// <summary>
     /// Lays out the windows from the game's state and handles the mouse: clicks on buttons, dragging title bars,
@@ -135,8 +138,12 @@ internal sealed class WindowLayer
             return true;
         }
 
-        _open.Remove(hit);
-        _open.Add(hit);
+        if (!hit.Window.IsPinned)
+        {
+            _open.Remove(hit);
+            _open.Add(hit);
+        }
+
         var layout = hit.Layout!;
         if (layout.Close.Contains(point))
         {
@@ -166,15 +173,19 @@ internal sealed class WindowLayer
             }
 
             batch.Draw(pixel, layout.Bounds, PanelColor);
-            batch.Draw(pixel, layout.TitleBar, TitleColor);
-            text.Draw(batch, layout.TitleText, new Vector2(layout.TitleBar.X + Padding, layout.TitleBar.Y + 3));
-            batch.Draw(pixel, layout.Close, layout.Close.Contains(mouse) ? ButtonHover : ButtonColor);
-            text.Draw(batch, "x", new Vector2(layout.Close.X + ((layout.Close.Width - _measure("x")) / 2), layout.Close.Y + 3));
+            if (!open.Window.IsPinned)
+            {
+                batch.Draw(pixel, layout.TitleBar, TitleColor);
+                text.Draw(batch, layout.TitleText, new Vector2(layout.TitleBar.X + Padding, layout.TitleBar.Y + 3));
+                batch.Draw(pixel, layout.Close, layout.Close.Contains(mouse) ? ButtonHover : ButtonColor);
+                text.Draw(batch, "x", new Vector2(layout.Close.X + ((layout.Close.Width - _measure("x")) / 2), layout.Close.Y + 3));
+            }
+
             foreach (var (area, cell) in layout.Cells)
             {
                 if (cell.IsButton)
                 {
-                    var hover = cell.OnClick is not null && area.Contains(mouse) && ReferenceEquals(open, _open[^1]);
+                    var hover = cell.OnClick is not null && area.Contains(mouse) && (ReferenceEquals(open, _open[^1]) || open.Window.IsPinned);
                     batch.Draw(pixel, area, hover ? ButtonHover : ButtonColor);
                 }
 
@@ -187,9 +198,9 @@ internal sealed class WindowLayer
             if (layout.MaxScroll > 0)
             {
                 // How far down the table the window shows, as a thin bar on the right.
-                var track = layout.Bounds.Height - _lineHeight;
+                var track = layout.Bounds.Height - layout.TitleBar.Height;
                 var barHeight = Math.Max(8, track * layout.VisibleRows / (layout.VisibleRows + layout.MaxScroll));
-                var barY = layout.Bounds.Y + _lineHeight + ((track - barHeight) * open.Scroll / layout.MaxScroll);
+                var barY = layout.Bounds.Y + layout.TitleBar.Height + ((track - barHeight) * open.Scroll / layout.MaxScroll);
                 batch.Draw(pixel, new Rectangle(layout.Bounds.Right - 4, barY, 3, barHeight), ButtonHover);
             }
         }
@@ -225,24 +236,31 @@ internal sealed class WindowLayer
             }
         }
 
+        var pinned = open.Window.IsPinned;
+        var titleHeight = pinned ? 0 : _lineHeight;
         var title = open.Window.Hotkey is { } key ? $"{open.Window.Title}  ({key})" : open.Window.Title;
         var tableWidth = columns.Count == 0 ? 0 : columns.Sum() + (ColumnGap * (columns.Count - 1));
-        var width = Math.Max(Math.Max(tableWidth, spanWidth), _measure(title) + _lineHeight + Padding) + (2 * Padding);
-        width = Math.Min(width, screen.Width);
-        var visibleRows = Math.Max(1, Math.Min(rows.Count, ((screen.Height - _lineHeight - (2 * Padding)) / _lineHeight) - 1));
-        var height = _lineHeight + (visibleRows * _lineHeight) + (2 * Padding);
+        var width = Math.Max(Math.Max(tableWidth, spanWidth), pinned ? 0 : _measure(title) + _lineHeight + Padding) + (2 * Padding);
+        width = pinned ? screen.Width : Math.Min(width, screen.Width);
+        var visibleRows = Math.Max(1, Math.Min(rows.Count, ((screen.Height - titleHeight - (2 * Padding)) / _lineHeight) - 1));
+        var height = titleHeight + (visibleRows * _lineHeight) + (2 * Padding);
+        if (pinned)
+        {
+            open.Position = new Point(screen.X, screen.Bottom - height);
+        }
+
         var maxScroll = Math.Max(0, rows.Count - visibleRows);
         open.Scroll = Math.Clamp(open.Scroll, 0, maxScroll);
         var x = Math.Clamp(open.Position.X, screen.X, Math.Max(screen.X, screen.Right - width));
         var y = Math.Clamp(open.Position.Y, screen.Y, Math.Max(screen.Y, screen.Bottom - height));
         open.Position = new Point(x, y);
         var bounds = new Rectangle(x, y, width, height);
-        var titleBar = new Rectangle(x, y, width - _lineHeight, _lineHeight);
-        var close = new Rectangle(x + width - _lineHeight, y, _lineHeight, _lineHeight);
+        var titleBar = pinned ? Rectangle.Empty : new Rectangle(x, y, width - _lineHeight, _lineHeight);
+        var close = pinned ? Rectangle.Empty : new Rectangle(x + width - _lineHeight, y, _lineHeight, _lineHeight);
         var cells = new List<(Rectangle Area, WindowCell Cell)>();
         for (var i = 0; i < visibleRows && i + open.Scroll < rows.Count; i++)
         {
-            var rowY = y + _lineHeight + Padding + (i * _lineHeight);
+            var rowY = y + titleHeight + Padding + (i * _lineHeight);
             var cellX = x + Padding;
             var column = 0;
             foreach (var cell in rows[i + open.Scroll].Cells)
