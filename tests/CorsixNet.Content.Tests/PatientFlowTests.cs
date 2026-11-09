@@ -206,7 +206,7 @@ public class PatientFlowTests
     public void OnLevelOneTheGpDiagnosesPatientsAndIsPaid()
     {
         var install = RealGameData.Require();
-        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var rules = LevelOne(install);
         var simulation = NewStaffedHospital(rules);
         var levelDiseases = rules.Diseases.AvailableDiseases().Select(d => d.Id).ToHashSet();
         var seen = new Dictionary<int, PatientBehaviour>();
@@ -238,7 +238,7 @@ public class PatientFlowTests
     public void OnLevelOneTheNurseCuresPatientsInThePharmacy()
     {
         var install = RealGameData.Require();
-        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var rules = LevelOne(install);
         var simulation = NewStaffedHospital(rules);
         BuildPharmacy(simulation);
         var hospital = simulation.Hospitals[0];
@@ -274,7 +274,7 @@ public class PatientFlowTests
     public void PatientsWaitingForTreatmentGoToAPharmacyBuiltLater()
     {
         var install = RealGameData.Require();
-        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var rules = LevelOne(install);
         var simulation = NewStaffedHospital(rules);
         Humanoid? waiting = null;
         for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay && waiting is null; tick++)
@@ -358,7 +358,7 @@ public class PatientFlowTests
     public void ASavedGameWithATreatmentGoingOnContinuesIdentically()
     {
         var install = RealGameData.Require();
-        var simulation = NewStaffedHospital(LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()));
+        var simulation = NewStaffedHospital(LevelOne(install));
         BuildPharmacy(simulation);
         for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay; tick++)
         {
@@ -385,7 +385,7 @@ public class PatientFlowTests
     public void OnLevelOneGeneralDiagnosisExaminesPatientsAndSendsThemBackToTheGp()
     {
         var install = RealGameData.Require();
-        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        var rules = LevelOne(install);
         var simulation = NewStaffedHospital(rules);
         BuildGeneralDiagnosis(simulation);
         var hospital = simulation.Hospitals[0];
@@ -435,7 +435,7 @@ public class PatientFlowTests
         var install = RealGameData.Require();
         int Cured(bool generalDiagnosis)
         {
-            var simulation = NewStaffedHospital(LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()), weakDoctor: true);
+            var simulation = NewStaffedHospital(LevelOne(install), weakDoctor: true);
             BuildPharmacy(simulation);
             if (generalDiagnosis)
             {
@@ -455,7 +455,7 @@ public class PatientFlowTests
     public void ASavedGameWithAPatientOnTheTrolleyContinuesIdentically()
     {
         var install = RealGameData.Require();
-        var simulation = NewStaffedHospital(LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()));
+        var simulation = NewStaffedHospital(LevelOne(install));
         BuildGeneralDiagnosis(simulation);
         for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay; tick++)
         {
@@ -547,6 +547,10 @@ public class PatientFlowTests
         Run(simulation, new HireStaffCommand(StaffClass.Doctor, doctor, new(15, 15)));
         Run(simulation, new HireStaffCommand(StaffClass.Receptionist, 0, new(16, 15)));
         PlaceReceptionDesk(simulation);
+
+        // The hospital has no radiators, so in winter its staff grow so cold and unhappy that they ask for a raise within
+        // three months and are fired when nobody answers (Staff:checkIfWaitedTooLongForRaise); granting raises keeps them.
+        Run(simulation, new SetPolicyCommand(PolicyKind.GrantWageIncrease, 1));
         return simulation;
     }
 
@@ -647,6 +651,13 @@ public class PatientFlowTests
         simulation.Schedule(0, new OpenHospitalCommand());
         return simulation;
     }
+
+    /// <summary>
+    /// Level one's rules without its three computer opponents: they would take three patients in four
+    /// (CorsixTH's round robin in <c>World:chooseHospitalForPatient</c>), and these tests watch the rooms at work.
+    /// </summary>
+    private static LevelRules LevelOne(CorsixNet.Formats.ThemeHospitalInstall install) =>
+        LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()).WithoutCompetitors();
 
     internal static void Run(Simulation simulation, Command command)
     {

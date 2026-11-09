@@ -198,7 +198,7 @@ public sealed class LevelRules
     public EpidemicRules Epidemics { get; }
 
     /// <summary>The computer opponents that play (CorsixTH's <c>AIHospital</c>s), in the order they take turns for patients.</summary>
-    public IReadOnlyList<PlannedCompetitor> Competitors { get; }
+    public IReadOnlyList<PlannedCompetitor> Competitors { get; private set; }
 
     /// <summary>The most the player's salary rises in a month (<c>gbv.ScoreMaxInc</c>); a sixth of it is the least.</summary>
     public int ScoreMaxIncrease { get; }
@@ -232,6 +232,14 @@ public sealed class LevelRules
         rules.StartCash = 0;
         rules.EndConditions = EndConditions.None;
         rules.Staff = _staff.WithoutSalaries();
+        return rules;
+    }
+
+    /// <summary>The same level with no computer opponents, so every patient comes to the players' hospitals.</summary>
+    public LevelRules WithoutCompetitors()
+    {
+        var rules = (LevelRules)MemberwiseClone();
+        rules.Competitors = [];
         return rules;
     }
 
