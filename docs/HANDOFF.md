@@ -167,6 +167,8 @@ Done and committed:
   Dialogs (information.lua, confirm_dialog.lua, tip_of_the_day.lua): a tip of the day with the first
   game, a room's description from S[57] the first time one is built (room_information_dialogs), and
   Restart and Quit in the menu ask first.
+  Rooms call staff by the dispatcher's score (path, queue x5, emergency, fatigue x40, -50 outside a
+  room) instead of the nearest, and leave staff to a waiting room that scores better for them.
 
 Not done yet:
 
