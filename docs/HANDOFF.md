@@ -93,8 +93,8 @@ Done and committed:
   patients sent to the hospitals in turn; then the monthly statistics for the graphs (PR #109) and the bank
   statement and graphs figures as text on F2 and F8 (PR #110), hiring a receptionist straight onto a desk
   (PR #111), the menu cheats as a command (PR #112), earthquakes from the level's `quake_control` with
-  screen shake (PR #113). No game data in the cloud: real-data tests were skipped there and the client was
-  not run, so these want a look on MSI. Save format version 22.
+  screen shake (PR #113), tile temperatures (PR #114). No game data in the cloud: real-data tests were
+  skipped there and the client was not run, so these want a look on MSI. Save format version 23.
 
 Not done yet:
 
@@ -106,7 +106,7 @@ Not done yet:
   psychiatry for TV personalities), faxes asking what to do with a patient, the casebook window
   (prices), floating dollar signs, looks of visual diseases (new humanoid types in the client), health,
   the death animation, the rest of reputation (VIPs, emergencies, awards), drug research.
-- Money: the town map, tile temperatures, the annual report and bank manager screens, bank window
+- Money: the town map, the annual report and bank manager screens, bank window
   with the transaction log.
 - Build UI: on-screen panel like the original (list of items with counts, confirm, pick-up and
   buy buttons); steps are keys and the status line for now. Cursor shapes per step. Buying extra

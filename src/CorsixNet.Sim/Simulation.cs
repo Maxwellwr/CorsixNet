@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 22;
+    private const int FormatVersion = 23;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -54,6 +54,9 @@ public sealed class Simulation
 
     /// <summary>Entity to tell when someone walks onto or off a tile. Derived from the entities; not saved.</summary>
     private readonly Dictionary<TilePosition, int> _occupantObservers = [];
+
+    /// <summary>Scratch space for <see cref="UpdateTemperatures"/>: each tile's radiator temperature, not saved.</summary>
+    private ushort[]? _radiatorTemperatures;
 
     /// <param name="map">The level map; the simulation takes ownership and changes it.</param>
     /// <param name="seed">Seed for <see cref="Random"/>.</param>
@@ -91,6 +94,7 @@ public sealed class Simulation
     private Simulation(LevelMap map, SimRandom random, GameContent content, LevelRules rules)
     {
         Map = map;
+        Temperatures = new TileTemperatures(map.Width, map.Height);
         Random = random;
         Content = content;
         Rules = rules;
@@ -102,6 +106,9 @@ public sealed class Simulation
 
     /// <summary>The level's money settings. Part of the saved state.</summary>
     public LevelRules Rules { get; }
+
+    /// <summary>How warm each tile is. Part of the saved state.</summary>
+    public TileTemperatures Temperatures { get; private set; } = null!;
 
     /// <summary>The world's earthquakes. Part of the saved state.</summary>
     public Earthquakes Earthquakes { get; private set; } = null!;
@@ -208,7 +215,31 @@ public sealed class Simulation
         // So do construction sites that are done: removing them during the loop would skip an entity.
         _entities.RemoveAll(entity => entity is Humanoid { IsDespawning: true } or ConstructionSite { IsDone: true });
 
+        // Then the heat spreads, at the new hour's month (CorsixTH's World:onTick after the entities).
+        UpdateTemperatures(GameDate.FromHours(Tick + 1).Month);
+
         Tick++;
+    }
+
+    /// <summary>
+    /// One hour of heat. CorsixTH heats every radiator by the first hospital's setting; here a radiator goes by the
+    /// hospital that owns its parcel, or by the first hospital on land nobody owns.
+    /// </summary>
+    private void UpdateTemperatures(int month)
+    {
+        _radiatorTemperatures ??= new ushort[Map.Width * Map.Height];
+        Array.Clear(_radiatorTemperatures);
+        foreach (var entity in _entities)
+        {
+            if (entity is RoomObject { ObjectType: Radiator } radiator)
+            {
+                var owner = Map.GetParcelOwner(Map[radiator.Tile.X, radiator.Tile.Y].Parcel) - 1;
+                var hospital = owner >= 0 && owner < _hospitals.Length ? _hospitals[owner] : _hospitals[0];
+                _radiatorTemperatures[(radiator.Tile.Y * Map.Width) + radiator.Tile.X] = TileTemperatures.RadiatorTemperature(hospital.RadiatorHeat);
+            }
+        }
+
+        Temperatures.Update(Map, TileTemperatures.OutsideTemperature(month), _radiatorTemperatures);
     }
 
     /// <summary>Creates an entity with the next free id.</summary>
@@ -383,6 +414,7 @@ public sealed class Simulation
             simulation._hospitals[player] = Hospital.Read(reader, player);
         }
 
+        simulation.Temperatures = TileTemperatures.Read(reader, map.Width, map.Height);
         simulation.Earthquakes = Earthquakes.Read(reader);
         simulation.Arrivals = PatientArrivals.Read(reader);
 
@@ -464,6 +496,7 @@ public sealed class Simulation
             hospital.Write(writer);
         }
 
+        Temperatures.Write(writer);
         Earthquakes.Write(writer);
         Arrivals.Write(writer);
 
