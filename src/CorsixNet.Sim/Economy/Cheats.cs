@@ -59,6 +59,39 @@ public enum CheatKind : byte
 
     /// <summary><c>end_year</c>: the calendar jumps to the last hour of the year, which then ends.</summary>
     EndYear = 16,
+
+    /// <summary>Roujin's challenge (<c>spawn_rate_cheat</c>), on or off: 40 more patients a month.</summary>
+    ToggleSpawnRate = 17,
+
+    /// <summary><c>no_rest_cheat</c>, on or off: the hospital's staff do not tire, and are rested when it goes on.</summary>
+    ToggleNoRest = 18,
+
+    /// <summary><c>queuejump</c>, on or off: nearly dead patients go ahead in queues.</summary>
+    ToggleQueueJump = 19,
+
+    /// <summary><c>super_doctor</c>, on or off: the doctors for hire are all consultants with every ability.</summary>
+    ToggleSuperDoctor = 20,
+}
+
+/// <summary>CorsixTH's fax code cheats (<c>toggle_cheats</c>), which stay on until the code is sent again.</summary>
+[Flags]
+public enum ToggleCheats : byte
+{
+    None = 0,
+
+    /// <summary>Roujin's challenge (<c>spawn_rate_cheat</c>).</summary>
+    SpawnRate = 1,
+
+    /// <summary><c>no_rest_cheat</c>.</summary>
+    NoRest = 2,
+
+    /// <summary><c>queuejump</c>.</summary>
+    QueueJump = 4,
+
+    /// <summary><c>super_doctor</c>.</summary>
+    SuperDoctor = 8,
+
+    All = SpawnRate | NoRest | QueueJump | SuperDoctor,
 }
 
 /// <summary>
@@ -148,10 +181,54 @@ public static class Cheats
             case CheatKind.EndYear:
                 simulation.SkipToLastHour(new GameDate(simulation.Date.Year + 1, 1, 1, 0));
                 break;
+            case CheatKind.ToggleSpawnRate:
+                Toggle(simulation, hospital, ToggleCheats.SpawnRate);
+                break;
+            case CheatKind.ToggleNoRest:
+                Toggle(simulation, hospital, ToggleCheats.NoRest);
+                break;
+            case CheatKind.ToggleQueueJump:
+                Toggle(simulation, hospital, ToggleCheats.QueueJump);
+                break;
+            case CheatKind.ToggleSuperDoctor:
+                Toggle(simulation, hospital, ToggleCheats.SuperDoctor);
+                break;
             default:
                 return;
         }
 
         hospital.Cheated = true;
+    }
+
+    /// <summary>
+    /// <c>Cheats:toggleCheat</c>: the fax code cheat goes on or off, either way marking the hospital as having cheated
+    /// (<c>announceCheat</c>).
+    /// </summary>
+    private static void Toggle(Simulation simulation, Hospital hospital, ToggleCheats cheat)
+    {
+        var on = (hospital.ActiveCheats & cheat) == 0;
+        hospital.ActiveCheats = on ? hospital.ActiveCheats | cheat : hospital.ActiveCheats & ~cheat;
+        switch (cheat)
+        {
+            case ToggleCheats.SpawnRate when !on:
+                // Cheats:roujinOff: the month's remaining patients are called off to give the player a break.
+                simulation.Arrivals.ClearSpawnDates();
+                break;
+            case ToggleCheats.NoRest when on:
+                // Cheats:noRestOn: the hospital's staff are rested at once.
+                foreach (var entity in simulation.Entities)
+                {
+                    if (entity is Entities.Humanoid { Profile: not null } staff && staff.Employer == hospital.Player)
+                    {
+                        staff.Fatigue = 0;
+                    }
+                }
+
+                break;
+            case ToggleCheats.SuperDoctor:
+                // Cheats:superDoctorOn and Off: new candidates for hire at once.
+                simulation.MakeAvailableStaff(simulation.Date.MonthOfGame);
+                break;
+        }
     }
 }

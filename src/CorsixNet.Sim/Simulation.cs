@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 41;
+    private const int FormatVersion = 42;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -346,6 +346,8 @@ public sealed class Simulation
     /// </summary>
     public void MakeAvailableStaff(int month)
     {
+        // The super doctor cheat of the first (local) hospital (World:getLocalPlayerHospital).
+        var superDoctor = Hospitals.Count > 0 && (Hospitals[0].ActiveCheats & ToggleCheats.SuperDoctor) != 0;
         foreach (var staffClass in StaffClasses.HireOrder)
         {
             var pool = _availableStaff[(int)staffClass];
@@ -353,7 +355,7 @@ public sealed class Simulation
             var count = Rules.Staff.AvailableCount(staffClass, month);
             for (var i = 0; i < count; i++)
             {
-                pool.Add(StaffProfile.CreateRandom(staffClass, month, Rules.Staff, Random));
+                pool.Add(StaffProfile.CreateRandom(staffClass, month, Rules.Staff, Random, superDoctor));
             }
         }
     }

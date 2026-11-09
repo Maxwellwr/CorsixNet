@@ -465,6 +465,9 @@ public sealed class Hospital
     /// <summary>Whether the player has used a cheat (CorsixTH's <c>cheated</c>).</summary>
     public bool Cheated { get; internal set; }
 
+    /// <summary>The fax code cheats switched on for the hospital (CorsixTH's <c>hosp_cheats.active_cheats</c>).</summary>
+    public ToggleCheats ActiveCheats { get; internal set; }
+
     /// <summary>The player's own salary, which rises month by month (CorsixTH's <c>player_salary</c>); it starts at 10,000.</summary>
     public long PlayerSalary { get; internal set; } = StartPlayerSalary;
 
@@ -1292,6 +1295,7 @@ public sealed class Hospital
         writer.WriteBool(Cheated);
         writer.WriteInt64(PlayerSalary);
         writer.WriteInt64(SalaryOffer);
+        writer.WriteByte((byte)ActiveCheats);
         writer.WriteInt64(SpawnAttempts);
         writer.WriteInt32(RadiatorHeat);
         writer.WriteBool(IsHeatingBroken);
@@ -1412,6 +1416,8 @@ public sealed class Hospital
         hospital.Cheated = reader.ReadBool();
         hospital.PlayerSalary = reader.ReadInt64();
         hospital.SalaryOffer = reader.ReadInt64();
+        var cheats = reader.ReadByte();
+        hospital.ActiveCheats = cheats <= (byte)ToggleCheats.All ? (ToggleCheats)cheats : throw new InvalidDataException($"Unknown toggle cheats {cheats}.");
         hospital.SpawnAttempts = reader.ReadInt64();
         hospital.RadiatorHeat = reader.ReadInt32();
         hospital.IsHeatingBroken = reader.ReadBool();

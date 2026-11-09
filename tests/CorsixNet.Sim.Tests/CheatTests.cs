@@ -3,7 +3,10 @@ using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
+using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.Tests;
 
@@ -122,6 +125,100 @@ public class CheatTests
 
         Assert.Equal(1, state.NextIndex);
         Assert.Equal(3, state.NextMonth);
+    }
+
+    [Fact]
+    public void FaxCodeCheatsGoOnAndOffAndAreSaved()
+    {
+        var simulation = NewSimulation();
+        var hospital = simulation.Hospitals[0];
+
+        Run(simulation, CheatKind.ToggleQueueJump);
+        Run(simulation, CheatKind.ToggleNoRest);
+        Assert.Equal(ToggleCheats.QueueJump | ToggleCheats.NoRest, hospital.ActiveCheats);
+        Assert.True(hospital.Cheated);
+
+        Run(simulation, CheatKind.ToggleQueueJump);
+        Assert.Equal(ToggleCheats.NoRest, hospital.ActiveCheats);
+
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var restored = Simulation.Load(stream);
+        Assert.Equal(ToggleCheats.NoRest, restored.Hospitals[0].ActiveCheats);
+        Assert.Equal(simulation.ComputeStateHash(), restored.ComputeStateHash());
+    }
+
+    [Fact]
+    public void NoRestRestsTheStaffAtOnce()
+    {
+        var simulation = NewSimulation();
+        var profile = StaffProfile.Create(StaffClass.Doctor, 500, simulation.Rules.Staff, simulation.Random);
+        var doctor = simulation.AddEntity(id => Humanoid.CreateStaff(id, new TilePosition(1, 1), profile, 0));
+        doctor.Fatigue = 0.6m;
+
+        Run(simulation, CheatKind.ToggleNoRest);
+
+        Assert.Equal(0m, doctor.Fatigue);
+    }
+
+    [Fact]
+    public void SuperDoctorsAreConsultantsWithEveryAbility()
+    {
+        var simulation = NewSimulation();
+        Run(simulation, CheatKind.ToggleSuperDoctor);
+
+        var doctors = simulation.AvailableStaff(StaffClass.Doctor);
+        Assert.NotEmpty(doctors);
+        Assert.All(doctors, doctor =>
+        {
+            Assert.True(doctor.IsConsultant && doctor.IsPsychiatrist && doctor.IsSurgeon && doctor.IsResearcher);
+            Assert.False(doctor.IsJunior);
+            Assert.InRange(doctor.Skill, simulation.Rules.Staff.ConsultantThreshold, StaffProfile.MaxSkill);
+            Assert.Equal(doctor.FairWage(simulation.Rules.Staff), doctor.Wage);
+        });
+
+        // Off again, the usual candidates come back.
+        Run(simulation, CheatKind.ToggleSuperDoctor);
+        Assert.Contains(simulation.AvailableStaff(StaffClass.Doctor), doctor => !(doctor.IsPsychiatrist && doctor.IsSurgeon && doctor.IsResearcher));
+    }
+
+    [Fact]
+    public void RoujinsChallengeBringsFortyMorePatientsAMonth()
+    {
+        var simulation = NewSimulation();
+        Run(simulation, CheatKind.ToggleSpawnRate);
+        Run(simulation, CheatKind.EndMonth);
+        Assert.InRange(simulation.Arrivals.SpawnDates.Sum(), 20, 80);
+
+        // Off, the rest of the month's patients are called off.
+        Run(simulation, CheatKind.ToggleSpawnRate);
+        Assert.Equal(0, simulation.Arrivals.SpawnDates.Sum());
+    }
+
+    [Fact]
+    public void WithQueueJumpNearlyDeadPatientsGoAheadOfTheOthers()
+    {
+        var simulation = NewSimulation();
+        var queue = new HumanoidQueue(new TilePosition(2, 1), new TilePosition(2, 0), 20);
+        var healthy = Patient(simulation, 0.5m);
+        queue.Push(simulation, healthy);
+        var dying = Patient(simulation, 0.05m);
+        queue.Push(simulation, dying);
+        Assert.Equal([healthy.Id, dying.Id], queue.Members);
+
+        Run(simulation, CheatKind.ToggleQueueJump);
+        var other = new HumanoidQueue(new TilePosition(2, 1), new TilePosition(2, 0), 20);
+        other.Push(simulation, healthy);
+        other.Push(simulation, dying);
+        Assert.Equal([dying.Id, healthy.Id], other.Members);
+    }
+
+    private static Humanoid Patient(Simulation simulation, decimal health)
+    {
+        var patient = simulation.AddEntity(id => Humanoid.CreateRandomPatient(id, new TilePosition(1, 1), simulation.Random, 0));
+        patient.Behaviour = new PatientBehaviour { Health = health };
+        return patient;
     }
 
     private static void Run(Simulation simulation, CheatKind cheat)
