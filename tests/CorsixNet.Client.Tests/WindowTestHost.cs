@@ -59,6 +59,12 @@ internal sealed class WindowTestHost : IWindowHost
 
     public void StartHiring(StaffClass staffClass, int index) => Hiring = (staffClass, index);
 
+    public bool HasNextLevel => true;
+
+    public bool? Started { get; private set; }
+
+    public void StartLevel(bool next) => Started = next;
+
     /// <summary>Hires the first candidate of a class onto a tile in the hospital.</summary>
     public Humanoid Hire(StaffClass staffClass, int x = 6, int y = 6)
     {
