@@ -23,7 +23,10 @@ internal sealed class Meandering
     private int _idleTicks;
 
     /// <summary>Called on each tick that the humanoid is idle and not walking.</summary>
-    internal void Update(Simulation simulation, Humanoid humanoid)
+    /// <param name="simulation">The simulation.</param>
+    /// <param name="humanoid">The member of staff.</param>
+    /// <param name="parcel">The only parcel to wander in (a handyman's), or 0 for any.</param>
+    internal void Update(Simulation simulation, Humanoid humanoid, int parcel = 0)
     {
         if (_idleTicks == Forever)
         {
@@ -37,7 +40,7 @@ internal sealed class Meandering
         }
 
         var start = humanoid.Tile;
-        if (!simulation.Pathfinder.TryFindIdleTile(simulation.Map, start, simulation.Random.NextInclusive(1, 24), out var tile) || tile == start)
+        if (!simulation.Pathfinder.TryFindIdleTile(simulation.Map, start, simulation.Random.NextInclusive(1, 24), out var tile, parcel) || tile == start)
         {
             _idleTicks = Forever;
             return;

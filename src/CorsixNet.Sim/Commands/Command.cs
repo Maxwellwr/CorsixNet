@@ -45,6 +45,7 @@ public enum CommandKind : ushort
     ChangeQueueSize = 30,
     MoveInQueue = 31,
     SendPatientToRoom = 32,
+    SetHandymanParcel = 33,
 }
 
 /// <summary>
@@ -100,6 +101,7 @@ public abstract record Command
             CommandKind.ChangeQueueSize => new ChangeQueueSizeCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.MoveInQueue => new MoveInQueueCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.SendPatientToRoom => new SendPatientToRoomCommand(reader.ReadInt32(), reader.ReadInt32()),
+            CommandKind.SetHandymanParcel => new SetHandymanParcelCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -800,6 +802,32 @@ public sealed record SendPatientToRoomCommand(int PatientId, int RoomId) : Comma
     {
         writer.WriteInt32(PatientId);
         writer.WriteInt32(RoomId);
+    }
+}
+
+/// <summary>
+/// Keeps a handyman of the issuing player to one of the player's parcels, or to all of them with 0 (CorsixTH's staff
+/// window, <c>UIStaff:changeParcel</c>, which steps through the hospital's parcels and back to all). Ignored for a parcel
+/// the player does not own.
+/// </summary>
+public sealed record SetHandymanParcelCommand(int HandymanId, int Parcel) : Command
+{
+    public override CommandKind Kind => CommandKind.SetHandymanParcel;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(HandymanId) is Humanoid { Behaviour: HandymanBehaviour handyman, IsDespawning: false } humanoid
+            && humanoid.Employer == player
+            && (Parcel == 0 || (Parcel > 0 && Parcel < simulation.Map.ParcelCount && simulation.Map.GetParcelOwner(Parcel) == player + 1)))
+        {
+            handyman.Parcel = Parcel;
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(HandymanId);
+        writer.WriteInt32(Parcel);
     }
 }
 

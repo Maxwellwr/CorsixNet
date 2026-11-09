@@ -3,6 +3,7 @@ using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.Tests;
@@ -14,6 +15,7 @@ public class MeanderingTests
     [InlineData(StaffClass.Doctor)]
     [InlineData(StaffClass.Nurse)]
     [InlineData(StaffClass.Receptionist)]
+    [InlineData(StaffClass.Handyman)]
     public void IdleStaffWalkAndStandByTurns(StaffClass staffClass)
     {
         var simulation = NewSimulation(".........");
@@ -68,6 +70,49 @@ public class MeanderingTests
         }
 
         Assert.Equal(simulation.ComputeStateHash(), restored.ComputeStateHash());
+    }
+
+    [Fact]
+    public void AHandymanKeepsToHisParcel()
+    {
+        // The west half is parcel 1, the east half parcel 2; the player owns both, and a third that does not exist.
+        var simulation = NewSimulation("..........");
+        var map = simulation.Map;
+        map.ParcelCount = 3;
+        map.SetParcelOwner(2, 1);
+        for (var y = 0; y < map.Height; y++)
+        {
+            for (var x = 5; x < map.Width; x++)
+            {
+                map[x, y].Parcel = 2;
+            }
+        }
+
+        var handyman = Hire(simulation, StaffClass.Handyman);
+        var behaviour = (HandymanBehaviour)handyman.Behaviour!;
+        Run(simulation, new SetHandymanParcelCommand(handyman.Id, 3));
+        Assert.Equal(0, behaviour.Parcel);
+        Run(simulation, new SetHandymanParcelCommand(handyman.Id, 2));
+        Assert.Equal(2, behaviour.Parcel);
+
+        // Once he has walked over, he stays.
+        for (var tick = 0; tick < 2000; tick++)
+        {
+            simulation.Step();
+            if (tick > 300 && !handyman.IsMoving)
+            {
+                Assert.Equal(2, map[handyman.Tile.X, handyman.Tile.Y].Parcel);
+            }
+        }
+
+        Run(simulation, new SetHandymanParcelCommand(handyman.Id, 0));
+        Assert.Equal(0, behaviour.Parcel);
+    }
+
+    private static void Run(Simulation simulation, Command command)
+    {
+        simulation.Schedule(0, command);
+        simulation.Step();
     }
 
     private static Humanoid Hire(Simulation simulation, StaffClass staffClass)

@@ -88,13 +88,21 @@ public sealed class Pathfinder
     /// <param name="start">Where the queue starts.</param>
     /// <param name="n">Which suitable tile to return, counting from 0.</param>
     /// <param name="tile">The tile found.</param>
+    /// <param name="parcel">
+    /// Only tiles of this parcel count (a handyman's assigned parcel); 0, or a parcel nobody owns, for any.
+    /// </param>
     /// <returns>Whether any suitable tile was found; with fewer than <paramref name="n"/> + 1, the last one is returned.</returns>
-    public bool TryFindIdleTile(LevelMap map, TilePosition start, int n, out TilePosition tile)
+    public bool TryFindIdleTile(LevelMap map, TilePosition start, int n, out TilePosition tile, int parcel = 0)
     {
         tile = default;
         if (!map.Contains(start.X, start.Y))
         {
             return false;
+        }
+
+        if (parcel <= 0 || parcel >= map.ParcelCount || map.GetParcelOwner(parcel) == 0)
+        {
+            parcel = 0;
         }
 
         _destinationX = start.X;
@@ -108,7 +116,8 @@ public sealed class Pathfinder
             var x = node % _width;
             var y = node / _width;
             var flags = map[x, y];
-            if (!flags.Has(TileFlags.DoNotIdle) && !flags.Has(TileFlags.AvoidTile) && flags.Has(TileFlags.Passable | TileFlags.Hospital))
+            if (!flags.Has(TileFlags.DoNotIdle) && !flags.Has(TileFlags.AvoidTile) && flags.Has(TileFlags.Passable | TileFlags.Hospital)
+                && (parcel == 0 || flags.Parcel == parcel))
             {
                 if (n == 0)
                 {
