@@ -10,6 +10,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CorsixNet.Analyzers.Tests/CorsixNet.Analyzers.Tests.csproj" />
+    <Project Path="tests/CorsixNet.Client.Tests/CorsixNet.Client.Tests.csproj" />
     <Project Path="tests/CorsixNet.Content.Tests/CorsixNet.Content.Tests.csproj" />
     <Project Path="tests/CorsixNet.Formats.Tests/CorsixNet.Formats.Tests.csproj" />
     <Project Path="tests/CorsixNet.Net.Tests/CorsixNet.Net.Tests.csproj" />
