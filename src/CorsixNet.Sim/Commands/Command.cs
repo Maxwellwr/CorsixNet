@@ -46,6 +46,7 @@ public enum CommandKind : ushort
     MoveInQueue = 31,
     SendPatientToRoom = 32,
     SetHandymanParcel = 33,
+    MoveStaff = 34,
 }
 
 /// <summary>
@@ -102,6 +103,7 @@ public abstract record Command
             CommandKind.MoveInQueue => new MoveInQueueCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.SendPatientToRoom => new SendPatientToRoomCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.SetHandymanParcel => new SetHandymanParcelCommand(reader.ReadInt32(), reader.ReadInt32()),
+            CommandKind.MoveStaff => new MoveStaffCommand(reader.ReadInt32(), reader.ReadTile()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -433,6 +435,29 @@ public sealed record HireStaffCommand(StaffClass Class, int Index, TilePosition 
     {
         writer.WriteByte((byte)Class);
         writer.WriteInt32(Index);
+        writer.WriteTile(Tile);
+    }
+}
+
+/// <summary>
+/// Picks up a member of the issuing player's staff and puts them down on a tile (CorsixTH's pickup action and
+/// <c>UIPlaceStaff</c>), where they start afresh; ignored where <see cref="StaffMoving.Check"/> says no.
+/// </summary>
+public sealed record MoveStaffCommand(int StaffId, TilePosition Tile) : Command
+{
+    public override CommandKind Kind => CommandKind.MoveStaff;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (StaffMoving.Check(simulation, StaffId, Tile, player) == StaffHireProblem.None && simulation.FindEntity(StaffId) is Humanoid staff)
+        {
+            StaffMoving.Move(simulation, staff, Tile);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(StaffId);
         writer.WriteTile(Tile);
     }
 }

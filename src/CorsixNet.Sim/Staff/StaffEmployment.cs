@@ -123,7 +123,7 @@ internal static class StaffEmployment
         }
     }
 
-    private static bool IsBusyWithPatient(Simulation simulation, Humanoid humanoid) => humanoid.Behaviour switch
+    internal static bool IsBusyWithPatient(Simulation simulation, Humanoid humanoid) => humanoid.Behaviour switch
     {
         NurseBehaviour { Phase: NursePhase.Treating } => true,
         DoctorBehaviour doctor => simulation.FindEntity(doctor.RoomId) is Room room
@@ -215,6 +215,18 @@ internal static class StaffEmployment
     /// </summary>
     private static void Leave(Simulation simulation, Humanoid humanoid)
     {
+        Detach(simulation, humanoid);
+        var points = simulation.Arrivals.SpawnPointsOf(simulation.Map);
+        var home = points.Count > 0 ? points[simulation.Random.Next(points.Count)] : humanoid.Tile;
+        humanoid.Behaviour = new LeavingBehaviour(home);
+    }
+
+    /// <summary>
+    /// Takes a member of staff off their job: out of the room they work in or are going to, off the reception desk they
+    /// staff or are going to; they stop walking and any action, and are seen again.
+    /// </summary>
+    internal static void Detach(Simulation simulation, Humanoid humanoid)
+    {
         switch (humanoid.Behaviour)
         {
             case DoctorBehaviour doctor:
@@ -245,9 +257,6 @@ internal static class StaffEmployment
         humanoid.ClearActionAnimation();
         humanoid.IsHidden = false;
         humanoid.StopWalking();
-        var points = simulation.Arrivals.SpawnPointsOf(simulation.Map);
-        var home = points.Count > 0 ? points[simulation.Random.Next(points.Count)] : humanoid.Tile;
-        humanoid.Behaviour = new LeavingBehaviour(home);
     }
 
     private static void LeaveRoom(Simulation simulation, Humanoid humanoid, int roomId, Maps.TilePosition? standAt)

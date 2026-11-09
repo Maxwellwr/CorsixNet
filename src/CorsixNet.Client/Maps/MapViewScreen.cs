@@ -145,6 +145,9 @@ internal sealed class MapViewScreen : IScreen
     private bool _demoDeskPending;
     private bool _demoDiagnosisPending;
     private int? _selected;
+
+    /// <summary>The member of staff picked up with M, to be put down with M again.</summary>
+    private int? _pickedUpStaff;
     private LevelMap? _preparedMap;
     private string? _capturePath;
 
@@ -1061,6 +1064,42 @@ internal sealed class MapViewScreen : IScreen
             if (shot is not null)
             {
                 _session.Submit(new ShootRatCommand(shot.Id));
+            }
+        }
+
+        // Until staff can be grabbed with the hand cursor, M picks up the player's member of staff nearest the cursor
+        // (within a tile) and M again puts them down at the cursor; on the same tile, nothing happens.
+        if (pressed(Keys.M) && _hoveredTile is { } handPoint)
+        {
+            var hand = new TilePosition(handPoint.X, handPoint.Y);
+            if (_pickedUpStaff is { } carried)
+            {
+                _pickedUpStaff = null;
+                if (simulation.FindEntity(carried) is Humanoid held && held.Tile != hand)
+                {
+                    var problem = StaffMoving.Check(simulation, carried, hand, _session.Player);
+                    if (problem == StaffHireProblem.None)
+                    {
+                        _session.Submit(new MoveStaffCommand(carried, hand));
+                    }
+                    else
+                    {
+                        ShowNotice($"Cannot put the member of staff down there: {problem}");
+                    }
+                }
+            }
+            else
+            {
+                _pickedUpStaff = simulation.Entities.OfType<Humanoid>()
+                    .Where(h => h.Profile is not null && h.Employer == _session.Player && !h.IsDespawning && !h.IsFired)
+                    .Where(h => Math.Abs(h.Tile.X - hand.X) <= 1 && Math.Abs(h.Tile.Y - hand.Y) <= 1)
+                    .OrderBy(h => Math.Abs(h.Tile.X - hand.X) + Math.Abs(h.Tile.Y - hand.Y))
+                    .Select(h => (int?)h.Id)
+                    .FirstOrDefault();
+                if (_pickedUpStaff is not null)
+                {
+                    ShowNotice("Picked up; M puts them down at the cursor");
+                }
             }
         }
 

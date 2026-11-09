@@ -23,6 +23,12 @@ public enum StaffHireProblem
     NotPassable,
     NoRoomsForReceptionists,
     DoorUnreachable,
+
+    /// <summary>Moving: there is no such member of staff of the player's, or they are leaving.</summary>
+    NoSuchStaff,
+
+    /// <summary>Moving: they are in the middle of using an object together with a patient.</summary>
+    BusyWithPatient,
 }
 
 /// <summary>
@@ -64,7 +70,12 @@ public static class StaffHiring
     /// reached from it. Receptionists have no door animations and never go into rooms, but may be put
     /// straight onto a reception desk without a receptionist, which they then staff.
     /// </summary>
-    public static StaffHireProblem CheckPlacement(Simulation simulation, StaffClass staffClass, TilePosition tile, int player)
+    /// <param name="simulation">The simulation.</param>
+    /// <param name="staffClass">The class of the member of staff.</param>
+    /// <param name="tile">Where they would be placed.</param>
+    /// <param name="player">The player, 0-based.</param>
+    /// <param name="movingStaffId">A member of staff being moved, whose own reception desk counts as unstaffed.</param>
+    public static StaffHireProblem CheckPlacement(Simulation simulation, StaffClass staffClass, TilePosition tile, int player, int movingStaffId = 0)
     {
         var map = simulation.Map;
         if (!map.Contains(tile.X, tile.Y))
@@ -78,7 +89,7 @@ public static class StaffHiring
             return StaffHireProblem.NotInHospital;
         }
 
-        if (staffClass == StaffClass.Receptionist && UnstaffedDeskAt(simulation, tile) is not null)
+        if (staffClass == StaffClass.Receptionist && UnstaffedDeskAt(simulation, tile, movingStaffId) is not null)
         {
             return StaffHireProblem.None;
         }
@@ -111,11 +122,14 @@ public static class StaffHiring
     /// A reception desk covering <paramref name="tile"/> without a receptionist at it (CorsixTH's
     /// <c>getObject(x, y, "reception_desk", true)</c> and <c>not desk.receptionist</c>), or null.
     /// </summary>
-    public static RoomObject? UnstaffedDeskAt(Simulation simulation, TilePosition tile)
+    /// <param name="simulation">The simulation.</param>
+    /// <param name="tile">The tile.</param>
+    /// <param name="receptionistId">A receptionist whose own desk counts as unstaffed, or 0.</param>
+    public static RoomObject? UnstaffedDeskAt(Simulation simulation, TilePosition tile, int receptionistId = 0)
     {
         foreach (var desk in simulation.Entities.OfType<RoomObject>())
         {
-            if (desk.Desk is not { ReceptionistId: 0 }
+            if (desk.Desk is not { } state || (state.ReceptionistId != 0 && state.ReceptionistId != receptionistId)
                 || simulation.Content.FindObject(desk.ObjectType) is not { } definition
                 || !definition.Orientations.TryGetValue(desk.Orientation, out var layout))
             {
@@ -183,17 +197,20 @@ public static class StaffHiring
     private static Humanoid Place(Simulation simulation, StaffProfile profile, TilePosition tile, int player)
     {
         var staff = simulation.AddEntity(id => Humanoid.CreateStaff(id, tile, profile, player));
-        staff.Behaviour = profile.Class switch
-        {
-            StaffClass.Doctor => new DoctorBehaviour(),
-            StaffClass.Nurse => new NurseBehaviour(),
-            StaffClass.Receptionist => new ReceptionistBehaviour(),
-            StaffClass.Handyman => new HandymanBehaviour(),
-            _ => null,
-        };
+        staff.Behaviour = NewBehaviour(profile.Class);
 
         // Staff:onPlaceInCorridor.
         Tiredness.UpdateSpeed(simulation, staff);
         return staff;
     }
+
+    /// <summary>What a member of staff of the class does when placed: start afresh, looking for work.</summary>
+    internal static HumanoidBehaviour? NewBehaviour(StaffClass staffClass) => staffClass switch
+    {
+        StaffClass.Doctor => new DoctorBehaviour(),
+        StaffClass.Nurse => new NurseBehaviour(),
+        StaffClass.Receptionist => new ReceptionistBehaviour(),
+        StaffClass.Handyman => new HandymanBehaviour(),
+        _ => null,
+    };
 }

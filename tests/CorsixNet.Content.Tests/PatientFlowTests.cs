@@ -588,7 +588,7 @@ public class PatientFlowTests
         Run(simulation, new HireStaffCommand(StaffClass.Doctor, 0, new(14, 16)));
     }
 
-    private static RoomObject PlaceReceptionDesk(Simulation simulation)
+    internal static RoomObject PlaceReceptionDesk(Simulation simulation)
     {
         PlaceAnywhere(simulation, ReceptionDesks.ObjectId, new TileRect(12, 14, 4, 4));
         return Desk(simulation);
@@ -618,7 +618,7 @@ public class PatientFlowTests
     /// A map of grass with a hospital building in the middle (tiles 2 to 21), all of it the player's;
     /// patients come from the edges.
     /// </summary>
-    private static Simulation NewHospital(LevelRules? rules = null)
+    internal static Simulation NewHospital(LevelRules? rules = null)
     {
         var map = new LevelMap(Size, Size, playerCount: 1);
         map.ParcelCount = 2;
