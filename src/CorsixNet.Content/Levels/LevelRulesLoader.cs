@@ -223,7 +223,8 @@ public static partial class LevelRulesLoader
             levelNumber,
             RandomEmergenciesFromConfig(config),
             difficulty,
-            config.GetInt("gbv.SodaPrice") ?? LevelRules.DefaultSodaPrice);
+            config.GetInt("gbv.SodaPrice") ?? LevelRules.DefaultSodaPrice,
+            ResearchFromConfig(config));
     }
 
     /// <summary>
@@ -240,6 +241,51 @@ public static partial class LevelRulesLoader
                 yield return new PlannedCompetitor(index + 1, config[$"computer[{index}].Name"] ?? BaseCompetitorNames[index]);
             }
         }
+    }
+
+    /// <summary>
+    /// The research settings: <c>objects[n]</c> of the objects research knows about (those the level names), each
+    /// <c>expertise[n].RschReqd</c>, and <c>gbv.ResearchPointsDivisor</c>, <c>RschImproveCostPercent</c>,
+    /// <c>RschImproveIncrementPercent</c>, <c>DrugImproveRate</c>, <c>MinDrugCost</c>, <c>MaxObjectStrength</c>,
+    /// <c>ResearchIncrement</c> and <c>AutopsyRschPercent</c>, by default base_config.lua's.
+    /// </summary>
+    public static Sim.Research.ResearchRules ResearchFromConfig(LevelConfig config)
+    {
+        var objects = new List<KeyValuePair<int, Sim.Research.ResearchObjectRules>>();
+        foreach (var obj in Sim.Research.ResearchObjects.All)
+        {
+            var key = $"objects[{obj.ObjectType}]";
+            if (config.GetInt($"{key}.AvailableForLevel") is not { } forLevel)
+            {
+                continue;
+            }
+
+            objects.Add(KeyValuePair.Create(obj.ObjectType, new Sim.Research.ResearchObjectRules(
+                config.GetInt($"{key}.StartCost") ?? 0,
+                config.GetInt($"{key}.StartAvail") == 1,
+                config.GetInt($"{key}.WhenAvail") ?? 0,
+                config.GetInt($"{key}.StartStrength") ?? obj.DefaultStrength,
+                forLevel == 1,
+                config.GetInt($"{key}.RschReqd"))));
+        }
+
+        var required = new int[DiseaseRules.ExpertiseCount + 1];
+        for (var i = 1; i < required.Length; i++)
+        {
+            required[i] = config.GetInt($"expertise[{i}].RschReqd") ?? 0;
+        }
+
+        return new Sim.Research.ResearchRules(
+            objects,
+            required,
+            config.GetInt("gbv.ResearchPointsDivisor") ?? Sim.Research.ResearchRules.DefaultPointsDivisor,
+            config.GetInt("gbv.RschImproveCostPercent") ?? Sim.Research.ResearchRules.DefaultImproveCostPercent,
+            config.GetInt("gbv.RschImproveIncrementPercent") ?? Sim.Research.ResearchRules.DefaultImproveIncrementPercent,
+            config.GetInt("gbv.DrugImproveRate") ?? Sim.Research.ResearchRules.DefaultDrugImproveRate,
+            config.GetInt("gbv.MinDrugCost") ?? Sim.Research.ResearchRules.DefaultMinDrugCost,
+            config.GetInt("gbv.MaxObjectStrength") ?? Sim.Research.ResearchRules.DefaultMaxObjectStrength,
+            config.GetInt("gbv.ResearchIncrement") ?? Sim.Research.ResearchRules.DefaultResearchIncrement,
+            config.GetInt("gbv.AutopsyRschPercent") ?? Sim.Research.ResearchRules.DefaultAutopsyPercent);
     }
 
     /// <summary>

@@ -21,7 +21,7 @@ public static class RoomPurchases
     /// <summary>Whether <paramref name="player"/> (0-based) has the money to start a room of this type.</summary>
     public static bool CanAfford(Simulation simulation, RoomDefinition room, int player)
     {
-        return HospitalOf(simulation, player) is { } hospital && hospital.Balance >= simulation.Rules.BuildCost(room);
+        return HospitalOf(simulation, player) is { } hospital && hospital.Balance >= BuildCost(simulation, hospital, room);
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public static class RoomPurchases
 
         foreach (var (objectId, count) in LevelRules.Needed(room))
         {
-            hospital.Spend(simulation.Hours, count * simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
+            hospital.Spend(simulation.Hours, count * hospital.Research.ObjectCost(simulation.Rules, objectId), TransactionKind.BuyObject, objectId);
         }
     }
 
@@ -53,13 +53,16 @@ public static class RoomPurchases
     /// </summary>
     public static bool CanAffordObject(Simulation simulation, string objectId, int player)
     {
-        return HospitalOf(simulation, player) is { } hospital && hospital.Balance >= simulation.Rules.ObjectCost(objectId);
+        return HospitalOf(simulation, player) is { } hospital && hospital.Balance >= hospital.Research.ObjectCost(simulation.Rules, objectId);
     }
 
     /// <summary>Pays for an object bought for a corridor.</summary>
     internal static void BuyObject(Simulation simulation, string objectId, int player)
     {
-        HospitalOf(simulation, player)?.Spend(simulation.Hours, simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
+        if (HospitalOf(simulation, player) is { } hospital)
+        {
+            hospital.Spend(simulation.Hours, hospital.Research.ObjectCost(simulation.Rules, objectId), TransactionKind.BuyObject, objectId);
+        }
     }
 
     /// <summary>Pays for the room itself when it is confirmed; its objects were paid for already.</summary>
@@ -80,7 +83,7 @@ public static class RoomPurchases
         {
             for (var i = 0; i < count; i++)
             {
-                hospital.Receive(simulation.Hours, simulation.Rules.ObjectCost(objectId), TransactionKind.SellObject, objectId);
+                hospital.Receive(simulation.Hours, hospital.Research.ObjectCost(simulation.Rules, objectId), TransactionKind.SellObject, objectId);
             }
         }
     }
@@ -105,7 +108,10 @@ public static class RoomPurchases
     /// <summary>Sells back an extra object picked up again (<c>UIPlaceObjects:removeObject</c>'s sale, at full price).</summary>
     internal static void SellObject(Simulation simulation, string objectId, int player)
     {
-        HospitalOf(simulation, player)?.Receive(simulation.Hours, simulation.Rules.ObjectCost(objectId), TransactionKind.SellObject, objectId);
+        if (HospitalOf(simulation, player) is { } hospital)
+        {
+            hospital.Receive(simulation.Hours, hospital.Research.ObjectCost(simulation.Rules, objectId), TransactionKind.SellObject, objectId);
+        }
     }
 
     /// <summary>
@@ -134,6 +140,18 @@ public static class RoomPurchases
 
     private static int CountIn(Simulation simulation, int roomId, string objectId) =>
         simulation.Entities.OfType<RoomObject>().Count(o => o.RoomId == roomId && string.Equals(o.ObjectType, objectId, StringComparison.Ordinal));
+
+    /// <summary>What a room costs this hospital in all: the room and its needed objects at their current prices (<c>build_cost</c>).</summary>
+    public static int BuildCost(Simulation simulation, Hospital hospital, RoomDefinition room)
+    {
+        var cost = simulation.Rules.RoomCost(room.Id);
+        foreach (var (objectId, count) in LevelRules.Needed(room))
+        {
+            cost += count * hospital.Research.ObjectCost(simulation.Rules, objectId);
+        }
+
+        return cost;
+    }
 
     private static Hospital? HospitalOf(Simulation simulation, int player)
     {

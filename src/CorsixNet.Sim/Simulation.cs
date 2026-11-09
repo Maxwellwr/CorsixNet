@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 53;
+    private const int FormatVersion = 54;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -87,6 +87,8 @@ public sealed class Simulation
                     _hospitals[player].DiscoverRoom(room.Id);
                 }
             }
+
+            _hospitals[player].Research = Research.ResearchDepartment.Create(Rules, _hospitals[player]);
         }
 
         // World:World adds the computer opponents after the players' hospitals.
@@ -298,6 +300,22 @@ public sealed class Simulation
         }
 
         Temperatures.Update(Map, TileTemperatures.OutsideTemperature(month), _radiatorTemperatures);
+    }
+
+    /// <summary>The player's staff at work in a research room (<c>researchCost</c>'s <c>staff_member_set</c>).</summary>
+    private int Researchers(int player)
+    {
+        var count = 0;
+        foreach (var entity in _entities)
+        {
+            if (entity is Humanoid { Behaviour: People.IRoomStaff { RoomId: > 0 } staff, Employer: var employer } && employer == player
+                && FindEntity(staff.RoomId) is Room { RoomType: "research" })
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     /// <summary>Creates an entity with the next free id.</summary>
@@ -757,6 +775,9 @@ public sealed class Simulation
         foreach (var hospital in _hospitals)
         {
             hospital.OnEndDay();
+
+            // Hospital:onEndDay: then the day's research cost, by the researchers at work.
+            hospital.Research.AccumulateCost(Researchers(hospital.Player));
             hospital.OnEndDayHeating(Random, radiators[hospital.Player], handymen[hospital.Player], date.DaysInMonth, Rules.Difficulty);
 
             // PlayerHospital's end of the day: rat holes, then rats.
@@ -817,8 +838,12 @@ public sealed class Simulation
             hospital.PayWages(Hours, wages[hospital.Player]);
             hospital.PayHeating(Hours);
             hospital.PayInterest(Hours);
+            hospital.PayResearch(Hours);
             hospital.RaiseSalary(Rules.ScoreMaxIncrease);
             hospital.PayInsurance(Hours);
+
+            // Hospital:onEndMonth: equipment the level brings this month.
+            hospital.Research.CheckAutomaticDiscovery(this, hospital, date.MonthOfGame);
             hospital.RecordMonth(wages[hospital.Player]);
             if (date.IsLastDayOfYear)
             {

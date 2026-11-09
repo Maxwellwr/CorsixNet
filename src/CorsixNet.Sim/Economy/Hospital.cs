@@ -94,6 +94,9 @@ public enum TransactionKind : byte
 
     /// <summary>A can sold from a drinks machine (<c>drinks</c>, <c>Hospital:sellSodaToPatient</c>).</summary>
     Drinks = 24,
+
+    /// <summary>The month's research costs (<c>research</c>).</summary>
+    Research = 25,
 }
 
 /// <summary>
@@ -560,6 +563,21 @@ public sealed class Hospital
 
     /// <summary>Hours until the hospital opens by itself; 0 once open.</summary>
     public int HoursUntilOpen => IsOpen ? 0 : OpenTimer < 0 ? 1 : OpenTickTimer + 1 + (OpenTimer * (OpeningTickRate + 1)) + 1;
+
+    /// <summary>The hospital's research (CorsixTH's <c>research</c>).</summary>
+    public Research.ResearchDepartment Research { get; internal set; } = new();
+
+    /// <summary>
+    /// <c>Hospital:onEndMonth</c>'s research costs: what the month's research cost is paid, rounded.
+    /// </summary>
+    internal void PayResearch(long tick)
+    {
+        var cost = Research.TakeAccumulatedCost();
+        if (cost > 0)
+        {
+            Spend(tick, cost, TransactionKind.Research, string.Empty);
+        }
+    }
 
     /// <summary>Casebook entries made so far, by disease id.</summary>
     public IReadOnlyDictionary<string, DiseaseCase> Casebook => _casebook;
@@ -1379,6 +1397,8 @@ public sealed class Hospital
             writer.WriteInt32(entry.Reputation ?? 0);
             writer.WriteInt32(entry.TurnedAway);
         }
+
+        Research.Write(writer);
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1389,7 +1409,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Drinks)
+            if (kind > (byte)TransactionKind.Research)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -1508,6 +1528,7 @@ public sealed class Hospital
             }
         }
 
+        hospital.Research = Sim.Research.ResearchDepartment.Read(reader);
         return hospital;
     }
 

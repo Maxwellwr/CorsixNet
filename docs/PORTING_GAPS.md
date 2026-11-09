@@ -17,7 +17,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Diagnosis rooms: X-ray, scanner, blood machine, cardiogram, psychiatry (also a treatment room), ward (also treatment) | `rooms/x_ray_room.lua`, `scanner_room.lua`, `ultrascan.lua`, `blood_machine_room.lua`, `cardiogram.lua`, `psych.lua`, `ward.lua` |
 | Treatment rooms: operating theatre, inflation, fracture clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination | `rooms/operating_theatre.lua`, `inflation.lua`, `fracture_clinic.lua`, `hair_restoration.lua`, `slack_tongue.lua`, `dna_fixer.lua`, `electrolysis.lua`, `jelly_vat.lua`, `decontamination.lua` |
 | Facilities: staff room, training room, research department | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
-| Rooms discovered by research (availability by level and at the start is ported) | `research_department.lua` |
+| The research department room and its researchers, autopsies (the research itself, by level settings, and equipment coming by itself are ported) | `rooms/research.lua`, `research_department.lua` |
 | Editing a finished room (back to blueprint: resize, move the door; add, move or remove objects), deleting a room | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
 | Room-specific rules: doors that can't be used while busy (swing doors of the operating theatre, ward), rooms that need two staff (operating theatre), max patients per room (ward beds) | `rooms/*.lua`, `objects/doors/*` |
@@ -151,7 +151,7 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   (N in the client), their prices, the heating level (T in the client), the heating bill and the boiler breaking
   down are done, and so is the temperature of tiles (`th_map.cpp`'s `updateTemperatures`, `TileTemperatures`, the
   O overlay), and people and plants feel it. The adviser's warning when the boiler breaks is not.
-- Research spending and its effect on drug ratings and new equipment (`research_department.lua`, `fullscreen/research_policy.lua`).
+- The research policy window (shares and concentrating are commands so far) (`fullscreen/research_policy.lua`).
 - Graphs window of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`); the monthly
   figures it draws are recorded (`Hospital.Statistics`) and F8 shows them as text.
 

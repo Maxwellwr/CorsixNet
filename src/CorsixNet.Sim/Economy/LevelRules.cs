@@ -86,6 +86,7 @@ public sealed class LevelRules
     /// <param name="randomEmergencies">Random emergencies instead of the planned ones, or null for none.</param>
     /// <param name="difficulty">The campaign's difficulty; medium for every other level.</param>
     /// <param name="sodaPrice">What a can from the drinks machine costs (<c>gbv.SodaPrice</c>).</param>
+    /// <param name="research">What research goes by; by default nothing to research.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -111,8 +112,10 @@ public sealed class LevelRules
         int? levelNumber = null,
         RandomEmergencies? randomEmergencies = null,
         Difficulty difficulty = Difficulty.Medium,
-        int sodaPrice = DefaultSodaPrice)
+        int sodaPrice = DefaultSodaPrice,
+        Research.ResearchRules? research = null)
     {
+        Research = research ?? Sim.Research.ResearchRules.Default;
         SodaPrice = sodaPrice;
         Difficulty = Enum.IsDefined(difficulty) ? difficulty : throw new ArgumentOutOfRangeException(nameof(difficulty));
         RandomEmergencies = randomEmergencies;
@@ -211,6 +214,9 @@ public sealed class LevelRules
 
     /// <summary>What a can from the drinks machine costs (<c>gbv.SodaPrice</c>).</summary>
     public int SodaPrice { get; }
+
+    /// <summary>What research goes by.</summary>
+    public Research.ResearchRules Research { get; }
 
     /// <summary>The campaign level's number (CorsixTH's <c>map.level_number</c>), or null for another map.</summary>
     public int? LevelNumber { get; }
@@ -357,6 +363,7 @@ public sealed class LevelRules
 
         writer.WriteByte((byte)Difficulty);
         writer.WriteInt32(SodaPrice);
+        Research.Write(writer);
         writer.WriteBool(FreeBuild);
     }
 
@@ -397,7 +404,8 @@ public sealed class LevelRules
             reader.ReadInt32(), reader.ReadInt32() is var level and > 0 ? level : null,
             reader.ReadBool() ? new RandomEmergencies(reader.ReadInt32(), reader.ReadInt32()) : null,
             reader.ReadByte() is var difficulty && Enum.IsDefined((Difficulty)difficulty) ? (Difficulty)difficulty : throw new InvalidDataException($"Unknown difficulty {difficulty}."),
-            reader.ReadInt32());
+            reader.ReadInt32(),
+            Sim.Research.ResearchRules.Read(reader));
         return reader.ReadBool() ? rules.WithFreeBuild() : rules;
     }
 

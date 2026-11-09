@@ -284,7 +284,13 @@ public static class PatientCare
     {
         patient.IsDiagnosed = true;
         patient.AddToTreatmentHistory(new TreatmentHistoryEntry(TreatmentHistoryKind.Diagnosis, disease.Id));
-        simulation.Hospitals[humanoid.HospitalPlayer].CaseOf(disease, simulation.Rules.Diseases).Discovered = true;
+        var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
+        var entry = hospital.CaseOf(disease, simulation.Rules.Diseases);
+        if (!entry.Discovered)
+        {
+            entry.Discovered = true;
+            hospital.Research.OnDiseaseDiscovered(simulation, hospital, disease);
+        }
     }
 
     /// <summary>Whether the hospital knows the patient's disease, so that it may be guessed.</summary>

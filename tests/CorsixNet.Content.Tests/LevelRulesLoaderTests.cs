@@ -24,6 +24,28 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsWhatResearchGoesByAndStartsItAsInitResearchDoes()
+    {
+        var install = RealGameData.Require();
+
+        // Level one has no ultrascanner; level eight has it to research, with its fallback expertise's points, 80,000 on that level.
+        var one = LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create());
+        Assert.False(one.Research.Object(22)!.Value.ForLevel);
+        var eight = LevelRulesLoader.LoadOriginal(install, "LEVEL.L8", BaseGameContent.Create());
+        Assert.Equal(new Sim.Research.ResearchObjectRules(6000, false, 0, 9, true, null), eight.Research.Object(22));
+        Assert.Equal(80_000, eight.Research.ExpertiseRequired(40));
+        Assert.Equal(5, eight.Research.PointsDivisor);
+        Assert.Equal(20, eight.Research.MaxObjectStrength);
+
+        var map = new Sim.Maps.LevelMap(4, 4, playerCount: 1);
+        var research = new Sim.Simulation(map, 1, BaseGameContent.Create(), eight).Hospitals[0].Research;
+        Assert.Equal(100, research.Total);
+        Assert.False(research.Objects["ultrascanner"].Discovered);
+        Assert.Equal(Sim.Research.ResearchTargetKind.Object, research.Area(Sim.Research.ResearchCategory.Diagnosis).Current.Kind);
+        Assert.Equal(Sim.Research.ResearchTargetKind.Object, research.Area(Sim.Research.ResearchCategory.Cure).Current.Kind);
+    }
+
+    [Fact]
     public void ReadsTheStartingStaffAsHospitalInitStaffDoes()
     {
         var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
