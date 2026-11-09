@@ -55,7 +55,7 @@ objects from the level file.
 refreshed monthly, `HireStaffCommand` with placement check, monthly wages; receptionist at a desk,
 doctor in GP and general diagnosis, nurse in the pharmacy.
 
-- Hire window with faces, names and descriptions from the language files; picking up and placing staff
+- Hire window with faces (names and descriptions are done, `StaffTexts`); picking up and placing staff
   (two steps, cancel puts candidate back) (`dialogs/hire_staff.lua`, `place_staff.lua`, `staff_profile.lua`).
 - Staff management screen: list, salaries, raise, fire, train (`fullscreen/staff_management.lua`). Firing and
   answering a raise request are commands only (`FireStaffCommand`, `AnswerRaiseCommand`).
@@ -171,7 +171,8 @@ MMPX smoothing; everything else is debug keys.
 - Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips; object and
   humanoid highlighting on hover; hover info.
 - Strings and languages: CorsixTH's language files and their mapping of the original strings, translations, and
-  showing any of them (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`).
+  showing them in windows (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`), and
+  so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor).
 - Subtitles for the announcer (`dialogs/subtitles.lua`).
 - Hotkeys and their assignment dialog (`resizables/hotkey_assign.lua`).
 
