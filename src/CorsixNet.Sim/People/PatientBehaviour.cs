@@ -77,6 +77,28 @@ public enum PatientPhase : byte
     Waiting,
 }
 
+/// <summary>Something a patient does on the spot, interrupting what they were doing.</summary>
+public enum PatientSpotAction : byte
+{
+    None,
+
+    /// <summary>Being sick (<c>VomitAction</c>); puke is left on the floor.</summary>
+    Vomit,
+
+    /// <summary>Doing it on the floor (<c>PeeAction</c>); pee is left on the floor.</summary>
+    Pee,
+}
+
+/// <summary>Where a patient stands with the toilet (CorsixTH's <c>going_to_toilet</c>).</summary>
+public enum ToiletVisit : byte
+{
+    /// <summary><c>"no"</c>.</summary>
+    No,
+
+    /// <summary><c>"no-toilets"</c>: the patient wanted the toilet and the hospital has none.</summary>
+    NoToilets,
+}
+
 /// <summary>What a line of the patient window's treatment history says.</summary>
 public enum TreatmentHistoryKind : byte
 {
@@ -221,7 +243,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     public RoomSeek Seeking { get; private set; }
 
     /// <summary>Whether the patient stands at their place in the queue, so that the desk may see them.</summary>
-    public bool IsStandingInQueue(Humanoid humanoid) => !humanoid.IsMoving && humanoid.Tile == QueueTile;
+    public bool IsStandingInQueue(Humanoid humanoid) => !IsSidetracked && !humanoid.IsMoving && humanoid.Tile == QueueTile;
 
     /// <summary>Whether the patient sits on the room's object, being seen (CorsixTH's <c>user_of</c>).</summary>
     public bool IsBeingSeen => Phase == PatientPhase.UsingObject && Use is { IsUsing: true };
@@ -291,6 +313,30 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>The use of the drinks machine once the patient stands at it.</summary>
     private ObjectUse? _drinkUse;
 
+    /// <summary>What the patient does on the spot, interrupting what they were doing, or none.</summary>
+    public PatientSpotAction SpotAction { get; private set; }
+
+    /// <summary>Ticks left of the spot action's animation, or −1 until the patient stands still to start it.</summary>
+    private int _spotTimer;
+
+    /// <summary>Whether the spot action faces south (drawn mirrored) rather than east.</summary>
+    private bool _spotSouth;
+
+    /// <summary>Whether the patient has been sick since they last waited (CorsixTH's <c>has_vomitted</c>).</summary>
+    public bool HasVomited { get; internal set; }
+
+    /// <summary>Whether the patient shows the mood of needing the toilet (<c>setMood("poo", "activate")</c>).</summary>
+    public bool IsNeedingToilet { get; internal set; }
+
+    /// <summary>Where the patient stands with the toilet (<c>going_to_toilet</c>).</summary>
+    public ToiletVisit GoingToToilet { get; internal set; }
+
+    /// <summary>
+    /// Whether the patient is away from what they were doing: getting a drink or doing something on the spot. Their
+    /// <see cref="Phase"/> keeps what they go back to.
+    /// </summary>
+    public bool IsSidetracked => DrinksMachineId != 0 || SpotAction != PatientSpotAction.None;
+
     /// <summary>Whether the patient shows the thirsty mood (CorsixTH's <c>setMood("thirsty", "activate")</c>).</summary>
     public bool IsThirsty { get; internal set; }
 
@@ -338,7 +384,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal bool IsStatic(Humanoid humanoid) => Phase switch
     {
-        _ when DrinksMachineId != 0 => false,
+        _ when IsSidetracked => false,
         PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue => IsStandingInQueue(humanoid),
         PatientPhase.Waiting or PatientPhase.SeekRoom => !humanoid.IsMoving,
         _ => false,
@@ -350,6 +396,19 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (IsSetToDie && !IsInRoom && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0)
         {
             Die(simulation, humanoid);
+            return;
+        }
+
+        // CorsixTH counts a patient's wait by the day, whatever they are doing: being sick or getting a drink does not
+        // make them wait longer.
+        if (IsSidetracked && Phase == PatientPhase.Waiting && Waiting > 0)
+        {
+            Waiting--;
+        }
+
+        if (SpotAction != PatientSpotAction.None)
+        {
+            DoSpotAction(simulation, humanoid);
             return;
         }
 
@@ -764,8 +823,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
         QueueTile = tile;
 
-        // Away at the drinks machine, the patient keeps the place and walks to it with the can (action_queue_get_soda).
-        if (DrinksMachineId != 0)
+        // Away at the drinks machine, the patient keeps the place and walks to it with the can (action_queue_get_soda);
+        // likewise after being sick or doing it on the floor.
+        if (IsSidetracked)
         {
             return;
         }
@@ -786,7 +846,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         TargetId = room.Id;
 
         // A patient called in while getting a drink comes in with the can, as CorsixTH's queued actions run in turn.
-        if (DrinksMachineId == 0)
+        if (!IsSidetracked)
         {
             humanoid.WalkTo(simulation, door.InsideTile(room.Area));
         }
@@ -798,7 +858,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal void GoForDrink(Simulation simulation, Humanoid humanoid, RoomObject machine)
     {
-        if (DrinksMachineId != 0 || Phase is not (PatientPhase.SeekReception or PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue
+        if (IsSidetracked || Phase is not (PatientPhase.SeekReception or PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue
             or PatientPhase.SeekRoom or PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue or PatientPhase.Waiting))
         {
             return;
@@ -875,6 +935,111 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
         DrinksMachineId = 0;
         _drinkUse = null;
+        CarryOn(simulation, humanoid);
+    }
+
+    /// <summary>
+    /// <c>Patient:atFullyEmptyTile</c>: walking, standing about, looking for a room or queueing, not on the way home or to
+    /// die, on a buildable hospital tile of the patient's own hospital.
+    /// </summary>
+    internal bool IsAtFullyEmptyTile(Simulation simulation, Humanoid humanoid)
+    {
+        if (IsSidetracked || IsSetToDie || Phase is not (PatientPhase.SeekReception or PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue
+            or PatientPhase.SeekRoom or PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue or PatientPhase.Waiting))
+        {
+            return false;
+        }
+
+        var map = simulation.Map;
+        var cell = map[humanoid.Tile.X, humanoid.Tile.Y];
+        return cell.Has(TileFlags.Buildable) && cell.Has(TileFlags.Hospital) && cell.Parcel != 0
+            && map.GetParcelOwner(cell.Parcel) == humanoid.HospitalPlayer + 1;
+    }
+
+    /// <summary>
+    /// <c>Patient:vomit</c>: at a fully empty tile and not sick already since they last waited, the patient is sick on the
+    /// spot, and unhappy about it.
+    /// </summary>
+    internal void Vomit(Simulation simulation, Humanoid humanoid)
+    {
+        if (!IsAtFullyEmptyTile(simulation, humanoid) || HasVomited)
+        {
+            return;
+        }
+
+        StartSpotAction(humanoid, PatientSpotAction.Vomit);
+        HasVomited = true;
+        Feelings.ChangeHappiness(simulation, humanoid, -0.02m);
+    }
+
+    /// <summary><c>Patient:pee</c>: at a fully empty tile the patient does it on the floor, and is sad about it.</summary>
+    internal void Pee(Simulation simulation, Humanoid humanoid)
+    {
+        if (!IsAtFullyEmptyTile(simulation, humanoid))
+        {
+            return;
+        }
+
+        StartSpotAction(humanoid, PatientSpotAction.Pee);
+        IsNeedingToilet = false;
+        Feelings.ChangeHappiness(simulation, humanoid, -0.02m);
+    }
+
+    /// <summary>
+    /// <c>interruptAndRequeueAction</c>: the patient stops where they are (finishing a step under way) and does it there.
+    /// </summary>
+    private void StartSpotAction(Humanoid humanoid, PatientSpotAction action)
+    {
+        SpotAction = action;
+        _spotTimer = -1;
+        humanoid.StopWalking();
+    }
+
+    /// <summary>
+    /// <c>action_vomit_start</c> and <c>action_pee_start</c>: facing east or south at random, the animation plays once; at its
+    /// end the puke or pee is left on the tile (<c>World:newLitter</c>) and the patient carries on.
+    /// </summary>
+    private void DoSpotAction(Simulation simulation, Humanoid humanoid)
+    {
+        var animations = simulation.Content.FindPatientAnimations(humanoid.Type);
+        var animation = SpotAction == PatientSpotAction.Vomit ? animations?.Vomit : animations?.Pee;
+        if (_spotTimer < 0)
+        {
+            _spotSouth = simulation.Random.NextInclusive(0, 1) != 1;
+            if (animation is not { } start)
+            {
+                SpotAction = PatientSpotAction.None;
+                CarryOn(simulation, humanoid);
+                return;
+            }
+
+            humanoid.SetActionAnimation(simulation, start, _spotSouth, humanoid.Tile, humanoid.Tile, 0);
+            _spotTimer = start.Length;
+            return;
+        }
+
+        _spotTimer--;
+        if (_spotTimer > 0)
+        {
+            return;
+        }
+
+        humanoid.ClearActionAnimation();
+        if (humanoid.HospitalPlayer >= 0)
+        {
+            Litter.Drop(simulation, humanoid.HospitalPlayer, SpotAction == PatientSpotAction.Vomit ? LitterType.Puke : LitterType.Pee, humanoid.Tile, isMirrored: !_spotSouth);
+        }
+
+        SpotAction = PatientSpotAction.None;
+        CarryOn(simulation, humanoid);
+    }
+
+    /// <summary>
+    /// Back to what the patient was doing before getting a drink or doing something on the spot, as CorsixTH's requeued
+    /// action: walks start again, a queueing patient walks back to their place.
+    /// </summary>
+    private void CarryOn(Simulation simulation, Humanoid humanoid)
+    {
         switch (Phase)
         {
             case PatientPhase.WalkingToReception:
@@ -1445,6 +1610,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         IsSetToDie = false;
         DrinksMachineId = 0;
         _drinkUse = null;
+        if (SpotAction != PatientSpotAction.None)
+        {
+            SpotAction = PatientSpotAction.None;
+            humanoid.ClearActionAnimation();
+        }
+
         var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
         PatientCare.RecordDeath(simulation, hospital, Disease is { } disease ? hospital.CaseOf(disease, simulation.Rules.Diseases) : null);
         if (EmergencyIndex > 0)
@@ -1488,8 +1659,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         HomeTile = points.Count > 0 ? points[simulation.Random.Next(points.Count)] : humanoid.Tile;
 
         // Sent home on the way to the drinks machine, the patient goes; at the machine, they finish buying first (the
-        // use is must_happen), and the walk home starts after.
-        if (DrinksMachineId != 0 && _drinkUse is not null)
+        // use is must_happen), and the walk home starts after. So does a patient being sick or doing it on the floor.
+        if ((DrinksMachineId != 0 && _drinkUse is not null) || SpotAction != PatientSpotAction.None)
         {
             return;
         }
@@ -1545,6 +1716,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteInt32(DrinkTimeout);
         writer.WriteInt32(DrinksMachineId);
         ObjectUse.WriteOptional(writer, _drinkUse);
+        writer.WriteByte((byte)SpotAction);
+        writer.WriteInt32(_spotTimer);
+        writer.WriteBool(_spotSouth);
+        writer.WriteBool(HasVomited);
+        writer.WriteBool(IsNeedingToilet);
+        writer.WriteByte((byte)GoingToToilet);
         writer.WriteBool(IsThirsty);
         writer.WriteBool(IsSad);
         writer.WriteInt32(_healthHistory.Count);
@@ -1619,6 +1796,14 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.DrinkTimeout = reader.ReadInt32();
         patient.DrinksMachineId = reader.ReadInt32();
         patient._drinkUse = ObjectUse.ReadOptional(reader);
+        var spot = reader.ReadByte();
+        patient.SpotAction = spot <= (byte)PatientSpotAction.Pee ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
+        patient._spotTimer = reader.ReadInt32();
+        patient._spotSouth = reader.ReadBool();
+        patient.HasVomited = reader.ReadBool();
+        patient.IsNeedingToilet = reader.ReadBool();
+        var toilet = reader.ReadByte();
+        patient.GoingToToilet = toilet <= (byte)ToiletVisit.NoToilets ? (ToiletVisit)toilet : throw new InvalidDataException($"Unknown toilet visit {toilet}.");
         patient.IsThirsty = reader.ReadBool();
         patient.IsSad = reader.ReadBool();
         var days = reader.ReadCount(HealthHistorySize);

@@ -53,6 +53,11 @@ public sealed record RoomDefinition(
 /// The game's content definitions: what the simulation's rules refer to by id. Every machine
 /// in a game must use the same content; it is not part of the saved state.
 /// </summary>
+/// <summary>
+/// What a kind of patient does on the spot (humanoid.lua's <c>vomit_anim</c> and <c>pee_anim</c>); null where it has none.
+/// </summary>
+public sealed record PatientAnimations(AnimationRef? Vomit, AnimationRef? Pee);
+
 public sealed class GameContent
 {
     public static readonly GameContent Empty = new([], []);
@@ -62,17 +67,29 @@ public sealed class GameContent
     private readonly HashSet<ushort> _externalWallSprites;
     private readonly HashSet<ushort> _windowSprites;
     private readonly Dictionary<HumanoidType, DoorAnimations> _doorAnimations;
+    private readonly Dictionary<HumanoidType, PatientAnimations> _patientAnimations;
 
     /// <param name="rooms">Room types the player can build.</param>
     /// <param name="externalWallSprites">Sprites of the hospital's outer walls, which rooms keep rather than replace.</param>
     /// <param name="objects">Object types the player can place.</param>
     /// <param name="doorAnimations">How each kind of humanoid goes through a room door; the others simply walk through.</param>
+    /// <param name="patientAnimations">How each kind of patient vomits and pees; the others do neither.</param>
     public GameContent(
         IEnumerable<RoomDefinition> rooms,
         IEnumerable<ushort> externalWallSprites,
         IEnumerable<ObjectDefinition>? objects = null,
-        IReadOnlyDictionary<HumanoidType, DoorAnimations>? doorAnimations = null)
+        IReadOnlyDictionary<HumanoidType, DoorAnimations>? doorAnimations = null,
+        IReadOnlyDictionary<HumanoidType, PatientAnimations>? patientAnimations = null)
     {
+        _patientAnimations = [];
+        foreach (var type in Enum.GetValues<HumanoidType>())
+        {
+            if (patientAnimations?.GetValueOrDefault(type) is { } animations)
+            {
+                _patientAnimations[type] = animations;
+            }
+        }
+
         _doorAnimations = [];
         foreach (var type in Enum.GetValues<HumanoidType>())
         {
@@ -107,4 +124,7 @@ public sealed class GameContent
 
     /// <summary>How humanoids of <paramref name="type"/> go through a room door, or null if they have no door animations.</summary>
     public DoorAnimations? FindDoorAnimations(HumanoidType type) => _doorAnimations.GetValueOrDefault(type);
+
+    /// <summary>How patients of <paramref name="type"/> vomit and pee, or null if they do neither.</summary>
+    public PatientAnimations? FindPatientAnimations(HumanoidType type) => _patientAnimations.GetValueOrDefault(type);
 }

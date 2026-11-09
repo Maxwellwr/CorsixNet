@@ -92,9 +92,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: toilets and peeing, vomiting, boredom, leaving angry, complaining (warmth and its
+- Patient needs: going to the toilets, boredom, leaving angry, complaining (warmth and its
   effect on happiness, prices changing happiness, health dropping, patients giving up, and thirst and the need for
-  the toilet growing (`Needs`), and thirsty patients buying a can from the drinks machine, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
+  the toilet growing (`Needs`), thirsty patients buying a can from the drinks machine, and vomiting and peeing on the floor, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
 - Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,

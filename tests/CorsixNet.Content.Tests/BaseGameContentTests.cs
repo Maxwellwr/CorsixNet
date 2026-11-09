@@ -40,6 +40,20 @@ public class BaseGameContentTests
     }
 
     [Fact]
+    public void VomitAndPeeAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var animations = BaseGameContent.PatientAnimations.Values.SelectMany(a => new[] { a.Vomit, a.Pee }).OfType<AnimationRef>().ToList();
+
+        Assert.Equal(4, animations.Count);
+        foreach (var animation in animations)
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+    }
+
+    [Fact]
     public void MultiUseAnimationsLastAsLongAsTheOriginalsAnimations()
     {
         var set = AnimationSet.Load(RealGameData.Require());

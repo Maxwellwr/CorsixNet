@@ -17,16 +17,17 @@ public class LitterDroppingTests
     {
         var simulation = NewStaffedHospital();
         // How soon the first piece falls depends on how far the patients walk: give them up to 200 days.
-        for (var day = 0; day < 200 && !simulation.Entities.OfType<Litter>().Any(); day++)
+        for (var day = 0; day < 200 && !simulation.Entities.OfType<Litter>().Any(piece => piece.IsRubbish); day++)
         {
             StepFor(simulation, GameDate.HoursPerDay);
         }
 
         var litter = simulation.Entities.OfType<Litter>().ToList();
-        Assert.NotEmpty(litter);
+        // Sick patients leave puke too (Patient:vomit); rubbish is dropped as they walk.
+        Assert.Contains(litter, piece => piece.IsRubbish);
         Assert.All(litter, piece =>
         {
-            Assert.True(piece.IsRubbish);
+            Assert.True(piece.IsRubbish || piece.Type == LitterType.Puke);
             var cell = simulation.Map[piece.Tile.X, piece.Tile.Y];
             Assert.Equal(0, cell.RoomId);
             Assert.True(cell.Has(TileFlags.Hospital));

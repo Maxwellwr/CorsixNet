@@ -304,7 +304,15 @@ public static class BaseGameContent
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
         [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant],
-        DoorAnimations);
+        DoorAnimations,
+        PatientAnimations);
+
+    /// <summary>humanoid.lua's <c>vomit_anim</c> and <c>pee_anim</c> for the standard patients.</summary>
+    public static readonly IReadOnlyDictionary<HumanoidType, PatientAnimations> PatientAnimations = new Dictionary<HumanoidType, PatientAnimations>
+    {
+        [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8)),
+        [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
+    };
 
     /// <summary>
     /// pharmacy_cabinet.lua's <c>anim_set</c>: the nurse's own begin and finish animations around the ones showing her with
