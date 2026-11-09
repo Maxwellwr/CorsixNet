@@ -47,6 +47,8 @@ public enum CommandKind : ushort
     SendPatientToRoom = 32,
     SetHandymanParcel = 33,
     MoveStaff = 34,
+    AdjustResearch = 35,
+    ConcentrateResearch = 36,
 }
 
 /// <summary>
@@ -105,6 +107,8 @@ public abstract record Command
             CommandKind.SetHandymanParcel => new SetHandymanParcelCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.MoveStaff => new MoveStaffCommand(reader.ReadInt32(), reader.ReadTile()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
+            CommandKind.AdjustResearch => new AdjustResearchCommand(ReadResearchCategory(reader), reader.ReadInt32()),
+            CommandKind.ConcentrateResearch => new ConcentrateResearchCommand(reader.ReadString()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -115,6 +119,12 @@ public abstract record Command
     {
         var cheat = reader.ReadByte();
         return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleSuperDoctor ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+    }
+
+    private static Research.ResearchCategory ReadResearchCategory(SimReader reader)
+    {
+        var category = reader.ReadByte();
+        return category <= (byte)Research.ResearchCategory.Specialisation ? (Research.ResearchCategory)category : throw new InvalidDataException($"Unknown research category {category}.");
     }
 
     private static PatientAnswer ReadPatientAnswer(SimReader reader)
@@ -609,6 +619,50 @@ public sealed record SetPolicyCommand(PolicyKind Policy, int Value) : Command
         writer.WriteByte((byte)Policy);
         writer.WriteInt32(Value);
     }
+}
+
+/// <summary>
+/// Moves an area's share of the research points up or down by <paramref name="Change"/> percent (the research window's
+/// arrows, <c>UIResearch:adjustResearch</c>).
+/// </summary>
+public sealed record AdjustResearchCommand(Research.ResearchCategory Category, int Change) : Command
+{
+    public override CommandKind Kind => CommandKind.AdjustResearch;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[player].Research.AdjustShare(Category, Change);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteByte((byte)Category);
+        writer.WriteInt32(Change);
+    }
+}
+
+/// <summary>Concentrates research on a disease, or stops if it already does (the casebook's concentrate button).</summary>
+public sealed record ConcentrateResearchCommand(string DiseaseId) : Command
+{
+    public override CommandKind Kind => CommandKind.ConcentrateResearch;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < simulation.Hospitals.Count && DiseaseCatalog.Find(DiseaseId) is { } disease)
+        {
+            var hospital = simulation.Hospitals[player];
+            if (string.Equals(hospital.Research.Concentrated, DiseaseId, StringComparison.Ordinal)
+                || (hospital.CaseOf(disease, simulation.Rules.Diseases).Discovered && hospital.Research.CanConcentrate(simulation, hospital, disease)))
+            {
+                hospital.Research.Concentrate(simulation, hospital, disease);
+            }
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteString(DiseaseId);
 }
 
 /// <summary>Fires one of the issuing player's staff (CorsixTH's staff window and staff management screen).</summary>
