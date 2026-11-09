@@ -132,8 +132,17 @@ entities and pending commands.
   idle tiles (`Pathfinder.TryFindIdleTile`), whose search does not go through doors, so wandering
   people keep out of rooms. The demo's walkers use it. Doctors, nurses and receptionists with no room or desk
   meander by themselves (`Meandering`): a walk to such a tile, then 5 to 40 ticks standing, and so on; with nowhere
-  to walk to they stand still until sent somewhere. Handymen (`HandymanBehaviour`, nothing else to do yet) meander
-  too, outside rooms only within the parcel they are kept to (`SetHandymanParcelCommand`, 0 for all).
+  to walk to they stand still until sent somewhere. A doctor or nurse put down in a room, or left in one without a job,
+  takes it over if it needs them and has room (`RoomVisits.SettleIdleStaff`, `Room:onHumanoidEnter`): one put down in a
+  room for one sends its member of staff out unless a patient is in; otherwise they walk out of its door and meander.
+  Handymen (`HandymanBehaviour`) meander too, outside rooms only within the parcel they are kept to
+  (`SetHandymanParcelCommand`, 0 for all), and at the start of each round outside rooms look for work as
+  `Handyman:searchForHandymanTask`: cleaning, watering or repairing first at random by their priorities (a third each),
+  the task nearest by path, or more urgent, in their parcel (one within 3 tiles at once; another handyman's only if 5
+  tiles nearer). Cleanable litter is swept (`sweep_floor.lua`: broom out, two rounds of sweeping, the litter goes, two
+  more); a thirsty plant (priority its state + 1) is watered from the nearest reachable side in its room, which makes it
+  healthy at once (`restoreToFullHealth`). The tasks are worked out from the litter and plants, not kept in a list;
+  nothing breaks down yet, so there are no repairs.
 - **Moving staff.** `MoveStaffCommand` (`StaffMoving`) is CorsixTH's pickup action and `UIPlaceStaff` in one step:
   the member of staff leaves their room or desk (`StaffEmployment.Detach`, as when fired), is put on a tile where a new
   member of staff could be placed (their own desk counting as free) and starts afresh as if just hired; a handyman keeps
@@ -259,16 +268,16 @@ saved originals and the remaining objects. The client previews with the same che
 objects with their idle animations; a facing without its own animation mirrors its mirror facing
 (north and west, east and south), as CorsixTH's `orient_mirror`. The corridor objects are the
 reception desk, bench, drinks machine, fire extinguisher, radiator, bin and plant; using them
-(benches, drinks, watering plants) is not ported yet. A plant (`RoomObject.Plant`, `PlantState`, from
+(benches, drinks) is not ported yet. A plant (`RoomObject.Plant`, `PlantState`, from
 `plant.lua`) droops a state every 64 days, sooner where it is warm (each day counts 1 plus the tile's temperature),
-from healthy to dead in five states; the client draws the idle frame plus the state. Nobody waters it yet.
+from healthy to dead in five states; the client draws the idle frame plus the state. Handymen water it.
 Litter (`Litter`, an entity of its own, from `objects/litter.lua`) lies on a tile, at most one piece per tile: a
 higher ranked kind (puke 4, dead rat 3, pee 2, rubbish 1, soot 99) replaces a lower one, otherwise the new piece is
 not dropped (`World:newLitter`). Patients drop rubbish (`Littering`, from `Patient:setTile`): on their first floor
 tile of the building they get a countdown of 20 to 100 tiles, each step at the hospital counts it down, and at 0, on a
 free floor tile of their hospital outside rooms, they drop a can, banana, paper or bottle (one time in 20 if a bin is
 within 8 steps by CorsixTH's object search) and start again at 30 to 150. Placing an object or building a room clears
-the cleanable litter from its tiles. Nobody sweeps it up yet.
+the cleanable litter from its tiles. Handymen sweep it up.
 Rats (`Rats`, `Rat`, from `hospital.lua` and `entities/rat.lua`) come with litter. Each day a hospital wants a rat
 hole (`Hospital.Ratholes`) for each half percent of its corridor tiles with litter and tries up to 12 random tiles for
 one more in a corridor wall; then, unless it has a rat per 200 tiles, a rat comes with a chance of 5 % plus half the

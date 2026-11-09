@@ -74,6 +74,46 @@ public class StaffMovingTests
     }
 
     [Fact]
+    public void ADoctorPutInAnOfficeTakesItOverAndTheOneThereLeaves()
+    {
+        var simulation = NewStaffedHospital();
+        var room = simulation.Entities.OfType<Room>().Single();
+        var first = simulation.Entities.OfType<Humanoid>().Single(h => h.Type == HumanoidType.Doctor);
+        StepFor(simulation, 400);
+        Assert.Equal(first.Id, room.StaffId);
+        var second = Hire(simulation, StaffClass.Doctor, new(17, 17));
+        var third = Hire(simulation, StaffClass.Doctor, new(18, 17));
+
+        // Room:onHumanoidEnter: the newcomer is appointed and the doctor there, not busy with a patient, sent out; each time.
+        Run(simulation, new MoveStaffCommand(second.Id, FreeTileInRoom(simulation)));
+        Assert.Equal(second.Id, room.StaffId);
+        Run(simulation, new MoveStaffCommand(third.Id, FreeTileInRoom(simulation)));
+        Assert.Equal(third.Id, room.StaffId);
+
+        StepFor(simulation, 600);
+        Assert.Equal(third.Id, room.StaffId);
+        Assert.True(room.Area.Contains(third.Tile));
+        Assert.False(room.Area.Contains(first.Tile));
+        Assert.False(room.Area.Contains(second.Tile));
+        Assert.Equal(DoctorPhase.Idle, Assert.IsType<DoctorBehaviour>(first.Behaviour).Phase);
+        Assert.Equal(DoctorPhase.Idle, Assert.IsType<DoctorBehaviour>(second.Behaviour).Phase);
+    }
+
+    [Fact]
+    public void StaffPutInARoomThatDoesNotNeedThemLeaveIt()
+    {
+        var simulation = NewStaffedHospital();
+        var room = simulation.Entities.OfType<Room>().Single();
+        var nurse = Hire(simulation, StaffClass.Nurse, new(17, 17));
+
+        Run(simulation, new MoveStaffCommand(nurse.Id, FreeTileInRoom(simulation)));
+        StepFor(simulation, 300);
+
+        Assert.False(room.Area.Contains(nurse.Tile));
+        Assert.NotEqual(nurse.Id, room.StaffId);
+    }
+
+    [Fact]
     public void OnlyTheirOwnStaffCanBeMovedAndOnlyWhereStaffCanBePlaced()
     {
         var simulation = NewStaffedHospital();

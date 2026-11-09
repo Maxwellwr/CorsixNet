@@ -28,7 +28,10 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 57;
+    private const int FormatVersion = 58;
+
+    /// <summary>The oldest version still read: 57 lacks only what handymen are doing (version 58).</summary>
+    private const int OldestFormatVersion = 57;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -468,10 +471,12 @@ public sealed class Simulation
         }
 
         var version = reader.ReadInt32();
-        if (version != FormatVersion)
+        if (version is < OldestFormatVersion or > FormatVersion)
         {
             throw new InvalidDataException($"Simulation state version {version} is not supported (expected {FormatVersion}).");
         }
+
+        reader.Version = version;
 
         var tick = reader.ReadInt64();
         var skippedHours = reader.ReadInt64();

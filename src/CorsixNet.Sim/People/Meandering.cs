@@ -66,6 +66,9 @@ internal sealed class Meandering
         }
     }
 
+    /// <summary>Whether the next update starts a new round (<c>meander_action_start</c>), rather than standing on.</summary>
+    internal bool AtRoundStart => _idleTicks == 0;
+
     /// <summary>The humanoid has something to do: the next time they are idle, they start with a walk.</summary>
     internal void Reset()
     {

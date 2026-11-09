@@ -4,6 +4,7 @@
 
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.People;
 
@@ -103,6 +104,72 @@ public static class RoomVisits
 
     /// <summary>The tile outside the room's door, where patients queue and leave to.</summary>
     public static TilePosition OutsideTile(Room room, RoomDoor door) => room.Area.Contains(door.Tile) ? door.OtherSide : door.Tile;
+
+    /// <summary>
+    /// <c>Room:onHumanoidEnter</c> for a doctor or nurse without a job who stands in a room: if the room needs them and has
+    /// room for them, they take it over; otherwise they leave it and wander about outside. Only someone just put down
+    /// there (<paramref name="placed"/>) takes over a room for one from its member of staff, who is sent out unless busy
+    /// with a patient; someone left there, such as the one sent out, does not.
+    /// </summary>
+    /// <returns>Whether the staff member was in a room and has been dealt with.</returns>
+    /// <remarks>
+    /// CorsixTH counts a member of staff as busy with a patient while the patient is in the room
+    /// (<c>dealing_with_patient</c>) unless they meander; here, while the room has a patient at all.
+    /// </remarks>
+    internal static bool SettleIdleStaff(Simulation simulation, Humanoid staff, bool placed = false)
+    {
+        var tile = staff.Tile;
+        if (!simulation.Map.Contains(tile.X, tile.Y) || simulation.Map[tile.X, tile.Y].RoomId is var roomId && roomId == 0
+            || simulation.FindEntity(roomId) is not Room room || simulation.FindEntity(room.DoorId) is not RoomDoor door
+            || staff.Behaviour is not IRoomStaff roomStaff)
+        {
+            return false;
+        }
+
+        if (room.IsActive && Owner(simulation, room) == staff.Employer)
+        {
+            if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
+            {
+                // ResearchRoom's maximum_staff: as many researchers as desks.
+                if (staff is { Behaviour: DoctorBehaviour, Profile.IsResearcher: true } && CountResearchers(simulation, room) < CountObjects(simulation, room, "desk"))
+                {
+                    if (room.StaffId == 0)
+                    {
+                        room.StaffId = staff.Id;
+                    }
+
+                    roomStaff.GoToRoom(simulation, staff, room, tile);
+                    return true;
+                }
+            }
+            else if (Rules.TryGetValue(room.RoomType, out var rules) && rules.Staff == staff.Behaviour!.Kind)
+            {
+                if (placed && room.StaffId != 0 && room.StaffId != staff.Id && room.PatientId == 0 && simulation.FindEntity(room.StaffId) is Humanoid { Profile: not null } current)
+                {
+                    // The previous member of staff is not busy with a patient: send them out and appoint the newcomer.
+                    StaffEmployment.Detach(simulation, current);
+                    current.Behaviour = StaffHiring.NewBehaviour(current.Profile.Class);
+                }
+
+                if (room.StaffId == 0)
+                {
+                    room.StaffId = staff.Id;
+                    roomStaff.GoToRoom(simulation, staff, room, tile);
+                    return true;
+                }
+            }
+        }
+
+        // createLeaveAction, then MeanderAction: out of the door, and wander about from there.
+        var outside = OutsideTile(room, door);
+        return staff.WalkTo(simulation, outside);
+    }
+
+    private static int CountResearchers(Simulation simulation, Room room) =>
+        simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour doctor, IsFired: false } && doctor.RoomId == room.Id);
+
+    private static int CountObjects(Simulation simulation, Room room, string objectType) =>
+        simulation.Entities.Count(e => e is RoomObject placed && placed.RoomId == room.Id && string.Equals(placed.ObjectType, objectType, StringComparison.Ordinal));
 
     /// <summary>The player (0-based) whose hospital the room is in.</summary>
     public static int Owner(Simulation simulation, Room room) => simulation.Map.GetParcelOwner(simulation.Map[room.Area.X, room.Area.Y].Parcel) - 1;

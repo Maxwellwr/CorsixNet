@@ -10,10 +10,7 @@ namespace CorsixNet.Sim.Objects;
 /// How thirsty a plant is: healthy, drooping twice, dying, then dead (CorsixTH's <c>current_state</c> 0 to 4, drawn as
 /// the idle animation's first frame plus the state). Every 64 days, sooner where it is warm, it gets one state worse.
 /// </summary>
-/// <remarks>
-/// Handymen do not water plants yet (CorsixTH's <c>callForWatering</c> and <c>restoreToFullHealth</c>), so plants only
-/// get worse; nor does the adviser warn about thirsty plants.
-/// </remarks>
+/// <remarks>The adviser does not warn about thirsty plants yet.</remarks>
 public sealed class PlantState
 {
     /// <summary>Days between states at 0 °C (CorsixTH's <c>days_between_states</c>, to match TH's rough 50 at ideal warmth).</summary>
@@ -56,6 +53,13 @@ public sealed class PlantState
                 State++;
             }
         }
+    }
+
+    /// <summary><c>Plant:restoreToFullHealth</c>: watered, the plant is healthy again and starts its days afresh.</summary>
+    internal void Restore()
+    {
+        State = Healthy;
+        DaysLeft = DaysBetweenStates;
     }
 
     internal void Write(SimWriter writer)

@@ -73,7 +73,11 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     {
         if (Phase == NursePhase.Idle)
         {
-            Meander.Update(simulation, humanoid);
+            if (!RoomVisits.SettleIdleStaff(simulation, humanoid))
+            {
+                Meander.Update(simulation, humanoid);
+            }
+
             return;
         }
 

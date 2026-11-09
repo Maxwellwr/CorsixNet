@@ -95,7 +95,11 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     {
         if (Phase == DoctorPhase.Idle)
         {
-            Meander.Update(simulation, humanoid);
+            if (!RoomVisits.SettleIdleStaff(simulation, humanoid))
+            {
+                Meander.Update(simulation, humanoid);
+            }
+
             return;
         }
 
