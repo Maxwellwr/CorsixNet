@@ -2030,7 +2030,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             (Keys.F5, () => new CasebookWindow()),
             (Keys.F6, () => new ResearchWindow()),
             (Keys.F7, () => new ProgressReportWindow()),
-            (Keys.F8, () => new GraphFiguresWindow()),
+            (Keys.F8, () => new GraphWindow()),
             (Keys.F9, () => new PolicyWindow()),
             (Keys.F11, () => new CheatsWindow()),
         ];

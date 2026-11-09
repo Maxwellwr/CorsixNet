@@ -126,7 +126,7 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
             WindowCell.Button("Casebook", () => host.Open(new CasebookWindow())),
             WindowCell.Button("Research", () => host.Open(new ResearchWindow())),
             WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())),
-            WindowCell.Button("Charts", () => host.Open(new GraphFiguresWindow())),
+            WindowCell.Button("Charts", () => host.Open(new GraphWindow())),
             WindowCell.Button("Policy", () => host.Open(new PolicyWindow())));
     }
 }

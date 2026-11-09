@@ -156,6 +156,8 @@ Done and committed:
   file or over one, after asking), load (manual saves, quick save, autosaves), quick save/load,
   restart, quit, the options (sounds, volume, screen shake, edge scrolling, scroll speeds, autosave;
   Apply saves config.txt and uses them at once), the levels list, the charts and cheats.
+  F8 draws the graphs (graphs.lua): a coloured line per statistic, each scaled to its own range,
+  buttons to hide lines, months/years/4-year steps, and Figures for the table.
 
 Not done yet:
 
