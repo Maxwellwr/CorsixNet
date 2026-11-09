@@ -115,6 +115,12 @@ internal static class Feelings
     /// </summary>
     private static void OnEndDayPatient(Simulation simulation, Humanoid humanoid, PatientBehaviour patient)
     {
+        // Patient:tickDay: a waiting patient may be sick again.
+        if (patient.Phase == PatientPhase.Waiting)
+        {
+            patient.HasVomited = false;
+        }
+
         if (!patient.OnEndDayHealth(simulation, humanoid))
         {
             return;
@@ -144,8 +150,13 @@ internal static class Feelings
             // Sitting makes happy, standing and walking do not; there are no benches yet.
             ChangeHappiness(simulation, humanoid, -0.00002m);
 
-            // Seeing litter makes unhappy, pee and puke more so. Vomiting at it is not ported yet.
-            SeeLitter(simulation, humanoid);
+            // Seeing litter makes unhappy, pee and puke more so, and they may make you sick.
+            var vomitInducing = SeeLitter(simulation, humanoid);
+            if (patient.EmergencyIndex == 0 && simulation.Content.FindPatientAnimations(humanoid.Type)?.Vomit is not null
+                && Nausea(humanoid, patient, vomitInducing) is { } nausea && Needs.Random(simulation.Random) < nausea + 0.5m)
+            {
+                patient.Vomit(simulation, humanoid);
+            }
         }
 
         patient.Health = Math.Max(patient.Health - PatientBehaviour.DailyHealthLoss, 0m);
@@ -211,10 +222,11 @@ internal static class Feelings
     /// The litter part of <c>Patient:tickDay</c> and <c>Staff:tickDay</c>: each piece in sight costs 0.0002 happiness if it is
     /// rubbish (<c>anyLitter</c>), otherwise 0.0004.
     /// </summary>
-    private static void SeeLitter(Simulation simulation, Humanoid humanoid)
+    private static int SeeLitter(Simulation simulation, Humanoid humanoid)
     {
         var map = simulation.Map;
         var roomId = map[humanoid.Tile.X, humanoid.Tile.Y].RoomId;
+        var vomitInducing = 0;
         foreach (var entity in simulation.Entities)
         {
             if (entity is Litter { IsRemoved: false } litter
@@ -224,8 +236,27 @@ internal static class Feelings
                 && map[litter.Tile.X, litter.Tile.Y].RoomId == roomId)
             {
                 ChangeHappiness(simulation, humanoid, litter.IsRubbish ? -0.0002m : -0.0004m);
+                if (litter.IsVomitInducing)
+                {
+                    vomitInducing++;
+                }
             }
         }
+
+        return vomitInducing;
+    }
+
+    /// <summary>
+    /// <c>Patient:_calculateNausea</c>: none unless the patient's health is at most 0.8, vomit-inducing litter is near or
+    /// they are unhappy (below 0.6); then a five-hundredth of their lost health, half again for each piece of it and once
+    /// more. CorsixTH then adds 0.5 to the chance, as a stand-in for causes it lacks.
+    /// </summary>
+    private static decimal? Nausea(Humanoid humanoid, PatientBehaviour patient, int vomitInducing)
+    {
+        var nausea = (1m - patient.Health) * 0.002m;
+        return patient.Health <= 0.8m || vomitInducing > 0 || humanoid.Happiness < 0.6m
+            ? nausea * ((vomitInducing + 1) * 1.5m)
+            : null;
     }
 
     /// <summary>

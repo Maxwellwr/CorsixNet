@@ -12,13 +12,16 @@ namespace CorsixNet.Sim.People;
 /// A patient's thirst and need for the toilet. Each day in the hospital, except for emergency patients, thirst grows
 /// by 0.004 to 0.008 plus a fiftieth of their warmth, and the need for the toilet by 0.002 to 0.008 (0.008 to 0.026 for
 /// gut rot and the squits). Above 0.7 thirst costs happiness every day and the patient, in a corridor, looks for a drinks
-/// machine within 8 steps every few days and goes to buy a can (<see cref="PatientBehaviour.GoForDrink"/>). Going to the
-/// toilet is not ported yet.
+/// machine within 8 steps every few days and goes to buy a can (<see cref="PatientBehaviour.GoForDrink"/>). Above 0.75
+/// need for the toilet a patient does it on the floor four days in ten; going to the toilets is not ported yet.
 /// </summary>
 internal static class Needs
 {
     /// <summary>A patient starts looking for a drink above this thirst.</summary>
     internal const decimal ExcessThirst = 0.7m;
+
+    /// <summary>Above this need for the toilet a patient goes, or does it on the floor (<c>_dailyBowelChecks</c>).</summary>
+    internal const decimal ToiletNeedLimit = 0.75m;
 
     /// <summary>How far a thirsty patient looks for a drinks machine (<c>findObjectNear(self, "drinks_machine", 8)</c>).</summary>
     private const int MachineDistance = 8;
@@ -41,15 +44,40 @@ internal static class Needs
 
         patient.Thirst = Clamp(patient.Thirst + (humanoid.Warmth * 0.02m) + (0.004m * Random(simulation.Random)) + 0.004m);
 
-        // Patient:_dailyBowelChecks. Peeing on the floor or going to the toilet above 0.75 is not ported yet.
+        // Patient:_dailyBowelChecks.
         var moreLooUse = patient.Disease?.MoreLooUse ?? false;
         patient.ToiletNeed = Clamp(patient.ToiletNeed + (moreLooUse
             ? (0.018m * Random(simulation.Random)) + 0.008m
             : (0.006m * Random(simulation.Random)) + 0.002m));
+        if (patient.ToiletNeed > ToiletNeedLimit && simulation.Content.FindPatientAnimations(humanoid.Type)?.Pee is not null
+            && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0
+            && patient.Phase is not (>= PatientPhase.EnteringRoom and <= PatientPhase.LeavingRoom))
+        {
+            HandleToiletNeed(simulation, humanoid, patient);
+        }
 
         if (patient.Thirst > ExcessThirst)
         {
             HandleExcessThirst(simulation, humanoid, patient);
+        }
+    }
+
+    /// <summary>
+    /// <c>Patient:handleToiletNeed</c>: four times in ten the patient does it on the floor; otherwise, unless waiting for a
+    /// decision, they want the toilet, and as the hospital has no toilets (not ported yet) they remember there are none.
+    /// </summary>
+    private static void HandleToiletNeed(Simulation simulation, Humanoid humanoid, PatientBehaviour patient)
+    {
+        if (simulation.Random.NextInclusive(1, 10) < 5)
+        {
+            patient.Pee(simulation, humanoid);
+            patient.ToiletNeed = Clamp(patient.ToiletNeed - (0.5m + (Random(simulation.Random) * 0.15m)));
+            patient.GoingToToilet = ToiletVisit.No;
+        }
+        else if (patient.GoingToToilet == ToiletVisit.No && patient.Phase != PatientPhase.Waiting)
+        {
+            patient.IsNeedingToilet = true;
+            patient.GoingToToilet = ToiletVisit.NoToilets;
         }
     }
 
