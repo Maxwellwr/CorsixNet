@@ -114,22 +114,25 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
         var simulation = host.Simulation;
         var hospital = simulation.Hospitals[host.Player];
         var faxes = FaxWindow.Pending(simulation, host.Player).Count();
+        // CorsixTH's tooltip.toolbar texts, with the keys from the hotkeys file.
+        string Tip(string text, string? action = null, string? key = null) =>
+            (action is null ? key : host.HotkeyText(action) ?? key) is { } shown ? $"{text} ({shown})" : text;
         yield return WindowRow.Of(
-            new WindowCell(MoneyText.Format(hospital.Balance), Highlight: true),
-            WindowCell.Button("Build", () => action("rooms")),
-            WindowCell.Button("Corridor", () => action("corridor")),
-            WindowCell.Button("Edit room", () => action("edit")),
-            WindowCell.Button("Hire", () => host.Open(new HireWindow())),
-            WindowCell.Button(faxes > 0 ? string.Create(CultureInfo.InvariantCulture, $"Faxes ({faxes})") : "Faxes", () => host.Open(new FaxWindow()), highlight: faxes > 0),
-            WindowCell.Button("Bank", () => host.Open(new BankManagerWindow())),
-            WindowCell.Button("Staff", () => host.Open(new StaffManagementWindow())),
-            WindowCell.Button("Town", () => host.Open(new TownMapWindow())),
-            WindowCell.Button("Casebook", () => host.Open(new CasebookWindow())),
-            WindowCell.Button("Research", () => host.Open(new ResearchWindow())),
-            WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())),
-            WindowCell.Button("Charts", () => host.Open(new GraphWindow())),
-            WindowCell.Button("Policy", () => host.Open(new PolicyWindow())),
-            WindowCell.Button("Messages", () => host.Open(new AdviserHistoryWindow())));
+            new WindowCell(MoneyText.Format(hospital.Balance), Highlight: true) { Tooltip = "Balance" },
+            WindowCell.Button("Build", () => action("rooms")) with { Tooltip = Tip("Build rooms", key: "B") },
+            WindowCell.Button("Corridor", () => action("corridor")) with { Tooltip = Tip("Furnish corridor") },
+            WindowCell.Button("Edit room", () => action("edit")) with { Tooltip = Tip("Edit rooms/items") },
+            WindowCell.Button("Hire", () => host.Open(new HireWindow())) with { Tooltip = Tip("Hire staff", "ingame_panel_hireStaff") },
+            WindowCell.Button(faxes > 0 ? string.Create(CultureInfo.InvariantCulture, $"Faxes ({faxes})") : "Faxes", () => host.Open(new FaxWindow()), highlight: faxes > 0) with { Tooltip = Tip("Faxes waiting for an answer", "ingame_openFirstMessage") },
+            WindowCell.Button("Bank", () => host.Open(new BankManagerWindow())) with { Tooltip = Tip("Bank Manager", "ingame_panel_bankManager") },
+            WindowCell.Button("Staff", () => host.Open(new StaffManagementWindow())) with { Tooltip = Tip("Staff management", "ingame_panel_staffManage") },
+            WindowCell.Button("Town", () => host.Open(new TownMapWindow())) with { Tooltip = Tip("Town map", "ingame_panel_townMap") },
+            WindowCell.Button("Casebook", () => host.Open(new CasebookWindow())) with { Tooltip = Tip("Drug casebook", "ingame_panel_casebook") },
+            WindowCell.Button("Research", () => host.Open(new ResearchWindow())) with { Tooltip = Tip("Research", "ingame_panel_research") },
+            WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())) with { Tooltip = Tip("Status", "ingame_panel_status") },
+            WindowCell.Button("Charts", () => host.Open(new GraphWindow())) with { Tooltip = Tip("Charts", "ingame_panel_charts") },
+            WindowCell.Button("Policy", () => host.Open(new PolicyWindow())) with { Tooltip = Tip("Policy", "ingame_panel_policy") },
+            WindowCell.Button("Messages", () => host.Open(new AdviserHistoryWindow())) with { Tooltip = Tip("The adviser's messages", "ingame_panel_adviserHistory") });
 
         // The adviser pops up from the panel (dialogs/adviser.lua): a click moves on, as a left click on him does;
         // Quiet sends the rest to the history unsaid, as a right click does.

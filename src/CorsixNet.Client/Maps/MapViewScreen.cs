@@ -2163,6 +2163,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     bool IWindowHost.HasNextLevel => _session is LocalSession && _levelIndex + 1 < _levels.Count;
 
+    string? IWindowHost.HotkeyText(string action) => _hotkeys[action]?.ToString();
+
     void IWindowHost.StartLevel(bool next)
     {
         if (_session is not LocalSession)

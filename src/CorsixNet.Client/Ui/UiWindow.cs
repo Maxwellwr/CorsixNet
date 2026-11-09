@@ -41,6 +41,9 @@ internal sealed record WindowCell(string Text, Action? OnClick = null, bool Dim 
 
     /// <summary>Whether the cell is drawn as a button, also when it cannot be clicked now.</summary>
     public bool IsButton { get; init; }
+
+    /// <summary>What the cell's tooltip says while the mouse rests on it, or null for none.</summary>
+    public string? Tooltip { get; init; }
 }
 
 /// <summary>One row of a window's table.</summary>
@@ -100,6 +103,9 @@ internal interface IWindowHost
 
     /// <summary>Starts the next level, or this one again.</summary>
     void StartLevel(bool next);
+
+    /// <summary>The key given to an action in the hotkeys file, as the player reads it (such as F1), or null.</summary>
+    string? HotkeyText(string action);
 }
 
 /// <summary>
