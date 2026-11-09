@@ -80,6 +80,27 @@ public sealed class CustomLevelTests : IDisposable
         Assert.NotEqual(1, rules.StartCash);
     }
 
+    [Fact]
+    public void ACampaignListsItsLevelsBesideIt()
+    {
+        File.WriteAllBytes(Path.Combine(_folder, "one.map"), new MapFileBuilder().Build());
+        Write("One.level", "%MapFile = \"one.map\"\n#town.StartCash 1234");
+        Write("two.level", "%MapFile = \"one.map\"");
+        var campaignPath = Write("test.campaign", """
+            name = "Test"
+            levels = { "one.level", "two.level" }
+            """);
+
+        var (campaign, paths) = LevelMapLoader.LoadCampaign(campaignPath);
+
+        Assert.Equal("Test", campaign.Name);
+        // On a file system that ignores case (Windows, macOS) the path may keep the campaign's spelling.
+        Assert.Equal(["One.level", "two.level"], paths.Select(Path.GetFileName), StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(1234, LevelMapLoader.LoadFile(paths[0]).Rules!.StartCash);
+        Assert.Throws<FileNotFoundException>(() => LevelMapLoader.LoadCampaign(Write("lost.campaign", "levels = { \"three.level\" }")));
+        Assert.Throws<InvalidDataException>(() => LevelMapLoader.LoadCampaign(Write("empty.campaign", "name = \"Empty\"")));
+    }
+
     private string Write(string name, string text)
     {
         var path = Path.Combine(_folder, name);

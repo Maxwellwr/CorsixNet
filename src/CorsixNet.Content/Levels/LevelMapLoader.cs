@@ -222,12 +222,31 @@ public static class LevelMapLoader
     }
 
     /// <summary>
-    /// A file named by a level file (CorsixTH's <c>App:_checkOrFind</c>, reduced to the level's own folder): the path as
-    /// given if it exists, else the file of that name beside the level file, in any case of letters.
+    /// Reads a CorsixTH campaign (<c>App:loadCampaign</c>): the campaign file and the paths of its level files, which lie
+    /// beside it (in any case of letters), in the order they are played.
     /// </summary>
-    private static string FindBeside(string levelPath, string fileName)
+    /// <exception cref="InvalidDataException">The campaign file is wrong or names no levels.</exception>
+    /// <exception cref="FileNotFoundException">A level file is not there.</exception>
+    public static (CustomCampaign Campaign, IReadOnlyList<string> LevelPaths) LoadCampaign(string campaignPath)
     {
-        var folder = Path.GetDirectoryName(Path.GetFullPath(levelPath)) ?? ".";
+        var campaign = CustomCampaign.Parse(System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(campaignPath)));
+        if (campaign.Levels.Count == 0)
+        {
+            throw new InvalidDataException($"The campaign {campaignPath} names no levels.");
+        }
+
+        return (campaign, campaign.Levels.Select(level => FindBeside(campaignPath, level)).ToList());
+    }
+
+    /// <summary>
+    /// A file named by a level or campaign file (CorsixTH's <c>App:_checkOrFind</c>, reduced to the folders at hand): the
+    /// path as given if it exists beside the naming file, else the file of that name, in any case of letters, beside the
+    /// naming file, then in the <c>Levels</c> and <c>Campaigns</c> folders next to that folder (CorsixTH's own
+    /// <c>level_dir</c> and <c>campaign_dir</c>, where its example campaign finds its levels).
+    /// </summary>
+    private static string FindBeside(string namingPath, string fileName)
+    {
+        var folder = Path.GetDirectoryName(Path.GetFullPath(namingPath)) ?? ".";
         var name = fileName.Replace('\\', '/');
         var direct = Path.Combine(folder, name);
         if (File.Exists(direct))
@@ -236,10 +255,24 @@ public static class LevelMapLoader
         }
 
         var bare = name[(name.LastIndexOf('/') + 1)..];
-        return Directory.EnumerateFiles(folder)
-            .Order(StringComparer.Ordinal)
-            .FirstOrDefault(file => string.Equals(Path.GetFileName(file), bare, StringComparison.OrdinalIgnoreCase))
-            ?? throw new FileNotFoundException($"The level's map file {fileName} is not beside it.", direct);
+        var parent = Path.GetDirectoryName(folder);
+        IEnumerable<string> siblings = parent is null || !Directory.Exists(parent)
+            ? []
+            : Directory.EnumerateDirectories(parent)
+                .Where(dir => Path.GetFileName(dir).Equals("Levels", StringComparison.OrdinalIgnoreCase) || Path.GetFileName(dir).Equals("Campaigns", StringComparison.OrdinalIgnoreCase))
+                .Order(StringComparer.Ordinal);
+        foreach (var dir in siblings.Prepend(folder))
+        {
+            var found = Directory.EnumerateFiles(dir)
+                .Order(StringComparer.Ordinal)
+                .FirstOrDefault(file => string.Equals(Path.GetFileName(file), bare, StringComparison.OrdinalIgnoreCase));
+            if (found is not null)
+            {
+                return found;
+            }
+        }
+
+        throw new FileNotFoundException($"{fileName} is not beside {Path.GetFileName(namingPath)}.", direct);
     }
 
     private static bool IsDividerWall(byte blockCode) => blockCode >> 1 == 70;
