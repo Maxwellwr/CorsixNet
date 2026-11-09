@@ -37,6 +37,9 @@ public sealed class LevelRules
     /// <summary>CorsixTH's base_config.lua <c>gbv.MayorLaunch</c>.</summary>
     public const int DefaultMayorLaunch = 150;
 
+    /// <summary>CorsixTH's base_config.lua's <c>gbv.ScoreMaxInc</c>.</summary>
+    public const int DefaultScoreMaxIncrease = 300;
+
     /// <summary>CorsixTH's fallback for <c>gbv.LandCostPerTile</c> (map.lua's <c>Map:getParcelPrice</c>).</summary>
     public const int DefaultLandCostPerTile = 25;
 
@@ -69,6 +72,8 @@ public sealed class LevelRules
     /// <param name="emergencies">The level's planned emergencies (<c>emergency_control</c>); by default none.</param>
     /// <param name="epidemics">How contagious diseases are and the epidemics' fines; by default <see cref="EpidemicRules.Default"/>.</param>
     /// <param name="competitors">The computer opponents that play, in the order CorsixTH adds them; by default none.</param>
+    /// <param name="scoreMaxIncrease">The most the player's salary rises in a month (<c>gbv.ScoreMaxInc</c>).</param>
+    /// <param name="levelNumber">The campaign level's number, or null for another map.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -89,8 +94,12 @@ public sealed class LevelRules
         int mayorLaunch = DefaultMayorLaunch,
         IEnumerable<PlannedEmergency>? emergencies = null,
         EpidemicRules? epidemics = null,
-        IEnumerable<PlannedCompetitor>? competitors = null)
+        IEnumerable<PlannedCompetitor>? competitors = null,
+        int scoreMaxIncrease = DefaultScoreMaxIncrease,
+        int? levelNumber = null)
     {
+        ScoreMaxIncrease = scoreMaxIncrease;
+        LevelNumber = levelNumber;
         Competitors = [.. competitors ?? []];
         Epidemics = epidemics ?? EpidemicRules.Default;
         Emergencies = [.. (emergencies ?? []).OrderBy(emergency => emergency.Index)];
@@ -168,6 +177,12 @@ public sealed class LevelRules
 
     /// <summary>The computer opponents that play (CorsixTH's <c>AIHospital</c>s), in the order they take turns for patients.</summary>
     public IReadOnlyList<PlannedCompetitor> Competitors { get; }
+
+    /// <summary>The most the player's salary rises in a month (<c>gbv.ScoreMaxInc</c>); a sixth of it is the least.</summary>
+    public int ScoreMaxIncrease { get; }
+
+    /// <summary>The campaign level's number (CorsixTH's <c>map.level_number</c>), or null for another map.</summary>
+    public int? LevelNumber { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -268,6 +283,9 @@ public sealed class LevelRules
             writer.WriteInt32(competitor.Number);
             writer.WriteString(competitor.Name);
         }
+
+        writer.WriteInt32(ScoreMaxIncrease);
+        writer.WriteInt32(LevelNumber ?? 0);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -303,7 +321,8 @@ public sealed class LevelRules
 
         return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32(), TirednessRules.Read(reader), reader.ReadInt32(),
             Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => PlannedEmergency.Read(reader)).ToList(), EpidemicRules.Read(reader),
-            Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => new PlannedCompetitor(reader.ReadInt32(), reader.ReadString())).ToList());
+            Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => new PlannedCompetitor(reader.ReadInt32(), reader.ReadString())).ToList(),
+            reader.ReadInt32(), reader.ReadInt32() is var level and > 0 ? level : null);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

@@ -538,6 +538,10 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   of a lose group loses. Wins are looked for at the end of March, June and September and at the year end, losses
   only at the year end, after its trophies and awards. The outcome stays in `Hospital.Outcome`; the simulation
   goes on. `ProgressReport` gives what CorsixTH's progress report shows.
+- **The player's salary** (`Hospital.PlayerSalary`, from `hospital.lua`). It starts at 10,000 and rises each month,
+  after the interest, by a tenth of `gbv.ScoreMaxInc` (300) plus the reputation above 500 per death plus one, at
+  least a sixth and at most all of `ScoreMaxInc`, rounded up; at the end of the third year of level 3 by 8,000 to
+  20,000 more. Winning sets `SalaryOffer`, the salary plus a bonus of 4 to 9 % unless the hospital cheated.
 - **Using objects** (`ObjectUse`, from `use_object.lua`). The object's usage animations
   (`ObjectDefinition.UsageNorth` and `UsageEast`, mirrored for south and west) say how long each phase
   lasts: one tick per frame, with the lengths of the original's animations in `BaseGameContent` (a

@@ -265,6 +265,9 @@ public sealed class Hospital
 
     private const int MaxCases = 256;
 
+    /// <summary>The player's salary at the start of a level (<c>Hospital:Hospital</c>).</summary>
+    private const long StartPlayerSalary = 10_000;
+
     /// <summary>The most rat holes read back from a save.</summary>
     private const int MaxRatholes = 1 << 16;
 
@@ -461,6 +464,12 @@ public sealed class Hospital
 
     /// <summary>Whether the player has used a cheat (CorsixTH's <c>cheated</c>).</summary>
     public bool Cheated { get; internal set; }
+
+    /// <summary>The player's own salary, which rises month by month (CorsixTH's <c>player_salary</c>); it starts at 10,000.</summary>
+    public long PlayerSalary { get; internal set; } = StartPlayerSalary;
+
+    /// <summary>The salary offered for the next level on winning (<c>salary_offer</c>), 0 until then.</summary>
+    public long SalaryOffer { get; private set; }
 
     /// <summary>Patients sent to the hospital so far, whether they came or not (CorsixTH's <c>spawn_attempts</c>).</summary>
     public long SpawnAttempts { get; internal set; }
@@ -1002,14 +1011,43 @@ public sealed class Hospital
 
     private static int RoundHalfUp(decimal value) => (int)decimal.Floor(value + 0.5m);
 
-    /// <summary>Records that the hospital won or lost; the first outcome stands.</summary>
-    internal void End(EndOutcome outcome, EndGoal? lostTo)
+    /// <summary>
+    /// Records that the hospital won or lost; the first outcome stands. A win comes with the offer of a salary for the
+    /// next level (<c>World:winGame</c>): the player's salary plus a bonus of 4 to 9 %, none for a hospital that cheated.
+    /// </summary>
+    internal void End(EndOutcome outcome, EndGoal? lostTo, SimRandom random)
     {
         if (Outcome == EndOutcome.None && outcome != EndOutcome.None)
         {
             Outcome = outcome;
             LostTo = lostTo;
+            if (outcome == EndOutcome.Won)
+            {
+                var bonusRate = random.NextInclusive(4, 9);
+                var bonus = Cheated ? 0m : PlayerSalary * bonusRate / 100m;
+                SalaryOffer = (long)decimal.Floor(PlayerSalary + bonus);
+            }
         }
+    }
+
+    /// <summary>
+    /// <c>Hospital:onEndMonth</c>'s score: the player's salary rises each month by a tenth of <c>gbv.ScoreMaxInc</c> plus
+    /// the reputation above 500 per death (plus one), at least a sixth and at most all of <c>ScoreMaxInc</c>, rounded up.
+    /// </summary>
+    internal void RaiseSalary(int scoreMaxIncrease)
+    {
+        var increase = (scoreMaxIncrease / 10m) + ((Reputation - 500) / (decimal)(Deaths + 1));
+        var minimum = scoreMaxIncrease / 6m;
+        if (increase < minimum)
+        {
+            increase = minimum;
+        }
+        else if (increase > scoreMaxIncrease)
+        {
+            increase = scoreMaxIncrease;
+        }
+
+        PlayerSalary += (long)decimal.Ceiling(increase);
     }
 
     /// <summary>Lua's <c>math.round</c>, <c>floor(x + 0.5)</c>, of a part in percent.</summary>
@@ -1252,6 +1290,8 @@ public sealed class Hospital
         }
 
         writer.WriteBool(Cheated);
+        writer.WriteInt64(PlayerSalary);
+        writer.WriteInt64(SalaryOffer);
         writer.WriteInt64(SpawnAttempts);
         writer.WriteInt32(RadiatorHeat);
         writer.WriteBool(IsHeatingBroken);
@@ -1370,6 +1410,8 @@ public sealed class Hospital
         }
 
         hospital.Cheated = reader.ReadBool();
+        hospital.PlayerSalary = reader.ReadInt64();
+        hospital.SalaryOffer = reader.ReadInt64();
         hospital.SpawnAttempts = reader.ReadInt64();
         hospital.RadiatorHeat = reader.ReadInt32();
         hospital.IsHeatingBroken = reader.ReadBool();

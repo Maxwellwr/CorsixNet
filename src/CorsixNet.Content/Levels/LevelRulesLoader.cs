@@ -106,7 +106,9 @@ public static partial class LevelRulesLoader
             config.GetInt("gbv.MayorLaunch") ?? LevelRules.DefaultMayorLaunch,
             EmergenciesFromConfig(config),
             EpidemicsFromConfig(config),
-            CompetitorsFromConfig(config));
+            CompetitorsFromConfig(config),
+            config.GetInt("gbv.ScoreMaxInc") ?? LevelRules.DefaultScoreMaxIncrease,
+            levelNumber);
     }
 
     /// <summary>
