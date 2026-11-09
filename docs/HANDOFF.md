@@ -137,6 +137,10 @@ Done and committed:
   F8 graph figures, F9 hospital policy. Shift+F3 staff management (F3 stays the level list): staff by
   class, bonus (a tenth of the wage), a tenth more salary, firing after a confirmation, raise answers;
   clicking a member of staff opens their window (pick up, fire, a handyman's parcel).
+  Clicking a patient opens the patient window (health, needs, history; send home, guess cure,
+  vaccinate), clicking a room or a reception desk its queue window (size, front/back, another room of
+  the kind); C opens the faxes (VIP, emergency, epidemic, patients asking), which open by themselves
+  when a new fax comes. The old keys (V, E, I, K, Q) still work.
 
 Not done yet:
 

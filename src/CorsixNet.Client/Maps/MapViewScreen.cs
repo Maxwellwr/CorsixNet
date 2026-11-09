@@ -38,6 +38,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// Keys: arrows/WASD, screen edges or right/middle-drag pan, wheel or =/− zoom, 0 original size, Alt+digit remember
 /// the view and Ctrl+digit go back to it, Home reset camera,
 /// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or quit.
+/// Clicking a member of staff, a patient, a room or a desk opens their window; C faxes.
 /// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
@@ -150,6 +151,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The windows open over the map (bank, casebook, research, policy, ...).</summary>
     private readonly WindowLayer _windows;
+
+    /// <summary>The faxes waiting when last looked, so that a new one opens the faxes window.</summary>
+    private HashSet<string> _seenFaxes = new(StringComparer.Ordinal);
 
     /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
     private bool _levelList;
@@ -1533,14 +1537,26 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             var tile = new TilePosition(target.X, target.Y);
             var here = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
+            var desk = simulation.Entities.OfType<RoomObject>().FirstOrDefault(o => o.Desk is not null && o.Tile == tile);
+            var roomId = simulation.Map[tile.X, tile.Y].RoomId;
             if (here is not null)
             {
                 _selected = here.Id;
                 if (here.Profile is not null && here.Employer == _session.Player && !here.IsFired)
                 {
-                    // A click on a member of staff opens their window (CorsixTH's UIStaff).
+                    // A click on a member of staff opens their window (CorsixTH's UIStaff), on a patient theirs (UIPatient).
                     _windows.Open(new StaffWindow(here.Id));
                 }
+                else if (here.Behaviour is PatientBehaviour && here.HospitalPlayer == _session.Player)
+                {
+                    _windows.Open(new PatientWindow(here.Id));
+                }
+            }
+            else if (desk is not null || (roomId > 0 && simulation.FindEntity(roomId) is Room { IsActive: true }))
+            {
+                // A click on a reception desk or a room opens its queue (CorsixTH's UIQueue).
+                _selected = null;
+                _windows.Open(new QueueWindow(desk?.Id ?? roomId));
             }
             else if (_selected is { } id)
             {
@@ -1906,6 +1922,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// </summary>
     private void UpdateWindowKeys(KeyboardState keys, Func<Keys, bool> pressed)
     {
+        // A new fax opens the faxes (C opens and closes them), as the original's message icon asks for a look.
+        var faxes = FaxWindow.Pending(Simulation!, _session!.Player).ToHashSet(StringComparer.Ordinal);
+        if (faxes.Any(fax => !_seenFaxes.Contains(fax)))
+        {
+            _windows.Open(new FaxWindow());
+            _sounds.Play("NewFax.wav"); // UIBottomPanel:queueMessage
+        }
+
+        _seenFaxes = faxes;
+        if (pressed(Keys.C))
+        {
+            _windows.Toggle(new FaxWindow());
+        }
+
         if (pressed(Keys.F3) && (keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift)))
         {
             _windows.Toggle(new StaffManagementWindow());
