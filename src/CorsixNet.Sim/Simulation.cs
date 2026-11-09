@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 47;
+    private const int FormatVersion = 48;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -92,6 +92,12 @@ public sealed class Simulation
         foreach (var competitor in Rules.Competitors)
         {
             _competitors.Add(new CompetitorHospital(competitor.Number, competitor.Name));
+        }
+
+        // Then Hospital:initStaff, before the first candidates for hire.
+        for (var player = 0; player < _hospitals.Length; player++)
+        {
+            StaffHiring.HireStartStaff(this, player);
         }
 
         _parcelAdjacency = ParcelAdjacency(map);

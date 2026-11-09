@@ -3,6 +3,8 @@
 // Hospital:getObjectBuildCost) and CorsixTH/Lua/world.lua (World:getAvailableRooms); the fallback
 // starting cash and reputation are CorsixTH/Lua/base_config.lua's town.StartCash and StartRep, and the staff settings fall back
 // to the same file's staff, gbv and staff_levels. The planned earthquakes are CorsixTH/Lua/earthquake.lua's quake_control.
+// The extra settings for campaign levels 5, 7, 8, 11 and 12 are CorsixTH/Levels/original05.level to original12.level, and
+// the starting staff are read as CorsixTH/Lua/hospital.lua's Hospital:initStaff reads start_staff.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -51,6 +53,9 @@ public static partial class LevelRulesLoader
     /// <summary>Number of levels in the original campaign; each has its own settings file.</summary>
     public const int CampaignLevels = 12;
 
+    /// <summary>The most <c>start_staff</c> entries read.</summary>
+    private const int MaxStartStaff = 1000;
+
     /// <summary>base_config.lua's <c>gbv.HoldVisualMonths</c>.</summary>
     private const int BaseHoldVisualMonths = 2;
 
@@ -82,8 +87,33 @@ public static partial class LevelRulesLoader
     }
 
     /// <summary>
+    /// CorsixTH's extra settings for some campaign levels (<c>Levels/original05.level</c> and so on, which
+    /// <c>Map:_loadOriginalCampaignLevel</c> reads after the level's own file at every difficulty): three specialist
+    /// consultants on level 5, an emergency on level 7, other goals on level 8 and alien DNA on levels 11 and 12.
+    /// </summary>
+    private static readonly Dictionary<int, string> CorsixThAdditions = new()
+    {
+        [5] = """
+            #start_staff[1].Doctor.Shrink.Consultant.Skill 1 1 1 100
+            #start_staff[2].Doctor.Surgeon.Consultant.Skill 1 1 1 100
+            #start_staff[3].Doctor.Researcher.Consultant.Skill 1 1 1 100
+            """,
+        [7] = "#emergency_control[9].StartMonth.EndMonth.Min.Max.Illness.PercWin.Bonus 60 70 5 8 4 75 1000",
+        [8] = """
+            #win_criteria[1].Criteria.MaxMin.Value.Group.Bound	3 1 55 1 0
+            #win_criteria[2].Criteria.MaxMin.Value.Group.Bound 4 1 500 1 0
+            #win_criteria[3].Criteria.MaxMin.Value.Group.Bound 6 1 180000 1 0
+            #lose_criteria[0].Criteria.MaxMin.Value.Group.Bound 1 0 200 1 400
+            #lose_criteria[1].Criteria.MaxMin.Value.Group.Bound 2 0 -1000 2 10000
+            #lose_criteria[2].Criteria.MaxMin.Value.Group.Bound 5 1 25 3 20
+            """,
+        [11] = "#visuals[6] 10 I_ALIEN",
+        [12] = "#visuals[6] 10 I_ALIEN",
+    };
+
+    /// <summary>
     /// Reads the settings of a level: the difficulty's base file (such as <c>FULL00.SAM</c>), then,
-    /// for a campaign level, the level's own file (such as <c>FULL01.SAM</c>).
+    /// for a campaign level, the level's own file (such as <c>FULL01.SAM</c>) and CorsixTH's extra settings for it.
     /// </summary>
     public static LevelConfig LoadConfig(ThemeHospitalInstall install, int? levelNumber, Difficulty difficulty = Difficulty.Medium)
     {
@@ -92,9 +122,19 @@ public static partial class LevelRulesLoader
         if (levelNumber is >= 1 and <= CampaignLevels)
         {
             config.Apply(install.ReadDataFile("LEVELS", $"{prefix}{levelNumber:00}.SAM"));
+            ApplyCorsixThAdditions(config, levelNumber.Value);
         }
 
         return config;
+    }
+
+    /// <summary>CorsixTH's extra settings for campaign level <paramref name="levelNumber"/>, if it has any.</summary>
+    public static void ApplyCorsixThAdditions(LevelConfig config, int levelNumber)
+    {
+        if (CorsixThAdditions.TryGetValue(levelNumber, out var additions))
+        {
+            config.Apply(System.Text.Encoding.ASCII.GetBytes(additions));
+        }
     }
 
     /// <summary>
@@ -343,7 +383,40 @@ public static partial class LevelRulesLoader
             divisor,
             config.GetInt("gbv.DoctorThreshold") ?? defaults.DoctorThreshold,
             config.GetInt("gbv.ConsultantThreshold") ?? defaults.ConsultantThreshold,
-            levels);
+            levels,
+            StartStaffFromConfig(config));
+    }
+
+    /// <summary>
+    /// The <c>start_staff</c> entries from 1 on, as far as they go without a gap (Lua's <c>ipairs</c>). An entry is a
+    /// nurse, receptionist, handyman or doctor, the first of these its flag sets to 1 (<c>Hospital:initStaff</c>), with
+    /// <c>Skill</c> in percent (0 by default); a doctor's <c>Shrink</c>, <c>Surgeon</c> and <c>Researcher</c> flags give
+    /// their abilities. An entry naming none of the classes is skipped.
+    /// </summary>
+    public static IReadOnlyList<StartingStaff> StartStaffFromConfig(LevelConfig config)
+    {
+        string[] fields = ["Doctor", "Nurse", "Receptionist", "Handyman", "Skill", "Shrink", "Surgeon", "Researcher", "Junior", "Consultant"];
+        var staff = new List<StartingStaff>();
+        for (var i = 1; i <= MaxStartStaff && fields.Any(field => config[$"start_staff[{i}].{field}"] is not null); i++)
+        {
+            bool Is(string field) => config.GetInt($"start_staff[{i}].{field}") == 1;
+            StaffClass? staffClass = Is("Nurse") ? StaffClass.Nurse
+                : Is("Receptionist") ? StaffClass.Receptionist
+                : Is("Handyman") ? StaffClass.Handyman
+                : Is("Doctor") ? StaffClass.Doctor
+                : null;
+            if (staffClass is not { } found)
+            {
+                continue;
+            }
+
+            // skill = Skill / 100; a skill beyond 0 to 100 percent is kept within it here.
+            var skill = Math.Clamp((config.GetInt($"start_staff[{i}].Skill") ?? 0) * 10, 0, StaffProfile.MaxSkill);
+            var doctor = found == StaffClass.Doctor;
+            staff.Add(new StartingStaff(found, skill, doctor && Is("Shrink"), doctor && Is("Surgeon"), doctor && Is("Researcher")));
+        }
+
+        return staff;
     }
 
     /// <summary>

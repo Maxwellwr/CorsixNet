@@ -112,8 +112,9 @@ Done and committed:
   (PR #141), handymen meandering within their parcel (PR #142), staff speed: slow juniors and tired
   staff, fast consultants (PR #143), the pharmacy's nurse meandering between patients (PR #144), the
   general diagnosis doctor meandering until the patient has undressed (PR #145), floating dollar signs
-  over paying patients (PR #146). No game data in the cloud: real-data tests were skipped there and the
-  client was not run, so these want a look on MSI. Save format version 47.
+  over paying patients (PR #146), the level's starting staff and CorsixTH's extra settings for campaign
+  levels 5, 7, 8, 11 and 12 (PR #147). No game data in the cloud: real-data tests were skipped there and
+  the client was not run, so these want a look on MSI. Save format version 48.
 
 Not done yet:
 

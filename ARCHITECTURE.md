@@ -273,7 +273,8 @@ CorsixTH's `hospital.lua`. What things cost depends on the level, so the prices 
 saved state as `LevelRules`: starting cash, each room type's own cost and each object type's
 cost. `LevelRulesLoader` reads them from the original's level files, as CorsixTH does: the
 difficulty's base file (`FULL00.SAM` at medium difficulty, `EASY00.SAM` or `HARD00.SAM`), then the level's
-own file (`FULL01.SAM` for `LEVEL.L1`). Only the original campaign has a difficulty (`--difficulty` in the client
+own file (`FULL01.SAM` for `LEVEL.L1`), then CorsixTH's extra settings for levels 5, 7, 8, 11 and 12
+(`Levels/original05.level` and so on, built into `LevelRulesLoader`). Only the original campaign has a difficulty (`--difficulty` in the client
 and server); every other map is medium. `LevelRules.Difficulty` also sets the price distortion at which patients
 find a price low or too high (−0.3/0.4, −0.4/0.3, −0.5/0.2) and the days between heating disasters (300, 200,
 150), as CorsixTH's `hospital.lua` does. The format (`#towns[1].StartCash.IllRate 40000 2`) is read by
@@ -326,6 +327,9 @@ CorsixTH's free build mode.
   pays the first month's salary (`TransactionKind.HireStaff`). The new member of staff is a
   `Humanoid` with the profile and the employing player. In CorsixTH choosing and placing are two
   steps and cancelling puts the candidate back at the end of the list; here they are one command.
+- A level's `start_staff` entries (`StaffRules.StartStaff`, only CorsixTH's level files have them, such as its
+  three specialist consultants on level 5) join every player's hospital for nothing when the game starts, each on a
+  random hospital tile near the player's camera tile (`StaffHiring.HireStartStaff`, from `Hospital:initStaff`).
 
 ## Patients and their visit
 
