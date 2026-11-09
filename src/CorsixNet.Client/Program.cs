@@ -144,7 +144,7 @@ else
             loadPath = new SaveGameStore(SaveGameStore.DefaultDirectory()).MostRecentAutosave();
         }
 
-        var screen = new MapViewScreen(install, device, levels, options.Zoom, options.Overlay, options.Demo, networkSession, options.Upscale, options.Speed, loadPath, config);
+        var screen = new MapViewScreen(install, device, levels, options.Zoom, options.Overlay, options.Demo, networkSession, options.Upscale, options.Speed, loadPath, config, configPath);
         if (options.CapturePath is not null)
         {
             // Give the demo time to build and furnish its room before capturing.

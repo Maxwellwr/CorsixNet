@@ -37,7 +37,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// <remarks>
 /// Keys: arrows/WASD, screen edges or right/middle-drag pan, wheel or =/− zoom, 0 original size, Alt+digit remember
 /// the view and Ctrl+digit go back to it, Home reset camera,
-/// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or quit.
+/// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or open the menu (save, load, options, quit).
 /// Clicking a member of staff, a patient, a room or a desk opens their window; C faxes, Y hire staff, F4 town map.
 /// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F7 progress report, F11 cheats, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
@@ -203,16 +203,22 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private string? _capturePath;
 
     /// <summary>The player's settings.</summary>
-    private readonly GameConfig _config;
+    private GameConfig _config;
+
+    /// <summary>Where the settings are saved, or null to leave the file alone.</summary>
+    private readonly string? _configPath;
+
+    /// <summary>The game install, for reloading the sounds when the options change.</summary>
+    private readonly ThemeHospitalInstall _install;
 
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
     private readonly OriginalTexts? _texts;
 
     /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
-    private readonly SoundEffects _sounds;
+    private SoundEffects _sounds;
 
     /// <summary>Scrolling and zooming the view as CorsixTH does, with the player's speeds.</summary>
-    private readonly MapScrolling _scrolling;
+    private MapScrolling _scrolling;
 
     /// <summary>Views remembered with Alt+digit, by digit (CorsixTH's <c>recallpositions</c>).</summary>
     private readonly (Vector2 Center, float Zoom)?[] _recallPositions = new (Vector2 Center, float Zoom)?[10];
@@ -232,9 +238,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         int upscale = 1,
         GameSpeed speed = GameSpeed.Normal,
         string? loadPath = null,
-        GameConfig? config = null)
+        GameConfig? config = null,
+        string? configPath = null)
     {
         _config = config ?? new GameConfig();
+        _configPath = configPath;
+        _install = install;
         _device = device;
         _initialSpeed = speed;
         _levels = networkSession is null ? levels : [];
@@ -256,8 +265,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _texts = LoadTexts(install, _config);
         _sounds = SoundEffects.Load(install, _config);
         _scrolling = new MapScrolling(_config.ScrollSettings());
-        _buildTool.PlaySound = _sounds.Play;
-        _furnishTool.PlaySound = _sounds.Play;
+        _buildTool.PlaySound = name => _sounds.Play(name);
+        _furnishTool.PlaySound = name => _sounds.Play(name);
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
         _pixel = new Texture2D(device, 1, 1);
@@ -359,6 +368,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             else if (_buildTool.IsActive || _furnishTool.IsActive)
             {
                 _buildBack = true;
+            }
+            else if (IsWindowHostReady)
+            {
+                // CorsixTH's Esc shows the menu bar; quitting is on it.
+                _windows.Open(new MenuWindow(MenuAction));
             }
             else
             {
@@ -664,6 +678,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var save = pressed(Keys.S);
         var load = pressed(Keys.L);
         if (!save && !load)
+        {
+            return false;
+        }
+
+        return QuickSave(load);
+    }
+
+    /// <summary>Saves to the quick save, or loads it (making one if there is none).</summary>
+    /// <returns>Whether another game was loaded.</returns>
+    private bool QuickSave(bool load)
+    {
+        if (_session is not LocalSession local)
         {
             return false;
         }
@@ -2057,6 +2083,82 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         _windows.CloseAll();
         SelectLevel(next ? Math.Min(_levelIndex + 1, _levels.Count - 1) : _levelIndex);
+    }
+
+    /// <summary>The menu's items that are not windows.</summary>
+    private void MenuAction(string action)
+    {
+        switch (action)
+        {
+            case "save" or "load" when _session is not LocalSession:
+                ShowNotice("Only local games can be saved and loaded");
+                break;
+            case "save" or "load" when _buildTool.IsActive || _furnishTool.IsActive:
+                ShowNotice("Finish building before saving or loading");
+                break;
+            case "save" or "load":
+                _windows.Open(new SaveLoadWindow(_saves, action == "save", SaveGameTo, LoadGame));
+                break;
+            case "quicksave" or "quickload":
+                QuickSave(load: action == "quickload");
+                break;
+            case "restart":
+                ((IWindowHost)this).StartLevel(next: false);
+                break;
+            case "quit":
+                ExitRequested = true;
+                break;
+            case "options":
+                _windows.Open(new OptionsWindow(_config, ApplyConfig));
+                break;
+            case "levels" when _levels.Count > 0:
+                _levelList = true;
+                break;
+        }
+    }
+
+    /// <summary>Saves the local game to a file, saying so or why not.</summary>
+    private bool SaveGameTo(string path)
+    {
+        if (_session is not LocalSession local)
+        {
+            return false;
+        }
+
+        try
+        {
+            SaveGameStore.Save(path, local.Name, local.Simulation);
+            ShowNotice($"Saved {Path.GetFileNameWithoutExtension(path)}");
+            return true;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowNotice($"Cannot save: {e.Message}");
+            return false;
+        }
+    }
+
+    /// <summary>The options window's Apply: the new settings are saved to <c>config.txt</c> and used at once.</summary>
+    private void ApplyConfig(GameConfig config)
+    {
+        _config = config;
+        _scrolling = new MapScrolling(config.ScrollSettings());
+        _sounds.Dispose();
+        _sounds = SoundEffects.Load(_install, config);
+        if (_configPath is not null)
+        {
+            try
+            {
+                config.Save(_configPath);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                ShowNotice($"Cannot save the settings: {e.Message}");
+                return;
+            }
+        }
+
+        ShowNotice("Settings saved; the screen size and language change on the next start");
     }
 
     /// <summary>Whether the room edit panel's <paramref name="button"/> was pressed; it counts once.</summary>
