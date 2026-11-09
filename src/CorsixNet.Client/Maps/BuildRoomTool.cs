@@ -82,6 +82,7 @@ internal sealed class BuildRoomTool
     private ObjectPlacementProblem _placeProblem;
     private bool _pickingUp;
     private int _highlightedObject;
+    private bool _editing;
 
     private enum Phase
     {
@@ -124,6 +125,35 @@ internal sealed class BuildRoomTool
     /// <summary>Whether the pick up button is down.</summary>
     public bool IsPickingUp => _pickingUp;
 
+    /// <summary>Whether the room is a finished one being edited (paid for: confirming costs nothing, taking it down asks).</summary>
+    public bool IsEditing => _editing && _phase == Phase.Objects;
+
+    /// <summary>The room being furnished or edited.</summary>
+    public int RoomId => _roomId;
+
+    /// <summary>
+    /// Edits a finished room (CorsixTH's <c>UIEditRoom</c> on an existing room): straight to its objects once the people in
+    /// it have left; <paramref name="tick"/> is when the edit command was sent. Taking it down is the screen's to confirm, so Esc does nothing here.
+    /// </summary>
+    public void StartEditing(RoomDefinition room, int roomId, long tick)
+    {
+        Start(room);
+        _roomId = roomId;
+        _phase = Phase.Objects;
+        _editing = true;
+
+        // The edit command is sent now; a room still active well after it ends the editing.
+        _sentTick = tick;
+    }
+
+    /// <summary>Stops editing without a command, once the room has been taken down.</summary>
+    public void Stop()
+    {
+        _phase = Phase.Inactive;
+        _editing = false;
+        StopPlacing();
+    }
+
     /// <summary>The objects the room still needs, counting commands on their way.</summary>
     public IReadOnlyList<(string ObjectType, int Count)> Missing(Simulation simulation) =>
         _phase == Phase.Objects && simulation.FindEntity(_roomId) is Room room ? Remaining(simulation, room) : [];
@@ -150,6 +180,7 @@ internal sealed class BuildRoomTool
 
     public void Start(RoomDefinition room)
     {
+        _editing = false;
         _room = room;
         _phase = Phase.Blueprint;
         _area = null;
@@ -499,9 +530,16 @@ internal sealed class BuildRoomTool
 
     private Command? UpdateObjects(Simulation simulation, int player, BuildInput input)
     {
-        if (simulation.FindEntity(_roomId) is not Room room || room.IsActive)
+        if (simulation.FindEntity(_roomId) is not Room room || (room.IsActive && !(_editing && simulation.Tick <= _sentTick + CommandTimeoutTicks)))
         {
             _phase = Phase.Inactive;
+            _editing = false;
+            return null;
+        }
+
+        if (room.IsActive || room.IsClosing)
+        {
+            // The edit command is on its way, or the room's people are still leaving.
             return null;
         }
 
@@ -512,6 +550,11 @@ internal sealed class BuildRoomTool
             if (_pickingUp)
             {
                 _pickingUp = false;
+                return null;
+            }
+
+            if (_editing)
+            {
                 return null;
             }
 
@@ -547,6 +590,7 @@ internal sealed class BuildRoomTool
         if (input.Confirm && _placing is null && _pending.Count == 0 && RoomBuilder.CanConfirm(simulation, room, player))
         {
             _phase = Phase.Inactive;
+            _editing = false;
             return new ConfirmRoomCommand(room.Id);
         }
 
@@ -685,6 +729,18 @@ internal sealed class BuildRoomTool
         if (simulation?.FindEntity(_roomId) is not Room room)
         {
             return $"{name}: ...";
+        }
+
+        if (room.IsActive || room.IsClosing)
+        {
+            return $"{name}: waiting for everyone to leave the room before it can be edited";
+        }
+
+        if (_editing)
+        {
+            var missing = Remaining(simulation, room);
+            var needs = missing.Count == 0 ? "Enter: confirm" : "place " + string.Join(", ", missing.Select(r => $"{simulation.Content.FindObject(r.ObjectType)?.Name ?? r.ObjectType} {r.Count}"));
+            return $"{name}: editing, move, buy or sell objects   {needs}   P: pick up   Esc: take the room down (half its cost back)";
         }
 
         var remaining = Remaining(simulation, room);

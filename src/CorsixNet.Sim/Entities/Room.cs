@@ -51,6 +51,15 @@ public sealed class Room : Entity
     /// <summary>Whether the room has been confirmed and works; until then its owner may furnish or cancel it.</summary>
     public bool IsActive { get; internal set; }
 
+    /// <summary>
+    /// Whether the room is emptying to be edited (CorsixTH's <c>Room:tryToEdit</c>): it takes nobody new, its queue goes
+    /// elsewhere and its people leave; once empty it can be furnished and confirmed again, or taken down.
+    /// </summary>
+    public bool IsClosing { get; internal set; }
+
+    /// <summary>Whether the room has been paid for, once first confirmed (CorsixTH's <c>UIEditRoom.paid</c>).</summary>
+    public bool IsPaid { get; internal set; }
+
     /// <summary>The area's tiles before the room was built, row by row.</summary>
     public IReadOnlyList<OriginalTile> OriginalTiles { get; }
 
@@ -84,6 +93,10 @@ public sealed class Room : Entity
         {
             RoomVisits.Update(simulation, this);
         }
+        else if (IsClosing)
+        {
+            RoomVisits.UpdateClosing(simulation, this);
+        }
     }
 
     internal static Room ReadState(int id, SimReader reader)
@@ -109,6 +122,8 @@ public sealed class Room : Entity
             StaffPresent = reader.ReadBool(),
             PatientId = reader.ReadInt32(),
             MaxTimes = reader.ReadInt32(),
+            IsPaid = reader.Version >= 59 ? reader.ReadBool() : active,
+            IsClosing = reader.Version >= 59 && reader.ReadBool(),
         };
     }
 
@@ -134,6 +149,8 @@ public sealed class Room : Entity
         writer.WriteBool(StaffPresent);
         writer.WriteInt32(PatientId);
         writer.WriteInt32(MaxTimes);
+        writer.WriteBool(IsPaid);
+        writer.WriteBool(IsClosing);
     }
 }
 

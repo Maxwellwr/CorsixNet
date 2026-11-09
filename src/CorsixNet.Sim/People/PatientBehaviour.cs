@@ -787,6 +787,43 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>Queue:rerouteAllPatients</c> when a room closes to be edited: a patient walking to it or queueing at its door
+    /// heads for another room of the type instead (<c>SeekRoomAction(room_type)</c>), or, with none, looks again as
+    /// they would have (a diagnosis room goes back on the list); one going to the toilets goes back to what they were
+    /// doing.
+    /// </summary>
+    internal void LeaveClosedRoom(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (TargetId != room.Id || Phase is not (PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue))
+        {
+            return;
+        }
+
+        LeaveQueue(simulation, humanoid);
+        humanoid.StopWalking();
+        Waiting = -1;
+        TargetId = 0;
+        if (string.Equals(room.RoomType, RoomVisits.ToiletsRoom, StringComparison.Ordinal))
+        {
+            // Back to what they were doing; the need stays, and they look for toilets again later.
+            AfterToilets(simulation, humanoid);
+            return;
+        }
+
+        if (GoToBestRoom(simulation, humanoid, room.RoomType))
+        {
+            return;
+        }
+
+        if (Seeking == RoomSeek.Diagnosis && !_availableDiagnosisRooms.Contains(room.RoomType, StringComparer.Ordinal))
+        {
+            _availableDiagnosisRooms.Add(room.RoomType);
+        }
+
+        Phase = PatientPhase.SeekRoom;
+    }
+
+    /// <summary>
     /// <c>Patient:setToDying</c> from <c>Hospital:resolveEmergency</c>: an emergency patient not cured, dead or going home
     /// when time is up will die.
     /// </summary>

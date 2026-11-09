@@ -28,9 +28,12 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 58;
+    private const int FormatVersion = 59;
 
-    /// <summary>The oldest version still read: 57 lacks only what handymen are doing (version 58).</summary>
+    /// <summary>
+    /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
+    /// emptying to be edited (version 59).
+    /// </summary>
     private const int OldestFormatVersion = 57;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian

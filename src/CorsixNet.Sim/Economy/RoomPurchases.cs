@@ -89,6 +89,29 @@ public static class RoomPurchases
     }
 
     /// <summary>
+    /// <c>UIEditRoom:abortRoom</c> for a room already paid for: half the room's whole cost, less half the price of each
+    /// kind of object it needs (once per kind, as CorsixTH does); extra objects are not paid back (a TODO there).
+    /// </summary>
+    internal static void RefundPaidRoom(Simulation simulation, RoomDefinition room, int player)
+    {
+        if (HospitalOf(simulation, player) is not { } hospital)
+        {
+            return;
+        }
+
+        decimal refund = BuildCost(simulation, hospital, room) / 2;
+        foreach (var (objectId, _) in LevelRules.Needed(room))
+        {
+            refund -= hospital.Research.ObjectCost(simulation.Rules, objectId) / 2m;
+        }
+
+        if (refund > 0)
+        {
+            hospital.Receive(simulation.Hours, (int)decimal.Floor(refund), TransactionKind.SellObject, room.Id);
+        }
+    }
+
+    /// <summary>
     /// Whether one more object of this type in the room is beyond what the room needs, so that it is bought on its own
     /// as in CorsixTH's buy items window (<c>UIPlaceObjects:addObjects</c>); every corridor object is.
     /// </summary>

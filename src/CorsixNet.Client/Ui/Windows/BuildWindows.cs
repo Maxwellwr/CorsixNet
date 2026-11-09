@@ -60,7 +60,7 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Confirm {MoneyText.Format(simulation.Rules.RoomCost(room.Id))}"), () => press(BuildButton.Confirm), tool.CanConfirm(simulation)),
+            WindowCell.Button(tool.IsEditing ? "Confirm" : string.Create(CultureInfo.InvariantCulture, $"Confirm {MoneyText.Format(simulation.Rules.RoomCost(room.Id))}"), () => press(BuildButton.Confirm), tool.CanConfirm(simulation)),
             WindowCell.Button(tool.IsPickingUp ? "Stop picking up" : "Pick up", () => press(BuildButton.PickUp), highlight: tool.IsPickingUp),
             WindowCell.Button("Take down", () => press(BuildButton.Back)));
     }
@@ -118,6 +118,7 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
             new WindowCell(MoneyText.Format(hospital.Balance), Highlight: true),
             WindowCell.Button("Build", () => action("rooms")),
             WindowCell.Button("Corridor", () => action("corridor")),
+            WindowCell.Button("Edit room", () => action("edit")),
             WindowCell.Button("Hire", () => host.Open(new HireWindow())),
             WindowCell.Button(faxes > 0 ? string.Create(CultureInfo.InvariantCulture, $"Faxes ({faxes})") : "Faxes", () => host.Open(new FaxWindow()), highlight: faxes > 0),
             WindowCell.Button("Bank", () => host.Open(new BankManagerWindow())),

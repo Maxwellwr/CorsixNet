@@ -18,7 +18,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Treatment rooms: operating theatre, inflation, fracture clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination | `rooms/operating_theatre.lua`, `inflation.lua`, `fracture_clinic.lua`, `hair_restoration.lua`, `slack_tongue.lua`, `dna_fixer.lua`, `electrolysis.lua`, `jelly_vat.lua`, `decontamination.lua` |
 | Facilities: staff room, training room | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Autopsies in the research department (the research, the room and its researchers are ported) | `rooms/research.lua`, `objects/autopsy.lua` |
-| Editing a finished room (back to blueprint: resize, move the door; add, move or remove objects), deleting a room | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
+| Editing a finished room back to the blueprint (resize, move the door), destroyed rooms after an explosion (editing objects and taking a room down for half its cost are done) | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
 | Room-specific rules: doors that can't be used while busy (swing doors of the operating theatre, ward), rooms that need two staff (operating theatre), max patients per room (ward beds) | `rooms/*.lua`, `objects/doors/*` |
 | Room information windows (staff in room, queue length, room "health") | `dialogs/queue_dialog.lua`, `dialogs/information.lua` |

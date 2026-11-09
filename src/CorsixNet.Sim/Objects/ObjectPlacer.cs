@@ -363,7 +363,7 @@ public static class ObjectPlacer
     public static bool CanPickUp(Simulation simulation, int objectId, int player)
     {
         return simulation.FindEntity(objectId) is RoomObject placed
-            && simulation.FindEntity(placed.RoomId) is Room { IsActive: false } room
+            && simulation.FindEntity(placed.RoomId) is Room { IsActive: false, IsClosing: false } room
             && RoomBuilder.IsOwnedBy(simulation.Map, room, player);
     }
 
@@ -519,7 +519,7 @@ public static class ObjectPlacer
         }
 
         // Objects go into rooms while they are being built, as in CorsixTH's edit room dialog.
-        return simulation.FindEntity(roomId) is Room { IsActive: false } room
+        return simulation.FindEntity(roomId) is Room { IsActive: false, IsClosing: false } room
             && simulation.Content.FindRoom(room.RoomType) is { } roomDefinition
             && roomDefinition.Allows(definition.Id);
     }

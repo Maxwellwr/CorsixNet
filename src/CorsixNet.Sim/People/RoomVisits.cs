@@ -582,6 +582,44 @@ public static class RoomVisits
     }
 
     /// <summary>
+    /// A room emptying to be edited (<c>Room:tryToEdit</c>, <c>Room:deactivate</c>): patients on their way or queueing go
+    /// elsewhere; once no patient is in it, its staff are let go and walk out; when nobody is left inside it can be
+    /// edited.
+    /// </summary>
+    internal static void UpdateClosing(Simulation simulation, Room room)
+    {
+        foreach (var entity in simulation.Entities.ToList())
+        {
+            if (entity is Humanoid { Behaviour: PatientBehaviour patient } humanoid && patient.TargetId == room.Id)
+            {
+                patient.LeaveClosedRoom(simulation, humanoid, room);
+            }
+        }
+
+        if (room.PatientId == 0)
+        {
+            foreach (var entity in simulation.Entities)
+            {
+                if (entity is Humanoid { Behaviour: IRoomStaff staff, Profile: { } profile } humanoid && staff.RoomId == room.Id)
+                {
+                    StaffEmployment.Detach(simulation, humanoid);
+                    humanoid.Behaviour = StaffHiring.NewBehaviour(profile.Class);
+                }
+            }
+
+            room.StaffId = 0;
+            room.StaffPresent = false;
+        }
+
+        if (room.PatientId != 0 || simulation.Entities.Any(e => e is Humanoid h && (room.Area.Contains(h.Tile) || room.Area.Contains(h.StepTarget))))
+        {
+            return;
+        }
+
+        room.IsClosing = false;
+    }
+
+    /// <summary>
     /// <c>CallsDispatcher:callForStaff</c> and <c>answerCall</c>: of the free staff of the kind the room needs, the one
     /// with the best score for it (<see cref="CallScore"/>) goes, unless another room waiting for staff scores better
     /// for them; that room takes them when it calls, as CorsixTH's free staff answer the most urgent call.
