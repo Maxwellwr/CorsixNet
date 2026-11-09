@@ -63,6 +63,19 @@ public class ResearchTests
     }
 
     [Fact]
+    public void TheAllResearchCheatDiscoversEveryObjectToResearch()
+    {
+        var simulation = NewSimulation();
+        var hospital = simulation.Hospitals[0];
+
+        Run(simulation, new CheatCommand(CheatKind.AllResearch));
+
+        Assert.True(hospital.Research.Objects["ultrascanner"].Discovered);
+        Assert.True(hospital.IsRoomDiscovered("ultrascan"));
+        Assert.True(hospital.Cheated);
+    }
+
+    [Fact]
     public void TooFewPointsAreKeptForLater()
     {
         var simulation = NewSimulation();

@@ -103,6 +103,9 @@ internal sealed class BuildRoomTool
 
     public bool IsActive => _phase != Phase.Inactive;
 
+    /// <summary>Whether the player is still drawing the blueprint, before anything is built or paid.</summary>
+    public bool IsDrawingBlueprint => _phase == Phase.Blueprint;
+
     /// <summary>The blueprint to draw on the map, with its door and windows, until the room is built.</summary>
     public RoomBlueprint? Blueprint => _blueprint;
 
