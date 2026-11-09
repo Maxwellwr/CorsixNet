@@ -132,7 +132,8 @@ entities and pending commands.
   idle tiles (`Pathfinder.TryFindIdleTile`), whose search does not go through doors, so wandering
   people keep out of rooms. The demo's walkers use it. Doctors, nurses and receptionists with no room or desk
   meander by themselves (`Meandering`): a walk to such a tile, then 5 to 40 ticks standing, and so on; with nowhere
-  to walk to they stand still until sent somewhere.
+  to walk to they stand still until sent somewhere. Handymen (`HandymanBehaviour`, nothing else to do yet) meander
+  too, outside rooms only within the parcel they are kept to (`SetHandymanParcelCommand`, 0 for all).
 
 Presentation details are derived in the client, not stored in the simulation. Examples are
 pixel offsets during a step and which tile a walking humanoid is drawn with. Animation timing

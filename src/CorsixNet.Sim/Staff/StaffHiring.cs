@@ -146,6 +146,7 @@ public static class StaffHiring
             StaffClass.Doctor => new DoctorBehaviour(),
             StaffClass.Nurse => new NurseBehaviour(),
             StaffClass.Receptionist => new ReceptionistBehaviour(),
+            StaffClass.Handyman => new HandymanBehaviour(),
             _ => null,
         };
         simulation.Hospitals[player].Spend(simulation.Hours, profile.Wage, TransactionKind.HireStaff, staffClass.ToString());
