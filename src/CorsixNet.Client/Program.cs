@@ -17,6 +17,7 @@ const string Usage = """
     Usage: CorsixNet [game folder] [options]
       --level NAME      Start on an original level, e.g. LEVEL.L3
       --map PATH        Show a map file from disk, e.g. a CorsixTH .map or .level file
+      --campaign PATH   Put a CorsixTH campaign's levels first, in order (PageDown for the next)
       --difficulty NAME Difficulty of the original levels: Easy, Medium (default) or Hard
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
@@ -38,6 +39,7 @@ const string Usage = """
 
 string? gamePath = null;
 string? initialLevel = null;
+string? campaignPath = null;
 string? mapPath = null;
 string? initialSheet = null;
 string? connectTo = null;
@@ -63,6 +65,9 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--map" when i + 1 < args.Length:
             mapPath = args[++i];
+            break;
+        case "--campaign" when i + 1 < args.Length:
+            campaignPath = args[++i];
             break;
         case "--difficulty" when i + 1 < args.Length && LevelRulesLoader.TryParseDifficulty(args[i + 1], out var d):
             difficulty = d;
@@ -171,6 +176,12 @@ else
     {
         // A two-player map, so that someone can join.
         initialLevel = levels.Any(level => level.Name == "LEVEL.L20") ? "LEVEL.L20" : null;
+    }
+
+    if (campaignPath is not null)
+    {
+        var (_, levelPaths) = LevelMapLoader.LoadCampaign(Path.GetFullPath(campaignPath));
+        levels.InsertRange(0, levelPaths.Select(path => new LevelSource(Path.GetFileName(path), () => LevelMapLoader.LoadFile(path, install))));
     }
 
     if (mapPath is not null)
