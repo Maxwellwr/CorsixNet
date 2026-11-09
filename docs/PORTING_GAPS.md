@@ -104,9 +104,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
   (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers
   (`PatientBehaviour.Question`, `AnswerPatientCommand`; K, Shift+K and Ctrl+K in the client) are done.
-- Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting, levels with
-  random emergencies (`emergency_control[0].Mean`) (`world.lua`, `objects/helicopter.lua`). The planned
-  emergencies, the fax offer, helicopter, watch, bonus and reputation are done (`Emergencies`).
+- Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting (`world.lua`,
+  `objects/helicopter.lua`). The planned and random emergencies, the fax offer, helicopter, watch, bonus and
+  reputation are done (`Emergencies`).
 - Epidemics: clicking patients to vaccinate them (J picks every infected patient for now) and the vaccination
   cursor, vaccinating patients on benches, the infected mood icons, the result fax, the adviser's warnings, the
   announcements and the inspector's, and showing the infected by cheat (`epidemic.lua`,

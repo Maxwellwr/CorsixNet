@@ -1,3 +1,4 @@
+using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Maps;
@@ -45,6 +46,42 @@ public class EmergencyScheduleTests
 
         Assert.Equal(0, state.NextMonth);
         Assert.Null(state.Current);
+    }
+
+    [Fact]
+    public void RandomEmergenciesComeAboutTheMeanNumberOfDaysApart()
+    {
+        // The planned emergency is ignored on a level with random ones.
+        var map = new LevelMap(10, 10, playerCount: 1);
+        var rules = new LevelRules(10_000, [], [], emergencies: [new PlannedEmergency(0, 4, 5, 4, 6, 16, 75, 400)], randomEmergencies: new RandomEmergencies(180, 30));
+        var simulation = new Simulation(map, seed: 1, rules: rules);
+        var hospital = simulation.Hospitals[0];
+        var state = hospital.Emergencies;
+
+        var total = 0L;
+        const int Draws = 500;
+        for (var i = 0; i < Draws; i++)
+        {
+            Emergencies.NextEmergency(simulation, hospital);
+            Assert.Equal(-1, state.NextIndex);
+            var planned = new GameDate(1 + ((state.NextMonth - 1) / 12), 1 + ((state.NextMonth - 1) % 12), state.NextDay, 0);
+            var days = (planned.ToHours() - simulation.Hours) / GameDate.HoursPerDay;
+            Assert.InRange(days, 1, 360);
+            total += days;
+        }
+
+        Assert.InRange(total / (decimal)Draws, 175m, 185m);
+    }
+
+    [Fact]
+    public void ARandomEmergencyIsAtLeastADayAway()
+    {
+        var map = new LevelMap(10, 10, playerCount: 1);
+        var simulation = new Simulation(map, seed: 1, rules: new LevelRules(10_000, [], [], randomEmergencies: new RandomEmergencies(-50, 1)));
+        var state = simulation.Hospitals[0].Emergencies;
+
+        Assert.Equal(1, state.NextMonth);
+        Assert.Equal(2, state.NextDay);
     }
 
     private static Simulation NewSimulation(params PlannedEmergency[] emergencies)

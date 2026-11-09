@@ -206,6 +206,18 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void EitherRandomOrMeanMakesTheEmergenciesRandom()
+    {
+        RandomEmergencies? Read(string text) =>
+            LevelRulesLoader.FromConfig(LevelConfig.Parse(Encoding.ASCII.GetBytes(text)), null, BaseGameContent.Create()).RandomEmergencies;
+
+        // As in Lua, 0 counts: CorsixTH's own campaign levels say "Random 0".
+        Assert.Equal(new RandomEmergencies(180, 30), Read("#emergency_control[0].Random 0"));
+        Assert.Equal(new RandomEmergencies(90, 10), Read("#emergency_control[0].Mean.Variance 90 10"));
+        Assert.Null(Read("#emergency_control[0].StartMonth.EndMonth.Min.Max.Illness.PercWin.Bonus 4 5 4 6 16 75 400"));
+    }
+
+    [Fact]
     public void TheOriginalLevelsPlanEarthquakesWithTheirMonthsInOrder()
     {
         var install = RealGameData.Require();
