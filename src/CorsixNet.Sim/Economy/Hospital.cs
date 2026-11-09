@@ -305,13 +305,16 @@ public sealed class Hospital
     public const int MaxReputation = 1000;
 
     /// <summary>
-    /// Price distortion below which a patient may find a price low, at medium difficulty (CorsixTH's
-    /// <c>under_priced_thresholds</c>: −0.3, −0.4, −0.5).
+    /// Price distortion below which a patient may find a price low, by difficulty (CorsixTH's
+    /// <c>under_priced_thresholds</c>).
     /// </summary>
-    private const decimal UnderPricedThreshold = -0.4m;
+    private static readonly decimal[] UnderPricedThresholds = [-0.3m, -0.4m, -0.5m];
 
-    /// <summary>Price distortion above which a patient may find a price too high, at medium difficulty (0.4, 0.3, 0.2).</summary>
-    private const decimal OverPricedThreshold = 0.3m;
+    /// <summary>Price distortion above which a patient may find a price too high, by difficulty (<c>over_priced_thresholds</c>).</summary>
+    private static readonly decimal[] OverPricedThresholds = [0.4m, 0.3m, 0.2m];
+
+    /// <summary>Days without a heating disaster, give or take 10, by difficulty (<c>disaster_free_days</c>).</summary>
+    private static readonly int[] DisasterFreeDays = [300, 200, 150];
 
     private readonly List<Transaction> _transactions = [];
     private readonly SortedDictionary<string, DiseaseCase> _casebook = new(StringComparer.Ordinal);
@@ -819,14 +822,15 @@ public sealed class Hospital
         var priceLevel = (((entry.PricePercent / 100m) - 0.5m) / 3) * 2;
         var distortion = priceLevel - expected;
         Feelings.ChangeHappiness(simulation, patient, -(distortion / 2));
-        if (distortion < UnderPricedThreshold)
+        var difficulty = (int)simulation.Rules.Difficulty - 1;
+        if (distortion < UnderPricedThresholds[difficulty])
         {
             if (random.NextInclusive(1, 100) == 1)
             {
                 ChangeReputation(random, ReputationChange.UnderPriced);
             }
         }
-        else if (distortion > OverPricedThreshold)
+        else if (distortion > OverPricedThresholds[difficulty])
         {
             if (random.NextInclusive(1, 100) == 1)
             {
@@ -913,8 +917,11 @@ public sealed class Hospital
         return true;
     }
 
-    /// <summary><c>Hospital:daysUntilNextDisaster</c> at medium difficulty: 200 days, give or take 10.</summary>
-    internal void ScheduleNextDisaster(SimRandom random) => DisasterlessDays = 200 + random.NextInclusive(1, 21) - 11;
+    /// <summary>
+    /// <c>Hospital:daysUntilNextDisaster</c>: 300, 200 or 150 days by difficulty, give or take 10.
+    /// </summary>
+    internal void ScheduleNextDisaster(SimRandom random, Difficulty difficulty) =>
+        DisasterlessDays = DisasterFreeDays[(int)difficulty - 1] + random.NextInclusive(1, 21) - 11;
 
     /// <summary>
     /// The heating part of <c>Hospital:onEndDay</c>: work on the boiler, perhaps a disaster, and the day's share of
@@ -924,13 +931,14 @@ public sealed class Hospital
     /// <param name="radiators">The radiators in the hospital.</param>
     /// <param name="handymen">The handymen the hospital employs.</param>
     /// <param name="daysInMonth">Days in the month that the day ends.</param>
-    internal void OnEndDayHeating(SimRandom random, int radiators, int handymen, int daysInMonth)
+    /// <param name="difficulty">The level's difficulty, for the days until the next disaster.</param>
+    internal void OnEndDayHeating(SimRandom random, int radiators, int handymen, int daysInMonth, Difficulty difficulty = Difficulty.Medium)
     {
         FixBoiler(radiators, handymen);
         DisasterlessDays--;
         if (DisasterlessDays <= 0)
         {
-            ScheduleNextDisaster(random);
+            ScheduleNextDisaster(random, difficulty);
 
             // 1 is no disaster; the vomit wave (4) is not there in CorsixTH either.
             switch (random.NextInclusive(1, 3))

@@ -183,8 +183,9 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 - Remaining level settings:
   research settings, `#gbv`
   values beyond the ones read now.
-- Original campaign (12 levels in order, difficulty choice), CorsixTH campaigns (`.campaign`),
-  custom levels (`.level` + `.map`) (`app.lua`, `Campaigns/`, `Levels/`).
+- Original campaign (12 levels in order), CorsixTH campaigns (`.campaign`), custom levels (`.level` + `.map`)
+  (`app.lua`, `Campaigns/`, `Levels/`). The difficulty and what it changes (`LevelRules.Difficulty`, `--difficulty`)
+  are done, except the ward's use of it, as there is no ward yet.
 - Free build mode and sandbox options (Partial: `LevelRules.Free` exists for missing level files).
 - New game dialog, difficulty choice, main menu (`resizables/new_game.lua`, `main_menu.lua`).
 - AI hospitals (Partial: `computer[n]` opponents take their turns for patients and count them as

@@ -10,12 +10,14 @@ using CorsixNet.Content.Saves;
 using CorsixNet.Formats;
 using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Transport;
+using CorsixNet.Sim.Economy;
 
 const int DefaultPort = 7777;
 const string Usage = """
     Usage: CorsixNet [game folder] [options]
       --level NAME      Start on an original level, e.g. LEVEL.L3
       --map PATH        Show a map file from disk, e.g. a CorsixTH .map file
+      --difficulty NAME Difficulty of the original levels: Easy, Medium (default) or Hard
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
       --demo            Build and furnish a GP's office and a pharmacy and add twenty patients wandering around
@@ -48,6 +50,7 @@ var overlay = MapOverlay.None;
 var demo = false;
 var upscale = 1;
 var speed = GameSpeed.Normal;
+var difficulty = Difficulty.Medium;
 string? capturePath = null;
 string? loadPath = null;
 var continueGame = false;
@@ -60,6 +63,10 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--map" when i + 1 < args.Length:
             mapPath = args[++i];
+            break;
+        case "--difficulty" when i + 1 < args.Length && LevelRulesLoader.TryParseDifficulty(args[i + 1], out var d):
+            difficulty = d;
+            i++;
             break;
         case "--zoom" when i + 1 < args.Length && float.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var z):
             zoom = z;
@@ -159,7 +166,7 @@ if (spriteViewer)
 }
 else
 {
-    var levels = MapViewScreen.OriginalLevels(install).ToList();
+    var levels = MapViewScreen.OriginalLevels(install, difficulty).ToList();
     if (hostPort is not null && initialLevel is null && mapPath is null)
     {
         // A two-player map, so that someone can join.

@@ -4,11 +4,13 @@ using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Transport;
+using CorsixNet.Sim.Economy;
 
 const string Usage = """
     Usage: CorsixNet.Server [game folder] [options]
       --level NAME   Original level to play (default LEVEL.L20, a two-player map)
       --map PATH     Map file to play instead, e.g. a CorsixTH .map file
+      --difficulty NAME  Difficulty of an original level: Easy, Medium (default) or Hard
       --port PORT    TCP port (default 7777)
       --public       Accept connections from other machines, not only this one
       --seed N       Seed for the simulation's random numbers (default 1)
@@ -23,6 +25,7 @@ string? mapPath = null;
 var port = 7777;
 var publicHost = false;
 ulong seed = 1;
+var difficulty = Difficulty.Medium;
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -32,6 +35,10 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--map" when i + 1 < args.Length:
             mapPath = args[++i];
+            break;
+        case "--difficulty" when i + 1 < args.Length && LevelRulesLoader.TryParseDifficulty(args[i + 1], out var d):
+            difficulty = d;
+            i++;
             break;
         case "--port" when i + 1 < args.Length && int.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var p):
             port = p;
@@ -90,7 +97,7 @@ try
             return 1;
         }
 
-        loaded = LevelMapLoader.LoadOriginal(install, level);
+        loaded = LevelMapLoader.LoadOriginal(install, level, difficulty);
         levelName = level;
     }
 }
