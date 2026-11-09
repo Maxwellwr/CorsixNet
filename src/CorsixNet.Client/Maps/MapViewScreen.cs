@@ -4,6 +4,7 @@ using CorsixNet.Client.Sessions;
 using CorsixNet.Content;
 using CorsixNet.Content.Levels;
 using CorsixNet.Content.Saves;
+using CorsixNet.Content.Settings;
 using CorsixNet.Formats;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
@@ -147,6 +148,9 @@ internal sealed class MapViewScreen : IScreen
     private LevelMap? _preparedMap;
     private string? _capturePath;
 
+    /// <summary>The player's settings.</summary>
+    private readonly GameConfig _config;
+
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
     private readonly OriginalTexts? _texts;
 
@@ -161,8 +165,10 @@ internal sealed class MapViewScreen : IScreen
         IGameSession? networkSession = null,
         int upscale = 1,
         GameSpeed speed = GameSpeed.Normal,
-        string? loadPath = null)
+        string? loadPath = null,
+        GameConfig? config = null)
     {
+        _config = config ?? new GameConfig();
         _device = device;
         _initialSpeed = speed;
         _levels = networkSession is null ? levels : [];
@@ -179,7 +185,7 @@ internal sealed class MapViewScreen : IScreen
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
-        _texts = LoadTexts(install);
+        _texts = LoadTexts(install, _config);
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
         _pixel = new Texture2D(device, 1, 1);
@@ -359,7 +365,7 @@ internal sealed class MapViewScreen : IScreen
     /// </summary>
     private Point ShakeOffset()
     {
-        var intensity = _session is { IsPaused: false, Simulation: { } simulation } ? simulation.Earthquakes.Shake switch
+        var intensity = _config.EnableScreenShake && _session is { IsPaused: false, Simulation: { } simulation } ? simulation.Earthquakes.Shake switch
         {
             EarthquakeShake.Warning => 0.2f,
             EarthquakeShake.Small => 0.5f,
@@ -495,7 +501,7 @@ internal sealed class MapViewScreen : IScreen
         try
         {
             var level = _levels[index].Load();
-            var local = new LocalSession(_levels[index].Name, level.StartSimulation(seed: 1), _saves);
+            var local = new LocalSession(_levels[index].Name, level.StartSimulation(seed: 1), _saves, _config.AutosaveFrequency);
             local.SetSpeed(_initialSpeed);
             _session = local;
             _error = null;
@@ -568,7 +574,7 @@ internal sealed class MapViewScreen : IScreen
 
         var speed = _session is { CanChangeSpeed: true } previous ? previous.Speed : _initialSpeed;
         _session?.Dispose();
-        var local = new LocalSession(saved.LevelName, saved.Simulation, _saves);
+        var local = new LocalSession(saved.LevelName, saved.Simulation, _saves, _config.AutosaveFrequency);
         local.SetSpeed(speed == GameSpeed.SpeedUp ? GameSpeed.Normal : speed);
         _session = local;
         _error = null;
@@ -1736,8 +1742,10 @@ internal sealed class MapViewScreen : IScreen
             : string.Empty;
     }
 
-    /// <summary>The texts in English, or in the first installed language if English is missing.</summary>
-    private static OriginalTexts? LoadTexts(ThemeHospitalInstall install)
+    /// <summary>
+    /// The texts in the settings' language if it is installed, else in English, else in the first installed language.
+    /// </summary>
+    private static OriginalTexts? LoadTexts(ThemeHospitalInstall install, GameConfig config)
     {
         var languages = install.InstalledLanguages();
         if (languages.Count == 0)
@@ -1745,9 +1753,12 @@ internal sealed class MapViewScreen : IScreen
             return null;
         }
 
+        var language = config.OriginalLanguageNumber() is { } wanted && languages.Contains(wanted) ? wanted
+            : languages.Contains(StringTable.English) ? StringTable.English
+            : languages[0];
         try
         {
-            return new OriginalTexts(install.LoadStrings(languages.Contains(StringTable.English) ? StringTable.English : languages[0]));
+            return new OriginalTexts(install.LoadStrings(language));
         }
         catch (InvalidDataException)
         {

@@ -636,9 +636,20 @@ Tests check that a saved and reloaded simulation continues to produce identical 
 Save files (`SaveGameStore` in `CorsixNet.Content`, after CorsixTH's `app.lua` and `world.lua`) add a short header
 (`CNETSAVE`, a header version and the level's name) before the simulation's own save, and are written to a
 temporary file first. They live in `%AppData%/CorsixNet/Saves` (or `CORSIXNET_SAVES`): the quick save
-`quicksave.qs` (Alt+Shift+S, Alt+Shift+L; loading without one makes one) and, for local games, an autosave as each
-month's last day begins, `Autosaves/Autosave-mm-dd.sav`, so a year keeps one per month. `--load FILE` and
-`--continue` (the newest autosave) start the client on a saved game. Network games are not saved.
+`quicksave.qs` (Alt+Shift+S, Alt+Shift+L; loading without one makes one) and, for local games, autosaves
+`Autosaves/Autosave-mm-dd.sav` at the settings' `autosave_frequency`: as each month's last day begins (the
+default, so a year keeps one per month), also on days 6, 13, 20 and 27 (weekly), every day, or never. `--load FILE`
+and `--continue` (the newest autosave) start the client on a saved game. Network games are not saved.
+
+## Settings
+
+`GameConfig` (`CorsixNet.Content`, after CorsixTH's `config_finder.lua`) reads and writes `config.txt` in CorsixTH's
+format, Lua assignments with CorsixTH's names, in `%AppData%/CorsixNet` on Windows and
+`$XDG_CONFIG_HOME/CorsixNet` or `~/.config/CorsixNet` elsewhere (or `CORSIXNET_CONFIG`, or `--config FILE`). A
+missing file is written with the defaults. Only the settings the client acts on are kept: `language` (the
+original's `LANG-n.DAT` for English, French, German, Italian, Spanish or Swedish), `fullscreen`, `width` and
+`height`, `enable_screen_shake`, `autosave_frequency`, `theme_hospital_install` (used when no game folder is given
+and it exists) and `player_name`. Command-line options still win.
 
 ## Content and mods
 

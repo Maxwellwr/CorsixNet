@@ -10,13 +10,18 @@ internal sealed class CorsixNetGame : Game
     private SpriteBatch? _batch;
     private IScreen? _screen;
 
-    public CorsixNetGame(string title, Func<GraphicsDevice, IScreen> createScreen)
+    /// <summary>The smallest window the settings may ask for (CorsixTH's 640 by 480).</summary>
+    private const int MinWidth = 640;
+    private const int MinHeight = 480;
+
+    public CorsixNetGame(string title, Func<GraphicsDevice, IScreen> createScreen, int width = 1280, int height = 800, bool fullscreen = false)
     {
         _createScreen = createScreen;
         _ = new GraphicsDeviceManager(this)
         {
-            PreferredBackBufferWidth = 1280,
-            PreferredBackBufferHeight = 800,
+            PreferredBackBufferWidth = Math.Max(MinWidth, width),
+            PreferredBackBufferHeight = Math.Max(MinHeight, height),
+            IsFullScreen = fullscreen,
         };
         IsMouseVisible = true;
         Window.AllowUserResizing = true;

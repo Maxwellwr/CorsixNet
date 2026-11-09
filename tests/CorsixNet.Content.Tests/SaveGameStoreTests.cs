@@ -80,6 +80,25 @@ public sealed class SaveGameStoreTests : IDisposable
     }
 
     [Fact]
+    public void TheAutosaveFrequencyIsNeverMonthlyWeeklyOrDaily()
+    {
+        GameDate Before(int day) => new(1, 3, day - 1, 49);
+        GameDate Start(int day) => new(1, 3, day, 0);
+
+        Assert.False(SaveGameStore.IsAutosaveDue(Before(31), Start(31), frequency: 0));
+        Assert.True(SaveGameStore.IsAutosaveDue(Before(31), Start(31), frequency: 1));
+        Assert.False(SaveGameStore.IsAutosaveDue(Before(6), Start(6), frequency: 1));
+        foreach (var day in new[] { 6, 13, 20, 27, 31 })
+        {
+            Assert.True(SaveGameStore.IsAutosaveDue(Before(day), Start(day), frequency: 2));
+        }
+
+        Assert.False(SaveGameStore.IsAutosaveDue(Before(7), Start(7), frequency: 2));
+        Assert.True(SaveGameStore.IsAutosaveDue(Before(7), Start(7), frequency: 3));
+        Assert.False(SaveGameStore.IsAutosaveDue(Start(7), new GameDate(1, 3, 7, 1), frequency: 3));
+    }
+
+    [Fact]
     public void TheNewestAutosaveIsFoundToContinue()
     {
         var store = new SaveGameStore(_folder);

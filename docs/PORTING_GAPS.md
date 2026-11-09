@@ -205,8 +205,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 **Has:** explicit versioned save format (version 9) of the whole simulation, used for network joins
 and state hashing; tests for save/load round trips.
 
-- Save and load windows, save slots, the file browser, the autosave frequency setting (daily, weekly, monthly,
-  off) (`resizables/file_browser.lua`, `file_browsers/`). The quick save, monthly autosaves, `--load` and
+- Save and load windows, save slots, the file browser (the autosave frequency setting is done, `autosave_frequency`) (`resizables/file_browser.lua`, `file_browsers/`). The quick save, monthly autosaves, `--load` and
   `--continue` are done (`SaveGameStore`).
 - Loading CorsixTH saves (likely never: CorsixTH persists the Lua heap) and original `SAVE*.SAV`.
 - Replays (initial save plus command log) as a feature in the client.
@@ -235,7 +234,10 @@ join.
 
 - Options dialog: resolution, fullscreen, language, audio, scroll speed, edge scrolling, zoom, mouse
   capture, adviser on/off, ... (`resizables/options.lua`, `graphics_settings.lua`, `customise.lua`).
-- Config file and its location (`config_finder.lua`), game data folder selection (`resizables/folder_settings.lua`, `directory_browser.lua`).
+- The rest of the config file (`config_finder.lua`): sound, movies, scrolling and zoom speeds, edge scrolling, the
+  options dialog's game rules, `config.path.txt`; game data folder selection (`resizables/folder_settings.lua`,
+  `directory_browser.lua`). `config.txt` with the language, window, screen shake, autosave frequency, game folder and
+  player name is done (`GameConfig`).
 - Hotkeys file.
 - Update check (`resizables/update.lua`).
 
