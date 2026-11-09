@@ -14,142 +14,18 @@ using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Transport;
 using CorsixNet.Sim.Economy;
 
-const int DefaultPort = 7777;
-const string Usage = """
-    Usage: CorsixNet [game folder] [options]
-      --level NAME      Start on an original level, e.g. LEVEL.L3
-      --map PATH        Show a map file from disk, e.g. a CorsixTH .map or .level file
-      --campaign PATH   Put a CorsixTH campaign's levels first, in order (PageDown for the next)
-      --difficulty NAME Difficulty of the original levels: Easy, Medium (default) or Hard
-      --zoom FACTOR     Initial map zoom, 0.5 to 4
-      --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels
-      --demo            Build and furnish a GP's office and a pharmacy and add twenty patients wandering around
-      --speed NAME      Start a local game at a speed: Pause, Slowest, Slower, Normal, MaxSpeed, AndThenSomeMore or Insane
-      --upscale N       Smooth sprites with the MMPX pixel art filter: 1 (original), 2 or 4 (key U)
-      --load FILE       Load a saved game, e.g. the quick save or an autosave
-      --continue        Load the newest autosave
-      --capture FILE    After a few seconds, save the map view to a PNG file and quit
-      --sprite-viewer   Browse sprite sheets instead of maps
-      --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
-      --config FILE     Use another settings file (default: config.txt in the CorsixNet settings folder)
-
-    Multiplayer (lockstep):
-      --host [PORT]     Host a game on the level (default LEVEL.L20, a two-player map) and join it
-      --public          With --host, accept connections from other machines, not only this one
-      --connect ADDRESS Join a game at HOST or HOST:PORT (default port 7777)
-      --name NAME       Player name shown to the server
-    """;
-
-string? gamePath = null;
-string? configPath = null;
-string? initialLevel = null;
-string? campaignPath = null;
-string? mapPath = null;
-string? initialSheet = null;
-string? connectTo = null;
-int? hostPort = null;
-var publicHost = false;
-string? playerName = null;
-var spriteViewer = false;
-var zoom = 1f;
-var overlay = MapOverlay.None;
-var demo = false;
-var upscale = 1;
-var speed = GameSpeed.Normal;
-var difficulty = Difficulty.Medium;
-string? capturePath = null;
-string? loadPath = null;
-var continueGame = false;
-for (var i = 0; i < args.Length; i++)
+var parseResult = ClientCommandLine.Parse(args);
+if (parseResult.Action is not null)
 {
-    switch (args[i])
-    {
-        case "--level" when i + 1 < args.Length:
-            initialLevel = args[++i];
-            break;
-        case "--map" when i + 1 < args.Length:
-            mapPath = args[++i];
-            break;
-        case "--campaign" when i + 1 < args.Length:
-            campaignPath = args[++i];
-            break;
-        case "--difficulty" when i + 1 < args.Length && LevelRulesLoader.TryParseDifficulty(args[i + 1], out var d):
-            difficulty = d;
-            i++;
-            break;
-        case "--zoom" when i + 1 < args.Length && float.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var z):
-            zoom = z;
-            i++;
-            break;
-        case "--overlay" when i + 1 < args.Length && Enum.TryParse<MapOverlay>(args[i + 1], ignoreCase: true, out var o):
-            overlay = o;
-            i++;
-            break;
-        case "--demo":
-            demo = true;
-            break;
-        case "--upscale" when i + 1 < args.Length && int.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var u) && u is 1 or 2 or 4:
-            upscale = u;
-            i++;
-            break;
-        case "--speed" when i + 1 < args.Length && Enum.TryParse<GameSpeed>(args[i + 1], ignoreCase: true, out var s) && s != GameSpeed.SpeedUp:
-            speed = s;
-            i++;
-            break;
-        case "--host":
-            if (i + 1 < args.Length && int.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var p))
-            {
-                hostPort = p;
-                i++;
-            }
-            else
-            {
-                hostPort = DefaultPort;
-            }
-
-            break;
-        case "--public":
-            publicHost = true;
-            break;
-        case "--connect" when i + 1 < args.Length:
-            connectTo = args[++i];
-            break;
-        case "--name" when i + 1 < args.Length:
-            playerName = args[++i];
-            break;
-        case "--sheet" when i + 1 < args.Length:
-            initialSheet = args[++i];
-            spriteViewer = true;
-            break;
-        case "--load" when i + 1 < args.Length:
-            loadPath = Path.GetFullPath(args[++i]);
-            break;
-        case "--continue":
-            continueGame = true;
-            break;
-        case "--capture" when i + 1 < args.Length:
-            capturePath = Path.GetFullPath(args[++i]);
-            break;
-        case "--config" when i + 1 < args.Length:
-            configPath = Path.GetFullPath(args[++i]);
-            break;
-        case "--sprite-viewer":
-            spriteViewer = true;
-            break;
-        case "--help" or "-h":
-            Console.WriteLine(Usage);
-            return 0;
-        default:
-            if (args[i].StartsWith("--", StringComparison.Ordinal))
-            {
-                Console.Error.WriteLine($"Unknown option {args[i]}.\n{Usage}");
-                return 1;
-            }
-
-            gamePath = args[i];
-            break;
-    }
+    // --help, --version or a mistake on the command line: System.CommandLine prints it.
+    return parseResult.Invoke();
 }
+
+var options = ClientCommandLine.Bind(parseResult);
+var configPath = options.ConfigPath;
+var initialLevel = options.InitialLevel;
+var playerName = options.PlayerName;
+var loadPath = options.LoadPath;
 
 GameConfig config;
 try
@@ -166,7 +42,7 @@ catch (Exception e) when (e is InvalidDataException or IOException or Unauthoriz
 playerName ??= config.PlayerName is { Length: > 0 } configured ? configured : "Player";
 
 ThemeHospitalInstall? install;
-if (gamePath is null)
+if (options.GamePath is null)
 {
     // The settings' game folder if it is there, as CorsixTH's theme_hospital_install; otherwise look for the game.
     install = config.ThemeHospitalInstall != GameConfig.PlaceholderInstall
@@ -174,7 +50,7 @@ if (gamePath is null)
         ? configuredInstall
         : ThemeHospitalInstall.Locate();
 }
-else if (!ThemeHospitalInstall.TryOpen(gamePath, out install, out var error))
+else if (!ThemeHospitalInstall.TryOpen(options.GamePath, out install, out var error))
 {
     Console.Error.WriteLine(error);
     return 1;
@@ -190,28 +66,28 @@ if (install is null)
 Console.WriteLine($"Using Theme Hospital data from {install.RootPath}{(install.IsDemo ? " (demo)" : "")}");
 
 Func<Microsoft.Xna.Framework.Graphics.GraphicsDevice, IScreen> createScreen;
-if (spriteViewer)
+if (options.SpriteViewer)
 {
-    createScreen = device => new SpriteViewerScreen(install, device, initialSheet);
+    createScreen = device => new SpriteViewerScreen(install, device, options.InitialSheet);
 }
 else
 {
-    var levels = MapViewScreen.OriginalLevels(install, difficulty).ToList();
-    if (hostPort is not null && initialLevel is null && mapPath is null)
+    var levels = MapViewScreen.OriginalLevels(install, options.Difficulty).ToList();
+    if (options.HostPort is not null && initialLevel is null && options.MapPath is null)
     {
         // A two-player map, so that someone can join.
         initialLevel = levels.Any(level => level.Name == "LEVEL.L20") ? "LEVEL.L20" : null;
     }
 
-    if (campaignPath is not null)
+    if (options.CampaignPath is not null)
     {
-        var (_, levelPaths) = LevelMapLoader.LoadCampaign(Path.GetFullPath(campaignPath));
+        var (_, levelPaths) = LevelMapLoader.LoadCampaign(Path.GetFullPath(options.CampaignPath));
         levels.InsertRange(0, levelPaths.Select(path => new LevelSource(Path.GetFileName(path), () => LevelMapLoader.LoadFile(path, install))));
     }
 
-    if (mapPath is not null)
+    if (options.MapPath is not null)
     {
-        var fullPath = Path.GetFullPath(mapPath);
+        var fullPath = Path.GetFullPath(options.MapPath);
         levels.Insert(0, new LevelSource(Path.GetFileName(fullPath), () => config.FreeBuildMode
             ? LevelMapLoader.LoadFile(fullPath, install).WithFreeBuild()
             : LevelMapLoader.LoadFile(fullPath, install)));
@@ -231,7 +107,7 @@ else
     IGameSession? networkSession = null;
     try
     {
-        if (hostPort is { } port)
+        if (options.HostPort is { } port)
         {
             if (levels.Count == 0)
             {
@@ -241,15 +117,15 @@ else
 
             var level = levels[0];
             var server = new LockstepServer(level.Load().StartSimulation(seed: 1)) { Log = Console.WriteLine };
-            var listener = new TcpConnectionListener(publicHost ? IPAddress.Any : IPAddress.Loopback, port);
+            var listener = new TcpConnectionListener(options.PublicHost ? IPAddress.Any : IPAddress.Loopback, port);
             var runner = new ServerRunner(server, listener, LocalSession.TickInterval);
-            Console.WriteLine($"Hosting {level.Name} on port {runner.Port}{(publicHost ? " for all network interfaces" : " (this machine only; add --public for others)")}.");
+            Console.WriteLine($"Hosting {level.Name} on port {runner.Port}{(options.PublicHost ? " for all network interfaces" : " (this machine only; add --public for others)")}.");
             var connection = TcpConnection.ConnectAsync("127.0.0.1", runner.Port).GetAwaiter().GetResult();
             networkSession = new NetworkSession(level.Name, new LockstepClient(connection, playerName, BaseGameContent.Create()), runner);
         }
-        else if (connectTo is not null)
+        else if (options.ConnectTo is not null)
         {
-            var (host, remotePort) = ParseAddress(connectTo, DefaultPort);
+            var (host, remotePort) = ParseAddress(options.ConnectTo, ClientCommandLine.DefaultPort);
             Console.WriteLine($"Connecting to {host}:{remotePort}...");
             var connection = TcpConnection.ConnectAsync(host, remotePort).GetAwaiter().GetResult();
             networkSession = new NetworkSession($"{host}:{remotePort}", new LockstepClient(connection, playerName, BaseGameContent.Create()));
@@ -263,16 +139,16 @@ else
 
     createScreen = device =>
     {
-        if (continueGame)
+        if (options.ContinueGame)
         {
             loadPath = new SaveGameStore(SaveGameStore.DefaultDirectory()).MostRecentAutosave();
         }
 
-        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale, speed, loadPath, config);
-        if (capturePath is not null)
+        var screen = new MapViewScreen(install, device, levels, options.Zoom, options.Overlay, options.Demo, networkSession, options.Upscale, options.Speed, loadPath, config);
+        if (options.CapturePath is not null)
         {
             // Give the demo time to build and furnish its room before capturing.
-            _ = Task.Delay(TimeSpan.FromSeconds(6)).ContinueWith(_ => screen.RequestCapture(capturePath), TaskScheduler.Default);
+            _ = Task.Delay(TimeSpan.FromSeconds(6)).ContinueWith(_ => screen.RequestCapture(options.CapturePath), TaskScheduler.Default);
         }
 
         return screen;

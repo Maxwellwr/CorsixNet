@@ -9,9 +9,11 @@
 
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" />
+    <PackageReference Include="System.CommandLine" />
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="CorsixNet.Client.Tests" />
     <ProjectReference Include="../CorsixNet.Content/CorsixNet.Content.csproj" />
     <ProjectReference Include="../CorsixNet.Formats/CorsixNet.Formats.csproj" />
     <ProjectReference Include="../CorsixNet.Net/CorsixNet.Net.csproj" />
