@@ -121,29 +121,34 @@ internal sealed class KnownSymbols
 
     public static ITypeSymbol? FindInTypeTree(ITypeSymbol type, Func<ITypeSymbol, bool> predicate)
     {
-        if (predicate(type))
+        while (true)
         {
-            return type;
-        }
+            if (predicate(type))
+            {
+                return type;
+            }
 
-        switch (type)
-        {
-            case IArrayTypeSymbol array:
-                return FindInTypeTree(array.ElementType, predicate);
-            case IPointerTypeSymbol pointer:
-                return FindInTypeTree(pointer.PointedAtType, predicate);
-            case INamedTypeSymbol named:
-                foreach (var argument in named.TypeArguments)
-                {
-                    if (FindInTypeTree(argument, predicate) is { } found)
+            switch (type)
+            {
+                case IArrayTypeSymbol array:
+                    type = array.ElementType;
+                    continue;
+                case IPointerTypeSymbol pointer:
+                    type = pointer.PointedAtType;
+                    continue;
+                case INamedTypeSymbol named:
+                    foreach (var argument in named.TypeArguments)
                     {
-                        return found;
+                        if (FindInTypeTree(argument, predicate) is { } found)
+                        {
+                            return found;
+                        }
                     }
-                }
 
-                return null;
-            default:
-                return null;
+                    return null;
+                default:
+                    return null;
+            }
         }
     }
 
