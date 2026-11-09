@@ -331,6 +331,25 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsThePlayingComputerOpponentsInCorsixThsOrder()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #computer[0].Playing.Name 1 DEEPBLUE
+            #computer[3].Playing 1
+            #computer[12].Playing.Name 1 CORSIX
+            #computer[13].Playing.Name 0 ROUJIN
+            """));
+
+        var rules = LevelRulesLoader.FromConfig(config, null, BaseGameContent.Create());
+
+        // pairs visits base_config.lua's 1 to 14 before 0; a missing name is base_config.lua's.
+        Assert.Equal(
+            [new PlannedCompetitor(4, "MULTIVAC"), new PlannedCompetitor(13, "CORSIX"), new PlannedCompetitor(1, "DEEPBLUE")],
+            rules.Competitors);
+        Assert.Empty(LevelRulesLoader.CompetitorsFromConfig(LevelConfig.Parse([])));
+    }
+
+    [Fact]
     public void ReadsTheOriginalLevelOneDiseases()
     {
         var install = RealGameData.Require();

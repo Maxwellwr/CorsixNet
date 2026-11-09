@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 34;
+    private const int FormatVersion = 35;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -42,6 +42,7 @@ public sealed class Simulation
     private readonly List<ScheduledCommand> _pending = [];
     private readonly List<MapObjectPlacement> _delayedObjects = [];
     private readonly Hospital[] _hospitals;
+    private readonly List<CompetitorHospital> _competitors = [];
 
     /// <summary>
     /// Which parcels touch, by passable tiles of the map as the level began (CorsixTH's
@@ -86,6 +87,12 @@ public sealed class Simulation
             }
         }
 
+        // World:World adds the computer opponents after the players' hospitals.
+        foreach (var competitor in Rules.Competitors)
+        {
+            _competitors.Add(new CompetitorHospital(competitor.Number, competitor.Name));
+        }
+
         _parcelAdjacency = ParcelAdjacency(map);
         MakeAvailableStaff(0);
 
@@ -121,6 +128,12 @@ public sealed class Simulation
 
     /// <summary>Each player's hospital, by player (0-based).</summary>
     public IReadOnlyList<Hospital> Hospitals => _hospitals;
+
+    /// <summary>
+    /// The computer opponents' hospitals (CorsixTH's <c>AIHospital</c>s), which come after the players' in the turns
+    /// for patients.
+    /// </summary>
+    public IReadOnlyList<CompetitorHospital> Competitors => _competitors;
 
     /// <summary>
     /// The candidates for hire of a class, in the order the hire window lists them. Every hospital
@@ -421,6 +434,12 @@ public sealed class Simulation
             simulation._hospitals[player] = Hospital.Read(reader, player);
         }
 
+        var competitorCount = reader.ReadCount(rules.Competitors.Count);
+        for (var i = 0; i < competitorCount; i++)
+        {
+            simulation._competitors.Add(CompetitorHospital.Read(reader));
+        }
+
         simulation.Temperatures = TileTemperatures.Read(reader, map.Width, map.Height);
         simulation.Earthquakes = Earthquakes.Read(reader);
         simulation.Arrivals = PatientArrivals.Read(reader);
@@ -501,6 +520,12 @@ public sealed class Simulation
         foreach (var hospital in _hospitals)
         {
             hospital.Write(writer);
+        }
+
+        writer.WriteInt32(_competitors.Count);
+        foreach (var competitor in _competitors)
+        {
+            competitor.Write(writer);
         }
 
         Temperatures.Write(writer);
@@ -731,6 +756,14 @@ public sealed class Simulation
                 // loss to come after the trophies and awards but pays them only when the report closes; here both
                 // checks come after them.
                 CheckEndConditions(hospital, mayLose: true);
+            }
+        }
+
+        if (date.IsLastDayOfYear)
+        {
+            foreach (var competitor in _competitors)
+            {
+                competitor.OnEndYear();
             }
         }
 

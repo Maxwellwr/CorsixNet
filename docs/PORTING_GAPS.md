@@ -173,13 +173,15 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 - Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
   (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`).
 - Remaining level settings:
-  `computer[n]` AI players, research settings, `#gbv`
+  research settings, `#gbv`
   values beyond the ones read now.
 - Original campaign (12 levels in order, difficulty choice), CorsixTH campaigns (`.campaign`),
   custom levels (`.level` + `.map`) (`app.lua`, `Campaigns/`, `Levels/`).
 - Free build mode and sandbox options (Partial: `LevelRules.Free` exists for missing level files).
 - New game dialog, difficulty choice, main menu (`resizables/new_game.lua`, `main_menu.lua`).
-- AI hospitals competing for patients (`hospitals/ai_hospital.lua`).
+- AI hospitals (Partial: `computer[n]` opponents take their turns for patients and count them as
+  visitors, as CorsixTH's `AIHospital` does; like CorsixTH's, they build nothing and play no part in
+  the league, awards or end conditions; `hospitals/ai_hospital.lua`).
 - Intro and level-end movies (`movie_player.lua`).
 
 ## 8. Saves
