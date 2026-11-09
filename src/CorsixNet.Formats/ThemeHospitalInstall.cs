@@ -230,6 +230,17 @@ public sealed class ThemeHospitalInstall
         return strings;
     }
 
+    /// <summary>
+    /// Loads the sound effects and speech of a language, <c>SOUND/DATA/SOUND-{language}.DAT</c>, or the English ones
+    /// (<c>SOUND-0.DAT</c>) when the language has none (CorsixTH's <c>Audio:initSpeech</c>); null when neither is there.
+    /// </summary>
+    /// <exception cref="InvalidDataException">The file is not a sound archive.</exception>
+    public SoundArchive? LoadSounds(int language = StringTable.English)
+    {
+        var file = FindFile("SOUND", "DATA", $"SOUND-{language}.DAT") ?? FindFile("SOUND", "DATA", $"SOUND-{StringTable.English}.DAT");
+        return file is null ? null : SoundArchive.Parse(Rnc.DecompressIfNeeded(File.ReadAllBytes(file)));
+    }
+
     /// <summary>The language numbers of the installed string files, in order.</summary>
     public IReadOnlyList<int> InstalledLanguages()
     {
