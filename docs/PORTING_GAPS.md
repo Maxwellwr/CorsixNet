@@ -109,9 +109,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   `entities/humanoids/inspector.lua`). Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
   the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
   evacuation are done (`Epidemics`, `InspectorBehaviour`).
-- VIP visits: the faxes asking and reporting, the arrival announcement, the VIP counting litter and vomit and
-  judging machines (`entities/humanoids/vip.lua`). The visit, the rating, its grant and reputation and the year's
-  trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
+- VIP visits: the faxes asking and reporting, the arrival announcement and judging machines
+  (`entities/humanoids/vip.lua`). The visit, the rating (with the litter seen), its grant and reputation and
+  the year's trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
 - Earthquakes damaging machines and knocking patients over (`earthquake.lua`); planning, the warning and main
   quakes and the screen shake are done (`Earthquakes`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
