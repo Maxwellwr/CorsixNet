@@ -245,7 +245,7 @@ public sealed class EndConditions
             }
 
             var counts = staff
-                ? humanoid.Profile is not null && humanoid.Employer == hospital.Player
+                ? humanoid.Profile is not null && humanoid.Employer == hospital.Player && !humanoid.IsFired
                 : humanoid.Behaviour is PatientBehaviour && humanoid.HospitalPlayer == hospital.Player;
             if (counts && IsInHospital(simulation, hospital, humanoid.Tile))
             {

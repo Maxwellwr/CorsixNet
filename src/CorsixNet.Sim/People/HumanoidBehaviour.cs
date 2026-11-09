@@ -12,6 +12,9 @@ public enum BehaviourKind : byte
     Receptionist = 2,
     Doctor = 3,
     Nurse = 4,
+
+    /// <summary>A member of staff leaving the hospital.</summary>
+    Leaving = 5,
 }
 
 /// <summary>A member of staff whom a room sends for and who works in it.</summary>
@@ -56,6 +59,7 @@ public abstract class HumanoidBehaviour
             BehaviourKind.Receptionist => ReceptionistBehaviour.ReadState(reader),
             BehaviourKind.Doctor => DoctorBehaviour.ReadState(reader),
             BehaviourKind.Nurse => NurseBehaviour.ReadState(reader),
+            BehaviourKind.Leaving => LeavingBehaviour.ReadState(reader),
             _ => throw new InvalidDataException($"Unknown behaviour kind {(byte)kind}."),
         };
     }

@@ -32,6 +32,8 @@ public enum CommandKind : ushort
     SetRadiatorHeat = 17,
     Cheat = 18,
     SetPolicy = 19,
+    FireStaff = 20,
+    AnswerRaise = 21,
 }
 
 /// <summary>
@@ -74,6 +76,8 @@ public abstract record Command
             CommandKind.Cheat => new CheatCommand(ReadCheat(reader)),
             CommandKind.SetRadiatorHeat => new SetRadiatorHeatCommand(reader.ReadInt32()),
             CommandKind.SetPolicy => new SetPolicyCommand(ReadPolicy(reader), reader.ReadInt32()),
+            CommandKind.FireStaff => new FireStaffCommand(reader.ReadInt32()),
+            CommandKind.AnswerRaise => new AnswerRaiseCommand(reader.ReadInt32(), reader.ReadBool()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -535,6 +539,45 @@ public sealed record SetPolicyCommand(PolicyKind Policy, int Value) : Command
     {
         writer.WriteByte((byte)Policy);
         writer.WriteInt32(Value);
+    }
+}
+
+/// <summary>Fires one of the issuing player's staff (CorsixTH's staff window and staff management screen).</summary>
+public sealed record FireStaffCommand(int StaffId) : Command
+{
+    public override CommandKind Kind => CommandKind.FireStaff;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(StaffId) is Humanoid { Profile: not null, IsFired: false } staff && staff.Employer == player)
+        {
+            StaffEmployment.Fire(simulation, staff);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(StaffId);
+}
+
+/// <summary>
+/// Answers a member of staff's request for a raise (CorsixTH's <c>UIStaffRise</c>): granting it raises their wage,
+/// refusing it fires them.
+/// </summary>
+public sealed record AnswerRaiseCommand(int StaffId, bool Grant) : Command
+{
+    public override CommandKind Kind => CommandKind.AnswerRaise;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(StaffId) is Humanoid { Profile: not null, IsFired: false } staff && staff.Employer == player)
+        {
+            StaffEmployment.AnswerRaise(simulation, staff, Grant);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(StaffId);
+        writer.WriteBool(Grant);
     }
 }
 

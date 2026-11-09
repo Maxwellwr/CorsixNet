@@ -119,6 +119,9 @@ public class PatientFlowTests
     {
         var simulation = NewStaffedHospital();
         var hospital = simulation.Hospitals[0];
+
+        // The unheated hospital grows cold and its doctor miserable; granting raises keeps them from quitting.
+        Run(simulation, new SetPolicyCommand(PolicyKind.GrantWageIncrease, 1));
         var diagnosed = new HashSet<string>();
         var waited = new HashSet<int>();
         var balanceBefore = hospital.Balance;

@@ -68,6 +68,9 @@ public enum TransactionKind : byte
 
     /// <summary>Money from the money cheat (<c>cheat</c>).</summary>
     Cheat = 16,
+
+    /// <summary>A month's wage for a member of staff who was fired (<c>severance</c>); the subject is their class.</summary>
+    Severance = 17,
 }
 
 /// <summary>
@@ -1228,7 +1231,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Cheat)
+            if (kind > (byte)TransactionKind.Severance)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }

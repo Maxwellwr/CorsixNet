@@ -22,8 +22,8 @@ public class TirednessTests
         var handyman = Hire(simulation, StaffClass.Handyman, new TilePosition(6, 5));
         handyman.Happiness = 0.5m;
 
-        Tiredness.Tick(simulation, doctor);
-        Tiredness.Tick(simulation, handyman);
+        StaffEmployment.Tick(simulation, doctor);
+        StaffEmployment.Tick(simulation, handyman);
 
         Assert.Equal(0m, doctor.Fatigue);
         Assert.Equal(1m, doctor.Happiness);
@@ -43,8 +43,8 @@ public class TirednessTests
 
         for (var i = 0; i < 100; i++)
         {
-            Tiredness.Tick(simulation, working);
-            Tiredness.Tick(simulation, resting);
+            StaffEmployment.Tick(simulation, working);
+            StaffEmployment.Tick(simulation, resting);
         }
 
         Assert.Equal(0.009m, working.Fatigue);
@@ -58,7 +58,7 @@ public class TirednessTests
         var handyman = Hire(simulation, StaffClass.Handyman, new TilePosition(6, 6));
         handyman.Fatigue = 0.99995m;
 
-        Tiredness.Tick(simulation, handyman);
+        StaffEmployment.Tick(simulation, handyman);
 
         Assert.Equal(1m, handyman.Fatigue);
     }
@@ -71,16 +71,16 @@ public class TirednessTests
         doctor.Fatigue = 0.6m;
         doctor.Happiness = 0.5m;
 
-        Tiredness.Tick(simulation, doctor);
+        StaffEmployment.Tick(simulation, doctor);
         Assert.True(doctor.WaitingForStaffRoom);
         Assert.Equal(0.5m, doctor.Happiness);
 
-        Tiredness.Tick(simulation, doctor);
+        StaffEmployment.Tick(simulation, doctor);
         Assert.Equal(0.499m, doctor.Happiness);
 
         // Very tired costs a little more.
         doctor.Fatigue = 0.7m;
-        Tiredness.Tick(simulation, doctor);
+        StaffEmployment.Tick(simulation, doctor);
         Assert.Equal(0.4978m, doctor.Happiness);
     }
 
@@ -96,7 +96,7 @@ public class TirednessTests
         Tiredness.OnRoomActivated(simulation, staffRoom);
         Assert.False(doctor.WaitingForStaffRoom);
 
-        Tiredness.Tick(simulation, doctor);
+        StaffEmployment.Tick(simulation, doctor);
         Assert.False(doctor.WaitingForStaffRoom);
         Assert.Equal(1m, doctor.Happiness);
     }

@@ -45,10 +45,9 @@ internal static class Tiredness
     /// <summary>The staff room's room type.</summary>
     internal const string StaffRoomType = "staff_room";
 
-    /// <summary>One hour of a member of staff (<c>Staff:tick</c>'s <c>checkIfNeedRest</c> and tiring).</summary>
-    internal static void Tick(Simulation simulation, Humanoid humanoid)
+    /// <summary>One hour of tiring (<c>Staff:tick</c>'s <c>isTiring</c> and <c>tire</c>).</summary>
+    internal static void TireIfWorking(Simulation simulation, Humanoid humanoid)
     {
-        CheckIfNeedRest(simulation, humanoid);
         if (IsTiring(simulation, humanoid))
         {
             humanoid.Fatigue = Math.Min(humanoid.Fatigue + TirePerHour, 1m);
@@ -114,7 +113,7 @@ internal static class Tiredness
     /// <c>Staff:checkIfNeedRest</c>: very tired staff lose happiness; tired staff outside a staff room want one, and
     /// lose happiness every hour while their hospital has none.
     /// </summary>
-    private static void CheckIfNeedRest(Simulation simulation, Humanoid humanoid)
+    internal static void CheckIfNeedRest(Simulation simulation, Humanoid humanoid)
     {
         if (IsVeryTired(simulation, humanoid.Fatigue))
         {

@@ -73,7 +73,7 @@ public sealed class StaffProfile
     public bool IsConsultant { get; private set; }
 
     /// <summary>Monthly salary, which is also what hiring costs.</summary>
-    public int Wage { get; private set; }
+    public int Wage { get; internal set; }
 
     /// <summary>Picture parts for the face in the staff window.</summary>
     public int HairIndex { get; private set; }

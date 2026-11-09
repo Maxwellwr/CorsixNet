@@ -90,6 +90,18 @@ public sealed class Humanoid : Entity
     /// </summary>
     public bool WaitingForStaffRoom { get; internal set; }
 
+    /// <summary>Fired or quit: leaving the hospital and no longer counted as its staff (CorsixTH's <c>fired</c>).</summary>
+    public bool IsFired { get; internal set; }
+
+    /// <summary>Hours of unhappiness left before asking for a raise, or −1 (CorsixTH's <c>timer_until_raise</c>).</summary>
+    public int RaiseTimer { get; internal set; } = -1;
+
+    /// <summary>The raise asked for and not yet answered, or 0 (CorsixTH's <c>pay_rise</c> mood and message).</summary>
+    public int RaiseRequest { get; internal set; }
+
+    /// <summary>Hours the raise request still waits for an answer, or −1 (CorsixTH's <c>quitting_in</c>).</summary>
+    public int QuittingIn { get; internal set; } = -1;
+
     /// <summary>The kind of person; a patient changes it when undressing and dressing (CorsixTH's <c>setType</c>).</summary>
     public HumanoidType Type { get; internal set; }
 
@@ -292,10 +304,17 @@ public sealed class Humanoid : Entity
 
     public override void Update(Simulation simulation)
     {
-        // Staff tire before they act, as CorsixTH's Staff:tick does its checks after Entity.tick.
+        // Staff tire and think of their pay before they act, as CorsixTH's Staff:tick does its checks after Entity.tick.
         if (Profile is not null && Employer >= 0 && !IsDespawning)
         {
-            Tiredness.Tick(simulation, this);
+            if (!IsFired)
+            {
+                StaffEmployment.Tick(simulation, this);
+            }
+            else if (Behaviour is not LeavingBehaviour)
+            {
+                StaffEmployment.LeaveWhenFree(simulation, this);
+            }
         }
 
         if (IsCrossingDoor)
@@ -573,6 +592,10 @@ public sealed class Humanoid : Entity
             Happiness = ReadAttribute(reader),
             Fatigue = ReadAttribute(reader),
             WaitingForStaffRoom = reader.ReadBool(),
+            IsFired = reader.ReadBool(),
+            RaiseTimer = reader.ReadInt32(),
+            RaiseRequest = reader.ReadInt32(),
+            QuittingIn = reader.ReadInt32(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -622,6 +645,10 @@ public sealed class Humanoid : Entity
         writer.WriteDecimal(Happiness);
         writer.WriteDecimal(Fatigue);
         writer.WriteBool(WaitingForStaffRoom);
+        writer.WriteBool(IsFired);
+        writer.WriteInt32(RaiseTimer);
+        writer.WriteInt32(RaiseRequest);
+        writer.WriteInt32(QuittingIn);
 
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)

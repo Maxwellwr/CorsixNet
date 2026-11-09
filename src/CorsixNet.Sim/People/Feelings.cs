@@ -64,7 +64,7 @@ internal static class Feelings
     internal static void OnEndDay(Simulation simulation, Humanoid humanoid)
     {
         // No use for those going home.
-        if (humanoid.IsDespawning || humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome })
+        if (humanoid.IsDespawning || humanoid.IsFired || humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome })
         {
             return;
         }
