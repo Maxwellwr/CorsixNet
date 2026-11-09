@@ -126,6 +126,9 @@ internal sealed class MapViewScreen : IScreen
     /// <summary>The saves folder: the quick save and the monthly autosaves.</summary>
     private readonly SaveGameStore _saves = new(SaveGameStore.DefaultDirectory());
     private int _levelIndex;
+
+    /// <summary>The room type Ctrl+Shift+B last chose, as an index into the content's rooms.</summary>
+    private int _anyRoomIndex = -1;
     private string? _error;
     private MapOverlay _overlay;
     private RenderTarget2D? _target;
@@ -1157,6 +1160,13 @@ internal sealed class MapViewScreen : IScreen
             _wander = !_wander;
         }
 
+        // Until the cheats window exists, F11 is CorsixTH's all_research cheat.
+        if (pressed(Keys.F11))
+        {
+            _session.Submit(new CheatCommand(CheatKind.AllResearch));
+            ShowNotice("Cheat: all research");
+        }
+
         // Until the watch window exists, Shift+O opens the hospital early, as clicking the watch's button does.
         if (pressed(Keys.O) && (keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift)) && _session.Player < simulation.Hospitals.Count && !simulation.Hospitals[_session.Player].IsOpen)
         {
@@ -1345,7 +1355,16 @@ internal sealed class MapViewScreen : IScreen
         }
 
         var roomToBuild = alt && shift ? "research" : alt ? "toilets" : shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
-        if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(roomToBuild) is { } roomType)
+
+        // Until the build room window exists, Ctrl+Shift+B goes through every room type in turn, also while drawing a
+        // blueprint.
+        var anyRoom = ctrl && shift && pressed(Keys.B) && (!_buildTool.IsActive || _buildTool.IsDrawingBlueprint) && simulation.Content.Rooms.Count > 0;
+        if (anyRoom)
+        {
+            _anyRoomIndex = (_anyRoomIndex + 1) % simulation.Content.Rooms.Count;
+            roomToBuild = simulation.Content.Rooms[_anyRoomIndex].Id;
+        }
+        if (pressed(Keys.B) && (!_buildTool.IsActive || anyRoom) && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
             // As in the original, a room can only be started once discovered and with its whole cost in the bank.
             if (!RoomPurchases.CanBuild(simulation, roomType, _session.Player))

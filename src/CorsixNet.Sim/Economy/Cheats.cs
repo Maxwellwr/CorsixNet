@@ -71,6 +71,9 @@ public enum CheatKind : byte
 
     /// <summary><c>super_doctor</c>, on or off: the doctors for hire are all consultants with every ability.</summary>
     ToggleSuperDoctor = 20,
+
+    /// <summary><c>all_research</c>: every diagnosis and cure object to research is discovered, with the rooms they make buildable.</summary>
+    AllResearch = 21,
 }
 
 /// <summary>CorsixTH's fax code cheats (<c>toggle_cheats</c>), which stay on until the code is sent again.</summary>
@@ -99,7 +102,7 @@ public enum ToggleCheats : byte
 /// (<c>Cheats:announceCheat</c>), except losing the level.
 /// </summary>
 /// <remarks>
-/// The other cheats wait for what they act on: research, showing the infected before an epidemic shows, and machines.
+/// The other cheats wait for what they act on: showing the infected before an epidemic shows, and machines.
 /// </remarks>
 public static class Cheats
 {
@@ -192,6 +195,9 @@ public static class Cheats
                 break;
             case CheatKind.ToggleSuperDoctor:
                 Toggle(simulation, hospital, ToggleCheats.SuperDoctor);
+                break;
+            case CheatKind.AllResearch:
+                hospital.Research.DiscoverAll(simulation, hospital);
                 break;
             default:
                 return;

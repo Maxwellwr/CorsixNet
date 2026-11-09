@@ -209,6 +209,20 @@ public sealed class ResearchDepartment
     /// <summary>CorsixTH's <c>disease.drug</c>: diseases cured in the pharmacy.</summary>
     internal static bool IsDrugDisease(DiseaseDefinition disease) => disease.TreatmentRooms is ["pharmacy", ..];
 
+    /// <summary>
+    /// <c>Cheats:cheatResearch</c>: the diagnosis and cure areas discover what they work on until nothing is left.
+    /// </summary>
+    internal void DiscoverAll(Simulation simulation, Hospital hospital)
+    {
+        foreach (var category in new[] { ResearchCategory.Diagnosis, ResearchCategory.Cure })
+        {
+            while (Area(category).Current is { Kind: ResearchTargetKind.Object } target && ResearchObjects.Find(target.Id) is { } obj && !_objects[obj.Id].Discovered)
+            {
+                DiscoverObject(simulation, hospital, obj);
+            }
+        }
+    }
+
     /// <summary><c>Hospital:getObjectBuildCost</c>: what an object costs now; research may have lowered a machine's cost.</summary>
     public int ObjectCost(LevelRules rules, string objectId) =>
         rules.FreeBuild ? 0 : _objects.TryGetValue(objectId, out var research) ? research.Cost : rules.ObjectCost(objectId);
