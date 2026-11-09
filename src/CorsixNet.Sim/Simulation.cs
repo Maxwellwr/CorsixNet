@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 28;
+    private const int FormatVersion = 29;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -684,7 +684,7 @@ public sealed class Simulation
         var wages = new int[_hospitals.Length];
         foreach (var entity in _entities)
         {
-            if (entity is Humanoid { Profile: { } profile, Employer: var employer } && employer >= 0 && employer < wages.Length)
+            if (entity is Humanoid { Profile: { } profile, Employer: var employer, IsFired: false } && employer >= 0 && employer < wages.Length)
             {
                 wages[employer] += profile.Wage;
             }

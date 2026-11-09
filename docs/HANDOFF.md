@@ -86,19 +86,20 @@ Done and committed:
 - Room doors (see ARCHITECTURE.md, "Room doors", "Wandering"): people go through a room door with its
   opening animation, one at a time; the demo's wanderers meander as CorsixTH's and keep out of rooms.
   Save format version 9.
-- Overnight cloud batch on 2026-11-08 (PRs #97–#108, each listing its oddities): clearing a new blueprint,
-  corridor objects, the opening watch (Shift+O), reputation, the year end's trophies and awards and the
-  hospital's value, winning and losing, loans and interest (L / Shift+L), buying land (N), room
-  availability by level, setting prices in the casebook (by command only), heating and boiler breakdowns
-  (T / Shift+T), patients sent to the hospitals in turn; then the monthly statistics for the graphs (PR
-  #109) and the bank statement and graphs figures as text on F2 and F8 (PR #110), hiring a receptionist
-  straight onto a desk (PR #111), the menu cheats as a command (PR #112), earthquakes from the level's
-  `quake_control` with screen shake (PR #113), tile temperatures (PR #114), warmth and happiness of people
-  (PR #115), plants drooping (PR #116), rooms' windows and space cheering staff (PR #117), staff tiring at
-  work (PR #118), patients' health running down until they give up or die (PR #119), the quick save
-  (Alt+Shift+S / Alt+Shift+L), monthly autosaves, `--load` and `--continue` (PR #120), hospital policies
-  by command (PR #121). No game data in the cloud: real-data tests were skipped there and the client was
-  not run, so these want a look on MSI. Save format version 28.
+- Overnight cloud batch on 2026-11-08 (PRs #97–#108, each listing its oddities): clearing a new
+  blueprint, corridor objects, the opening watch (Shift+O), reputation, the year end's trophies and
+  awards and the hospital's value, winning and losing, loans and interest (L / Shift+L), buying land
+  (N), room availability by level, setting prices in the casebook (by command only), heating and boiler
+  breakdowns (T / Shift+T), patients sent to the hospitals in turn; then the monthly statistics for the
+  graphs (PR #109) and the bank statement and graphs figures as text on F2 and F8 (PR #110), hiring a
+  receptionist straight onto a desk (PR #111), the menu cheats as a command (PR #112), earthquakes from
+  the level's `quake_control` with screen shake (PR #113), tile temperatures (PR #114), warmth and
+  happiness of people (PR #115), plants drooping (PR #116), rooms' windows and space cheering staff (PR
+  #117), staff tiring at work (PR #118), patients' health running down until they give up or die (PR
+  #119), the quick save (Alt+Shift+S / Alt+Shift+L), monthly autosaves, `--load` and `--continue` (PR
+  #120), hospital policies by command (PR #121), firing staff and their raise requests by command (PR
+  #122). No game data in the cloud: real-data tests were skipped there and the client was not run, so
+  these want a look on MSI. Save format version 29.
 
 Not done yet:
 

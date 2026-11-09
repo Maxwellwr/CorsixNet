@@ -55,13 +55,15 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 
 - Hire window with faces, names and descriptions from the language files; picking up and placing staff
   (two steps, cancel puts candidate back) (`dialogs/hire_staff.lua`, `place_staff.lua`, `staff_profile.lua`).
-- Staff management screen: list, salaries, raise, fire, train (`fullscreen/staff_management.lua`).
+- Staff management screen: list, salaries, raise, fire, train (`fullscreen/staff_management.lua`). Firing and
+  answering a raise request are commands only (`FireStaffCommand`, `AnswerRaiseCommand`).
 - Staff window: picking up and moving a member of staff, sending home (`dialogs/staff_dialog.lua`, `humanoid_actions/pickup.lua`).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
   partial: today a room just sends for the nearest free member of staff (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Handyman: sweeping litter and vomit, watering plants, repairing machines, task priorities
   (`entities/humanoids/staff/handyman.lua`, `humanoid_actions/sweep_floor.lua`).
-- Going to the staff room and resting there, wage demands and raises (`staff_rise.lua`), quitting. Happiness is
+- Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
+  policy's automatic raise and quitting are in `StaffEmployment`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
   for working and waiting for a staff room (`Tiredness`); resting, being on call, the no-rest cheat and the mood
   icons are not.

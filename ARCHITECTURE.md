@@ -442,7 +442,7 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   policy window settings: `send_home` 0.1, `guess_cure` 0.9, `stop_procedure` 1.0 (up to 2.0), `goto_staffroom`
   from the level's `gbv.Tired`, staff allowed to move and granting raises. `SetPolicyCommand` sets one, in
   thousandths for the sliders, kept in the sliders' ranges (sending home never above guessing). The window itself
-  is not there yet; staff moving and raises have nothing to act on yet.
+  is not there yet; staff moving has nothing to act on yet.
 - **Tiredness** (`Humanoid.Fatigue`, `Tiredness`, from `staff.lua`). Every hour a member of staff in a room
   (other than a staff room), or a handyman anywhere, gains 0.00009 fatigue and loses 0.00002 happiness, so a doctor
   who never leaves their office reaches the level's `gbv.Tired` (600 thousandths, the hospital's `goto_staffroom`
@@ -451,6 +451,13 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   who are not resting lose 0.02, and 0.01 more from fatigue 0.5; resting in a staff room brings 0.006. Fatigue
   lowers the treatment's service quality and the GP's diagnosis bonus, and a consultant stays at the desk only
   while a random draw is at least their fatigue. Going to the staff room and resting there are not ported yet.
+- **Firing and raises** (`StaffEmployment`, from `staff.lua`). `FireStaffCommand` pays a month's wage as
+  severance, costs 3 reputation (as a kicked patient) and sends the member of staff out through a spawn point
+  (`LeavingBehaviour`); wages, feelings and the end conditions no longer count them. A nurse or doctor in the middle
+  of a two-person use finishes it first. Staff below 0.1 happiness ask for a raise every 200 hours with a 1 in 5
+  chance (the larger of 10 % and half-way to the fair wage, up to the maximum salary); unanswered for 750–800 hours,
+  they get it if the hospital's policy grants raises and quit otherwise. `AnswerRaiseCommand` grants (happiness up
+  0.99) or refuses (they are fired). The raise dialog is not ported.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
   quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike
