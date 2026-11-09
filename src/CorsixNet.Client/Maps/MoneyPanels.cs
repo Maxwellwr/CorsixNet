@@ -23,7 +23,7 @@ internal static class MoneyPanels
         yield return string.Create(CultureInfo.InvariantCulture, $"Bank statement (F2 closes). Balance {MoneyText.Format(hospital.Balance)}, loan {MoneyText.Format(hospital.Loan)}");
         foreach (var transaction in hospital.Transactions)
         {
-            var date = GameDate.FromHours(transaction.Tick);
+            var date = GameDate.FromHours(transaction.Hour);
             var what = Describe(transaction);
             yield return string.Create(CultureInfo.InvariantCulture, $"{date.Day,2}/{date.Month,2}/{date.Year}  {what,-28} {MoneyText.Format(transaction.Amount),10} {MoneyText.Format(transaction.Balance),10}");
         }

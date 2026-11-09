@@ -181,7 +181,7 @@ public sealed class EndConditions
             EndCriterion.Value => hospital.Value,
             EndCriterion.StaffHappiness => 100 * AverageHappiness(simulation, hospital, staff: true, minCount: 1),
             EndCriterion.PatientHappiness => 100 * AverageHappiness(simulation, hospital, staff: false, MinPatientsCounted),
-            EndCriterion.MonthsPlayed => GameDate.FromHours(simulation.Tick + 1).MonthOfGame,
+            EndCriterion.MonthsPlayed => GameDate.FromHours(simulation.Hours + 1).MonthOfGame,
             _ => null,
         };
     }

@@ -234,9 +234,9 @@ join.
 
 - Map editor: painting floor, walls, parcels, spawn points (`resizables/map_editor.lua`).
 - Cheats dialog (`resizables/cheats_dialog.lua`) and the fax code that opens it; the cheats for research,
-  showing the infected, machines and jumping to the month's or year's end (`cheats.lua`). Money, a patient,
-  winning, losing, prices, the death count, the reputation, the earthquake, the VIP, the emergency, the epidemic
-  and the epidemics toggle cheats are done (`CheatCommand`), with no key in the client.
+  showing the infected and machines, and the fax code toggles (`cheats.lua`). Money, a patient, winning, losing,
+  prices, the death count, the reputation, the earthquake, the VIP, the emergency, the epidemic, the epidemics
+  toggle and the end of the month and year cheats are done (`CheatCommand`), with no key in the client.
 - Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
   (Partial: debug keys H, Ctrl+1-4).
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.

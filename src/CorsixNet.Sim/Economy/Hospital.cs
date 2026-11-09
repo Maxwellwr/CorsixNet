@@ -184,12 +184,12 @@ public enum ReputationChange : byte
 }
 
 /// <summary>One entry of a hospital's transaction log.</summary>
-/// <param name="Tick">When it happened.</param>
+/// <param name="Hour">When it happened, as the hour of the game's calendar (<see cref="Simulation.Hours"/>).</param>
 /// <param name="Kind">What it was for.</param>
 /// <param name="Subject">Id of the room or object type it was for, the staff class of a hire, or empty.</param>
 /// <param name="Amount">Money received (positive) or spent (negative).</param>
 /// <param name="Balance">The balance afterwards.</param>
-public readonly record struct Transaction(long Tick, TransactionKind Kind, string Subject, int Amount, long Balance);
+public readonly record struct Transaction(long Hour, TransactionKind Kind, string Subject, int Amount, long Balance);
 
 /// <summary>
 /// The hospital's casebook entry for a disease or a diagnosis (CorsixTH's <c>disease_casebook</c>): the
@@ -1224,7 +1224,7 @@ public sealed class Hospital
         writer.WriteInt32(_transactions.Count);
         foreach (var transaction in _transactions)
         {
-            writer.WriteInt64(transaction.Tick);
+            writer.WriteInt64(transaction.Hour);
             writer.WriteByte((byte)transaction.Kind);
             writer.WriteString(transaction.Subject);
             writer.WriteInt32(transaction.Amount);

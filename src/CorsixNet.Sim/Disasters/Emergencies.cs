@@ -1,5 +1,5 @@
 // Emergencies, ported from CorsixTH CorsixTH/Lua/world.lua (World:onEndDay's emergency check, nextEmergency,
-// computeNextEmergencyDates), hospital.lua (createEmergency, resolveEmergency, checkEmergencyOver,
+// computeNextEmergencyDates, wasEmergencySkipped), hospital.lua (createEmergency, resolveEmergency, checkEmergencyOver,
 // getHeliportPosition, getHeliportSpawnPosition, reputation_changes), objects/helicopter.lua, dialogs/watch.lua
 // (UIWatch for "emergency"), hospitals/player_hospital.lua (makeEmergencyStartFax's timeout) and
 // dialogs/fullscreen/fax.lua (accept_emergency, refuse_emergency).
@@ -277,6 +277,26 @@ public static class Emergencies
     }
 
     /// <summary>
+    /// <c>World:wasEmergencySkipped</c>: when a cheat moved the calendar on from <paramref name="previous"/> past the
+    /// start of the planned emergency's day, the next one is planned instead (<c>setEndMonth</c>, <c>setEndYear</c>).
+    /// </summary>
+    internal static void OnCalendarSkipped(Simulation simulation, Hospital hospital, long previous, long now)
+    {
+        var state = hospital.Emergencies;
+        if (state.NextMonth <= 0)
+        {
+            return;
+        }
+
+        // Date(1, next_emergency_month, next_emergency_day): the first hour of that day.
+        var planned = new GameDate(1 + ((state.NextMonth - 1) / 12), 1 + ((state.NextMonth - 1) % 12), state.NextDay, 0).ToHours();
+        if (planned < now && previous < planned)
+        {
+            NextEmergency(simulation, hospital);
+        }
+    }
+
+    /// <summary>
     /// The end of a day (<c>World:onEndDay</c>): on the planned day an emergency is offered, or put off to a random day
     /// of the next month while a watch is running (the opening's or another emergency's).
     /// </summary>
@@ -477,7 +497,7 @@ public static class Emergencies
             var earned = emergency.Bonus * emergency.Cured;
             if (earned != 0)
             {
-                hospital.Receive(simulation.Tick, earned, TransactionKind.EmergencyBonus, string.Empty);
+                hospital.Receive(simulation.Hours, earned, TransactionKind.EmergencyBonus, string.Empty);
             }
         }
         else

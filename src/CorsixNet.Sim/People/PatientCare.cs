@@ -159,7 +159,7 @@ public static class PatientCare
             patient.SetNextDie();
         }
 
-        hospital.PayForDrug(simulation.Tick, entry, simulation.Random.NextInclusive(1, 5));
+        hospital.PayForDrug(simulation.Hours, entry, simulation.Random.NextInclusive(1, 5));
         if (patient.EmergencyIndex > 0)
         {
             Emergencies.PatientDone(simulation, hospital, patient.IsCured);
@@ -313,7 +313,7 @@ public static class PatientCare
             hospital.ComputePriceLevelImpact(simulation, humanoid, entry);
         }
 
-        hospital.ReceiveForTreatment(simulation.Tick, entry, amount, patient.InsuranceCompany);
+        hospital.ReceiveForTreatment(simulation.Hours, entry, amount, patient.InsuranceCompany);
         patient.PayAmount = 0;
     }
 

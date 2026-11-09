@@ -643,7 +643,7 @@ public static class Epidemics
     {
         patient.IsMarkedForVaccination = false;
         patient.IsVaccinated = true;
-        hospital.Spend(simulation.Tick, simulation.Rules.Epidemics.VaccinationCost, TransactionKind.Vaccination, patient.DiseaseId);
+        hospital.Spend(simulation.Hours, simulation.Rules.Epidemics.VaccinationCost, TransactionKind.Vaccination, patient.DiseaseId);
     }
 
     /// <summary><c>is_in_adjacent_square</c>: on tiles next to each other, neither in a room.</summary>
@@ -875,7 +875,7 @@ public static class Epidemics
     private static void ResolveDeclaration(Simulation simulation, Hospital hospital, Epidemic epidemic)
     {
         ClearAllInfectedPatients(simulation, epidemic);
-        hospital.Spend(simulation.Tick, epidemic.DeclareFine, TransactionKind.EpidemicFine, epidemic.DiseaseId);
+        hospital.Spend(simulation.Hours, epidemic.DeclareFine, TransactionKind.EpidemicFine, epidemic.DiseaseId);
         epidemic.ReputationHit = ReputationFromFine(epidemic.DeclareFine);
 
         // CorsixTH lowers the reputation directly, without holding it to 0–1000.
@@ -1044,13 +1044,13 @@ public static class Epidemics
                 epidemic.ReputationHit = ReputationFromFine(epidemic.CoverUpFine);
             }
 
-            hospital.Spend(simulation.Tick, epidemic.CoverUpFine, TransactionKind.EpidemicCoverUpFine, epidemic.DiseaseId);
+            hospital.Spend(simulation.Hours, epidemic.CoverUpFine, TransactionKind.EpidemicCoverUpFine, epidemic.DiseaseId);
             hospital.UnconditionalChangeReputation(-epidemic.ReputationHit);
             hospital.Epidemics.LastAmount = epidemic.CoverUpFine;
         }
         else
         {
-            hospital.Receive(simulation.Tick, epidemic.Compensation, TransactionKind.EpidemicCompensation, epidemic.DiseaseId);
+            hospital.Receive(simulation.Hours, epidemic.Compensation, TransactionKind.EpidemicCompensation, epidemic.DiseaseId);
             hospital.Epidemics.LastAmount = epidemic.Compensation;
         }
 

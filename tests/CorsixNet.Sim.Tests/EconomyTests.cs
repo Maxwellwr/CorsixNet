@@ -110,7 +110,7 @@ public class EconomyTests
         var log = simulation.Hospitals[0].Transactions;
         Assert.Equal(Hospital.LogLength, log.Count);
         Assert.Equal(TransactionKind.SellObject, log[0].Kind);
-        Assert.Equal(15, log[0].Tick);
+        Assert.Equal(15, log[0].Hour);
         Assert.Equal(3000, log[0].Balance);
     }
 
