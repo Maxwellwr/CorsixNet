@@ -4,6 +4,7 @@
 
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.People;
@@ -17,7 +18,7 @@ namespace CorsixNet.Sim.People;
 /// <remarks>
 /// Not yet: tiredness (staff working while tired or resting), resting on the staff room's sofa or games, a room's
 /// windows and space (<c>Room:calculateHappinessFactor</c>), the cold and hot mood icons, and patients' own daily
-/// effects (waiting, health, vomit, thirst). Plants count as healthy, since they do not wilt yet.
+/// effects (waiting, health, vomit, thirst).
 /// </remarks>
 internal static class Feelings
 {
@@ -35,9 +36,6 @@ internal static class Feelings
 
     /// <summary>How far around a member of staff they see objects (<c>findObjectsInSquare(2, ...)</c>).</summary>
     private const int SightRange = 2;
-
-    /// <summary>How healthy an unwilted plant is (<c>Plant:isPleasingFactor</c> at state 0).</summary>
-    private const int HealthyPlant = 5;
 
     /// <summary>Objects that cheer staff up when near them (<c>Staff:tickDay</c>'s <c>good_objects</c>).</summary>
     private static readonly (string ObjectType, decimal Happiness)[] GoodObjects =
@@ -110,34 +108,32 @@ internal static class Feelings
         var fairWage = profile.FairWage(simulation.Rules.Staff);
         ChangeHappiness(simulation, humanoid, 0.05m * (profile.Wage - fairWage) / (fairWage != 0 ? fairWage : 1));
 
-        // It is nice to see plants; a random one of those nearby counts.
+        // It is nice to see plants, but dead plants make unhappy; a random one of those nearby counts.
         var plants = ObjectsInSight(simulation, humanoid, "plant");
-        if (plants > 0)
+        if (plants.Count > 0)
         {
             // getRandomEntryFromArray draws only when there is more than one.
-            if (plants > 1)
-            {
-                simulation.Random.NextInclusive(1, plants);
-            }
-
-            ChangeHappiness(simulation, humanoid, -0.003m + (HealthyPlant * 0.001m));
+            var plant = plants.Count == 1 ? plants[0] : plants[simulation.Random.NextInclusive(1, plants.Count) - 1];
+            var pleasing = plant.Plant?.PleasingFactor ?? PlantState.Phases;
+            ChangeHappiness(simulation, humanoid, -0.003m + (pleasing * 0.001m));
         }
 
         foreach (var (objectType, happiness) in GoodObjects)
         {
-            ChangeHappiness(simulation, humanoid, ObjectsInSight(simulation, humanoid, objectType) * happiness);
+            ChangeHappiness(simulation, humanoid, ObjectsInSight(simulation, humanoid, objectType).Count * happiness);
         }
     }
 
     /// <summary>
-    /// <c>Humanoid:findObjectsInSquare</c>: how many objects of a type stand within <see cref="SightRange"/> tiles in
-    /// the same room as the person (or both in the corridor), counted by the tile each object stands on.
+    /// <c>Humanoid:findObjectsInSquare</c>: the objects of a type within <see cref="SightRange"/> tiles in the same room
+    /// as the person (or both in the corridor), found by the tile each object stands on, column by column as CorsixTH
+    /// searches.
     /// </summary>
-    private static int ObjectsInSight(Simulation simulation, Humanoid humanoid, string objectType)
+    private static List<RoomObject> ObjectsInSight(Simulation simulation, Humanoid humanoid, string objectType)
     {
         var map = simulation.Map;
         var roomId = map[humanoid.Tile.X, humanoid.Tile.Y].RoomId;
-        var count = 0;
+        var found = new List<RoomObject>();
         foreach (var entity in simulation.Entities)
         {
             if (entity is RoomObject placed
@@ -147,10 +143,11 @@ internal static class Feelings
                 && map.Contains(placed.Tile.X, placed.Tile.Y)
                 && map[placed.Tile.X, placed.Tile.Y].RoomId == roomId)
             {
-                count++;
+                found.Add(placed);
             }
         }
 
-        return count;
+        // Stable, so objects on one tile keep the order they were placed in.
+        return [.. found.OrderBy(placed => placed.Tile.X).ThenBy(placed => placed.Tile.Y)];
     }
 }
