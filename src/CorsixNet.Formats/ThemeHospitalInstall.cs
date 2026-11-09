@@ -215,6 +215,43 @@ public sealed class ThemeHospitalInstall
         return IndexedImage.FromRaw(ReadDataFile(folder, name + ".DAT"), width, height);
     }
 
+    /// <summary>
+    /// Loads the strings of a language, <c>DATA/LANG-{language}.DAT</c> (see the language numbers on
+    /// <see cref="StringTable"/>), with CorsixTH's fixes for the German version.
+    /// </summary>
+    public StringTable LoadStrings(int language)
+    {
+        var strings = StringTable.Parse(ReadDataFile("DATA", $"LANG-{language}.DAT"));
+        if (language == StringTable.German)
+        {
+            strings.FixGerman();
+        }
+
+        return strings;
+    }
+
+    /// <summary>The language numbers of the installed string files, in order.</summary>
+    public IReadOnlyList<int> InstalledLanguages()
+    {
+        var languages = new List<int>();
+        if (FindDirectory("DATA") is { } data)
+        {
+            foreach (var file in Directory.EnumerateFiles(data))
+            {
+                var name = Path.GetFileName(file);
+                if (name.StartsWith("LANG-", StringComparison.OrdinalIgnoreCase)
+                    && name.EndsWith(".DAT", StringComparison.OrdinalIgnoreCase)
+                    && int.TryParse(name.AsSpan(5, name.Length - 9), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var language))
+                {
+                    languages.Add(language);
+                }
+            }
+        }
+
+        languages.Sort();
+        return languages;
+    }
+
     private FileNotFoundException NotFound(string[] segments)
     {
         var relative = string.Join('/', segments);

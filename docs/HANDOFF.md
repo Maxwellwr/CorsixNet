@@ -114,8 +114,9 @@ Done and committed:
   general diagnosis doctor meandering until the patient has undressed (PR #145), floating dollar signs
   over paying patients (PR #146), the level's starting staff and CorsixTH's extra settings for campaign
   levels 5, 7, 8, 11 and 12 (PR #147), CorsixTH custom levels with `--map file.level` (PR #148), reading
-  CorsixTH campaign files with `--campaign` (PR #149). No game data in the cloud: real-data tests were
-  skipped there and the client was not run, so these want a look on MSI. Save format version 48.
+  CorsixTH campaign files with `--campaign` (PR #149), reading the original's strings, `LANG-n.DAT` (PR
+  #150). No game data in the cloud: real-data tests were skipped there and the client was not run, so
+  these want a look on MSI. Save format version 48.
 
 Not done yet:
 

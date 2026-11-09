@@ -714,6 +714,7 @@ Format readers in `CorsixNet.Formats`:
 | `BitmapFont`, `Cp437` | Bitmap fonts: sprite `i` draws character `31 + i` in the game's code page |
 | `LevelConfig` | Level settings (`LEVELS/*.SAM`, CorsixTH `.level` files) as flat keys such as `towns[1].StartCash` |
 | `PaletteRemaps` | Colour remap tables (`QDATA/GHOST*.DAT`), for example the red room blueprint |
+| `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. Nothing shows them yet |
 
 Images stay as palette indices so that the renderer can apply palette effects.
 The client converts them to textures.

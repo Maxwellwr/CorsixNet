@@ -170,7 +170,8 @@ MMPX smoothing; everything else is debug keys.
 - Information dialogs, confirm dialogs, tip of the day (`dialogs/information.lua`, `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
 - Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips; object and
   humanoid highlighting on hover; hover info.
-- Strings and languages: reading the original's `LANG-*.DAT` and CorsixTH's language files, translations (`strings.lua`, `languages/`).
+- Strings and languages: CorsixTH's language files and their mapping of the original strings, translations, and
+  showing any of them (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`).
 - Subtitles for the announcer (`dialogs/subtitles.lua`).
 - Hotkeys and their assignment dialog (`resizables/hotkey_assign.lua`).
 
