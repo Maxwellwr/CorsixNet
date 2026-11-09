@@ -283,6 +283,41 @@ public class PatientFlowTests
     }
 
     [Fact]
+    public void TheDoctorMeandersAboutGeneralDiagnosisUntilThePatientHasUndressed()
+    {
+        var simulation = NewStaffedHospital();
+        BuildGeneralDiagnosis(simulation);
+        var room = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "general_diag");
+        var tiles = new HashSet<TilePosition>();
+        var examinations = 0;
+        var wasOnTrolley = false;
+        for (var tick = 0; tick < 60 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            var doctor = simulation.FindEntity(room.StaffId) as Humanoid;
+            if (doctor?.Behaviour is DoctorBehaviour { Phase: DoctorPhase.Waiting })
+            {
+                Assert.True(GeneralDiagArea.Contains(doctor.Tile), $"The doctor left general diagnosis for {doctor.Tile}.");
+                Assert.False(
+                    simulation.FindEntity(room.PatientId) is Humanoid { Behaviour: PatientBehaviour { Phase: PatientPhase.AtTrolley or PatientPhase.OnTrolley } },
+                    "The doctor meandered while the patient waited at the trolley.");
+                tiles.Add(doctor.Tile);
+            }
+
+            var onTrolley = simulation.FindEntity(room.PatientId) is Humanoid { Behaviour: PatientBehaviour { Phase: PatientPhase.OnTrolley } };
+            if (wasOnTrolley && !onTrolley)
+            {
+                examinations++;
+            }
+
+            wasOnTrolley = onTrolley;
+        }
+
+        Assert.True(tiles.Count > 1, "The doctor stood still.");
+        Assert.True(examinations >= 1, "No patient was examined.");
+    }
+
+    [Fact]
     public void ASavedGameWithATreatmentGoingOnContinuesIdentically()
     {
         var install = RealGameData.Require();

@@ -1029,6 +1029,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 {
                     Phase = PatientPhase.WalkingToTrolley;
                     humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, trolley));
+                    if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour summoned } staff)
+                    {
+                        summoned.OnPatientUndressed(simulation, staff, room);
+                    }
                 }
                 else
                 {
@@ -1062,6 +1066,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                 TrolleyUse = null;
                 IsExamined = true;
+                if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour examiner })
+                {
+                    examiner.OnExamined(room);
+                }
+
                 WalkBackToScreen(simulation, humanoid, screen);
                 return;
             case PatientPhase.WalkingBackToScreen:
