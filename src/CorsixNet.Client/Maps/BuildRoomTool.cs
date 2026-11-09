@@ -53,6 +53,9 @@ internal sealed class BuildRoomTool
 
     private static readonly Direction[] Turns = [Direction.North, Direction.East, Direction.South, Direction.West];
 
+    /// <summary>Plays one of the original's interface sounds (CorsixTH's <c>UI:playSound</c>), if set.</summary>
+    public Action<string>? PlaySound { get; set; }
+
     private readonly List<DoorPlacement> _windows = [];
     private readonly List<Pending> _pending = [];
 
@@ -341,6 +344,8 @@ internal sealed class BuildRoomTool
             return null;
         }
 
+        // UIEditRoom:placeDoorBlueprint.
+        PlaySound?.Invoke("buildclk.wav");
         _windows.Clear();
         if (_room!.Walls.HasWindows)
         {
@@ -369,9 +374,15 @@ internal sealed class BuildRoomTool
 
         if (input.LeftPressed && _hoverEdge is { } clicked)
         {
-            if (!_windows.Remove(clicked) && _problem == RoomPlanProblem.None)
+            // UIEditRoom:placeWindowBlueprint, and taking a window away again (de_build.wav).
+            if (_windows.Remove(clicked))
+            {
+                PlaySound?.Invoke("de_build.wav");
+            }
+            else if (_problem == RoomPlanProblem.None)
             {
                 _windows.Add(clicked);
+                PlaySound?.Invoke("buildclk.wav");
             }
         }
 
@@ -512,6 +523,8 @@ internal sealed class BuildRoomTool
 
         if (input.RightClicked)
         {
+            // UIPlaceObjects:tryNextOrientation.
+            PlaySound?.Invoke("swoosh.wav");
             Turn();
         }
 
@@ -525,6 +538,7 @@ internal sealed class BuildRoomTool
             var newer = simulation.Entities.Count == 0 ? 1 : simulation.Entities.Max(e => e.Id) + 1;
             _pending.Add(new Pending(_placing.Id, +1, simulation.Tick, newer, target, _orientation));
             StopPlacing();
+            PlaySound?.Invoke("place_r.wav"); // UIPlaceObjects:placeObject
             return command;
         }
 

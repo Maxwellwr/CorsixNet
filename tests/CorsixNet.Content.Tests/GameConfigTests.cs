@@ -26,7 +26,8 @@ public sealed class GameConfigTests : IDisposable
             width = 1024
             height = 768
             audio = true
-            sound_volume = 0.5
+            sound_volume = 0.25
+            play_sounds = false
             midi_api = nil -- [[alsa]]
             enable_screen_shake = false
             autosave_frequency = 3
@@ -45,12 +46,14 @@ public sealed class GameConfigTests : IDisposable
         Assert.Equal(@"D:\Games\Theme Hospital\data\Game", config.ThemeHospitalInstall);
         Assert.Equal("Maxim", config.PlayerName);
         Assert.True(config.FreeBuildMode);
+        Assert.False(config.PlaySounds);
+        Assert.Equal(0.25m, config.SoundVolume);
     }
 
     [Fact]
     public void KeepsTheDefaultsForMissingSettingsAndValuesOfTheWrongType()
     {
-        var config = GameConfig.Parse("width = [[wide]]\nheight = 600.5\nfullscreen = 1\n");
+        var config = GameConfig.Parse("width = [[wide]]\nheight = 600.5\nfullscreen = 1\nsound_volume = [[loud]]\n");
 
         Assert.Equal(new GameConfig(), config);
         Assert.Equal("English", config.Language);
@@ -77,6 +80,8 @@ public sealed class GameConfigTests : IDisposable
             EnableScreenShake = false,
             AutosaveFrequency = 2,
             FreeBuildMode = true,
+            PlaySounds = false,
+            SoundVolume = 0.75m,
             ThemeHospitalInstall = @"C:\Games\Theme Hospital",
             PlayerName = "Name with ]] and ]=] in it]",
         };
