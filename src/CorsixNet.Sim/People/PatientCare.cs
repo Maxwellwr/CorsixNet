@@ -179,15 +179,15 @@ public static class PatientCare
     /// <summary>
     /// <c>Patient:isTreatmentEffective</c>: the chance in percent is the cure's effectiveness times the diagnosis progress,
     /// moved by up to a tenth of what is left to 100 (at least 20) by the staff's service quality, which is
-    /// <c>0.7 × skill + 0.2 × (1 − fatigue) + 0.1 × happiness</c> (fatigue 0 and happiness 1 while they are not modelled).
+    /// <c>0.7 × skill + 0.2 × (1 − fatigue) + 0.1 × happiness</c> (fatigue 0 while it is not modelled).
     /// </summary>
     private static bool IsTreatmentEffective(Simulation simulation, Room room, PatientBehaviour patient, DiseaseCase entry)
     {
         var cureChance = entry.CureEffectiveness * (patient.DiagnosisProgress / 1000m);
         var quality = 0.5m;
-        if (simulation.FindEntity(room.StaffId) is Humanoid { Profile: { } profile })
+        if (simulation.FindEntity(room.StaffId) is Humanoid { Profile: { } profile } staff)
         {
-            quality = (0.7m * profile.Skill / StaffProfile.MaxSkill) + 0.2m + 0.1m;
+            quality = (0.7m * profile.Skill / StaffProfile.MaxSkill) + 0.2m + (0.1m * staff.Happiness);
         }
 
         const int minImpact = 20;
@@ -297,7 +297,7 @@ public static class PatientCare
         if (patient.InsuranceCompany == 0)
         {
             // A patient paying themselves may find the price too high or low.
-            hospital.ComputePriceLevelImpact(simulation.Random, entry);
+            hospital.ComputePriceLevelImpact(simulation, humanoid, entry);
         }
 
         hospital.ReceiveForTreatment(simulation.Tick, entry, amount, patient.InsuranceCompany);

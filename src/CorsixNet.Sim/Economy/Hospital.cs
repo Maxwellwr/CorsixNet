@@ -15,6 +15,8 @@
 
 using System.Globalization;
 using CorsixNet.Sim.Diseases;
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.Economy;
@@ -727,19 +729,20 @@ public sealed class Hospital
     /// <summary>
     /// <c>Hospital:computePriceLevelImpact</c> for a patient paying themselves, with <c>Patient:getPriceDistortion</c>:
     /// the price level (0 at half price, 1 at double) against what the patient expects from the reputation for the
-    /// disease, the cure's effectiveness and their happiness. Now and then a price far off what they expect changes the
-    /// reputation. Patients' happiness is not modelled yet: it counts as full, and the price does not change it.
+    /// disease, the cure's effectiveness and their happiness. The patient's happiness drops by half the distortion (or
+    /// rises, at a low price); now and then a price far off what they expect changes the reputation.
     /// </summary>
-    internal void ComputePriceLevelImpact(SimRandom random, DiseaseCase entry)
+    internal void ComputePriceLevelImpact(Simulation simulation, Humanoid patient, DiseaseCase entry)
     {
         const decimal happinessWeight = 0.1m;
         const decimal reputationWeight = 0.6m;
         const decimal effectivenessWeight = 0.3m;
-        const decimal happiness = 1m;
+        var random = simulation.Random;
         var reputation = entry.Reputation ?? Reputation;
-        var expected = (happinessWeight * happiness) + (reputationWeight * reputation / 1000m) + (effectivenessWeight * entry.CureEffectiveness / 100m);
+        var expected = (happinessWeight * patient.Happiness) + (reputationWeight * reputation / 1000m) + (effectivenessWeight * entry.CureEffectiveness / 100m);
         var priceLevel = (((entry.PricePercent / 100m) - 0.5m) / 3) * 2;
         var distortion = priceLevel - expected;
+        Feelings.ChangeHappiness(simulation, patient, -(distortion / 2));
         if (distortion < UnderPricedThreshold)
         {
             if (random.NextInclusive(1, 100) == 1)
@@ -1142,8 +1145,8 @@ public sealed class Hospital
         writer.WriteInt64(Loan);
         writer.WriteInt32(InterestRate);
         writer.WriteInt32(OverdraftDifferential);
-        WriteDecimal(writer, AccruedLoanInterest);
-        WriteDecimal(writer, AccruedOverdraft);
+        writer.WriteDecimal(AccruedLoanInterest);
+        writer.WriteDecimal(AccruedOverdraft);
         writer.WriteByte((byte)Outcome);
         writer.WriteBool(LostTo is not null);
         if (LostTo is { } lostTo)
@@ -1184,7 +1187,7 @@ public sealed class Hospital
         writer.WriteInt32(SavedRadiatorHeat);
         writer.WriteInt32(BoilerRepairCount);
         writer.WriteInt32(DisasterlessDays);
-        WriteDecimal(writer, AccruedHeating);
+        writer.WriteDecimal(AccruedHeating);
         writer.WriteBool(IsOpen);
         writer.WriteInt32(OpenTimer);
         writer.WriteInt32(OpenTickTimer);
@@ -1256,8 +1259,8 @@ public sealed class Hospital
         hospital.Loan = reader.ReadInt64();
         hospital.InterestRate = reader.ReadInt32();
         hospital.OverdraftDifferential = reader.ReadInt32();
-        hospital.AccruedLoanInterest = ReadDecimal(reader);
-        hospital.AccruedOverdraft = ReadDecimal(reader);
+        hospital.AccruedLoanInterest = reader.ReadDecimal();
+        hospital.AccruedOverdraft = reader.ReadDecimal();
         var outcome = reader.ReadByte();
         if (outcome > (byte)EndOutcome.Lost)
         {
@@ -1293,7 +1296,7 @@ public sealed class Hospital
         hospital.SavedRadiatorHeat = reader.ReadInt32();
         hospital.BoilerRepairCount = reader.ReadInt32();
         hospital.DisasterlessDays = reader.ReadInt32();
-        hospital.AccruedHeating = ReadDecimal(reader);
+        hospital.AccruedHeating = reader.ReadDecimal();
         hospital.IsOpen = reader.ReadBool();
         hospital.OpenTimer = reader.ReadInt32();
         hospital.OpenTickTimer = reader.ReadInt32();
@@ -1327,19 +1330,6 @@ public sealed class Hospital
         }
 
         return hospital;
-    }
-
-    private static void WriteDecimal(SimWriter writer, decimal value)
-    {
-        foreach (var bits in decimal.GetBits(value))
-        {
-            writer.WriteInt32(bits);
-        }
-    }
-
-    private static decimal ReadDecimal(SimReader reader)
-    {
-        return new decimal([reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()]);
     }
 
     private void Log(Transaction transaction)

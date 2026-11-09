@@ -90,7 +90,8 @@ public static partial class LevelRulesLoader
             TownInt(config, levelNumber, "InterestRate") ?? Hospital.DefaultInterestRate,
             TownInt(config, levelNumber, "OverdraftDiff") ?? Hospital.DefaultOverdraftDifferential,
             ObjectAvailabilityFromConfig(config, content),
-            EarthquakesFromConfig(config));
+            EarthquakesFromConfig(config),
+            config.GetInt("payroll.MaxSalary") ?? LevelRules.DefaultMaxSalary);
     }
 
     /// <summary>

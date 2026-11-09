@@ -67,9 +67,6 @@ public sealed class EndConditions
     private const int MinPatientsCounted = 4;
     private const decimal DefaultHappiness = 0.5m;
 
-    /// <summary>Each humanoid's happiness while it is not modelled (CorsixTH starts everybody at 1).</summary>
-    private const decimal Happiness = 1m;
-
     /// <param name="win">Win goals; one per criterion and group, a later one replacing an earlier one.</param>
     /// <param name="lose">Lose goals, likewise.</param>
     public EndConditions(IEnumerable<EndGoal> win, IEnumerable<EndGoal> lose)
@@ -252,7 +249,7 @@ public sealed class EndConditions
                 : humanoid.Behaviour is PatientBehaviour && humanoid.HospitalPlayer == hospital.Player;
             if (counts && IsInHospital(simulation, hospital, humanoid.Tile))
             {
-                sum += Happiness;
+                sum += humanoid.Happiness;
                 count++;
             }
         }

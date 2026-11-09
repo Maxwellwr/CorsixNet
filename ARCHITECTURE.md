@@ -381,7 +381,7 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   room the patient goes on to the disease's next treatment room, or after the last one is treated: they pay what
   they agreed to at the GP, and the cure works if `effectiveness × diagnosis progress`, moved by up to a tenth of
   what is left to 100 (at least 20) by the staff's service quality (`0.7 × skill + 0.2 × (1 − fatigue) + 0.1 ×
-  happiness`, fatigue 0 and happiness 1 for now), reaches a random 1 to 100. A cured patient goes home and counts
+  happiness`, fatigue 0 for now), reaches a random 1 to 100. A cured patient goes home and counts
   in the hospital's `Cured` and the disease's `Recoveries`; otherwise the patient dies (`Deaths`, `Fatalities`) and,
   as dying is not animated yet, vanishes outside the room. Either way the hospital pays for the drug.
 - **Payment** (`Hospital`, from `hospital.lua`). Before each room the patient agrees to pay its current price
@@ -420,6 +420,13 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (medium difficulty) comes a chance
   of a disaster: an open hospital with radiators and fewer than one handyman per 8 of them may have its boiler
   break, stuck at full or no heat, until 10–30 repairs are done (1 to 3 a day, the more handymen the more).
+- **Warmth and happiness** (`Humanoid.Warmth`, `Humanoid.Happiness`, `Feelings`, from `humanoid.lua` and
+  `staff.lua`). Everyone starts at warmth 0.29 and happiness 1. At the end of each day after the hospitals, a
+  person's warmth moves a quarter towards their tile's temperature; below 0.22 (11 °C) or above 0.36 (18 °C)
+  happiness drops by a tenth of the gap, otherwise it rises by 0.005. Staff also gain or lose 5 % of how far their
+  wage is from the fair wage, and a little for a plant, extinguisher, bin, bookcase, skeleton or TV within two
+  tiles in the same room. Receptionists and staff on `payroll.MaxSalary` (2000) are always happy. A patient paying
+  loses half the price distortion. Happiness feeds the treatment's service quality and the happiness goals.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
   quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike
