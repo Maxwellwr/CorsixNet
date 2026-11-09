@@ -33,7 +33,7 @@ first original level:
 | Arrows / WASD, right or middle drag | Pan |
 | Mouse wheel | Zoom |
 | PgUp / PgDn | Previous / next level |
-| O | Cycle overlay (passable, hospital, parcels) |
+| O | Cycle overlay (passable, hospital, parcels, temperature) |
 | U | Cycle sprite smoothing: original, 2x, 4x |
 | Home | Reset camera |
 | B | Build a GP's office (see below) |

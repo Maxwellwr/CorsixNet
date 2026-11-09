@@ -420,6 +420,12 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (medium difficulty) comes a chance
   of a disaster: an open hospital with radiators and fewer than one handyman per 8 of them may have its boiler
   break, stuck at full or no heat, until 10–30 repairs are done (1 to 3 a day, the more handymen the more).
+- **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
+  temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
+  quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike
+  inside and in a room), then outside tiles 1 % towards the month's air, radiator tiles half-way to the radiators'
+  heat (`0.25 + heat × 0.03`, by the parcel owner's setting) and other hospital tiles lose 0.1 %. Nothing feels it
+  yet; the client's O overlay shows it in the town map's colours.
 - **Statistics** (`Hospital.Statistics`, from `hospital.lua`). At the end of each month, after the bills and
   insurance, the month's money in and out, its wages, the balance, the visitors, cures and deaths so far and the
   reputation are recorded for the graphs; the first entry is the start of the game.

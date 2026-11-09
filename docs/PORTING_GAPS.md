@@ -123,8 +123,8 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   level 3 salary rise. The hospital's value, the year's counts and the other trophies and awards are done.
 - Town map screen (`fullscreen/town_map.lua`), the grass and divider walls of parcels nobody owns; buying parcels
   (N in the client), their prices, the heating level (T in the client), the heating bill and the boiler breaking
-  down are done. The temperature of tiles (`th_map.cpp`'s `updateTemperatures`) and patients and staff feeling it
-  are not; nor is the adviser's warning when the boiler breaks.
+  down are done, and so is the temperature of tiles (`th_map.cpp`'s `updateTemperatures`, `TileTemperatures`, the
+  O overlay). Patients, staff and plants feeling it are not; nor is the adviser's warning when the boiler breaks.
 - Research spending and its effect on drug ratings and new equipment (`research_department.lua`, `fullscreen/research_policy.lua`).
 - Graphs window of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`); the monthly
   figures it draws are recorded (`Hospital.Statistics`) and F8 shows them as text.

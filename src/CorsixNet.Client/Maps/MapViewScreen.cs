@@ -1175,7 +1175,7 @@ internal sealed class MapViewScreen : IScreen
             for (var x = firstX; x <= lastX; x++)
             {
                 var y = s - x;
-                var tint = hovered == new Point(x, y) ? HoverTint : OverlayTint(map[x, y]);
+                var tint = hovered == new Point(x, y) ? HoverTint : OverlayTint(map[x, y], x, y);
                 if (tint != Color.Transparent)
                 {
                     batch.Draw(_diamond, new Vector2((32 * (x - y)) - 32, 16 * (x + y)), tint);
@@ -1184,10 +1184,13 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
-    private Color OverlayTint(MapTile tile)
+    private Color OverlayTint(MapTile tile, int x, int y)
     {
         return _overlay switch
         {
+            MapOverlay.Temperature => tile.Has(TileFlags.Hospital) && Simulation is { } simulation
+                ? TemperatureColor(simulation.Temperatures[x, y]) * 0.6f
+                : Color.Transparent,
             MapOverlay.Passable => tile.Has(TileFlags.Passable) ? new Color(0, 200, 0) * 0.4f : new Color(200, 0, 0) * 0.4f,
             MapOverlay.Hospital => tile.Has(TileFlags.Buildable) ? new Color(0, 120, 255) * 0.45f
                 : tile.Has(TileFlags.Hospital) ? new Color(255, 200, 0) * 0.45f
@@ -1195,6 +1198,25 @@ internal sealed class MapViewScreen : IScreen
             MapOverlay.Parcels => tile.Parcel == 0 ? Color.Transparent : ParcelColor(tile.Parcel) * 0.45f,
             _ => Color.Transparent,
         };
+    }
+
+    /// <summary>
+    /// The town map's blue, green and red warmth colours (CorsixTH's th_lua_ui.cpp, <c>temperature_theme::multi_colour</c>):
+    /// blue below 11 °C, green up to 18 °C, red above.
+    /// </summary>
+    private static Color TemperatureColor(ushort temperature)
+    {
+        // 4 °C and below is 0, 25 °C and above 255.
+        var scaled = temperature < 5200 ? 0 : temperature > 32767 ? 255 : (temperature - 5200) / 108;
+        const int MinOk = 140;
+        const int MaxOk = 180;
+        return scaled < MinOk ? new Color(0, 0, Channel(0, MinOk - 1, scaled, 200, 60))
+            : scaled < MaxOk ? new Color(0, Channel(MinOk, MaxOk - 1, scaled, 140, 224), 70)
+            : new Color(Channel(MaxOk, 255, scaled, 224, 255), 0, 70);
+
+        // map_color_channel in th_lua_ui.h.
+        static int Channel(int low, int high, int value, int start, int end) =>
+            value <= low ? start : value >= high ? end : start + ((end - start) * (value - low) / (high - low));
     }
 
     private static Color ParcelColor(int parcel)
@@ -1408,6 +1430,7 @@ internal enum MapOverlay
     Passable,
     Hospital,
     Parcels,
+    Temperature,
 }
 
 /// <summary>Which money panel <see cref="MapViewScreen"/> shows.</summary>
