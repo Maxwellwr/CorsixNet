@@ -338,6 +338,7 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
             }
 
             RoomVisits.OnRoomActivated(simulation, room);
+            Tiredness.OnRoomActivated(simulation, room);
         }
     }
 

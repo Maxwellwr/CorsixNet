@@ -145,6 +145,20 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsWhenStaffCountAsTired()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #gbv.Tired 500
+            #gbv.CrackUpTired 900
+            """));
+
+        var rules = LevelRulesLoader.FromConfig(config, null, BaseGameContent.Create());
+
+        Assert.Equal(new TirednessRules(500, 700, 900), rules.Tiredness);
+        Assert.Equal(TirednessRules.Default, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), null, BaseGameContent.Create()).Tiredness);
+    }
+
+    [Fact]
     public void TheOriginalLevelsPlanEarthquakesWithTheirMonthsInOrder()
     {
         var install = RealGameData.Require();

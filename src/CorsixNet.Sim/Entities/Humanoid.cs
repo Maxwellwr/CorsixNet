@@ -82,6 +82,14 @@ public sealed class Humanoid : Entity
     /// <summary>How happy the person is, 0 to 1 (<c>attributes["happiness"]</c>).</summary>
     public decimal Happiness { get; internal set; } = 1m;
 
+    /// <summary>How tired a member of staff is, from 0 (rested) to 1 (CorsixTH's <c>fatigue</c> attribute).</summary>
+    public decimal Fatigue { get; internal set; }
+
+    /// <summary>
+    /// Tired with no staff room to go to (CorsixTH's <c>waiting_for_staffroom</c>); cleared when one is built.
+    /// </summary>
+    public bool WaitingForStaffRoom { get; internal set; }
+
     /// <summary>The kind of person; a patient changes it when undressing and dressing (CorsixTH's <c>setType</c>).</summary>
     public HumanoidType Type { get; internal set; }
 
@@ -284,6 +292,12 @@ public sealed class Humanoid : Entity
 
     public override void Update(Simulation simulation)
     {
+        // Staff tire before they act, as CorsixTH's Staff:tick does its checks after Entity.tick.
+        if (Profile is not null && Employer >= 0 && !IsDespawning)
+        {
+            Tiredness.Tick(simulation, this);
+        }
+
         if (IsCrossingDoor)
         {
             _doorTicks--;
@@ -557,6 +571,8 @@ public sealed class Humanoid : Entity
             _resumeTo = reader.ReadBool() ? reader.ReadTile() : null,
             Warmth = ReadAttribute(reader),
             Happiness = ReadAttribute(reader),
+            Fatigue = ReadAttribute(reader),
+            WaitingForStaffRoom = reader.ReadBool(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -604,6 +620,8 @@ public sealed class Humanoid : Entity
 
         writer.WriteDecimal(Warmth);
         writer.WriteDecimal(Happiness);
+        writer.WriteDecimal(Fatigue);
+        writer.WriteBool(WaitingForStaffRoom);
 
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)

@@ -163,9 +163,8 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         DeskUseTime--;
         if (DeskUseTime == 0)
         {
-            // A consultant stays at the desk while not tired (math.random() >= fatigue); fatigue is not
-            // modelled yet, so it is always 0.
-            if (profile.IsConsultant)
+            // A consultant stays at the desk while not tired (math.random() >= fatigue).
+            if (profile.IsConsultant && simulation.Random.Next(1_000_000) >= humanoid.Fatigue * 1_000_000)
             {
                 DeskUseTime = simulation.Random.NextInclusive(7, 14);
             }
