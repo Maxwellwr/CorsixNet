@@ -52,6 +52,8 @@ internal static class MoneyPanels
         TransactionKind.BuyLand => $"Buy parcel {transaction.Subject}",
         TransactionKind.Heating => "Heating",
         TransactionKind.Cheat => "Cheat",
+        TransactionKind.Severance => $"Severance pay: {transaction.Subject}",
+        TransactionKind.PersonalBonus => $"Staff bonus: {transaction.Subject}",
         _ => transaction.Kind.ToString(),
     };
 }

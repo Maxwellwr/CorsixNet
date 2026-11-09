@@ -3,7 +3,9 @@ using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
+using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Client.Tests;
 
@@ -43,6 +45,21 @@ internal sealed class WindowTestHost : IWindowHost
 
     public void PlaySound(string name) => Sounds.Add(name);
 
+    public int? PickedUp { get; private set; }
+
+    public TilePosition? Centered { get; private set; }
+
+    public void PickUpStaff(int staffId) => PickedUp = staffId;
+
+    public void CenterOn(TilePosition tile) => Centered = tile;
+
+    /// <summary>Hires the first candidate of a class onto a tile in the hospital.</summary>
+    public Humanoid Hire(StaffClass staffClass, int x = 6, int y = 6)
+    {
+        Submit(new HireStaffCommand(staffClass, 0, new TilePosition(x, y)));
+        return Simulation.Entities.OfType<Humanoid>().Last();
+    }
+
     /// <summary>Clicks the first enabled button of the window with this text.</summary>
     public void Click(UiWindow window, string text, int skip = 0)
     {
@@ -57,6 +74,8 @@ internal sealed class WindowTestHost : IWindowHost
     private static Simulation NewHospital(LevelRules? rules)
     {
         var map = new LevelMap(Size, Size, playerCount: 1);
+        map.ParcelCount = 2;
+        map.SetParcelOwner(1, 1);
         for (var y = 0; y < Size; y++)
         {
             for (var x = 0; x < Size; x++)
@@ -64,6 +83,11 @@ internal sealed class WindowTestHost : IWindowHost
                 ref var tile = ref map[x, y];
                 tile.Floor = 1;
                 tile.Set(TileFlags.Passable, true);
+                if (x is >= 2 and < Size - 2 && y is >= 2 and < Size - 2)
+                {
+                    tile.Parcel = 1;
+                    tile.Set(TileFlags.Buildable | TileFlags.Hospital, true);
+                }
             }
         }
 

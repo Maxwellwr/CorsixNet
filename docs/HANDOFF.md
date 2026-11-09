@@ -134,7 +134,9 @@ Done and committed:
   window wants a look on MSI). Windows over the map (`Client/Ui`, see ARCHITECTURE.md, "Windows"): text
   stand-ins for CorsixTH's dialogs with clickable buttons that send commands. F1 bank manager (loans,
   insurance owed), F2 bank statement, F5 casebook (prices, research concentration), F6 research shares,
-  F8 graph figures, F9 hospital policy.
+  F8 graph figures, F9 hospital policy. Shift+F3 staff management (F3 stays the level list): staff by
+  class, bonus (a tenth of the wage), a tenth more salary, firing after a confirmation, raise answers;
+  clicking a member of staff opens their window (pick up, fire, a handyman's parcel).
 
 Not done yet:
 

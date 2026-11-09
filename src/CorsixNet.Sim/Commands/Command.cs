@@ -49,6 +49,8 @@ public enum CommandKind : ushort
     MoveStaff = 34,
     AdjustResearch = 35,
     ConcentrateResearch = 36,
+    PayBonus = 37,
+    IncreaseSalary = 38,
 }
 
 /// <summary>
@@ -109,6 +111,8 @@ public abstract record Command
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             CommandKind.AdjustResearch => new AdjustResearchCommand(ReadResearchCategory(reader), reader.ReadInt32()),
             CommandKind.ConcentrateResearch => new ConcentrateResearchCommand(reader.ReadString()),
+            CommandKind.PayBonus => new PayBonusCommand(reader.ReadInt32()),
+            CommandKind.IncreaseSalary => new IncreaseSalaryCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -675,6 +679,38 @@ public sealed record FireStaffCommand(int StaffId) : Command
         if (simulation.FindEntity(StaffId) is Humanoid { Profile: not null, IsFired: false } staff && staff.Employer == player)
         {
             StaffEmployment.Fire(simulation, staff);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(StaffId);
+}
+
+/// <summary>Pays one of the issuing player's staff a bonus of a tenth of their wage (the staff management screen).</summary>
+public sealed record PayBonusCommand(int StaffId) : Command
+{
+    public override CommandKind Kind => CommandKind.PayBonus;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(StaffId) is Humanoid { Profile: not null, IsFired: false } staff && staff.Employer == player)
+        {
+            StaffEmployment.PayBonus(simulation, staff);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(StaffId);
+}
+
+/// <summary>Raises one of the issuing player's staff's wage by a tenth (the staff management screen).</summary>
+public sealed record IncreaseSalaryCommand(int StaffId) : Command
+{
+    public override CommandKind Kind => CommandKind.IncreaseSalary;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(StaffId) is Humanoid { Profile: not null, IsFired: false } staff && staff.Employer == player)
+        {
+            StaffEmployment.IncreaseSalary(simulation, staff);
         }
     }
 
