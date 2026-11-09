@@ -31,6 +31,9 @@ public sealed class LevelRules
     /// <summary>No money at the start and everything free, staff included.</summary>
     public static readonly LevelRules Free = new(0, [], [], StaffRules.Free);
 
+    /// <summary>CorsixTH's base_config.lua <c>payroll.MaxSalary</c>.</summary>
+    public const int DefaultMaxSalary = 2000;
+
     /// <summary>CorsixTH's fallback for <c>gbv.LandCostPerTile</c> (map.lua's <c>Map:getParcelPrice</c>).</summary>
     public const int DefaultLandCostPerTile = 25;
 
@@ -57,6 +60,7 @@ public sealed class LevelRules
     /// <param name="overdraftDifferential">What overdrafts cost on top, likewise (<c>OverdraftDiff</c>).</param>
     /// <param name="objectAvailability">Which object types the level has and from when; an object it does not name is there from the start.</param>
     /// <param name="earthquakes">The level's planned earthquakes in order (<c>quake_control</c>); by default none.</param>
+    /// <param name="maxSalary">The highest salary (<c>payroll.MaxSalary</c>); staff earning it are always happy.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -71,8 +75,10 @@ public sealed class LevelRules
         int interestRate = Hospital.DefaultInterestRate,
         int overdraftDifferential = Hospital.DefaultOverdraftDifferential,
         IEnumerable<KeyValuePair<string, ObjectAvailability>>? objectAvailability = null,
-        IEnumerable<PlannedEarthquake>? earthquakes = null)
+        IEnumerable<PlannedEarthquake>? earthquakes = null,
+        int maxSalary = DefaultMaxSalary)
     {
+        MaxSalary = maxSalary;
         Earthquakes = [.. earthquakes ?? []];
         InterestRate = interestRate;
         OverdraftDifferential = overdraftDifferential;
@@ -123,6 +129,9 @@ public sealed class LevelRules
 
     /// <summary>Which diseases the level has, from when, and their prices.</summary>
     public DiseaseRules Diseases { get; }
+
+    /// <summary>The highest salary: staff earning it are never unhappy.</summary>
+    public int MaxSalary { get; }
 
     /// <summary>The level's planned earthquakes, in the order they come.</summary>
     public IReadOnlyList<PlannedEarthquake> Earthquakes { get; }
@@ -209,6 +218,8 @@ public sealed class LevelRules
             writer.WriteInt32(earthquake.EndMonth);
             writer.WriteInt32(earthquake.Severity);
         }
+
+        writer.WriteInt32(MaxSalary);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -242,7 +253,7 @@ public sealed class LevelRules
             earthquakes[i] = new PlannedEarthquake(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes);
+        return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32());
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

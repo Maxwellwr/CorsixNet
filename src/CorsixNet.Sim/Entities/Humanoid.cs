@@ -73,6 +73,15 @@ public sealed class Humanoid : Entity
         layers[..Math.Min(layers.Length, LayerCount)].CopyTo(_layers);
     }
 
+    /// <summary>How warm the person feels at first (CorsixTH's <c>attributes["warmth"]</c>).</summary>
+    public const decimal StartWarmth = 0.29m;
+
+    /// <summary>How warm the person feels, 0 to 1 like a tile's temperature over 50 °C (<c>attributes["warmth"]</c>).</summary>
+    public decimal Warmth { get; internal set; } = StartWarmth;
+
+    /// <summary>How happy the person is, 0 to 1 (<c>attributes["happiness"]</c>).</summary>
+    public decimal Happiness { get; internal set; } = 1m;
+
     /// <summary>The kind of person; a patient changes it when undressing and dressing (CorsixTH's <c>setType</c>).</summary>
     public HumanoidType Type { get; internal set; }
 
@@ -513,6 +522,12 @@ public sealed class Humanoid : Entity
         return false;
     }
 
+    private static decimal ReadAttribute(SimReader reader)
+    {
+        var value = reader.ReadDecimal();
+        return value is >= 0m and <= 1m ? value : throw new InvalidDataException($"Attribute {value} is not between 0 and 1.");
+    }
+
     internal static Humanoid ReadState(int id, SimReader reader)
     {
         var tile = reader.ReadTile();
@@ -540,6 +555,8 @@ public sealed class Humanoid : Entity
             _doorTicks = reader.ReadInt32(),
             _doorExit = reader.ReadTile(),
             _resumeTo = reader.ReadBool() ? reader.ReadTile() : null,
+            Warmth = ReadAttribute(reader),
+            Happiness = ReadAttribute(reader),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -584,6 +601,9 @@ public sealed class Humanoid : Entity
         {
             writer.WriteTile(resumeTo);
         }
+
+        writer.WriteDecimal(Warmth);
+        writer.WriteDecimal(Happiness);
 
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)

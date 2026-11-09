@@ -55,6 +55,15 @@ public sealed class SimWriter
         _stream.Write(_buffer, 0, 8);
     }
 
+    /// <summary>Writes a decimal as its four 32-bit parts (<see cref="decimal.GetBits(decimal)"/>).</summary>
+    public void WriteDecimal(decimal value)
+    {
+        foreach (var bits in decimal.GetBits(value))
+        {
+            WriteInt32(bits);
+        }
+    }
+
     public void WriteTile(TilePosition tile)
     {
         WriteInt32(tile.X);

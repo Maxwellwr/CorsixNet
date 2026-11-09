@@ -42,6 +42,20 @@ public sealed class SimReader
 
     public ulong ReadUInt64() => BinaryPrimitives.ReadUInt64LittleEndian(Fill(8));
 
+    /// <summary>Reads a decimal written by <see cref="SimWriter.WriteDecimal"/>.</summary>
+    public decimal ReadDecimal()
+    {
+        int[] bits = [ReadInt32(), ReadInt32(), ReadInt32(), ReadInt32()];
+        try
+        {
+            return new decimal(bits);
+        }
+        catch (ArgumentException exception)
+        {
+            throw new InvalidDataException("A decimal is malformed.", exception);
+        }
+    }
+
     public TilePosition ReadTile() => new(ReadInt32(), ReadInt32());
 
     /// <summary>Reads a string written by <see cref="SimWriter.WriteString"/>, rejecting ones longer than <paramref name="maxBytes"/>.</summary>

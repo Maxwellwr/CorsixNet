@@ -1,5 +1,7 @@
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Maps;
 
 namespace CorsixNet.Sim.Tests;
 
@@ -89,16 +91,16 @@ public class ReputationTests
     [Fact]
     public void NowAndThenAPriceFarFromWhatPatientsExpectMovesTheReputation()
     {
-        var random = new SimRandom(9);
+        var simulation = new Simulation(TestMaps.FromRows("."), seed: 9);
 
-        // At half price for a cure that always works, patients expect more: 0 − (0.1 + 0.3 + 0.3) < −0.4.
+        // A new, fully happy patient pays each time. At half price for a cure that always works, patients expect more: 0 − (0.1 + 0.3 + 0.3) < −0.4.
         var cheap = new Hospital(0, 0);
         var gp = cheap.CaseOf(Gp, DiseaseRules.Default);
         gp.PricePercent = 50;
         gp.CureEffectiveness = 100;
         for (var i = 0; i < 2000; i++)
         {
-            cheap.ComputePriceLevelImpact(random, gp);
+            cheap.ComputePriceLevelImpact(simulation, NewPatient(), gp);
         }
 
         Assert.InRange(cheap.Reputation, 505, 540);
@@ -110,7 +112,7 @@ public class ReputationTests
         gp.CureEffectiveness = 0;
         for (var i = 0; i < 2000; i++)
         {
-            dear.ComputePriceLevelImpact(random, gp);
+            dear.ComputePriceLevelImpact(simulation, NewPatient(), gp);
         }
 
         Assert.InRange(dear.Reputation, 420, 490);
@@ -119,11 +121,29 @@ public class ReputationTests
         var fair = new Hospital(0, 0);
         for (var i = 0; i < 2000; i++)
         {
-            fair.ComputePriceLevelImpact(random, fair.CaseOf(Cold, DiseaseRules.Default));
+            fair.ComputePriceLevelImpact(simulation, NewPatient(), fair.CaseOf(Cold, DiseaseRules.Default));
         }
 
         Assert.Equal(Hospital.AverageReputation, fair.Reputation);
     }
+
+    [Fact]
+    public void APriceAboveWhatThePatientExpectsMakesThemUnhappy()
+    {
+        var simulation = new Simulation(TestMaps.FromRows("."), seed: 9);
+        var hospital = new Hospital(0, 0);
+        var gp = hospital.CaseOf(Gp, DiseaseRules.Default);
+        gp.PricePercent = 200;
+        gp.CureEffectiveness = 0;
+        var patient = NewPatient();
+
+        // 1 − (0.1 + 0.3 + 0) = 0.6 too dear: happiness drops by half of it.
+        hospital.ComputePriceLevelImpact(simulation, patient, gp);
+
+        Assert.Equal(0.7m, patient.Happiness);
+    }
+
+    private static Humanoid NewPatient() => new(1, new TilePosition(0, 0));
 
     [Fact]
     public void TheLevelSetsTheStartingReputationAndSavesKeepIt()

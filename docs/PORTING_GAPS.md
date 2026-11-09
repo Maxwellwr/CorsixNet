@@ -61,8 +61,9 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   partial: today a room just sends for the nearest free member of staff (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Handyman: sweeping litter and vomit, watering plants, repairing machines, task priorities
   (`entities/humanoids/staff/handyman.lua`, `humanoid_actions/sweep_floor.lua`).
-- Fatigue, happiness, going to the staff room, wage demands and raises (`staff_rise.lua`), quitting.
-  Partial: service quality uses fatigue 0 and happiness 1.
+- Fatigue, going to the staff room, wage demands and raises (`staff_rise.lua`), quitting. Happiness is done for
+  warmth, pay, nearby objects and the highest salary (`Feelings`); tiredness, resting, a room's windows and space
+  and the mood icons are not. Service quality uses fatigue 0.
 - Staff meandering when idle (Partial: wanderers in `--demo` use `MeanderCommand`; staff waiting in a
   room stand still), staff room idle actions (`use_staffroom.lua`, `seek_staffroom.lua`).
 - Training: training room, consultant teaching, skill growth, gaining abilities (`rooms/training.lua`).
@@ -82,8 +83,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: health dropping over time, warmth, thirst, toilets, happiness, boredom, leaving angry,
-  complaining (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
+- Patient needs: health dropping over time, thirst, toilets, boredom, leaving angry, complaining (warmth and
+  its effect on happiness, and prices changing happiness, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, patients
   getting worse (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
 - Queue features: priorities (emergencies, VIP), benches, queue window to reorder or send home,
@@ -158,8 +159,7 @@ rules, `popn`, disease frequencies and availability, win and lose criteria), swi
 Hospitals win and lose by the level's criteria (`endconditions.lua`), and the progress report's content is computed.
 
 - Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
-  (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`). Staff and
-  patient happiness for the criteria count as full until happiness is modelled.
+  (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`).
 - Remaining level settings: emergencies (`#emergency_control`), epidemics, VIP schedules,
   `computer[n]` AI players, research settings, `#gbv`
   values beyond the ones read now.
