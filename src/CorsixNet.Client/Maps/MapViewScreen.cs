@@ -35,7 +35,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// <remarks>
 /// Keys: arrows/WASD, screen edges or right/middle-drag pan, wheel or =/− zoom, 0 original size, Alt+digit remember
 /// the view and Ctrl+digit go back to it, Home reset camera,
-/// PgUp/PgDn previous/next level (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
+/// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
@@ -70,6 +70,8 @@ internal sealed class MapViewScreen : IScreen
     private static readonly Color RoomListHoverBlocked = new(90, 60, 60, 220);
 
     private static readonly Color RoomListBlocked = new(150, 150, 150);
+
+    private static readonly Color LevelListCurrent = new(255, 220, 120);
 
     /// <summary>Width of the frame drawn around the map while building.</summary>
     private const int BuildFrameWidth = 3;
@@ -145,6 +147,12 @@ internal sealed class MapViewScreen : IScreen
 
     /// <summary>The money panel shown over the map: none, the bank statement (F2) or the graphs' figures (F8).</summary>
     private MoneyPanel _moneyPanel;
+
+    /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
+    private bool _levelList;
+
+    /// <summary>The level list's rows on screen, from the last time it was drawn, for clicks.</summary>
+    private readonly List<(Rectangle Row, int Index)> _levelListRows = [];
 
     /// <summary>Whether the list of rooms to build is open (B), a stand-in for CorsixTH's build room window.</summary>
     private bool _roomList;
@@ -308,7 +316,11 @@ internal sealed class MapViewScreen : IScreen
 
         if (Pressed(Keys.Escape))
         {
-            if (_roomList)
+            if (_levelList)
+            {
+                _levelList = false;
+            }
+            else if (_roomList)
             {
                 _roomList = false;
             }
@@ -322,14 +334,28 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
-        if (_levels.Count > 0 && Pressed(Keys.PageDown))
+        // The level list (F3): a click on a level starts it; a click elsewhere, F3 or Esc closes the list.
+        if (_levels.Count > 0 && Pressed(Keys.F3))
         {
-            SelectLevel((_levelIndex + 1) % _levels.Count);
+            _levelList = !_levelList;
+            _roomList = false;
         }
 
-        if (_levels.Count > 0 && Pressed(Keys.PageUp))
+        if (_levelList)
         {
-            SelectLevel((_levelIndex + _levels.Count - 1) % _levels.Count);
+            if (mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released)
+            {
+                var chosen = _levelListRows.FirstOrDefault(row => row.Row.Contains(mouse.X, mouse.Y));
+                _levelList = false;
+                if (chosen.Row != Rectangle.Empty)
+                {
+                    SelectLevel(chosen.Index);
+                }
+            }
+
+            _previousKeys = keys;
+            _previousMouse = mouse;
+            return;
         }
 
         if (Pressed(Keys.Home))
@@ -519,6 +545,7 @@ internal sealed class MapViewScreen : IScreen
         DrawDatePanel(batch, viewport);
         DrawMoneyPanel(batch);
         DrawRoomList(batch);
+        DrawLevelList(batch);
         batch.End();
     }
 
@@ -1914,7 +1941,7 @@ internal sealed class MapViewScreen : IScreen
 
         var levels = _levels.Count > 0 ? $"   ({_levelIndex + 1} of {_levels.Count})" : string.Empty;
         var people = Simulation?.Entities.OfType<Humanoid>().Count() ?? 0;
-        var levelKeys = _levels.Count > 0 ? "   PgUp PgDn: level" : string.Empty;
+        var levelKeys = _levels.Count > 0 ? "   F3: levels" : string.Empty;
         var autosave = _session is LocalSession { AutosaveError: { } failed } ? $"   AUTOSAVE FAILED: {failed}" : string.Empty;
         return string.Create(
             CultureInfo.InvariantCulture,
@@ -1946,6 +1973,53 @@ internal sealed class MapViewScreen : IScreen
         batch.Draw(_pixel, box, DatePanelColor);
         _text.Draw(batch, date, new Vector2(box.X + 8, 4));
         _text.Draw(batch, speed, new Vector2(box.X + 8, 4 + _text.LineHeight + 2));
+    }
+
+    /// <summary>
+    /// The list of levels (F3): every level the client can start, the current one marked; the one under the cursor is
+    /// highlighted. Campaign levels get their number.
+    /// </summary>
+    private void DrawLevelList(SpriteBatch batch)
+    {
+        _levelListRows.Clear();
+        if (!_levelList || _levels.Count == 0)
+        {
+            return;
+        }
+
+        const string title = "Choose a level (click one; F3 or Esc closes)";
+        var labels = _levels.Select(LevelLabel).ToList();
+        var lineHeight = _text.LineHeight + 4;
+        var width = labels.Append(title).Max(label => _text.Measure(label).Width) + 40;
+        var box = new Rectangle(8, StatusHeight + 8, width, ((labels.Count + 1) * lineHeight) + 12);
+        batch.Draw(_pixel, box, MoneyPanelColor);
+        _text.Draw(batch, title, new Vector2(box.X + 12, box.Y + 6));
+        var mouse = Mouse.GetState();
+        for (var i = 0; i < labels.Count; i++)
+        {
+            var row = new Rectangle(box.X + 4, box.Y + 6 + ((i + 1) * lineHeight) - 2, box.Width - 8, lineHeight);
+            _levelListRows.Add((row, i));
+            if (row.Contains(mouse.X, mouse.Y))
+            {
+                batch.Draw(_pixel, row, RoomListHover);
+            }
+
+            var current = i == _levelIndex;
+            _text.Draw(batch, (current ? "> " : "  ") + labels[i], new Vector2(box.X + 12, row.Y + 2), tint: current ? LevelListCurrent : Color.White);
+        }
+    }
+
+    /// <summary>What the level list shows for a level: the original's campaign levels with their number, others by file.</summary>
+    private static string LevelLabel(LevelSource level)
+    {
+        var name = level.Name;
+        if (name.StartsWith("LEVEL.L", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(name.AsSpan(7), NumberStyles.None, CultureInfo.InvariantCulture, out var number))
+        {
+            return number <= 12 ? $"Campaign level {number}   ({name})" : $"Level {number}   ({name})";
+        }
+
+        return name;
     }
 
     /// <summary>

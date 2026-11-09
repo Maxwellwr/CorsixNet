@@ -34,11 +34,11 @@ first original level:
 | Mouse wheel, = / - (Shift: five times as far) | Zoom |
 | 0 | Original size |
 | Alt+0-9 / Ctrl+0, Ctrl+5-9 | Remember the view / go back to it |
-| PgUp / PgDn | Previous / next level |
+| F3 | Choose the level from a list |
 | O | Cycle overlay (passable, hospital, parcels, temperature) |
 | U | Cycle sprite smoothing: original, 2x, 4x |
 | Home | Reset camera |
-| B | Build a GP's office (see below) |
+| B | Choose a room to build from a list (see below) |
 | H | Spawn a patient at the cursor |
 | G | Spawn ten patients in the hospital |
 | Left click | Select a patient, or send the selected one walking |

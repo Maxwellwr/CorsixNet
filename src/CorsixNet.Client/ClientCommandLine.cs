@@ -71,7 +71,7 @@ internal static class ClientCommandLine
 
     private static readonly Option<string?> CampaignOption = new("--campaign")
     {
-        Description = "Put a CorsixTH campaign's levels first, in order (PageDown for the next)",
+        Description = "Put a CorsixTH campaign's levels first, in order (F3 lists them)",
         HelpName = "PATH",
     };
 
