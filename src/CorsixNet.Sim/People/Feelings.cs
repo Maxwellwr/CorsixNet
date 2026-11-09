@@ -18,7 +18,7 @@ namespace CorsixNet.Sim.People;
 /// </summary>
 /// <remarks>
 /// Not yet: resting on the staff room's sofa or games, the cold and
-/// hot mood icons, and patients' own daily effects (waiting, health, vomit, thirst).
+/// hot mood icons, and patients' vomiting, thirst, toilets and yawning.
 /// </remarks>
 internal static class Feelings
 {
@@ -97,7 +97,52 @@ internal static class Feelings
         {
             OnEndDayStaff(simulation, humanoid, humanoid.Profile);
         }
+        else if (humanoid.Behaviour is PatientBehaviour patient)
+        {
+            OnEndDayPatient(simulation, humanoid, patient);
+        }
     }
+
+    /// <summary>
+    /// The rest of <c>Patient:tickDay</c> after <c>Humanoid:tickDay</c>: the health checks, what the patient sees
+    /// outside rooms, and the day's loss of health.
+    /// </summary>
+    private static void OnEndDayPatient(Simulation simulation, Humanoid humanoid, PatientBehaviour patient)
+    {
+        if (!patient.OnEndDayHealth(simulation, humanoid))
+        {
+            return;
+        }
+
+        // In the corridor (not in a room, nor going in or out), plants, extinguishers and standing about count.
+        if (patient.Phase is < PatientPhase.EnteringRoom or > PatientPhase.LeavingRoom
+            && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0)
+        {
+            var plants = ObjectsInSight(simulation, humanoid, "plant");
+            if (plants.Count > 0)
+            {
+                var plant = RandomEntry(simulation, plants);
+                ChangeHappiness(simulation, humanoid, -0.0003m + ((plant.Plant?.PleasingFactor ?? PlantState.Phases) * 0.0001m));
+            }
+
+            // It always makes you happy to see you are in a safe place.
+            var extinguishers = ObjectsInSight(simulation, humanoid, "extinguisher");
+            if (extinguishers.Count > 0)
+            {
+                RandomEntry(simulation, extinguishers);
+                ChangeHappiness(simulation, humanoid, 0.0002m);
+            }
+
+            // Sitting makes happy, standing and walking do not; there are no benches yet.
+            ChangeHappiness(simulation, humanoid, -0.00002m);
+        }
+
+        patient.Health = Math.Max(patient.Health - PatientBehaviour.DailyHealthLoss, 0m);
+    }
+
+    /// <summary><c>getRandomEntryFromArray</c>, which draws only when there is more than one.</summary>
+    private static RoomObject RandomEntry(Simulation simulation, List<RoomObject> objects) =>
+        objects.Count == 1 ? objects[0] : objects[simulation.Random.NextInclusive(1, objects.Count) - 1];
 
     /// <summary>
     /// <c>Humanoid:changeAttribute</c> for happiness: kept between 0 and 1, and always 1 for a receptionist or a member
@@ -129,7 +174,7 @@ internal static class Feelings
         if (plants.Count > 0)
         {
             // getRandomEntryFromArray draws only when there is more than one.
-            var plant = plants.Count == 1 ? plants[0] : plants[simulation.Random.NextInclusive(1, plants.Count) - 1];
+            var plant = RandomEntry(simulation, plants);
             var pleasing = plant.Plant?.PleasingFactor ?? PlantState.Phases;
             ChangeHappiness(simulation, humanoid, -0.003m + (pleasing * 0.001m));
         }

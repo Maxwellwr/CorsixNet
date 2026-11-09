@@ -133,8 +133,11 @@ public sealed class PatientArrivals
             ? closest
             : _spawnPoints[simulation.Random.Next(_spawnPoints.Count)];
         var look = disease?.Look ?? PatientLook.Standard;
+
+        // Humanoid:Humanoid: patients are not fully well when they come, from 0.8 to 1.
+        var health = simulation.Random.NextInclusive(80, 100) / 100m;
         var patient = simulation.AddEntity(id => Humanoid.CreatePatient(id, spawn, simulation.Random, look, player));
-        var behaviour = new PatientBehaviour();
+        var behaviour = new PatientBehaviour { Health = health };
         if (disease is not null)
         {
             behaviour.SetDisease(disease, PatientCare.ChooseInsuranceCompany(simulation.Random));

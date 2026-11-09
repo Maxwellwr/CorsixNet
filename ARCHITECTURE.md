@@ -431,6 +431,13 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   room; only the external wall's windows count, as in CorsixTH) and of `round(ln area / smallest area)`.
   Receptionists and staff on `payroll.MaxSalary` (2000) are always happy. A patient paying
   loses half the price distortion. Happiness feeds the treatment's service quality and the happiness goals.
+- **Health** (`PatientBehaviour.Health`, from `patient.lua`). A patient comes with health from 0.80 to 1.00 and
+  loses 0.004 each day after warmth and happiness; a cure sets it to 1. While it is from 0.18 to below 0.22, each
+  day costs 0.0002 happiness and one time in 30 the patient gives up and goes home (counted as sent home); CorsixTH
+  lets a patient in a room other than their cure room give up too, here only those outside rooms do. Below 0.01 it
+  becomes 0, and the next day at 0 the patient is set to die: once out of rooms and doorways they die, count as a
+  death of their disease and vanish. Outside rooms, patients also like an extinguisher within two tiles (0.0002),
+  a plant by how healthy it is (−0.0003 + 0.0001 × state), and lose 0.00002 a day for standing (no benches yet).
 - **Tiredness** (`Humanoid.Fatigue`, `Tiredness`, from `staff.lua`). Every hour a member of staff in a room
   (other than a staff room), or a handyman anywhere, gains 0.00009 fatigue and loses 0.00002 happiness, so a doctor
   who never leaves their office reaches the level's `gbv.Tired` (600 thousandths, the hospital's `goto_staffroom`

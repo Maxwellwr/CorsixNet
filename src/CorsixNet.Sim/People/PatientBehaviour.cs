@@ -123,6 +123,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour
 
     private const int MaxDiagnosisRooms = 64;
 
+    /// <summary>What each day costs a patient's health (<c>changeAttribute("health", -0.004)</c>).</summary>
+    internal const decimal DailyHealthLoss = 0.004m;
+
     private readonly List<string> _availableDiagnosisRooms = [];
 
     public override BehaviourKind Kind => BehaviourKind.Patient;
@@ -200,8 +203,23 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     /// <summary>In general diagnosis: whether the doctor has examined the patient on the crash trolley.</summary>
     private bool IsExamined { get; set; }
 
+    /// <summary>How well the patient is, from 0 to 1 (CorsixTH's <c>health</c> attribute).</summary>
+    public decimal Health { get; internal set; } = 1m;
+
+    /// <summary>
+    /// Health ran out: the patient dies as soon as they are out of rooms and doorways (CorsixTH's <c>set_to_die</c>).
+    /// </summary>
+    public bool IsSetToDie { get; private set; }
+
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
+        // Patient:tick: out of rooms and doorways, a patient whose health ran out dies.
+        if (IsSetToDie && !IsInRoom && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0)
+        {
+            Die(simulation, humanoid);
+            return;
+        }
+
         switch (Phase)
         {
             case PatientPhase.SeekReception:
@@ -858,6 +876,82 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         Waiting--;
     }
 
+    /// <summary>Entering, in or leaving a room (CorsixTH's <c>getRoom</c>, <c>is_entering</c> or <c>is_leaving</c>).</summary>
+    private bool IsInRoom => Phase is >= PatientPhase.EnteringRoom and <= PatientPhase.LeavingRoom;
+
+    /// <summary><c>Patient:cure</c>: well again, and no longer dying.</summary>
+    internal void Cure()
+    {
+        Health = 1m;
+
+        // Patient:die does nothing for a cured patient.
+        IsSetToDie = false;
+    }
+
+    /// <summary>
+    /// <c>Patient:_dailyHealthChecks</c>: below 0.01 health goes to 0, and at 0 the patient is set to die. On the way
+    /// down, while health is from 0.18 to below 0.22, each day costs a little happiness and one time in 30 the patient is
+    /// fed up and goes home, unless they are in the room that cures them.
+    /// </summary>
+    /// <returns>False when health was already 0, which ends the patient's day.</returns>
+    internal bool OnEndDayHealth(Simulation simulation, Humanoid humanoid)
+    {
+        var health = Health;
+        if (health < 0.01m)
+        {
+            if (health == 0)
+            {
+                IsSetToDie = true;
+                return false;
+            }
+
+            // Time to say a prayer: dying tomorrow.
+            Health = 0;
+            return true;
+        }
+
+        if (health is >= 0.18m and < 0.22m)
+        {
+            // Entered the road of deterioration: waiting too long makes sad.
+            Feelings.ChangeHappiness(simulation, humanoid, -0.0002m);
+
+            // CorsixTH also lets a patient in another room give up; here only those outside rooms do (see remarks).
+            if (!IsInRoom && simulation.Random.NextInclusive(1, 30) == 1)
+            {
+                LeaveQueue(simulation, humanoid);
+                GoHome(simulation, humanoid, ReputationChange.Kicked);
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary><c>Patient:die</c>: the death counts, and the patient is gone.</summary>
+    private void Die(Simulation simulation, Humanoid humanoid)
+    {
+        IsSetToDie = false;
+        var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
+        PatientCare.RecordDeath(simulation, hospital, Disease is { } disease ? hospital.CaseOf(disease, simulation.Rules.Diseases) : null);
+        LeaveQueue(simulation, humanoid);
+
+        // Falling down and the trip to heaven or hell are not animated yet: the patient is gone.
+        TargetId = 0;
+        humanoid.StopWalking();
+        humanoid.IsDespawning = true;
+    }
+
+    /// <summary>Leaves the reception or door queue the patient stands in, if any.</summary>
+    private void LeaveQueue(Simulation simulation, Humanoid humanoid)
+    {
+        var queue = Phase switch
+        {
+            PatientPhase.InReceptionQueue => (simulation.FindEntity(TargetId) as RoomObject)?.Desk?.Queue,
+            PatientPhase.InDoorQueue => (simulation.FindEntity(TargetId) as Room)?.DoorQueue,
+            _ => null,
+        };
+        queue?.Remove(simulation, humanoid.Id);
+    }
+
     /// <summary>
     /// Leaves through a random spawn point, as CorsixTH's <c>Humanoid:despawn</c>. A patient sent home or put off by the
     /// price counts as not cured (<c>Patient:goHome</c>); the reasons for leaving a room were counted in the room.
@@ -906,6 +1000,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         writer.WriteInt32(CureRoomsVisited);
         writer.WriteBool(IsExamined);
         MultiObjectUse.WriteOptional(writer, TrolleyUse);
+        writer.WriteDecimal(Health);
+        writer.WriteBool(IsSetToDie);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -943,6 +1039,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour
         patient.CureRoomsVisited = reader.ReadInt32();
         patient.IsExamined = reader.ReadBool();
         patient.TrolleyUse = MultiObjectUse.ReadOptional(reader);
+        patient.Health = reader.ReadDecimal();
+        if (patient.Health is < 0m or > 1m)
+        {
+            throw new InvalidDataException($"Patient health {patient.Health} is not between 0 and 1.");
+        }
+
+        patient.IsSetToDie = reader.ReadBool();
         return patient;
     }
 }

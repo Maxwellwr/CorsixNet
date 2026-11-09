@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 26;
+    private const int FormatVersion = 27;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
