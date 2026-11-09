@@ -716,8 +716,18 @@ onto its tile and the tile in front of it, and passes the count to the left half
 reports the move when it starts, as in CorsixTH's walk action. Which frame a door shows while
 sliding is tracked by the client.
 
-Not yet handled: the original divider walls between parcels for multiplayer, and the UI
-layer.
+Not yet handled: the original divider walls between parcels for multiplayer.
+
+**Windows.** Until the original's panels are drawn, CorsixTH's dialogs are stand-ins in
+`Client/Ui`: a `UiWindow` describes a table of text cells, some of them buttons, built afresh
+each frame from the simulation; `WindowLayer` lays the tables out, draws them over the map,
+lets the title bar drag a window and the wheel scroll it, and keeps the mouse from the map
+while it is over one. Windows hold only interface state (a selected row, a page). Their
+buttons change the game through the player's commands (`IWindowHost.Submit`), so they work
+the same in network games, and they read the simulation without changing it (for example
+`Hospital.PeekCase` rather than `CaseOf`). The dialogs' hotkeys are CorsixTH's: F1 bank
+manager, F2 bank statement, F5 casebook, F6 research, F8 graphs, F9 policy; Esc closes the
+front window.
 
 **Optional sprite smoothing.** `Formats.PixelArtScaler` ports MMPX, a pixel art
 magnification filter. It smooths diagonals but keeps straight edges, corners and the original

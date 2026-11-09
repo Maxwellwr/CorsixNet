@@ -602,14 +602,27 @@ public sealed class Hospital
     {
         if (!_casebook.TryGetValue(disease.Id, out var entry))
         {
-            entry = new DiseaseCase(disease.Id, rules.IsKnown(disease.ExpertiseId)) { Reputation = disease.IsPseudo ? null : AverageReputation };
-            if (disease.TreatmentRooms is ["pharmacy", ..])
-            {
-                entry.CureEffectiveness = rules.DrugStartRating;
-                entry.DrugCost = rules.DrugStartCost;
-            }
-
+            entry = NewCase(disease, rules);
             _casebook.Add(disease.Id, entry);
+        }
+
+        return entry;
+    }
+
+    /// <summary>
+    /// The casebook entry for a disease as <see cref="CaseOf"/> gives it, without making one: for windows, which must not
+    /// change the game. An entry not made yet is a fresh one, not kept.
+    /// </summary>
+    public DiseaseCase PeekCase(DiseaseDefinition disease, DiseaseRules rules) =>
+        _casebook.TryGetValue(disease.Id, out var entry) ? entry : NewCase(disease, rules);
+
+    private static DiseaseCase NewCase(DiseaseDefinition disease, DiseaseRules rules)
+    {
+        var entry = new DiseaseCase(disease.Id, rules.IsKnown(disease.ExpertiseId)) { Reputation = disease.IsPseudo ? null : AverageReputation };
+        if (disease.TreatmentRooms is ["pharmacy", ..])
+        {
+            entry.CureEffectiveness = rules.DrugStartRating;
+            entry.DrugCost = rules.DrugStartCost;
         }
 
         return entry;
@@ -644,7 +657,8 @@ public sealed class Hospital
             inflation *= 1 + InflationRate;
         }
 
-        var entry = CaseOf(disease, rules);
+        // Peeking, so that working out a price (also for a window) does not add to the casebook.
+        var entry = PeekCase(disease, rules);
         var price = rules.CurePrice(disease) * inflation * entry.PricePercent / DiseaseCase.StandardPrice;
         var reputation = entry.Reputation ?? Reputation;
         if (reputation >= AverageReputation)
