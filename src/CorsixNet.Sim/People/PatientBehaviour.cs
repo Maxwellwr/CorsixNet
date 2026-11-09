@@ -1765,15 +1765,48 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     return;
                 }
 
-                if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley }, IsMoving: false } doctor)
+                if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley } doctorBehaviour, IsMoving: false } doctor)
                 {
-                    TrolleyUse = MultiObjectUse.Start(simulation, humanoid, machine, doctor);
+                    if (string.Equals(room.RoomType, RoomVisits.XRayRoom, StringComparison.Ordinal))
+                    {
+                        // XRayRoom's loop callback: X-rayed for 2 to 4 rounds, times 2 less the doctor's skill; the doctor
+                        // sits at the console meanwhile.
+                        var skill = (doctor.Profile?.Skill ?? 0) / (decimal)Staff.StaffProfile.MaxSkill;
+                        _machineRounds = simulation.Random.NextInclusive(2, 4) * (2 - skill);
+                        Use = ObjectUse.Start(simulation, humanoid, machine);
+                        doctorBehaviour.StartShield(simulation, doctor, room);
+                    }
+                    else
+                    {
+                        TrolleyUse = MultiObjectUse.Start(simulation, humanoid, machine, doctor);
+                    }
+
                     Phase = PatientPhase.OnTrolley;
                 }
 
                 return;
             case PatientPhase.OnTrolley:
-                if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                if (Use is not null)
+                {
+                    var useEvent = Use.Update(simulation, humanoid);
+                    if (useEvent == ObjectUseEvent.Loop)
+                    {
+                        if (_machineRounds <= 0)
+                        {
+                            Use.Interrupt();
+                        }
+
+                        _machineRounds--;
+                    }
+
+                    if (useEvent != ObjectUseEvent.Done)
+                    {
+                        return;
+                    }
+
+                    Use = null;
+                }
+                else if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
                 {
                     return;
                 }
@@ -1789,6 +1822,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 return;
         }
     }
+
+    /// <summary>Rounds of a machine's in-use animation left (the X-ray's <c>length</c>).</summary>
+    private decimal _machineRounds;
 
     private void WalkBackToScreen(Simulation simulation, Humanoid humanoid, RoomObject screen)
     {
@@ -2045,6 +2081,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteBool(HasVomited);
         writer.WriteBool(IsNeedingToilet);
         writer.WriteByte((byte)GoingToToilet);
+        writer.WriteDecimal(_machineRounds);
         writer.WriteInt32(ToiletObjectId);
         writer.WriteInt32(_looRounds);
         writer.WriteInt32(_sinkWait);
@@ -2132,6 +2169,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.IsNeedingToilet = reader.ReadBool();
         var toilet = reader.ReadByte();
         patient.GoingToToilet = toilet <= (byte)ToiletVisit.Yes ? (ToiletVisit)toilet : throw new InvalidDataException($"Unknown toilet visit {toilet}.");
+        patient._machineRounds = reader.ReadDecimal();
         patient.ToiletObjectId = reader.ReadInt32();
         patient._looRounds = reader.ReadInt32();
         patient._sinkWait = reader.ReadInt32();

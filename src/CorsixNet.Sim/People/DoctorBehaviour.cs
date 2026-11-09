@@ -30,6 +30,9 @@ public enum DoctorPhase : byte
     /// <summary>In general diagnosis: meandering about the room until a patient has undressed.</summary>
     Waiting,
 
+    /// <summary>In the X-ray room: at the radiation shield's console while the patient is X-rayed.</summary>
+    UsingShield,
+
     /// <summary>In the research department: walking to a desk, cabinet, computer or atom analyser.</summary>
     WalkingToResearchObject,
 
@@ -156,6 +159,13 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 else
                 {
                     Meander.Update(simulation, humanoid);
+                }
+
+                break;
+            case DoctorPhase.UsingShield:
+                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+                {
+                    Wait();
                 }
 
                 break;
@@ -381,6 +391,21 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         {
             Wait();
         }
+        else if (Phase == DoctorPhase.UsingShield && RoomId == room.Id)
+        {
+            // after_use_xray: the doctor gets up from the console (its use is interrupted) and meanders.
+            Use?.Interrupt();
+        }
+    }
+
+    /// <summary><c>XRayRoom:commandEnteringPatient</c>: both are ready, so the doctor sits at the radiation shield's console.</summary>
+    internal void StartShield(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (Phase == DoctorPhase.AtTrolley && RoomId == room.Id && RoomVisits.FindObject(simulation, room.Id, "radiation_shield") is { } shield)
+        {
+            Phase = DoctorPhase.UsingShield;
+            Use = ObjectUse.Start(simulation, humanoid, shield);
+        }
     }
 
     /// <summary>Whether the room's patient is on their way to the trolley, waiting at it or lying on it.</summary>
@@ -403,9 +428,9 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     {
         Use = null;
         Phase = DoctorPhase.WalkingToTrolley;
-        if (RoomVisits.ExaminingObject(simulation, room) is { } trolley)
+        if (RoomVisits.DoctorStation(simulation, room) is { } station)
         {
-            humanoid.WalkTo(simulation, RoomVisits.SecondaryUseTile(simulation, trolley));
+            humanoid.WalkTo(simulation, station);
         }
     }
 
