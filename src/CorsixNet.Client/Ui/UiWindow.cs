@@ -2,6 +2,7 @@ using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Client.Ui;
 
@@ -84,6 +85,9 @@ internal interface IWindowHost
 
     /// <summary>Moves the view to a tile.</summary>
     void CenterOn(TilePosition tile);
+
+    /// <summary>Puts a candidate for hire on the cursor, to be placed in the hospital with a click (CorsixTH's UIPlaceStaff).</summary>
+    void StartHiring(StaffClass staffClass, int index);
 }
 
 /// <summary>

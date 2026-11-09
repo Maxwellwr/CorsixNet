@@ -38,7 +38,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// Keys: arrows/WASD, screen edges or right/middle-drag pan, wheel or =/− zoom, 0 original size, Alt+digit remember
 /// the view and Ctrl+digit go back to it, Home reset camera,
 /// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or quit.
-/// Clicking a member of staff, a patient, a room or a desk opens their window; C faxes.
+/// Clicking a member of staff, a patient, a room or a desk opens their window; C faxes, Y hire staff, F4 town map.
 /// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
@@ -151,6 +151,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The windows open over the map (bank, casebook, research, policy, ...).</summary>
     private readonly WindowLayer _windows;
+
+    /// <summary>The candidate for hire on the cursor, to be placed with a click.</summary>
+    private (StaffClass Class, StaffProfile Profile)? _hiring;
+
+    /// <summary>Whether a countdown ran when last looked, so that a new one opens the watch.</summary>
+    private bool _watchRan;
 
     /// <summary>The faxes waiting when last looked, so that a new one opens the faxes window.</summary>
     private HashSet<string> _seenFaxes = new(StringComparer.Ordinal);
@@ -324,7 +330,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (Pressed(Keys.Escape))
         {
-            if (_windows.Any)
+            if (_hiring is not null)
+            {
+                _hiring = null;
+            }
+            else if (_windows.Any)
             {
                 _windows.CloseTop();
             }
@@ -1460,6 +1470,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _furnishTool.Cycle(simulation.Content, backwards: shift);
         }
 
+        if (UpdateHiring(simulation, mouse))
+        {
+            return;
+        }
+
         if (_buildTool.IsActive || _furnishTool.IsActive)
         {
             // While building, the mouse belongs to the build tool; a right click (not a drag, which pans) turns objects.
@@ -1936,6 +1951,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _windows.Toggle(new FaxWindow());
         }
 
+        var watch = WatchWindow.IsRunning(Simulation!, _session.Player);
+        if (watch && !_watchRan)
+        {
+            _windows.Open(new WatchWindow());
+        }
+
+        _watchRan = watch;
+        if (pressed(Keys.Y))
+        {
+            _windows.Toggle(new HireWindow());
+            _sounds.Play("selectx.wav");
+        }
+
         if (pressed(Keys.F3) && (keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift)))
         {
             _windows.Toggle(new StaffManagementWindow());
@@ -1946,6 +1974,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         [
             (Keys.F1, () => new BankManagerWindow()),
             (Keys.F2, () => new BankStatementWindow()),
+            (Keys.F4, () => new TownMapWindow()),
             (Keys.F5, () => new CasebookWindow()),
             (Keys.F6, () => new ResearchWindow()),
             (Keys.F8, () => new GraphFiguresWindow()),
@@ -1988,6 +2017,52 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     void IWindowHost.CenterOn(TilePosition tile) => _camera.Center = Camera.TileCenter(tile.X, tile.Y);
+
+    void IWindowHost.StartHiring(StaffClass staffClass, int index)
+    {
+        _hiring = (staffClass, Simulation!.AvailableStaff(staffClass)[index]);
+        _windows.CloseAll();
+        ShowNotice("Click in the hospital to place the new member of staff; right click or Esc cancels");
+    }
+
+    /// <summary>
+    /// <c>UIPlaceStaff</c>: the candidate on the cursor is hired onto the tile clicked if they may stand there; a right
+    /// click (or Esc) puts them back on the list. A candidate gone from the list in the meantime is dropped.
+    /// </summary>
+    /// <returns>Whether a candidate is being placed, so the click was for that.</returns>
+    private bool UpdateHiring(Simulation simulation, MouseState mouse)
+    {
+        if (_hiring is not { } hiring)
+        {
+            return false;
+        }
+
+        var index = simulation.AvailableStaff(hiring.Class).ToList().IndexOf(hiring.Profile);
+        if (index < 0 || (mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released))
+        {
+            _hiring = null;
+            return true;
+        }
+
+        if (mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released && _hoveredTile is { } point)
+        {
+            var tile = new TilePosition(point.X, point.Y);
+            var problem = StaffHiring.Check(simulation, hiring.Class, index, tile, _session!.Player);
+            if (problem == StaffHireProblem.None)
+            {
+                _session.Submit(new HireStaffCommand(hiring.Class, index, tile));
+                _sounds.Play("plac_st2.wav"); // UIPlaceStaff:close
+                _hiring = null;
+            }
+            else
+            {
+                ShowNotice($"Cannot place them there: {problem}");
+                _sounds.Play("wrong2.wav");
+            }
+        }
+
+        return true;
+    }
 
     private void ShowNotice(string text)
     {
