@@ -2,7 +2,6 @@ using System.Globalization;
 using CorsixNet.Client.Maps;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
-using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -15,7 +14,7 @@ internal sealed class BankManagerWindow : UiWindow
 {
     public override string Title => "Bank manager";
 
-    public override Keys? Hotkey => Keys.F1;
+    public override string? Hotkey => "F1";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
@@ -57,7 +56,7 @@ internal sealed class BankStatementWindow : UiWindow
 {
     public override string Title => "Bank statement";
 
-    public override Keys? Hotkey => Keys.F2;
+    public override string? Hotkey => "F2";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
@@ -82,7 +81,7 @@ internal sealed class GraphFiguresWindow : UiWindow
 {
     public override string Title => "Graphs";
 
-    public override Keys? Hotkey => Keys.F8;
+    public override string? Hotkey => "F8";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {

@@ -97,6 +97,9 @@ public enum TransactionKind : byte
 
     /// <summary>The month's research costs (<c>research</c>).</summary>
     Research = 25,
+
+    /// <summary>A bonus of a tenth of a wage paid from the staff management screen (<c>personal_bonus</c>).</summary>
+    PersonalBonus = 26,
 }
 
 /// <summary>
@@ -1423,7 +1426,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Research)
+            if (kind > (byte)TransactionKind.PersonalBonus)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }

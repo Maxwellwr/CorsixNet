@@ -195,6 +195,36 @@ internal static class StaffEmployment
         humanoid.QuittingIn = QuittingDelay + simulation.Random.NextInclusive(0, QuittingSpread);
     }
 
+    /// <summary>
+    /// <c>UIStaffManagement:payBonus</c>: if the balance is more than a tenth of the wage, that tenth is paid and the
+    /// member of staff is half as happy again.
+    /// </summary>
+    /// <returns>Whether the bonus was paid.</returns>
+    internal static bool PayBonus(Simulation simulation, Humanoid humanoid)
+    {
+        var profile = humanoid.Profile!;
+        var hospital = simulation.Hospitals[humanoid.Employer];
+        var bonus = profile.Wage / 10;
+        if (hospital.Balance <= bonus)
+        {
+            return false;
+        }
+
+        Feelings.ChangeHappiness(simulation, humanoid, 0.5m);
+        hospital.Spend(simulation.Hours, bonus, TransactionKind.PersonalBonus, profile.Class.ToString());
+        return true;
+    }
+
+    /// <summary>
+    /// <c>UIStaffManagement:increaseSalary</c>: a tenth more wage (<c>Staff:increaseWage</c>), which also cancels a
+    /// pending raise request; at the highest salary the wage stays.
+    /// </summary>
+    internal static void IncreaseSalary(Simulation simulation, Humanoid humanoid)
+    {
+        IncreaseWage(simulation, humanoid, humanoid.Profile!.Wage / 10);
+        humanoid.QuittingIn = -1;
+    }
+
     /// <summary><c>Staff:increaseWage</c>: up to the highest salary, and the member of staff is happy again.</summary>
     private static void IncreaseWage(Simulation simulation, Humanoid humanoid, int amount)
     {

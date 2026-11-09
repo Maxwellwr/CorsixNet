@@ -1,7 +1,6 @@
 using System.Globalization;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
-using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -14,7 +13,7 @@ internal sealed class PolicyWindow : UiWindow
 {
     public override string Title => "Hospital policy";
 
-    public override Keys? Hotkey => Keys.F9;
+    public override string? Hotkey => "F9";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {

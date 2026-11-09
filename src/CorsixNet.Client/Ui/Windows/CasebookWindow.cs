@@ -3,7 +3,6 @@ using CorsixNet.Client.Maps;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
-using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -22,7 +21,7 @@ internal sealed class CasebookWindow : UiWindow
 
     public override string Title => "Drug casebook";
 
-    public override Keys? Hotkey => Keys.F5;
+    public override string? Hotkey => "F5";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {

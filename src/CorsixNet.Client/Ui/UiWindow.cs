@@ -1,7 +1,7 @@
 using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
-using Microsoft.Xna.Framework.Input;
+using CorsixNet.Sim.Maps;
 
 namespace CorsixNet.Client.Ui;
 
@@ -78,6 +78,12 @@ internal interface IWindowHost
 
     /// <summary>Plays one of the original's sound effects.</summary>
     void PlaySound(string name);
+
+    /// <summary>Picks a member of staff up to put them down elsewhere, as the M key does.</summary>
+    void PickUpStaff(int staffId);
+
+    /// <summary>Moves the view to a tile.</summary>
+    void CenterOn(TilePosition tile);
 }
 
 /// <summary>
@@ -91,7 +97,7 @@ internal abstract class UiWindow
     public abstract string Title { get; }
 
     /// <summary>The key that opens and closes the window, if any, shown in the title bar.</summary>
-    public virtual Keys? Hotkey => null;
+    public virtual string? Hotkey => null;
 
     /// <summary>
     /// Whether this window stands for the same dialog as <paramref name="other"/>, so that opening it again brings the

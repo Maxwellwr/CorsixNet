@@ -38,7 +38,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// Keys: arrows/WASD, screen edges or right/middle-drag pan, wheel or =/− zoom, 0 original size, Alt+digit remember
 /// the view and Ctrl+digit go back to it, Home reset camera,
 /// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or quit.
-/// F1 bank manager, F2 bank statement, F5 casebook, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
+/// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
@@ -343,7 +343,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         // The level list (F3): a click on a level starts it; a click elsewhere, F3 or Esc closes the list.
-        if (_levels.Count > 0 && Pressed(Keys.F3))
+        if (_levels.Count > 0 && Pressed(Keys.F3) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
         {
             _levelList = !_levelList;
             _roomList = false;
@@ -1369,7 +1369,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _session.Submit(new AnswerVipCommand(!shift));
         }
 
-        UpdateWindowKeys(pressed);
+        UpdateWindowKeys(keys, pressed);
 
         // Until the town map exists, T and Shift+T turn the heating up and down.
 
@@ -1536,6 +1536,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (here is not null)
             {
                 _selected = here.Id;
+                if (here.Profile is not null && here.Employer == _session.Player && !here.IsFired)
+                {
+                    // A click on a member of staff opens their window (CorsixTH's UIStaff).
+                    _windows.Open(new StaffWindow(here.Id));
+                }
             }
             else if (_selected is { } id)
             {
@@ -1897,10 +1902,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>
     /// CorsixTH's fullscreen dialogs' hotkeys (its default <c>hotkeys</c> in config_finder.lua): F1 bank manager, F2 bank
     /// statement, F5 casebook, F6 research, F8 graphs, F9 policy, each opening its window or closing it again. F3 (staff
-    /// management) stays the level list for now.
+    /// management) stays the level list for now; Shift+F3 opens staff management.
     /// </summary>
-    private void UpdateWindowKeys(Func<Keys, bool> pressed)
+    private void UpdateWindowKeys(KeyboardState keys, Func<Keys, bool> pressed)
     {
+        if (pressed(Keys.F3) && (keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift)))
+        {
+            _windows.Toggle(new StaffManagementWindow());
+            _sounds.Play("selectx.wav");
+        }
+
         (Keys Key, Func<UiWindow> Window)[] dialogs =
         [
             (Keys.F1, () => new BankManagerWindow()),
@@ -1938,6 +1949,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     void IWindowHost.Notice(string text) => ShowNotice(text);
 
     void IWindowHost.PlaySound(string name) => _sounds.Play(name);
+
+    void IWindowHost.PickUpStaff(int staffId)
+    {
+        _pickedUpStaff = staffId;
+        _sounds.Play("pickup.wav");
+        ShowNotice("Picked up; M puts them down at the cursor");
+    }
+
+    void IWindowHost.CenterOn(TilePosition tile) => _camera.Center = Camera.TileCenter(tile.X, tile.Y);
 
     private void ShowNotice(string text)
     {

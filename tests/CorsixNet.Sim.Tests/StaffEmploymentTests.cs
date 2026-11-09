@@ -176,9 +176,40 @@ public class StaffEmploymentTests
     }
 
     [Fact]
+    public void ABonusCostsATenthOfTheWageAndCheersUp()
+    {
+        var simulation = NewSimulation();
+        var doctor = Hire(simulation, StaffClass.Doctor);
+        doctor.Happiness = 0.2m;
+        var balance = simulation.Hospitals[0].Balance;
+
+        Run(simulation, new PayBonusCommand(doctor.Id));
+
+        Assert.Equal(balance - (doctor.Profile!.Wage / 10), simulation.Hospitals[0].Balance);
+        Assert.Contains(simulation.Hospitals[0].Transactions, t => t.Kind == TransactionKind.PersonalBonus);
+        Assert.True(doctor.Happiness >= 0.65m);
+    }
+
+    [Fact]
+    public void ARaiseFromTheStaffScreenAddsATenthAndAnswersARequest()
+    {
+        var simulation = NewSimulation();
+        var doctor = Hire(simulation, StaffClass.Doctor);
+        var wage = doctor.Profile!.Wage;
+        doctor.RaiseRequest = 40;
+        doctor.QuittingIn = 300;
+
+        Run(simulation, new IncreaseSalaryCommand(doctor.Id));
+
+        Assert.Equal(Math.Min(wage + (wage / 10), simulation.Rules.MaxSalary), doctor.Profile.Wage);
+        Assert.Equal(0, doctor.RaiseRequest);
+        Assert.Equal(-1, doctor.QuittingIn);
+    }
+
+    [Fact]
     public void TheCommandsAndSavesKeepItAll()
     {
-        foreach (var command in new Command[] { new FireStaffCommand(7), new AnswerRaiseCommand(8, true) })
+        foreach (var command in new Command[] { new FireStaffCommand(7), new AnswerRaiseCommand(8, true), new PayBonusCommand(9), new IncreaseSalaryCommand(10) })
         {
             using var wire = new MemoryStream();
             command.Write(new SimWriter(wire));

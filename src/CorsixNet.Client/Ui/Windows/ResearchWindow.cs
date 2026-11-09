@@ -1,7 +1,6 @@
 using System.Globalization;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Research;
-using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -14,7 +13,7 @@ internal sealed class ResearchWindow : UiWindow
 {
     public override string Title => "Research";
 
-    public override Keys? Hotkey => Keys.F6;
+    public override string? Hotkey => "F6";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
