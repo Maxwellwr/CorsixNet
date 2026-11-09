@@ -56,13 +56,19 @@ internal sealed class ObjectDrawing
     private static readonly byte[] NoLayers = [];
 
     /// <summary>
-    /// Objects drawn in two parts (CorsixTH's <c>slave_id</c>): the second part's animation, drawn from the same tile but
-    /// during the drawing pass of its own render attach tile, and whether it is mirrored, by facing.
+    /// Objects drawn in two parts (CorsixTH's <c>slave_id</c>): the second part's animation, whether it is mirrored and
+    /// the tile it is drawn from, relative to the object's tile, by facing.
     /// </summary>
+    /// <remarks>
+    /// CorsixTH creates the slave on its master's tile, which for the radiation shield is the solid footprint tile nearest
+    /// to the use position (<c>Object.processTypeDefinition</c> moves the origin there: (0, -1) in both facings). The
+    /// slave has no footprint, so its own origin is never moved and its animation keeps a zero offset: it is drawn from
+    /// the anchor of its render attach tile, in that tile's drawing pass. North: (0, -1) + (0, 2); east: (0, -1) + (1, 1).
+    /// </remarks>
     private static readonly Dictionary<string, Dictionary<Direction, (int Animation, bool Flip, (int X, int Y) Attach)>> SlaveParts = new(StringComparer.Ordinal)
     {
         // radiation_shield_b.lua: the shield's front, east (and west) 1968; north mirrors west.
-        ["radiation_shield"] = new() { [N] = (1968, true, (0, 2)), [E] = (1968, false, (1, 1)) },
+        ["radiation_shield"] = new() { [N] = (1968, true, (0, 1)), [E] = (1968, false, (1, 0)) },
     };
 
     private readonly AnimationRenderer _renderer;
@@ -93,8 +99,9 @@ internal sealed class ObjectDrawing
             return;
         }
 
-        var set = _renderer.Animations;
-        _renderer.DrawFrame(batch, set.FirstFrame(part.Animation), 32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y), NoLayers, part.Flip, tint);
+        var x = tile.X + part.Attach.X;
+        var y = tile.Y + part.Attach.Y;
+        _renderer.DrawFrame(batch, _renderer.Animations.FirstFrame(part.Animation), 32 * (x - y), 16 * (x + y), NoLayers, part.Flip, tint);
     }
 
     /// <summary>Draws an object placed on <paramref name="tile"/>.</summary>
