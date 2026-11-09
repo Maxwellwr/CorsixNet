@@ -2184,10 +2184,63 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             case "options":
                 _windows.Open(new OptionsWindow(_config, ApplyConfig));
                 break;
+            case "savereplay":
+                SaveReplay();
+                break;
+            case "replays":
+                _windows.Open(new ReplayListWindow(Path.Combine(_saves.Directory, Replay.Folder), WatchReplay));
+                break;
             case "levels" when _levels.Count > 0:
                 _levelList = true;
                 break;
         }
+    }
+
+    /// <summary>Saves the replay of the local game so far to the saves folder's replays.</summary>
+    private void SaveReplay()
+    {
+        if (_session is not LocalSession local)
+        {
+            ShowNotice("Only local games are recorded");
+            return;
+        }
+
+        var name = string.Create(CultureInfo.InvariantCulture, $"{Path.GetFileNameWithoutExtension(local.Name)} {DateTime.Now:yyyy-MM-dd HH-mm-ss}{Replay.Extension}");
+        var path = Path.Combine(_saves.Directory, Replay.Folder, name);
+        try
+        {
+            local.Recording.Finish(local.Simulation);
+            local.Recording.Save(path);
+            ShowNotice($"Saved the replay {Path.GetFileNameWithoutExtension(path)}");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowNotice($"Cannot save the replay: {e.Message}");
+        }
+    }
+
+    /// <summary>Plays a replay back in place of the game.</summary>
+    private void WatchReplay(string path)
+    {
+        ReplaySession replay;
+        try
+        {
+            replay = new ReplaySession(Path.GetFileNameWithoutExtension(path), Replay.Load(path), BaseGameContent.Create());
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
+        {
+            ShowNotice($"Cannot watch {Path.GetFileName(path)}: {e.Message}");
+            return;
+        }
+
+        _session?.Dispose();
+        replay.SetSpeed(GameSpeed.Normal);
+        _session = replay;
+        _error = null;
+        _demoPending = _demoDeskPending = _demoDiagnosisPending = _demoMachinePending = _demoToiletsPending = false;
+        _demoFurniture.Clear();
+        PrepareMapIfReady();
+        ShowNotice("Watching a replay: your commands are not taken; pick a level or load a game to play again");
     }
 
     /// <summary>CorsixTH's <c>confirmation</c> texts, S[35][index], with an English stand-in.</summary>

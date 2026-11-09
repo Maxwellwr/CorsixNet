@@ -26,7 +26,11 @@ internal sealed class LocalSession : IGameSession
         Simulation = simulation;
         _autosaves = autosaves;
         _autosaveFrequency = autosaveFrequency;
+        Recording = Replay.Start(name, simulation);
     }
+
+    /// <summary>The replay of this game so far: its start and every command given since.</summary>
+    public Replay Recording { get; }
 
     /// <summary>Why the last autosave failed, or null.</summary>
     public string? AutosaveError { get; private set; }
@@ -49,7 +53,11 @@ internal sealed class LocalSession : IGameSession
 
     public void ResumeSpeed() => _clock.Resume();
 
-    public void Submit(Command command) => Simulation.Schedule(Player, command);
+    public void Submit(Command command)
+    {
+        Recording.Record(Simulation, Player, command);
+        Simulation.Schedule(Player, command);
+    }
 
     public void Update(TimeSpan elapsed)
     {
