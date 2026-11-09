@@ -82,7 +82,7 @@ public abstract record Command
     private static CheatKind ReadCheat(SimReader reader)
     {
         var cheat = reader.ReadByte();
-        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.MaxReputation ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleEarthquakes ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
     }
 
     private static StaffClass ReadStaffClass(SimReader reader)

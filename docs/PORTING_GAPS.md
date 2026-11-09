@@ -97,7 +97,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Epidemics: contagious diseases spreading between patients, inspector, vaccination by nurses, cover-up
   fax and fine (`epidemic.lua`, `humanoid_actions/vaccinate.lua`, `entities/humanoids/inspector.lua`).
 - VIP visits and their verdict, affecting reputation (`entities/humanoids/vip.lua`, `humanoid_actions/vip_go_to_next_room.lua`).
-- Earthquakes damaging machines (`earthquake.lua`).
+- Earthquakes damaging machines and knocking patients over (`earthquake.lua`); planning, the warning and main
+  quakes and the screen shake are done (`Earthquakes`).
 - Rats, litter and vomit, hospital cleanliness (`entities/rat.lua`, `objects/litter.lua`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
@@ -159,7 +160,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 - Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
   (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`). Staff and
   patient happiness for the criteria count as full until happiness is modelled.
-- Remaining level settings: emergencies (`#emergency_control`), epidemics, VIP and earthquake schedules,
+- Remaining level settings: emergencies (`#emergency_control`), epidemics, VIP schedules,
   `computer[n]` AI players, research settings, `#gbv`
   values beyond the ones read now.
 - Original campaign (12 levels in order, difficulty choice), CorsixTH campaigns (`.campaign`),
@@ -213,9 +214,9 @@ join.
 
 - Map editor: painting floor, walls, parcels, spawn points (`resizables/map_editor.lua`).
 - Cheats dialog (`resizables/cheats_dialog.lua`) and the fax code that opens it; the cheats for research,
-  emergencies, epidemics, earthquakes, VIPs, machines and jumping to the month's or year's end, and the toggle
-  cheats (`cheats.lua`). Money, a patient, winning, losing, prices, the death count and the reputation are done
-  (`CheatCommand`), with no key in the client.
+  emergencies, epidemics, VIPs, machines and jumping to the month's or year's end, and the epidemics toggle
+  (`cheats.lua`). Money, a patient, winning, losing, prices, the death count, the reputation and the earthquake
+  cheats are done (`CheatCommand`), with no key in the client.
 - Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
   (Partial: debug keys H, Ctrl+1-4).
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.
@@ -226,5 +227,6 @@ join.
 mirroring, blueprint drawing, bitmap fonts, palette remaps.
 
 - Wall transparency (walls cut away), animated map elements.
-- Screen shake during earthquakes, smoke from broken machines, explosion animations.
+- Smoke from broken machines, explosion animations. (Screen shake during earthquakes is done; the
+  `enable_screen_shake` option is not.)
 - Video playback (Smacker intro/win/lose movies).

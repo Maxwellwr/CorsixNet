@@ -92,8 +92,9 @@ Done and committed:
   by level, setting prices in the casebook (by command only), heating and boiler breakdowns (T / Shift+T),
   patients sent to the hospitals in turn; then the monthly statistics for the graphs (PR #109) and the bank
   statement and graphs figures as text on F2 and F8 (PR #110), hiring a receptionist straight onto a desk
-  (PR #111). No game data in the cloud: real-data tests were skipped there and the client was not run, so
-  these want a look on MSI. Save format version 21.
+  (PR #111), the menu cheats as a command (PR #112), earthquakes from the level's `quake_control` with
+  screen shake (PR #113). No game data in the cloud: real-data tests were skipped there and the client was
+  not run, so these want a look on MSI. Save format version 22.
 
 Not done yet:
 

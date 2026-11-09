@@ -2,6 +2,7 @@ using System.Text;
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.People;
@@ -126,6 +127,34 @@ public class LevelRulesLoaderTests
         Assert.Equal(new ObjectAvailability(false, true), rules.Availability("desk"));
         Assert.Equal(new ObjectAvailability(true, true), rules.Availability("chair"));
         Assert.False(rules.IsRoomAvailable(BaseGameContent.GpOffice));
+    }
+
+    [Fact]
+    public void ReadsThePlannedEarthquakesUpToTheFirstMissingOne()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #quake_control[0].StartMonth.EndMonth.Severity 5 10 3
+            #quake_control[1].StartMonth.EndMonth.Severity 15 20 9
+            #quake_control[3].StartMonth.EndMonth.Severity 35 40 2
+            """));
+
+        var rules = LevelRulesLoader.FromConfig(config, null, BaseGameContent.Create());
+
+        Assert.Equal([new PlannedEarthquake(5, 10, 3), new PlannedEarthquake(15, 20, 9)], rules.Earthquakes);
+        Assert.Empty(LevelRulesLoader.FromConfig(LevelConfig.Parse([]), null, BaseGameContent.Create()).Earthquakes);
+    }
+
+    [Fact]
+    public void TheOriginalLevelsPlanEarthquakesWithTheirMonthsInOrder()
+    {
+        var install = RealGameData.Require();
+        var content = BaseGameContent.Create();
+
+        for (var level = 1; level <= 12; level++)
+        {
+            var rules = LevelRulesLoader.LoadOriginal(install, $"LEVEL.L{level}", content);
+            Assert.All(rules.Earthquakes, earthquake => Assert.True(earthquake.Severity == 0 || earthquake.StartMonth <= earthquake.EndMonth, $"Level {level}: {earthquake}"));
+        }
     }
 
     [Fact]

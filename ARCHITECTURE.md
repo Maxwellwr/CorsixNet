@@ -425,8 +425,14 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   reputation are recorded for the graphs; the first entry is the start of the game.
 - **Cheats** (`Cheats`, from `cheats.lua`). `CheatCommand` performs the menu cheats the simulation has the parts
   for: money (10,000, `TransactionKind.Cheat`), a patient, winning or losing the level, prices up or down by 50
-  points, forgetting the deaths and the reputation to 1,000. Each that works marks `Hospital.Cheated`, except
-  losing.
+  points, forgetting the deaths and the reputation to 1,000, an earthquake now and earthquakes off or on. Each
+  that works marks `Hospital.Cheated`, except losing.
+- **Earthquakes** (`Simulation.Earthquakes`, from `earthquake.lua`). The level's `quake_control` entries are
+  planned in turn: a random day of a random month of the game between their months. On that day a 25-hour
+  warning quake comes, 600 hours later the main one, which does a round of damage every 16 hours until its
+  severity is used up; then the next is planned. `Earthquakes.Shake` says how hard the client shakes the view
+  (gently in the warning and the first and last two rounds). The rounds do nothing yet: there are no machines to
+  wear and no falling animations.
 - **Room availability** (`LevelRules.IsRoomAvailable`, `Hospital.IsRoomDiscovered`, from `world.lua` and
   `hospital.lua`). A level has a room type when every object it needs has `objects[n].AvailableForLevel`; the
   hospital may build it from the start when they all have `StartAvail` too, otherwise once research discovers it.

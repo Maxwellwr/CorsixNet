@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
@@ -55,6 +56,7 @@ public sealed class LevelRules
     /// <param name="interestRate">The bank's yearly interest in hundredths of a percent (<c>InterestRate</c>).</param>
     /// <param name="overdraftDifferential">What overdrafts cost on top, likewise (<c>OverdraftDiff</c>).</param>
     /// <param name="objectAvailability">Which object types the level has and from when; an object it does not name is there from the start.</param>
+    /// <param name="earthquakes">The level's planned earthquakes in order (<c>quake_control</c>); by default none.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -68,8 +70,10 @@ public sealed class LevelRules
         EndConditions? endConditions = null,
         int interestRate = Hospital.DefaultInterestRate,
         int overdraftDifferential = Hospital.DefaultOverdraftDifferential,
-        IEnumerable<KeyValuePair<string, ObjectAvailability>>? objectAvailability = null)
+        IEnumerable<KeyValuePair<string, ObjectAvailability>>? objectAvailability = null,
+        IEnumerable<PlannedEarthquake>? earthquakes = null)
     {
+        Earthquakes = [.. earthquakes ?? []];
         InterestRate = interestRate;
         OverdraftDifferential = overdraftDifferential;
         EndConditions = endConditions ?? EndConditions.None;
@@ -119,6 +123,9 @@ public sealed class LevelRules
 
     /// <summary>Which diseases the level has, from when, and their prices.</summary>
     public DiseaseRules Diseases { get; }
+
+    /// <summary>The level's planned earthquakes, in the order they come.</summary>
+    public IReadOnlyList<PlannedEarthquake> Earthquakes { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -195,6 +202,13 @@ public sealed class LevelRules
         }
 
         Diseases.Write(writer);
+        writer.WriteInt32(Earthquakes.Count);
+        foreach (var earthquake in Earthquakes)
+        {
+            writer.WriteInt32(earthquake.StartMonth);
+            writer.WriteInt32(earthquake.EndMonth);
+            writer.WriteInt32(earthquake.Severity);
+        }
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -221,7 +235,14 @@ public sealed class LevelRules
             population[i] = new PopulationChange(reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, DiseaseRules.Read(reader), startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability);
+        var diseases = DiseaseRules.Read(reader);
+        var earthquakes = new PlannedEarthquake[reader.ReadCount(MaxEntries)];
+        for (var i = 0; i < earthquakes.Length; i++)
+        {
+            earthquakes[i] = new PlannedEarthquake(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        }
+
+        return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes);
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)
