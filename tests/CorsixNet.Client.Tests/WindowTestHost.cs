@@ -41,9 +41,7 @@ internal sealed class WindowTestHost : IWindowHost
 
     public void Close(UiWindow window) => Opened.Remove(window);
 
-    public void Notice(string text)
-    {
-    }
+    public void Notice(string text) => Notices.Add(text);
 
     public void PlaySound(string name) => Sounds.Add(name);
 
@@ -54,6 +52,12 @@ internal sealed class WindowTestHost : IWindowHost
     public void PickUpStaff(int staffId) => PickedUp = staffId;
 
     public void CenterOn(TilePosition tile) => Centered = tile;
+
+    public (StaffClass Class, int Index)? Hiring { get; private set; }
+
+    public List<string> Notices { get; } = [];
+
+    public void StartHiring(StaffClass staffClass, int index) => Hiring = (staffClass, index);
 
     /// <summary>Hires the first candidate of a class onto a tile in the hospital.</summary>
     public Humanoid Hire(StaffClass staffClass, int x = 6, int y = 6)

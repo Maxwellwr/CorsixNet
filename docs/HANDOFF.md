@@ -141,6 +141,10 @@ Done and committed:
   vaccinate), clicking a room or a reception desk its queue window (size, front/back, another room of
   the kind); C opens the faxes (VIP, emergency, epidemic, patients asking), which open by themselves
   when a new fax comes. The old keys (V, E, I, K, Q) still work.
+  Y opens the hire window (candidates by class; Hire puts them on the cursor, a click places them,
+  right click or Esc cancels; Ctrl+1-4 still hire at once), F4 the town map (counts, heating, parcels
+  with Buy), and the watch opens by itself while a countdown runs (opening, emergency, epidemic) with
+  "Open now".
 
 Not done yet:
 
