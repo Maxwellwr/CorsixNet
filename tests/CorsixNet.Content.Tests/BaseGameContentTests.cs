@@ -12,9 +12,8 @@ public class BaseGameContentTests
         var set = AnimationSet.Load(RealGameData.Require());
 
         var animations = BaseGameContent.Create().Objects
-            .SelectMany(o => new[] { o.UsageNorth, o.UsageEast })
-            .Where(table => table is not null)
-            .SelectMany(table => table!.Values)
+            .SelectMany(o => o.UsageTables)
+            .SelectMany(table => table.Values)
             .SelectMany(use => use.InUse.Append(use.Begin ?? use.InUse[0]).Append(use.Finish ?? use.InUse[0]))
             .Distinct()
             .ToList();

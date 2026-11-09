@@ -40,6 +40,9 @@ public sealed class LevelRules
     /// <summary>CorsixTH's base_config.lua's <c>gbv.ScoreMaxInc</c>.</summary>
     public const int DefaultScoreMaxIncrease = 300;
 
+    /// <summary>base_config.lua's <c>gbv.SodaPrice</c>.</summary>
+    public const int DefaultSodaPrice = 20;
+
     /// <summary>CorsixTH's fallback for <c>gbv.LandCostPerTile</c> (map.lua's <c>Map:getParcelPrice</c>).</summary>
     public const int DefaultLandCostPerTile = 25;
 
@@ -82,6 +85,7 @@ public sealed class LevelRules
     /// <param name="levelNumber">The campaign level's number, or null for another map.</param>
     /// <param name="randomEmergencies">Random emergencies instead of the planned ones, or null for none.</param>
     /// <param name="difficulty">The campaign's difficulty; medium for every other level.</param>
+    /// <param name="sodaPrice">What a can from the drinks machine costs (<c>gbv.SodaPrice</c>).</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -106,8 +110,10 @@ public sealed class LevelRules
         int scoreMaxIncrease = DefaultScoreMaxIncrease,
         int? levelNumber = null,
         RandomEmergencies? randomEmergencies = null,
-        Difficulty difficulty = Difficulty.Medium)
+        Difficulty difficulty = Difficulty.Medium,
+        int sodaPrice = DefaultSodaPrice)
     {
+        SodaPrice = sodaPrice;
         Difficulty = Enum.IsDefined(difficulty) ? difficulty : throw new ArgumentOutOfRangeException(nameof(difficulty));
         RandomEmergencies = randomEmergencies;
         ScoreMaxIncrease = scoreMaxIncrease;
@@ -202,6 +208,9 @@ public sealed class LevelRules
 
     /// <summary>The most the player's salary rises in a month (<c>gbv.ScoreMaxInc</c>); a sixth of it is the least.</summary>
     public int ScoreMaxIncrease { get; }
+
+    /// <summary>What a can from the drinks machine costs (<c>gbv.SodaPrice</c>).</summary>
+    public int SodaPrice { get; }
 
     /// <summary>The campaign level's number (CorsixTH's <c>map.level_number</c>), or null for another map.</summary>
     public int? LevelNumber { get; }
@@ -347,6 +356,7 @@ public sealed class LevelRules
         }
 
         writer.WriteByte((byte)Difficulty);
+        writer.WriteInt32(SodaPrice);
         writer.WriteBool(FreeBuild);
     }
 
@@ -386,7 +396,8 @@ public sealed class LevelRules
             Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => new PlannedCompetitor(reader.ReadInt32(), reader.ReadString())).ToList(),
             reader.ReadInt32(), reader.ReadInt32() is var level and > 0 ? level : null,
             reader.ReadBool() ? new RandomEmergencies(reader.ReadInt32(), reader.ReadInt32()) : null,
-            reader.ReadByte() is var difficulty && Enum.IsDefined((Difficulty)difficulty) ? (Difficulty)difficulty : throw new InvalidDataException($"Unknown difficulty {difficulty}."));
+            reader.ReadByte() is var difficulty && Enum.IsDefined((Difficulty)difficulty) ? (Difficulty)difficulty : throw new InvalidDataException($"Unknown difficulty {difficulty}."),
+            reader.ReadInt32());
         return reader.ReadBool() ? rules.WithFreeBuild() : rules;
     }
 

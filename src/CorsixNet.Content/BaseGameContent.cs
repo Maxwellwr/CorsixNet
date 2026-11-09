@@ -149,7 +149,10 @@ public static class BaseGameContent
             [Direction.South] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
             [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
         },
-        CorridorObject: true);
+        CorridorObject: true,
+        UsageEast: DrinksMachineUse(196, 14, 256, 11),
+        UsageSouth: DrinksMachineUse(190, 14, 250, 11),
+        UsageWest: DrinksMachineUse(192, 11, 252, 10));
 
     /// <summary>The fire extinguisher (objects/fire_extinguisher.lua), a side object.</summary>
     public static readonly ObjectDefinition FireExtinguisher = new("extinguisher", "Fire Extinguisher", ObjectType: 43, SideOrientations(Direction.North, Direction.East, Direction.South, Direction.West), CorridorObject: true);
@@ -334,6 +337,17 @@ public static class BaseGameContent
     /// doctor drawn in the animations (no secondary ones, so the doctor is hidden). Each phase lists three animations; the
     /// use plays the same position of each list. Defined for north and south.
     /// </summary>
+    /// <summary>
+    /// The drinks machine's <c>in_use</c> animations for the standard male and female patients; it has them facing south,
+    /// east and west, and north mirrors west. CorsixTH's one-pixel <c>added_animation_offset_while_in_use</c> facing north
+    /// is left out.
+    /// </summary>
+    private static Dictionary<HumanoidType, UseAnimations> DrinksMachineUse(int male, int maleLength, int female, int femaleLength) => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(null, [new(male, maleLength)], null),
+        [HumanoidType.StandardFemalePatient] = new(null, [new(female, femaleLength)], null),
+    };
+
     private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> TrolleyMultiUsage()
     {
         static MultiUseAnimations[] Variants(AnimationRef[] begin, AnimationRef[] inUse, AnimationRef[] finish)

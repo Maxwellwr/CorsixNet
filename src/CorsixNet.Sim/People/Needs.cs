@@ -12,7 +12,8 @@ namespace CorsixNet.Sim.People;
 /// A patient's thirst and need for the toilet. Each day in the hospital, except for emergency patients, thirst grows
 /// by 0.004 to 0.008 plus a fiftieth of their warmth, and the need for the toilet by 0.002 to 0.008 (0.008 to 0.026 for
 /// gut rot and the squits). Above 0.7 thirst costs happiness every day and the patient, in a corridor, looks for a drinks
-/// machine within 8 steps every few days. Buying the drink and going to the toilet are not ported yet.
+/// machine within 8 steps every few days and goes to buy a can (<see cref="PatientBehaviour.GoForDrink"/>). Going to the
+/// toilet is not ported yet.
 /// </summary>
 internal static class Needs
 {
@@ -61,6 +62,12 @@ internal static class Needs
         Feelings.ChangeHappiness(simulation, humanoid, -0.002m);
         patient.IsThirsty = true;
 
+        // Already on the way to a drinks machine.
+        if (patient.DrinksMachineId != 0)
+        {
+            return;
+        }
+
         // Don't look for a drinks machine too often.
         if (patient.DrinkTimeout > 0)
         {
@@ -76,27 +83,34 @@ internal static class Needs
             return;
         }
 
-        if (!IsMachineNear(simulation, humanoid) || simulation.Random.NextInclusive(1, 10) < 3)
+        if (FindMachineNear(simulation, humanoid) is not { } machine || simulation.Random.NextInclusive(1, 10) < 3)
         {
             patient.DrinkTimeout = simulation.Random.NextInclusive(2, 4);
+            return;
         }
 
-        // Patient:_constructGetSodaAction, walking to the machine and buying a drink, is not ported yet.
+        patient.GoForDrink(simulation, humanoid, machine);
     }
 
-    /// <summary><c>World:findObjectNear(self, "drinks_machine", 8)</c>, by CorsixTH's object visitor.</summary>
-    private static bool IsMachineNear(Simulation simulation, Humanoid humanoid)
+    /// <summary><c>World:findObjectNear(self, "drinks_machine", 8)</c>, by CorsixTH's object visitor: the nearest machine.</summary>
+    private static RoomObject? FindMachineNear(Simulation simulation, Humanoid humanoid)
     {
-        var machines = new HashSet<TilePosition>();
+        var machines = new Dictionary<TilePosition, RoomObject>();
         foreach (var entity in simulation.Entities)
         {
             if (entity is RoomObject { ObjectType: DrinksMachineType } machine)
             {
-                machines.Add(machine.Tile);
+                machines.TryAdd(machine.Tile, machine);
             }
         }
 
-        return machines.Count > 0 && ObjectVisitor.Visit(simulation.Map, humanoid.Tile, MachineDistance, machines.Contains);
+        RoomObject? found = null;
+        if (machines.Count > 0)
+        {
+            ObjectVisitor.Visit(simulation.Map, humanoid.Tile, MachineDistance, tile => machines.TryGetValue(tile, out found));
+        }
+
+        return found;
     }
 
     private static decimal Clamp(decimal value) => Math.Clamp(value, 0m, 1m);
