@@ -115,6 +115,18 @@ public sealed class Humanoid : Entity
     /// </summary>
     public bool IsSlow { get; internal set; }
 
+    /// <summary>
+    /// Whether the humanoid's steps take half the ticks (CorsixTH's <c>speed == "fast"</c>: consultants, and everyone
+    /// with the no-rest cheat).
+    /// </summary>
+    public bool IsFast { get; internal set; }
+
+    /// <summary>Whether the current step was started fast; the speed counts from the start of a step.</summary>
+    private bool _fastStep;
+
+    /// <summary>Ticks the current step takes: <see cref="TicksPerStep"/>, or half of it for a fast one.</summary>
+    public int StepTicks => _fastStep ? TicksPerStep / 2 : TicksPerStep;
+
     /// <summary>The kind of person; a patient changes it when undressing and dressing (CorsixTH's <c>setType</c>).</summary>
     public HumanoidType Type { get; internal set; }
 
@@ -356,7 +368,7 @@ public sealed class Humanoid : Entity
             }
 
             StepProgress++;
-            if (StepProgress < TicksPerStep)
+            if (StepProgress < StepTicks)
             {
                 return;
             }
@@ -388,6 +400,7 @@ public sealed class Humanoid : Entity
             _path.RemoveAt(0);
             Facing = rawDirection;
             IsStepping = true;
+            _fastStep = IsFast;
             StepProgress = 0;
             return;
         }
@@ -456,6 +469,7 @@ public sealed class Humanoid : Entity
         }
 
         IsStepping = true;
+        _fastStep = IsFast;
         StepProgress = 0;
     }
 
@@ -627,6 +641,8 @@ public sealed class Humanoid : Entity
             QuittingIn = reader.ReadInt32(),
             IsSlow = reader.ReadBool(),
             _skipStepTick = reader.ReadBool(),
+            IsFast = reader.ReadBool(),
+            _fastStep = reader.ReadBool(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -682,6 +698,8 @@ public sealed class Humanoid : Entity
         writer.WriteInt32(QuittingIn);
         writer.WriteBool(IsSlow);
         writer.WriteBool(_skipStepTick);
+        writer.WriteBool(IsFast);
+        writer.WriteBool(_fastStep);
 
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)

@@ -59,6 +59,8 @@ internal static class StaffEmployment
         {
             humanoid.RaiseTimer = -1;
         }
+
+        Tiredness.UpdateSpeed(simulation, humanoid);
     }
 
     /// <summary><c>StaffProfile:getRiseAmount</c>: a tenth more, or half-way to the fair wage if that is more.</summary>
