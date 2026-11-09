@@ -81,12 +81,12 @@ public sealed class HumanoidQueue
     }
 
     /// <summary>
-    /// <c>_getHumanoidQueuePriority</c>: a smaller number goes first; VIPs (3), then emergency patients (4), then the
+    /// <c>_getHumanoidQueuePriority</c>: a smaller number goes first; VIPs and the inspector (3), then emergency patients (4), then the
     /// other patients (6).
     /// </summary>
     private static int Priority(Humanoid? humanoid) => humanoid?.Behaviour switch
     {
-        VipBehaviour => 3,
+        VipBehaviour or InspectorBehaviour => 3,
         PatientBehaviour { EmergencyIndex: > 0 } => 4,
         _ => 6,
     };

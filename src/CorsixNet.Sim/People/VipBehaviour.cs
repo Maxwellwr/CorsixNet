@@ -219,41 +219,16 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     private void SeekReception(Simulation simulation, Humanoid humanoid)
     {
-        if (ReceptionDesks.FindBest(simulation, humanoid) is not var (desk, distance))
+        Phase = ReceptionDesks.Approach(simulation, humanoid, out var deskId) switch
         {
-            Phase = VipPhase.SeekReception;
-            return;
-        }
-
-        DeskId = desk.Id;
-        if (ReceptionDesks.CanJoinQueueAt(simulation, humanoid, humanoid.Tile, distance))
+            DeskApproach.Joined => VipPhase.InReceptionQueue,
+            DeskApproach.Walking => VipPhase.WalkingToReception,
+            _ => VipPhase.SeekReception,
+        };
+        if (deskId != 0)
         {
-            Phase = VipPhase.InReceptionQueue;
-            desk.Desk!.Queue.Push(simulation, humanoid);
-            return;
+            DeskId = deskId;
         }
-
-        // Walk towards the desk, but stop as soon as the queue may be joined (trimQueuingTail).
-        var path = new List<TilePosition>();
-        if (!simulation.Pathfinder.TryFindPath(simulation.Map, humanoid.Tile, ReceptionDesks.UseTile(simulation, desk), path))
-        {
-            Phase = VipPhase.SeekReception;
-            return;
-        }
-
-        var last = path.Count - 1;
-        for (var i = last - 1; i >= 1; i--)
-        {
-            if (!ReceptionDesks.CanJoinQueueAt(simulation, humanoid, path[i], last - i))
-            {
-                break;
-            }
-
-            path.RemoveAt(i + 1);
-        }
-
-        Phase = VipPhase.WalkingToReception;
-        humanoid.FollowPath(path);
     }
 
     /// <summary>The room went while the VIP was on the way or looking (the queue's <c>expect</c> callback).</summary>

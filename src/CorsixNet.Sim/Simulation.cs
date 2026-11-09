@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 31;
+    private const int FormatVersion = 32;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -215,6 +215,7 @@ public sealed class Simulation
             hospital.TickOpeningWatch();
             VipVisits.TickInvitation(this, hospital);
             Emergencies.Tick(this, hospital);
+            Epidemics.Tick(this, hospital);
         }
 
         // People who have left the map go now, as CorsixTH's _flushDestroyedEntities.

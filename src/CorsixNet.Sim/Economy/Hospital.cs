@@ -78,6 +78,15 @@ public enum TransactionKind : byte
 
     /// <summary>The bonus for the patients cured in an emergency (CorsixTH's <c>emergency_bonus</c>).</summary>
     EmergencyBonus = 19,
+
+    /// <summary>The fine for declaring an epidemic (CorsixTH's <c>epidemy_fine</c>); the subject is the disease.</summary>
+    EpidemicFine = 20,
+
+    /// <summary>The fine for an epidemic's cover-up that failed (<c>epidemy_coverup_fine</c>); the subject is the disease.</summary>
+    EpidemicCoverUpFine = 21,
+
+    /// <summary>The compensation for an epidemic's cover-up that worked (<c>compensation</c>); the subject is the disease.</summary>
+    EpidemicCompensation = 22,
 }
 
 /// <summary>
@@ -469,6 +478,9 @@ public sealed class Hospital
 
     /// <summary>The next emergency, the one offered or under way, and its helicopter (<see cref="Disasters.Emergencies"/>).</summary>
     public HospitalEmergencies Emergencies { get; internal set; } = new();
+
+    /// <summary>The epidemic the player knows of, the hidden ones, and the last one's outcome (<see cref="Disasters.Epidemics"/>).</summary>
+    public HospitalEpidemics Epidemics { get; internal set; } = new();
 
     /// <summary>Whether the boiler is broken, so that the radiators are stuck at full or no heat (CorsixTH's <c>heating_broke</c>).</summary>
     public bool IsHeatingBroken { get; private set; }
@@ -1229,6 +1241,7 @@ public sealed class Hospital
         Policies.Write(writer);
         Vips.Write(writer);
         Emergencies.Write(writer);
+        Epidemics.Write(writer);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)
@@ -1262,7 +1275,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.EmergencyBonus)
+            if (kind > (byte)TransactionKind.EpidemicCompensation)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -1341,6 +1354,7 @@ public sealed class Hospital
         hospital.Policies = HospitalPolicies.Read(reader);
         hospital.Vips = VipVisits.Read(reader);
         hospital.Emergencies = HospitalEmergencies.Read(reader);
+        hospital.Epidemics = HospitalEpidemics.Read(reader);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)

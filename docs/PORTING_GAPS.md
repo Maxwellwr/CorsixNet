@@ -90,7 +90,7 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   happiness, prices changing happiness, health dropping and patients giving up are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
-- Queue features: benches (priorities for VIPs and emergency patients are done), queue window to reorder or send home,
+- Queue features: benches (priorities for VIPs, the inspector and emergency patients are done), queue window to reorder or send home,
   patients rerouting to shorter queues (`queue.lua`, `dialogs/queue_dialog.lua`).
 - Patient window: health, happiness, thirst, warmth, diagnosis progress, send home, guess cure
   (`dialogs/patient.lua`).
@@ -100,8 +100,11 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting, levels with
   random emergencies (`emergency_control[0].Mean`) (`world.lua`, `objects/helicopter.lua`). The planned
   emergencies, the fax offer, helicopter, watch, bonus and reputation are done (`Emergencies`).
-- Epidemics: contagious diseases spreading between patients, inspector, vaccination by nurses, cover-up
-  fax and fine (`epidemic.lua`, `humanoid_actions/vaccinate.lua`, `entities/humanoids/inspector.lua`).
+- Epidemics: vaccination by nurses (marking patients, the nurse's call and walk, the fee), the infected mood icons,
+  the result fax, the adviser's warnings, the announcements and the inspector's, and showing the infected by cheat
+  (`epidemic.lua`, `humanoid_actions/vaccinate.lua`, `entities/humanoids/inspector.lua`). Contagious patients, the
+  spreading, the declare or cover-up fax (I / Shift+I), the cover-up watch, the inspector and the fines,
+  compensation and evacuation are done (`Epidemics`, `InspectorBehaviour`).
 - VIP visits: the faxes asking and reporting, the arrival announcement, the VIP counting litter and vomit and
   judging machines (`entities/humanoids/vip.lua`). The visit, the rating, its grant and reputation and the year's
   trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
@@ -167,7 +170,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 
 - Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
   (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`).
-- Remaining level settings: epidemics,
+- Remaining level settings:
   `computer[n]` AI players, research settings, `#gbv`
   values beyond the ones read now.
 - Original campaign (12 levels in order, difficulty choice), CorsixTH campaigns (`.campaign`),
@@ -222,9 +225,9 @@ join.
 
 - Map editor: painting floor, walls, parcels, spawn points (`resizables/map_editor.lua`).
 - Cheats dialog (`resizables/cheats_dialog.lua`) and the fax code that opens it; the cheats for research,
-  epidemics, machines and jumping to the month's or year's end, and the epidemics toggle
-  (`cheats.lua`). Money, a patient, winning, losing, prices, the death count, the reputation, the earthquake,
-  the VIP and the emergency cheats are done (`CheatCommand`), with no key in the client.
+  showing the infected, machines and jumping to the month's or year's end (`cheats.lua`). Money, a patient,
+  winning, losing, prices, the death count, the reputation, the earthquake, the VIP, the emergency, the epidemic
+  and the epidemics toggle cheats are done (`CheatCommand`), with no key in the client.
 - Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
   (Partial: debug keys H, Ctrl+1-4).
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.

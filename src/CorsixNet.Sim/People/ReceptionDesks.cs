@@ -50,6 +50,22 @@ public sealed class ReceptionDeskState
     }
 }
 
+/// <summary>How heading for reception went (<see cref="ReceptionDesks.Approach"/>).</summary>
+internal enum DeskApproach : byte
+{
+    /// <summary>No staffed desk of the hospital can be reached.</summary>
+    NoDesk,
+
+    /// <summary>A desk was found but no way to it.</summary>
+    NoPath,
+
+    /// <summary>Close enough: in the queue now.</summary>
+    Joined,
+
+    /// <summary>On the way.</summary>
+    Walking,
+}
+
 /// <summary>
 /// Reception desks: a receptionist comes to staff each one, and patients queue there when they arrive and
 /// are sent on to the GP.
@@ -174,6 +190,9 @@ public static class ReceptionDesks
                     case VipBehaviour vip:
                         vip.OnSeenAtReception();
                         break;
+                    case InspectorBehaviour inspector:
+                        inspector.OnSeenAtReception(simulation, front);
+                        break;
                 }
             }
         }
@@ -220,6 +239,48 @@ public static class ReceptionDesks
             state.ReservedForId = nearest.Id;
             ((ReceptionistBehaviour)nearest.Behaviour!).GoToDesk(simulation, nearest, desk);
         }
+    }
+
+    /// <summary>
+    /// <c>action_seek_reception_start</c> for a guest (a VIP or the inspector): to the best staffed desk, joining its
+    /// queue once close enough, or walking towards it but stopping as soon as the queue may be joined
+    /// (<c>trimQueuingTail</c>).
+    /// </summary>
+    /// <param name="deskId">The desk chosen, or 0 when there is none.</param>
+    internal static DeskApproach Approach(Simulation simulation, Humanoid humanoid, out int deskId)
+    {
+        deskId = 0;
+        if (FindBest(simulation, humanoid) is not var (desk, distance))
+        {
+            return DeskApproach.NoDesk;
+        }
+
+        deskId = desk.Id;
+        if (CanJoinQueueAt(simulation, humanoid, humanoid.Tile, distance))
+        {
+            desk.Desk!.Queue.Push(simulation, humanoid);
+            return DeskApproach.Joined;
+        }
+
+        var path = new List<TilePosition>();
+        if (!simulation.Pathfinder.TryFindPath(simulation.Map, humanoid.Tile, UseTile(simulation, desk), path))
+        {
+            return DeskApproach.NoPath;
+        }
+
+        var last = path.Count - 1;
+        for (var i = last - 1; i >= 1; i--)
+        {
+            if (!CanJoinQueueAt(simulation, humanoid, path[i], last - i))
+            {
+                break;
+            }
+
+            path.RemoveAt(i + 1);
+        }
+
+        humanoid.FollowPath(path);
+        return DeskApproach.Walking;
     }
 
     /// <summary>

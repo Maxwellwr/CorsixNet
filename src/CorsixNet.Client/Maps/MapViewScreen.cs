@@ -998,6 +998,12 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(new AnswerEmergencyCommand(!shift));
         }
 
+        // Until faxes exist, I covers up the epidemic the hospital was told of and Shift+I declares it.
+        if (pressed(Keys.I) && simulation.Hospitals[_session.Player].Epidemics.IsFaxPending)
+        {
+            _session.Submit(new AnswerEpidemicCommand(!shift));
+        }
+
         // Until faxes exist, V invites the VIP who asks to visit and Shift+V refuses them.
         if (pressed(Keys.V) && simulation.Hospitals[_session.Player].Vips.IsInvitationPending)
         {
@@ -1404,13 +1410,21 @@ internal sealed class MapViewScreen : IScreen
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
             ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
+                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{EpidemicText(simulation, simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
             : string.Empty;
 
         static string EmergencyText(Hospital hospital) => hospital.Emergencies.Current switch
         {
             { IsAccepted: false } offer => $"   EMERGENCY: {offer.Victims} with {offer.DiseaseId}, {offer.Percentage} % to cure (E accept, Shift+E refuse)",
             { } emergency => $"   EMERGENCY: cured {emergency.Cured}, lost {emergency.Killed} of {emergency.Victims}, {emergency.WatchTimer + 1}/13 left",
+            null => string.Empty,
+        };
+
+        static string EpidemicText(Simulation simulation, Hospital hospital) => hospital.Epidemics.Current switch
+        {
+            { FaxExpires: > 0 } fax => $"   EPIDEMIC of {fax.DiseaseId}: declare for {MoneyText.Format(fax.DeclareFine)} (Shift+I) or cover up (I)",
+            { IsWatchRunning: true } epidemic => $"   EPIDEMIC: {Epidemics.CountInfectedPatients(simulation, epidemic)} infected, {epidemic.WatchTimer + 1}/13 left",
+            { } => "   EPIDEMIC: the health inspector is coming",
             null => string.Empty,
         };
 

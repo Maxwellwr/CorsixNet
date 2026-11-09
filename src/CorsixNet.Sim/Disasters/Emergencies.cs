@@ -331,6 +331,12 @@ public static class Emergencies
             return false;
         }
 
+        // UIBottomPanel:canQueueFax: not while an epidemic's fax waits; the emergency is dropped (cancelFax).
+        if (hospital.Epidemics.IsFaxPending)
+        {
+            return false;
+        }
+
         emergency ??= new Emergency(random.Id, number, RandomBonus, RandomPercentage);
         if (!hospital.CaseOf(DiseaseCatalog.Find(emergency.DiseaseId)!, simulation.Rules.Diseases).Discovered)
         {
