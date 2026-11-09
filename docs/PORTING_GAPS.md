@@ -138,11 +138,11 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 **Has:** balance and transaction log per player, level costs of rooms and objects, room purchase
 rules, wages, patient payments with inflation and insurers, drug cost.
 
-- Bank manager screen (`fullscreen/bank_manager.lua`); loans, their limit, interest and overdraft interest are done
-  (L and Shift+L in the client).
-- Bank statement window showing the transaction log; F2 shows it as text for now.
-- Casebook window: per-disease prices, concentrate research, drug ratings (`fullscreen/drug_casebook.lua`).
-  Partial: prices can be set by command (`SetTreatmentPriceCommand`), but there is no window to set them.
+- The bank manager and bank statement screens as the original draws them (`fullscreen/bank_manager.lua`,
+  `bank_statement.lua`). Loans, their limit, interest and overdraft interest are done, and F1 and F2 show them as text
+  windows with buttons (`BankManagerWindow`, `BankStatementWindow`).
+- The casebook as the original draws it (`fullscreen/drug_casebook.lua`); F5 is a text window with prices to set and
+  research to concentrate (`CasebookWindow`).
 - Reputation: changes from autopsies, room explosions, the year-end award and staff kicked out;
   the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
   price, prices far from what patients expect, and the price rise above 500 are done.
@@ -150,30 +150,37 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   rats, plants, staff and patient happiness, cleanliness, emergencies, waiting times, machines and research; the
   salary ranking. The hospital's value, the year's counts, the player's salary (`Hospital.PlayerSalary`, with the
   level 3 rise and the offer on winning) and the other trophies and awards are done.
-- Town map screen (`fullscreen/town_map.lua`). Parcels nobody owns showing as grass, divider walls, buying parcels
+- Town map screen as the original draws it (`fullscreen/town_map.lua`); F4 is a text window with counts, heating and
+  parcels to buy (`TownMapWindow`). Parcels nobody owns showing as grass, divider walls, buying parcels
   (N in the client), their prices, the heating level (T in the client), the heating bill and the boiler breaking
   down are done, and so is the temperature of tiles (`th_map.cpp`'s `updateTemperatures`, `TileTemperatures`, the
-  O overlay), and people and plants feel it. The adviser's warning when the boiler breaks is not.
-- The research policy window (shares and concentrating are commands so far) (`fullscreen/research_policy.lua`).
-- Graphs window of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`); the monthly
-  figures it draws are recorded (`Hospital.Statistics`) and F8 shows them as text.
+  O overlay), and people and plants feel it, and the adviser warns when the boiler breaks.
+- The research policy screen as the original draws it (`fullscreen/research_policy.lua`); F6 sets the shares in a
+  text window (`ResearchWindow`).
+- The graphs screen with the original's sprites (`fullscreen/graphs.lua`); F8 draws the lines of the monthly figures
+  (`Hospital.Statistics`, `GraphWindow`).
 
 ## 6. Interface, windows, faxes, adviser
 
 **Has:** isometric map view, camera scroll and zoom, overlays (`--overlay`), date and speed box,
 balance in the top line, status line, build room tool and its blueprint drawing, sprite viewer,
-MMPX smoothing; everything else is debug keys.
+MMPX smoothing, and windows over the map (`Client/Ui`): text stand-ins for CorsixTH's dialogs, with buttons that
+send commands. Every window below exists in that form; what is missing is the original's look (panels, sprites,
+fonts, faces) and the details listed.
 
-- Bottom panel with its buttons, message queue and money/date display (`dialogs/bottom_panel.lua`).
-- Top menu bar (file, options, display, charts, debug) (`dialogs/menu.lua`).
-- Build room window with room list and prices, furnish corridor window, room edit panel
-  (items, confirm, pick-up, buy) (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`).
-- Hire, staff, patient, machine, queue, watch (countdown) windows (`dialogs/*.lua`).
-- Fullscreen dialogs: annual report and awards/hall of shame, bank manager, casebook, fax, graphs,
-  policy, progress report, research policy, staff management, town map (`dialogs/fullscreen/*.lua`).
-- Faxes and message icons in the bottom panel (`dialogs/message.lua`, `fullscreen/fax.lua`).
-- Adviser with speech, tips, adviser history (`dialogs/adviser.lua`, `resizables/adviser_history.lua`, `announcer.lua`).
-- Information dialogs, confirm dialogs, tip of the day (`dialogs/information.lua`, `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
+- Bottom panel as the original draws it, with message icons (`dialogs/bottom_panel.lua`); the text panel has the
+  balance, the dialogs' buttons, the faxes' count and the adviser's line.
+- Top menu bar (`dialogs/menu.lua`); Esc opens a menu window with the file items, options, charts and debug.
+- Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
+  (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
+  edit panel are text windows. Resizing a finished room or moving its door is not done.
+- Hire, staff, patient, queue and watch windows are text windows; the machine window is missing (`dialogs/*.lua`).
+- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of shame is missing.
+- Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
+- Adviser: the speaking figure and the announcer (`dialogs/adviser.lua`, `announcer.lua`); the queue, history and much
+  of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
+- Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
+  `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
 - Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips beyond the bottom panel's
   (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the cursor; the bottom panel's buttons have
   CorsixTH's `tooltip.toolbar` texts with the hotkeys file's keys); object and humanoid highlighting on hover; hover
