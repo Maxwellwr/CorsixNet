@@ -14,6 +14,7 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
@@ -74,6 +75,9 @@ public enum TransactionKind : byte
 
     /// <summary>A pleased VIP's grant (CorsixTH's <c>vip_award</c>).</summary>
     VipAward = 18,
+
+    /// <summary>The bonus for the patients cured in an emergency (CorsixTH's <c>emergency_bonus</c>).</summary>
+    EmergencyBonus = 19,
 }
 
 /// <summary>
@@ -463,6 +467,9 @@ public sealed class Hospital
     /// <summary>VIPs asking to visit, on their way and gone (<see cref="VipVisits"/>).</summary>
     public VipVisits Vips { get; internal set; } = new();
 
+    /// <summary>The next emergency, the one offered or under way, and its helicopter (<see cref="Disasters.Emergencies"/>).</summary>
+    public HospitalEmergencies Emergencies { get; internal set; } = new();
+
     /// <summary>Whether the boiler is broken, so that the radiators are stuck at full or no heat (CorsixTH's <c>heating_broke</c>).</summary>
     public bool IsHeatingBroken { get; private set; }
 
@@ -672,6 +679,12 @@ public sealed class Hospital
             ReputationChange.OverPriced => -2,
             _ => 1,
         };
+        ChangeReputation(random, amount, entry);
+    }
+
+    /// <summary><c>Hospital:changeReputation</c> by an amount, for a disease or none.</summary>
+    internal void ChangeReputation(SimRandom random, int amount, DiseaseCase? entry)
+    {
         ChangeReputation(random, amount);
         if (entry is { Reputation: { } diseaseReputation })
         {
@@ -1215,6 +1228,7 @@ public sealed class Hospital
         writer.WriteInt32(OpenTickTimer);
         Policies.Write(writer);
         Vips.Write(writer);
+        Emergencies.Write(writer);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)
@@ -1248,7 +1262,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.VipAward)
+            if (kind > (byte)TransactionKind.EmergencyBonus)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -1326,6 +1340,7 @@ public sealed class Hospital
         hospital.OpenTickTimer = reader.ReadInt32();
         hospital.Policies = HospitalPolicies.Read(reader);
         hospital.Vips = VipVisits.Read(reader);
+        hospital.Emergencies = HospitalEmergencies.Read(reader);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)

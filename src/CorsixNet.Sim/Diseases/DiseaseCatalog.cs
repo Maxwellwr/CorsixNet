@@ -25,18 +25,21 @@ public static class DiseaseCatalog
     [
         new("alien_dna", 8, 2000)
         {
+            EmergencyNumber = 16,
             VisualsId = 6,
             OnlyEmergency = true,
             TreatmentRooms = ["dna_fixer"],
         },
         new("baldness", 10, 950)
         {
+            EmergencyNumber = 18,
             VisualsId = 8,
             DiagnosisRooms = ["x_ray", "blood_machine", "scanner"],
             TreatmentRooms = ["hair_restoration"],
         },
         new("bloaty_head", 2, 850)
         {
+            EmergencyNumber = 18,
             VisualsId = 0,
             Look = PatientLook.BloatyHead,
             DiagnosisRooms = ["general_diag", "x_ray", "cardiogram", "scanner"],
@@ -44,6 +47,7 @@ public static class DiseaseCatalog
         },
         new("broken_heart", 20, 1900)
         {
+            EmergencyNumber = 6,
             NonVisualsId = 4,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -51,6 +55,7 @@ public static class DiseaseCatalog
         },
         new("broken_wind", 17, 1300)
         {
+            EmergencyNumber = 14,
             NonVisualsId = 1,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -58,6 +63,7 @@ public static class DiseaseCatalog
         },
         new("chronic_nosehair", 25, 800)
         {
+            EmergencyNumber = 18,
             NonVisualsId = 9,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -65,6 +71,7 @@ public static class DiseaseCatalog
         },
         new("corrugated_ankles", 24, 800)
         {
+            EmergencyNumber = 18,
             NonVisualsId = 8,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -72,6 +79,7 @@ public static class DiseaseCatalog
         },
         new("discrete_itching", 11, 700)
         {
+            EmergencyNumber = 15,
             VisualsId = 9,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -79,6 +87,7 @@ public static class DiseaseCatalog
         },
         new("fake_blood", 27, 800)
         {
+            EmergencyNumber = 18,
             NonVisualsId = 11,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -86,12 +95,14 @@ public static class DiseaseCatalog
         },
         new("fractured_bones", 9, 450)
         {
+            EmergencyNumber = 16,
             VisualsId = 7,
             DiagnosisRooms = ["scanner"],
             TreatmentRooms = ["fracture_clinic"],
         },
         new("gastric_ejections", 28, 650)
         {
+            EmergencyNumber = 15,
             NonVisualsId = 12,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -99,6 +110,7 @@ public static class DiseaseCatalog
         },
         new("golf_stones", 34, 1600)
         {
+            EmergencyNumber = 6,
             NonVisualsId = 18,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -106,6 +118,7 @@ public static class DiseaseCatalog
         },
         new("gut_rot", 33, 350)
         {
+            EmergencyNumber = 14,
             NonVisualsId = 17,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -113,12 +126,14 @@ public static class DiseaseCatalog
         },
         new("hairyitis", 3, 1150)
         {
+            EmergencyNumber = 12,
             VisualsId = 1,
             DiagnosisRooms = ["x_ray", "scanner"],
             TreatmentRooms = ["electrolysis"],
         },
         new("heaped_piles", 32, 400)
         {
+            EmergencyNumber = 14,
             NonVisualsId = 16,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -126,6 +141,7 @@ public static class DiseaseCatalog
         },
         new("infectious_laughter", 23, 1500)
         {
+            EmergencyNumber = 18,
             NonVisualsId = 7,
             IsContagious = true,
             DiagnosisRooms = ["cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -133,12 +149,14 @@ public static class DiseaseCatalog
         },
         new("invisibility", 5, 1400)
         {
+            EmergencyNumber = 18,
             VisualsId = 3,
             DiagnosisRooms = ["x_ray", "scanner"],
             TreatmentRooms = ["pharmacy"],
         },
         new("iron_lungs", 30, 1700)
         {
+            EmergencyNumber = 5,
             NonVisualsId = 14,
             IsContagious = true,
             DiagnosisRooms = ["x_ray", "cardiogram", "blood_machine"],
@@ -146,12 +164,14 @@ public static class DiseaseCatalog
         },
         new("jellyitis", 12, 1000)
         {
+            EmergencyNumber = 12,
             VisualsId = 10,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
             TreatmentRooms = ["jelly_vat"],
         },
         new("kidney_beans", 19, 1050)
         {
+            EmergencyNumber = 5,
             NonVisualsId = 3,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -159,18 +179,21 @@ public static class DiseaseCatalog
         },
         new("king_complex", 4, 1600)
         {
+            EmergencyNumber = 18,
             VisualsId = 2,
             DiagnosisRooms = ["x_ray", "scanner"],
             TreatmentRooms = ["psych"],
         },
         new("pregnant", 14, 200)
         {
+            EmergencyNumber = 8,
             VisualsId = 12,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
             TreatmentRooms = ["ward", "operating_theatre"],
         },
         new("ruptured_nodules", 21, 1600)
         {
+            EmergencyNumber = 6,
             NonVisualsId = 5,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -178,18 +201,21 @@ public static class DiseaseCatalog
         },
         new("serious_radiation", 6, 1800)
         {
+            EmergencyNumber = 18,
             VisualsId = 4,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
             TreatmentRooms = ["decontamination"],
         },
         new("slack_tongue", 7, 900)
         {
+            EmergencyNumber = 18,
             VisualsId = 5,
             DiagnosisRooms = ["x_ray", "scanner"],
             TreatmentRooms = ["slack_tongue"],
         },
         new("sleeping_illness", 13, 750)
         {
+            EmergencyNumber = 18,
             VisualsId = 11,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -197,6 +223,7 @@ public static class DiseaseCatalog
         },
         new("spare_ribs", 18, 1100)
         {
+            EmergencyNumber = 4,
             NonVisualsId = 2,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -204,6 +231,7 @@ public static class DiseaseCatalog
         },
         new("sweaty_palms", 31, 600)
         {
+            EmergencyNumber = 14,
             NonVisualsId = 15,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -211,6 +239,7 @@ public static class DiseaseCatalog
         },
         new("the_squits", 29, 400)
         {
+            EmergencyNumber = 18,
             NonVisualsId = 13,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -218,6 +247,7 @@ public static class DiseaseCatalog
         },
         new("third_degree_sideburns", 26, 550)
         {
+            EmergencyNumber = 13,
             NonVisualsId = 10,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -225,12 +255,14 @@ public static class DiseaseCatalog
         },
         new("transparency", 15, 800)
         {
+            EmergencyNumber = 12,
             VisualsId = 13,
             DiagnosisRooms = ["scanner"],
             TreatmentRooms = ["pharmacy"],
         },
         new("tv_personalities", 22, 800)
         {
+            EmergencyNumber = 14,
             NonVisualsId = 6,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -238,6 +270,7 @@ public static class DiseaseCatalog
         },
         new("uncommon_cold", 16, 300)
         {
+            EmergencyNumber = 18,
             NonVisualsId = 0,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
@@ -245,6 +278,7 @@ public static class DiseaseCatalog
         },
         new("unexpected_swelling", 35, 500)
         {
+            EmergencyNumber = 5,
             NonVisualsId = 19,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],

@@ -168,6 +168,20 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsThePlannedEmergenciesSteppingOverOneMissingNumber()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #emergency_control[0].StartMonth.EndMonth.Min.Max.Illness.PercWin.Bonus 4 5 4 6 16 75 400
+            #emergency_control[2].StartMonth.EndMonth.Min.Max.Illness.PercWin.Bonus 8 10 3 5 32 75 500
+            """));
+
+        var emergencies = LevelRulesLoader.FromConfig(config, null, BaseGameContent.Create()).Emergencies;
+
+        Assert.Equal([new PlannedEmergency(0, 4, 5, 4, 6, 16, 75, 400), new PlannedEmergency(2, 8, 10, 3, 5, 32, 75, 500)], emergencies);
+        Assert.Empty(LevelRulesLoader.FromConfig(LevelConfig.Parse([]), null, BaseGameContent.Create()).Emergencies);
+    }
+
+    [Fact]
     public void TheOriginalLevelsPlanEarthquakesWithTheirMonthsInOrder()
     {
         var install = RealGameData.Require();

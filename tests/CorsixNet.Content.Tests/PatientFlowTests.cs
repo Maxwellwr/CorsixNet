@@ -458,7 +458,7 @@ public class PatientFlowTests
     }
 
     /// <summary>A pharmacy east of the GP's office, with a nurse.</summary>
-    private static void BuildPharmacy(Simulation simulation)
+    internal static void BuildPharmacy(Simulation simulation)
     {
         Run(simulation, new BuildRoomCommand(new RoomPlan("pharmacy", PharmacyArea, new DoorPlacement(new(13, PharmacyArea.Bottom), EdgeOrientation.North))));
         var room = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "pharmacy");

@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 30;
+    private const int FormatVersion = 31;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -74,6 +74,7 @@ public sealed class Simulation
 
             _hospitals[player].ScheduleNextDisaster(Random);
             _hospitals[player].Vips.ScheduleNext(Random, Rules.MayorLaunch, today: 0);
+            Emergencies.Start(this, _hospitals[player]);
 
             // CorsixTH's Hospital:Hospital: the rooms of the level whose objects are all there from the start.
             foreach (var room in Content.Rooms)
@@ -213,6 +214,7 @@ public sealed class Simulation
         {
             hospital.TickOpeningWatch();
             VipVisits.TickInvitation(this, hospital);
+            Emergencies.Tick(this, hospital);
         }
 
         // People who have left the map go now, as CorsixTH's _flushDestroyedEntities.
@@ -685,6 +687,13 @@ public sealed class Simulation
         }
 
         Earthquakes.OnEndDay(date);
+
+        // World:onEndDay: then perhaps an emergency.
+        foreach (var hospital in _hospitals)
+        {
+            Emergencies.OnEndDay(this, hospital);
+        }
+
         Arrivals.OnEndDay(this);
         if (!date.IsLastDayOfMonth)
         {

@@ -48,6 +48,9 @@ public sealed class DiseaseDefinition
     /// <summary>Whether patients only come with it in emergencies (alien DNA, as CorsixTH's default config).</summary>
     public bool OnlyEmergency { get; init; }
 
+    /// <summary>At most this many patients come with it in an emergency (<c>emergency_number</c>); 0 for pseudo diseases.</summary>
+    public int EmergencyNumber { get; init; }
+
     /// <summary>Whether the disease spreads in epidemics.</summary>
     public bool IsContagious { get; init; }
 

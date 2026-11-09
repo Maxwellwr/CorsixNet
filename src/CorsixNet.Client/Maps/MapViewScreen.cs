@@ -67,6 +67,9 @@ internal sealed class MapViewScreen : IScreen
     /// <summary>How long a notice such as "not enough money" stays in the status line.</summary>
     private const int NoticeMilliseconds = 4000;
 
+    /// <summary>The emergency helicopter (CorsixTH's objects/helicopter.lua).</summary>
+    private const int HelicopterAnimation = 2456;
+
     /// <summary>Room door animations from CorsixTH's <c>objects/door.lua</c>.</summary>
     private const int RoomDoorNorth = 104;
     private const int RoomDoorWest = 106;
@@ -989,6 +992,12 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(shift ? new RepayCommand(ctrl) : new BorrowCommand(ctrl));
         }
 
+        // Until faxes exist, E accepts the emergency offered and Shift+E refuses it.
+        if (pressed(Keys.E) && simulation.Hospitals[_session.Player].Emergencies.Current is { IsAccepted: false })
+        {
+            _session.Submit(new AnswerEmergencyCommand(!shift));
+        }
+
         // Until faxes exist, V invites the VIP who asks to visit and Shift+V refuses them.
         if (pressed(Keys.V) && simulation.Hospitals[_session.Player].Vips.IsInvitationPending)
         {
@@ -1237,8 +1246,42 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
+    /// <summary>
+    /// The emergency helicopter (CorsixTH's objects/helicopter.lua, animation 2456) on the tile south of the heliport:
+    /// hidden on its way, then 600 pixels up coming down 10 a tick, landed, and going up again.
+    /// </summary>
+    private void DrawHelicopter(SpriteBatch batch, Simulation simulation, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (_session is not { } session || simulation.Hospitals[session.Player].Emergencies.HelicopterPhase is not { } phase || phase < 0)
+        {
+            return;
+        }
+
+        var heliport = simulation.Map.GetHeliportTile(session.Player);
+        if (tile != heliport with { Y = heliport.Y + 1 })
+        {
+            return;
+        }
+
+        var height = phase switch
+        {
+            < 60 => 600 - (10 * phase),
+            < 87 => 0,
+            _ => 10 * (phase - 87),
+        };
+        var set = _animations.Animations;
+        var first = set.FirstFrame(HelicopterAnimation);
+        var frame = set.Advance(first, (int)(simulation.Tick % set.Length(first)));
+        _animations.DrawFrame(batch, frame, anchorX, anchorY - height, NoLayers, flipHorizontally: false);
+    }
+
     private void DrawEntities(SpriteBatch batch, TilePosition tile, int anchorX, int anchorY)
     {
+        if (Simulation is { } helicopterSimulation)
+        {
+            DrawHelicopter(batch, helicopterSimulation, tile, anchorX, anchorY);
+        }
+
         if (Simulation is not { } simulation || !_entitiesByTile.TryGetValue(tile, out var list))
         {
             return;
@@ -1361,8 +1404,15 @@ internal sealed class MapViewScreen : IScreen
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
             ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
+                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
             : string.Empty;
+
+        static string EmergencyText(Hospital hospital) => hospital.Emergencies.Current switch
+        {
+            { IsAccepted: false } offer => $"   EMERGENCY: {offer.Victims} with {offer.DiseaseId}, {offer.Percentage} % to cure (E accept, Shift+E refuse)",
+            { } emergency => $"   EMERGENCY: cured {emergency.Cured}, lost {emergency.Killed} of {emergency.Victims}, {emergency.WatchTimer + 1}/13 left",
+            null => string.Empty,
+        };
 
         static string VipText(Hospital hospital) => hospital.Vips.IsInvitationPending ? $"   VIP {hospital.Vips.InvitedName} asks to visit (V invite, Shift+V refuse)" : string.Empty;
 

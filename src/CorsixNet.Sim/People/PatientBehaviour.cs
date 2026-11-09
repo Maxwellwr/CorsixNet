@@ -4,6 +4,7 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Calendar;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
@@ -211,6 +212,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     public bool IsSetToDie { get; private set; }
 
+    /// <summary>Which of an emergency's patients this is, from 1, or 0 for none (CorsixTH's <c>is_emergency</c>).</summary>
+    public int EmergencyIndex { get; private set; }
+
+    /// <summary>Whether the patient was cured (CorsixTH's <c>cured</c>).</summary>
+    public bool IsCured { get; private set; }
+
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
         // Patient:tick: out of rooms and doorways, a patient whose health ran out dies.
@@ -324,6 +331,39 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         _availableDiagnosisRooms.Clear();
         _availableDiagnosisRooms.AddRange(disease.DiagnosisRooms);
         InsuranceCompany = insuranceCompany;
+    }
+
+    /// <summary>
+    /// <c>Helicopter:spawnPatient</c>: an emergency patient comes diagnosed and heads straight for the last room of the
+    /// treatment, unless they find its price too high and go home.
+    /// </summary>
+    internal void StartEmergency(Simulation simulation, Humanoid humanoid, int index)
+    {
+        EmergencyIndex = index;
+        DiagnosisProgress = 1000;
+        var disease = Disease!;
+        PatientCare.SetDiagnosed(simulation, humanoid, this, disease);
+        CureRoomsVisited = Math.Max(disease.TreatmentRooms.Count - 1, 0);
+        if (!PatientCare.AgreesToPay(simulation, humanoid, this, disease))
+        {
+            GoHome(simulation, humanoid, ReputationChange.OverPriced);
+            return;
+        }
+
+        Seeking = RoomSeek.Treatment;
+        Phase = PatientPhase.SeekRoom;
+    }
+
+    /// <summary>
+    /// <c>Patient:setToDying</c> from <c>Hospital:resolveEmergency</c>: an emergency patient not cured, dead or going home
+    /// when time is up will die.
+    /// </summary>
+    internal void SetToDieUnlessCuredOrLeaving()
+    {
+        if (!IsCured && Phase != PatientPhase.GoingHome && Next != AfterRoom.Die)
+        {
+            IsSetToDie = true;
+        }
     }
 
     /// <summary>
@@ -884,6 +924,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     internal void Cure()
     {
         Health = 1m;
+        IsCured = true;
 
         // Patient:die does nothing for a cured patient.
         IsSetToDie = false;
@@ -933,6 +974,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         IsSetToDie = false;
         var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
         PatientCare.RecordDeath(simulation, hospital, Disease is { } disease ? hospital.CaseOf(disease, simulation.Rules.Diseases) : null);
+        if (EmergencyIndex > 0)
+        {
+            Emergencies.PatientDone(simulation, hospital, cured: false);
+        }
+
         LeaveQueue(simulation, humanoid);
 
         // Falling down and the trip to heaven or hell are not animated yet: the patient is gone.
@@ -1003,6 +1049,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         MultiObjectUse.WriteOptional(writer, TrolleyUse);
         writer.WriteDecimal(Health);
         writer.WriteBool(IsSetToDie);
+        writer.WriteInt32(EmergencyIndex);
+        writer.WriteBool(IsCured);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -1047,6 +1095,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
 
         patient.IsSetToDie = reader.ReadBool();
+        patient.EmergencyIndex = reader.ReadInt32();
+        patient.IsCured = reader.ReadBool();
         return patient;
     }
 }

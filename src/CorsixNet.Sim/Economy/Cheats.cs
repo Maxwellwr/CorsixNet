@@ -1,6 +1,6 @@
 // The menu cheats that the simulation has the parts for, ported from CorsixTH CorsixTH/Lua/cheats.lua
 // (Cheats:performCheat, announceCheat, cheatMoney, cheatPatient, cheatLose, cheatWin, cheatIncreasePrices,
-// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip) and dialogs/resizables/cheats_dialog.lua
+// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip, cheatEmergency) and dialogs/resizables/cheats_dialog.lua
 // (UICheats:buttonClicked).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -41,6 +41,9 @@ public enum CheatKind : byte
 
     /// <summary><c>vip</c>: a VIP asks to visit now (<c>Hospital:createVip</c>), even if one is already on the way.</summary>
     Vip = 11,
+
+    /// <summary><c>emergency</c>: a random emergency is offered now; not without a heliport, a staffed desk or a known disease.</summary>
+    Emergency = 12,
 }
 
 /// <summary>
@@ -48,7 +51,7 @@ public enum CheatKind : byte
 /// (<c>Cheats:announceCheat</c>), except losing the level.
 /// </summary>
 /// <remarks>
-/// The other cheats wait for what they act on: research, emergencies, epidemics, machines, and
+/// The other cheats wait for what they act on: research, epidemics, machines, and
 /// jumping to the end of the month or year.
 /// </remarks>
 public static class Cheats
@@ -106,6 +109,13 @@ public static class Cheats
                 break;
             case CheatKind.Vip:
                 VipVisits.Invite(simulation, hospital);
+                break;
+            case CheatKind.Emergency:
+                if (!Disasters.Emergencies.CreateRandom(simulation, hospital))
+                {
+                    return;
+                }
+
                 break;
             default:
                 return;
