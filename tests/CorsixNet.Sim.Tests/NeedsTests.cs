@@ -47,6 +47,32 @@ public class NeedsTests
     }
 
     [Fact]
+    public void EachDayShowsWhetherThePatientIsSadAndAddsToTheHealthGraph()
+    {
+        var simulation = NewSimulation();
+        var (humanoid, patient) = AddPatient(simulation, "uncommon_cold");
+        humanoid.Happiness = 0.29m;
+
+        Feelings.OnEndDay(simulation, humanoid);
+
+        // The mood is set before the day changes happiness; health goes into the graph before the day's loss.
+        Assert.True(patient.IsSad);
+        Assert.Equal([0.9m], patient.HealthHistory);
+        Assert.Equal(0.896m, patient.Health);
+
+        for (var day = 0; day < 25; day++)
+        {
+            humanoid.Happiness = 0.3m;
+            Feelings.OnEndDay(simulation, humanoid);
+        }
+
+        Assert.False(patient.IsSad);
+        Assert.Equal(PatientBehaviour.HealthHistorySize, patient.HealthHistory.Count);
+        Assert.Equal(0.9m - (6 * 0.004m), patient.HealthHistory[0]);
+        Assert.Equal(0.9m - (25 * 0.004m), patient.HealthHistory[^1]);
+    }
+
+    [Fact]
     public void AThirstyPatientIsUnhappyAndLooksForADrinksMachineEveryFewDays()
     {
         var simulation = NewSimulation();

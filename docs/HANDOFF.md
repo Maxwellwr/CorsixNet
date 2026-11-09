@@ -127,8 +127,9 @@ Done and committed:
   shift_scroll_speed and the growing multiplier, the wheel zooming with momentum through zoom_speed, and
   prevent_edge_scrolling (PR #160). Camera hotkeys: = and - zoom (Shift five times as far), 0 original
   size, Alt+digit remembers the view and Ctrl+0, Ctrl+5-9 recall it, as Ctrl+1-4 still hire (PR #161).
-  No game data in the cloud: real-data tests were skipped there and the client was not run, so these
-  want a look on MSI. Save format version 49.
+  The patient window's data: the health graph's last 20 days, the treatment history (rooms, diagnosis,
+  cure) and the sad mood (PR #162). No game data in the cloud: real-data tests were skipped there and
+  the client was not run, so these want a look on MSI. Save format version 50.
 
 Not done yet:
 
