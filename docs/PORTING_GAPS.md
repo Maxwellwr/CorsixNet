@@ -100,11 +100,12 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting, levels with
   random emergencies (`emergency_control[0].Mean`) (`world.lua`, `objects/helicopter.lua`). The planned
   emergencies, the fax offer, helicopter, watch, bonus and reputation are done (`Emergencies`).
-- Epidemics: vaccination by nurses (marking patients, the nurse's call and walk, the fee), the infected mood icons,
-  the result fax, the adviser's warnings, the announcements and the inspector's, and showing the infected by cheat
-  (`epidemic.lua`, `humanoid_actions/vaccinate.lua`, `entities/humanoids/inspector.lua`). Contagious patients, the
-  spreading, the declare or cover-up fax (I / Shift+I), the cover-up watch, the inspector and the fines,
-  compensation and evacuation are done (`Epidemics`, `InspectorBehaviour`).
+- Epidemics: clicking patients to vaccinate them (J picks every infected patient for now) and the vaccination
+  cursor, vaccinating patients on benches, the infected mood icons, the result fax, the adviser's warnings, the
+  announcements and the inspector's, and showing the infected by cheat (`epidemic.lua`,
+  `entities/humanoids/inspector.lua`). Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
+  the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
+  evacuation are done (`Epidemics`, `InspectorBehaviour`).
 - VIP visits: the faxes asking and reporting, the arrival announcement, the VIP counting litter and vomit and
   judging machines (`entities/humanoids/vip.lua`). The visit, the rating, its grant and reputation and the year's
   trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).

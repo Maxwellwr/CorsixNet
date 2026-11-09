@@ -197,7 +197,7 @@ public static class RoomVisits
         var nearestDistance = 0;
         foreach (var entity in simulation.Entities)
         {
-            if (entity is not Humanoid { Behaviour: { } behaviour } staff || behaviour is not IRoomStaff { RoomId: 0 } || behaviour.Kind != rules.Staff
+            if (entity is not Humanoid { Behaviour: { } behaviour } staff || behaviour is not IRoomStaff { RoomId: 0 } || behaviour is NurseBehaviour { IsFree: false } || behaviour.Kind != rules.Staff
                 || staff.Employer != owner)
             {
                 continue;

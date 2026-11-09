@@ -1004,6 +1004,18 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(new AnswerEpidemicCommand(!shift));
         }
 
+        // Until patients can be clicked, J picks every infected patient for vaccination during a cover-up.
+        if (pressed(Keys.J) && simulation.Hospitals[_session.Player].Epidemics.Current is { IsCoverUp: true, IsWatchRunning: true } coverUp)
+        {
+            foreach (var id in coverUp.InfectedIds)
+            {
+                if (simulation.FindEntity(id) is Humanoid { Behaviour: PatientBehaviour { IsVaccinated: false, IsMarkedForVaccination: false } })
+                {
+                    _session.Submit(new VaccinateCommand(id));
+                }
+            }
+        }
+
         // Until faxes exist, V invites the VIP who asks to visit and Shift+V refuses them.
         if (pressed(Keys.V) && simulation.Hospitals[_session.Player].Vips.IsInvitationPending)
         {
@@ -1423,7 +1435,7 @@ internal sealed class MapViewScreen : IScreen
         static string EpidemicText(Simulation simulation, Hospital hospital) => hospital.Epidemics.Current switch
         {
             { FaxExpires: > 0 } fax => $"   EPIDEMIC of {fax.DiseaseId}: declare for {MoneyText.Format(fax.DeclareFine)} (Shift+I) or cover up (I)",
-            { IsWatchRunning: true } epidemic => $"   EPIDEMIC: {Epidemics.CountInfectedPatients(simulation, epidemic)} infected, {epidemic.WatchTimer + 1}/13 left",
+            { IsWatchRunning: true } epidemic => $"   EPIDEMIC: {Epidemics.CountInfectedPatients(simulation, epidemic)} infected, {epidemic.WatchTimer + 1}/13 left (J vaccinate)",
             { } => "   EPIDEMIC: the health inspector is coming",
             null => string.Empty,
         };
