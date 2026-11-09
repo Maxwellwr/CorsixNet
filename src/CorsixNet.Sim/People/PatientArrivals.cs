@@ -146,6 +146,7 @@ public sealed class PatientArrivals
         patient.Behaviour = behaviour;
         hospital.Visitors++;
         hospital.VisitorsThisYear++;
+        Disasters.Epidemics.DetermineIfContagious(simulation, hospital, patient, behaviour);
         return patient;
     }
 

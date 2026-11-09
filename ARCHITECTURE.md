@@ -476,6 +476,18 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   at the heliport; they go ahead of others in queues. A watch of 52 days runs; when it ends, or every patient is
   cured or dead, the remaining ones die unless cured, and enough cures bring the bonus and 15 reputation, too few
   cost 20 reputation. Each hospital has its own schedule.
+- **Epidemics** (`Disasters/Epidemics.cs`, `People/InspectorBehaviour.cs`, from `epidemic.lua`, `hospital.lua`'s
+  `determineIfContagious` and `addToEpidemic`, and `entities/humanoids/inspector.lua`). A patient who comes with a
+  contagious disease is contagious one time in the level's `ContRate` for it, once the game is past
+  `ReduceContMonths` and `ReduceContPeepCount` patients came; up to `EpidemicConcurrentLimit` epidemics run at once.
+  Every hour an infected patient may infect each patient on the four tiles next to them, in the same room or both
+  in corridors, each patient being tried once, so that the epidemic's infections stay under `spread_factor / 200`
+  of its tries. An epidemic stays hidden until one of its patients is diagnosed, then a fax asks whether to
+  declare it (a fine, at least 2,000, and a hundredth of it in reputation) or cover it up (the default after 480
+  hours). A cover-up runs a 100-day watch; when it ends, an uncured patient leaves the grounds or nobody is
+  infected, the health inspector comes and reports at reception (or at once without a desk): nobody infected
+  brings compensation, otherwise a fine and reputation, and from `EpidemicEvacMinimum` still infected an evacuation
+  and a third of the reputation. Vaccinated patients pass nothing on but still count as infected.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
   quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike

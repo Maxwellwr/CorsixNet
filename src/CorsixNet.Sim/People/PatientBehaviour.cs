@@ -218,6 +218,18 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>Whether the patient was cured (CorsixTH's <c>cured</c>).</summary>
     public bool IsCured { get; private set; }
 
+    /// <summary>Whether the patient has caught an epidemic's disease (CorsixTH's <c>infected</c>); a cure ends it.</summary>
+    public bool IsInfected { get; internal set; }
+
+    /// <summary>Whether the patient was vaccinated and passes the disease on no more (CorsixTH's <c>vaccinated</c>).</summary>
+    public bool IsVaccinated { get; internal set; }
+
+    /// <summary>Whether an infected patient has tried to infect this one, which happens once (<c>under_infection_attempt</c>).</summary>
+    public bool IsUnderInfectionAttempt { get; internal set; }
+
+    /// <summary>Whether the patient got past reception, so an evacuation sends them home (<c>has_passed_reception</c>).</summary>
+    public bool HasPassedReception { get; internal set; }
+
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
         // Patient:tick: out of rooms and doorways, a patient whose health ran out dies.
@@ -355,6 +367,51 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>Patient:changeDisease</c>: an undiagnosed patient catches an epidemic's disease instead of their own; the
+    /// diagnosis rooms they already went to for the old one are not visited again.
+    /// </summary>
+    internal void ChangeDisease(DiseaseDefinition disease)
+    {
+        var old = Disease;
+        var available = new List<string>();
+        foreach (var room in disease.DiagnosisRooms)
+        {
+            var visited = old is not null && old.DiagnosisRooms.Contains(room) && !_availableDiagnosisRooms.Contains(room);
+            if (!visited)
+            {
+                available.Add(room);
+            }
+        }
+
+        _availableDiagnosisRooms.Clear();
+        _availableDiagnosisRooms.AddRange(available);
+        DiseaseId = disease.Id;
+    }
+
+    /// <summary>
+    /// <c>Epidemic:evacuateHospital</c>'s <c>goHome("evacuated")</c>: the patient leaves, uncounted, unless already
+    /// leaving or dying. One in a room finishes there first (see remarks).
+    /// </summary>
+    internal void Evacuate(Simulation simulation, Humanoid humanoid)
+    {
+        if (Phase == PatientPhase.GoingHome || IsSetToDie || Next == AfterRoom.Die)
+        {
+            return;
+        }
+
+        // CorsixTH sends a patient in a room home at once; rooms here cannot be left midway yet.
+        if (IsInRoom)
+        {
+            SetNextGoHome();
+            return;
+        }
+
+        LeaveQueue(simulation, humanoid);
+        Waiting = -1;
+        GoHome(simulation, humanoid);
+    }
+
+    /// <summary>
     /// <c>Patient:setToDying</c> from <c>Hospital:resolveEmergency</c>: an emergency patient not cured, dead or going home
     /// when time is up will die.
     /// </summary>
@@ -372,6 +429,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal void OnSeenAtReception(Simulation simulation, Humanoid humanoid)
     {
+        HasPassedReception = true;
         TargetId = 0;
         Waiting = -1;
         Seeking = RoomSeek.Gp;
@@ -925,6 +983,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     {
         Health = 1m;
         IsCured = true;
+        IsInfected = false;
 
         // Patient:die does nothing for a cured patient.
         IsSetToDie = false;
@@ -1051,6 +1110,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteBool(IsSetToDie);
         writer.WriteInt32(EmergencyIndex);
         writer.WriteBool(IsCured);
+        writer.WriteBool(IsInfected);
+        writer.WriteBool(IsVaccinated);
+        writer.WriteBool(IsUnderInfectionAttempt);
+        writer.WriteBool(HasPassedReception);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -1097,6 +1160,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.IsSetToDie = reader.ReadBool();
         patient.EmergencyIndex = reader.ReadInt32();
         patient.IsCured = reader.ReadBool();
+        patient.IsInfected = reader.ReadBool();
+        patient.IsVaccinated = reader.ReadBool();
+        patient.IsUnderInfectionAttempt = reader.ReadBool();
+        patient.HasPassedReception = reader.ReadBool();
         return patient;
     }
 }

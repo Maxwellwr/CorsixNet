@@ -1,6 +1,6 @@
 // The menu cheats that the simulation has the parts for, ported from CorsixTH CorsixTH/Lua/cheats.lua
 // (Cheats:performCheat, announceCheat, cheatMoney, cheatPatient, cheatLose, cheatWin, cheatIncreasePrices,
-// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip, cheatEmergency) and dialogs/resizables/cheats_dialog.lua
+// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip, cheatEmergency, cheatEpidemic, cheatToggleEpidemic) and dialogs/resizables/cheats_dialog.lua
 // (UICheats:buttonClicked).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -44,6 +44,12 @@ public enum CheatKind : byte
 
     /// <summary><c>emergency</c>: a random emergency is offered now; not without a heliport, a staffed desk or a known disease.</summary>
     Emergency = 12,
+
+    /// <summary><c>epidemic</c>: a contagious patient comes, starting or joining an epidemic; not without a staffed desk or a contagious disease.</summary>
+    Epidemic = 13,
+
+    /// <summary><c>toggle_epidemic</c>: epidemics off, cancelling those under way, or back on.</summary>
+    ToggleEpidemics = 14,
 }
 
 /// <summary>
@@ -51,7 +57,7 @@ public enum CheatKind : byte
 /// (<c>Cheats:announceCheat</c>), except losing the level.
 /// </summary>
 /// <remarks>
-/// The other cheats wait for what they act on: research, epidemics, machines, and
+/// The other cheats wait for what they act on: research, showing the infected before an epidemic shows, machines, and
 /// jumping to the end of the month or year.
 /// </remarks>
 public static class Cheats
@@ -116,6 +122,16 @@ public static class Cheats
                     return;
                 }
 
+                break;
+            case CheatKind.Epidemic:
+                if (!Disasters.Epidemics.SpawnContagiousPatient(simulation, hospital))
+                {
+                    return;
+                }
+
+                break;
+            case CheatKind.ToggleEpidemics:
+                Disasters.Epidemics.ToggleDisabled(simulation, hospital);
                 break;
             default:
                 return;

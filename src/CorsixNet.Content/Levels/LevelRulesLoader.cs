@@ -97,7 +97,37 @@ public static partial class LevelRulesLoader
                 config.GetInt("gbv.VeryTired") ?? TirednessRules.Default.VeryTired,
                 config.GetInt("gbv.CrackUpTired") ?? TirednessRules.Default.CrackUpTired),
             config.GetInt("gbv.MayorLaunch") ?? LevelRules.DefaultMayorLaunch,
-            EmergenciesFromConfig(config));
+            EmergenciesFromConfig(config),
+            EpidemicsFromConfig(config));
+    }
+
+    /// <summary>
+    /// The epidemic settings: <c>expertise[n].ContRate</c> and <c>gbv.ContagiousSpreadFactor</c>, <c>ReduceContMonths</c>,
+    /// <c>ReduceContPeepCount</c>, <c>VacCost</c>, <c>EpidemicFine</c>, <c>EpidemicCompLo</c>, <c>EpidemicCompHi</c>,
+    /// <c>EpidemicRepLossMinimum</c>, <c>EpidemicEvacMinimum</c> and <c>EpidemicConcurrentLimit</c>, on top of
+    /// CorsixTH's base_config.lua.
+    /// </summary>
+    public static EpidemicRules EpidemicsFromConfig(LevelConfig config)
+    {
+        var defaults = EpidemicRules.Default;
+        var rates = new int[DiseaseRules.ExpertiseCount + 1];
+        for (var i = 1; i < rates.Length; i++)
+        {
+            rates[i] = config.GetInt($"expertise[{i}].ContRate") ?? 0;
+        }
+
+        return new EpidemicRules(
+            rates,
+            config.GetInt("gbv.ContagiousSpreadFactor") ?? defaults.SpreadFactor,
+            config.GetInt("gbv.ReduceContMonths") ?? defaults.ReduceContagiousMonths,
+            config.GetInt("gbv.ReduceContPeepCount") ?? defaults.ReduceContagiousPeopleCount,
+            config.GetInt("gbv.VacCost") ?? defaults.VaccinationCost,
+            config.GetInt("gbv.EpidemicFine") ?? defaults.Fine,
+            config.GetInt("gbv.EpidemicCompLo") ?? defaults.CompensationLow,
+            config.GetInt("gbv.EpidemicCompHi") ?? defaults.CompensationHigh,
+            config.GetInt("gbv.EpidemicRepLossMinimum") ?? defaults.ReputationLossMinimum,
+            config.GetInt("gbv.EpidemicEvacMinimum") ?? defaults.EvacuationMinimum,
+            config.GetInt("gbv.EpidemicConcurrentLimit") ?? defaults.ConcurrentLimit);
     }
 
     /// <summary>

@@ -30,6 +30,7 @@ internal sealed class HumanoidDrawing
         [HumanoidType.StrippedMalePatient] = (818, 820, 826, 828),
         [HumanoidType.StrippedFemalePatient] = (834, 836, 842, 844),
         [HumanoidType.Vip] = (266, 268, 274, 276),
+        [HumanoidType.Inspector] = (266, 268, 274, 276),
     };
 
     private readonly AnimationRenderer _renderer;

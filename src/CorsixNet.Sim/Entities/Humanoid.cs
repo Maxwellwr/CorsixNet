@@ -40,6 +40,9 @@ public enum HumanoidType : byte
 
     /// <summary>A VIP visiting the hospital (CorsixTH's "VIP", who looks like the inspector).</summary>
     Vip = 9,
+
+    /// <summary>The health inspector, after an epidemic's cover-up (CorsixTH's "Inspector").</summary>
+    Inspector = 10,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -739,6 +742,10 @@ public sealed class Humanoid : Entity
     /// <summary>A VIP visiting <paramref name="hospitalPlayer"/>'s hospital, who walks slowly (<c>World:spawnVIP</c>).</summary>
     public static Humanoid CreateVip(int id, TilePosition tile, int hospitalPlayer) =>
         new(id, tile, HumanoidType.Vip) { HospitalPlayer = hospitalPlayer, IsSlow = true };
+
+    /// <summary>Creates the health inspector coming to a hospital, who walks at normal speed.</summary>
+    public static Humanoid CreateInspector(int id, TilePosition tile, int hospitalPlayer) =>
+        new(id, tile, HumanoidType.Inspector) { HospitalPlayer = hospitalPlayer };
 
     /// <summary>
     /// Creates a newly hired member of staff, as CorsixTH's <c>Staff:setProfile</c> does: the type

@@ -168,6 +168,30 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsHowContagiousDiseasesAreAndTheEpidemicSettings()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #expertise[17].ContRate.Known.RschReqd 30 1 0
+            #gbv.ContagiousSpreadFactor 40
+            #gbv.EpidemicFine 3000
+            #gbv.EpidemicCompHi 9000
+            #gbv.EpidemicConcurrentLimit 2
+            """));
+
+        var epidemics = LevelRulesLoader.FromConfig(config, null, BaseGameContent.Create()).Epidemics;
+
+        Assert.Equal(30, epidemics.ContagiousRate(17));
+        Assert.Equal(0, epidemics.ContagiousRate(16));
+        Assert.Equal(40, epidemics.SpreadFactor);
+        Assert.Equal(3000, epidemics.Fine);
+        Assert.Equal(1000, epidemics.CompensationLow);
+        Assert.Equal(9000, epidemics.CompensationHigh);
+        Assert.Equal(2, epidemics.ConcurrentLimit);
+        Assert.Equal(14, epidemics.ReduceContagiousMonths);
+        Assert.Equal(50, epidemics.VaccinationCost);
+    }
+
+    [Fact]
     public void ReadsThePlannedEmergenciesSteppingOverOneMissingNumber()
     {
         var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""

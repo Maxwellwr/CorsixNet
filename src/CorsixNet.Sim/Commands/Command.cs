@@ -36,6 +36,7 @@ public enum CommandKind : ushort
     AnswerRaise = 21,
     AnswerVip = 22,
     AnswerEmergency = 23,
+    AnswerEpidemic = 24,
 }
 
 /// <summary>
@@ -82,6 +83,7 @@ public abstract record Command
             CommandKind.AnswerRaise => new AnswerRaiseCommand(reader.ReadInt32(), reader.ReadBool()),
             CommandKind.AnswerVip => new AnswerVipCommand(reader.ReadBool()),
             CommandKind.AnswerEmergency => new AnswerEmergencyCommand(reader.ReadBool()),
+            CommandKind.AnswerEpidemic => new AnswerEpidemicCommand(reader.ReadBool()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -92,7 +94,7 @@ public abstract record Command
     private static CheatKind ReadCheat(SimReader reader)
     {
         var cheat = reader.ReadByte();
-        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.Emergency ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleEpidemics ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
     }
 
     private static PolicyKind ReadPolicy(SimReader reader)
@@ -609,6 +611,19 @@ public sealed record AnswerEmergencyCommand(bool Accept) : Command
     public override void Execute(Simulation simulation, int player) => Disasters.Emergencies.Answer(simulation, player, Accept);
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteBool(Accept);
+}
+
+/// <summary>
+/// Answers the fax telling the issuing player's hospital of an epidemic (CorsixTH's <c>cover_up_epidemic</c> and
+/// <c>declare_epidemic</c> choices).
+/// </summary>
+public sealed record AnswerEpidemicCommand(bool CoverUp) : Command
+{
+    public override CommandKind Kind => CommandKind.AnswerEpidemic;
+
+    public override void Execute(Simulation simulation, int player) => Disasters.Epidemics.Answer(simulation, player, CoverUp);
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteBool(CoverUp);
 }
 
 /// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>

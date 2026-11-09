@@ -67,6 +67,7 @@ public sealed class LevelRules
     /// <param name="tiredness">When staff count as tired; by default <see cref="TirednessRules.Default"/>.</param>
     /// <param name="mayorLaunch">Days on average between VIP visits (<c>gbv.MayorLaunch</c>).</param>
     /// <param name="emergencies">The level's planned emergencies (<c>emergency_control</c>); by default none.</param>
+    /// <param name="epidemics">How contagious diseases are and the epidemics' fines; by default <see cref="EpidemicRules.Default"/>.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -85,8 +86,10 @@ public sealed class LevelRules
         int maxSalary = DefaultMaxSalary,
         TirednessRules? tiredness = null,
         int mayorLaunch = DefaultMayorLaunch,
-        IEnumerable<PlannedEmergency>? emergencies = null)
+        IEnumerable<PlannedEmergency>? emergencies = null,
+        EpidemicRules? epidemics = null)
     {
+        Epidemics = epidemics ?? EpidemicRules.Default;
         Emergencies = [.. (emergencies ?? []).OrderBy(emergency => emergency.Index)];
         MayorLaunch = mayorLaunch;
         Tiredness = tiredness ?? TirednessRules.Default;
@@ -156,6 +159,9 @@ public sealed class LevelRules
 
     /// <summary>The level's planned emergencies, by their number in the level files.</summary>
     public IReadOnlyList<PlannedEmergency> Emergencies { get; }
+
+    /// <summary>How contagious each disease is and the epidemics' settings.</summary>
+    public EpidemicRules Epidemics { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -248,6 +254,8 @@ public sealed class LevelRules
         {
             emergency.Write(writer);
         }
+
+        Epidemics.Write(writer);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -282,7 +290,7 @@ public sealed class LevelRules
         }
 
         return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32(), TirednessRules.Read(reader), reader.ReadInt32(),
-            Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => PlannedEmergency.Read(reader)).ToList());
+            Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => PlannedEmergency.Read(reader)).ToList(), EpidemicRules.Read(reader));
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)
