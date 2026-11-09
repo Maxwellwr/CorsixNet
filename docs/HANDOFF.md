@@ -103,9 +103,9 @@ Done and committed:
   PR #126), answering waiting patients' faxes (K / Shift+K / Ctrl+K, PR #127), computer opponents that
   take their turns for patients and count them as visitors (PR #128), patients dropping litter and
   people minding it (PR #129), rat holes and rats coming with litter, shot with X (PR #130), the
-  player's salary and the salary offered on winning (PR #131). No game data in the cloud: real-data
-  tests were skipped there and the client was not run, so these want a look on MSI. Save format version
-  38.
+  player's salary and the salary offered on winning (PR #131), the VIP rating counting the litter they
+  see (PR #132). No game data in the cloud: real-data tests were skipped there and the client was not
+  run, so these want a look on MSI. Save format version 39.
 
 Not done yet:
 

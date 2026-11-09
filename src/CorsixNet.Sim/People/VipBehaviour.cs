@@ -7,6 +7,7 @@
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Pathfinding;
 using CorsixNet.Sim.Serialization;
 using CorsixNet.Sim.Staff;
 
@@ -35,13 +36,21 @@ public enum VipPhase : byte
 /// with a chance, and always a research department or ward), and on leaving rate the hospital from 1 (best) to 15.
 /// </summary>
 /// <remarks>
-/// Not yet: counting litter and vomit (there is none yet, so the VIP always finds the hospital clean), machines and
-/// crashed rooms (there are none yet), the arrival announcement and the faxes.
+/// Not yet: machines and crashed rooms (there are none yet), the arrival announcement and the faxes.
 /// </remarks>
 public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
 {
     /// <summary>Ratings up to this bring a grant and more reputation.</summary>
     public const int PleasedRating = 7;
+
+    /// <summary>How far around the VIP sees litter each day (<c>findObjectNear(self, "litter", 8)</c>).</summary>
+    private const int LitterSightDistance = 8;
+
+    /// <summary>The most litter seen that still counts as a clean hospital.</summary>
+    private const int MaxCleanLitter = 10;
+
+    /// <summary>The most litter ids read back from a save.</summary>
+    private const int MaxFoundLitter = 1 << 16;
 
     /// <summary>Hours a VIP looks in at a room: CorsixTH's idle of 50, doubled by their slow animation.</summary>
     internal const int LookingHours = 100;
@@ -97,6 +106,15 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>What the rooms looked in at scored together (fire extinguishers, bins, plants).</summary>
     public int RoomEvaluation { get; private set; }
+
+    /// <summary>Pieces of rubbish the VIP has seen (CorsixTH's <c>num_vomit_noninducing</c>).</summary>
+    public int RubbishFound { get; private set; }
+
+    /// <summary>Puke, pee, dead rats and soot the VIP has seen (<c>num_vomit_inducing</c>).</summary>
+    public int VomitFound { get; private set; }
+
+    /// <summary>The litter already counted (<c>found_vomit</c>), by entity id.</summary>
+    private readonly List<int> _foundLitter = [];
 
     /// <summary>The room the VIP is going to or looking at, or the last one; 0 before the first.</summary>
     public int RoomId { get; private set; }
@@ -191,18 +209,63 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary><c>Vip:tickDay</c>: a day of standing about is over; on to the next room, or home if there is none.</summary>
     internal void OnEndDay(Simulation simulation, Humanoid humanoid)
     {
-        if (Waiting <= 0 || --Waiting > 0)
+        if (Waiting > 0 && --Waiting == 0)
+        {
+            // CorsixTH sends the VIP home without rooms, then still looks for the next room, which finds none.
+            if (!VipVisits.RoomsOf(simulation, humanoid.HospitalPlayer).Any())
+            {
+                GoHome(simulation, humanoid);
+            }
+            else
+            {
+                GetNextRoom(simulation, humanoid);
+            }
+        }
+
+        if (Phase != VipPhase.GoingHome)
+        {
+            CountLitter(simulation, humanoid);
+        }
+    }
+
+    /// <summary>
+    /// <c>Vip:tickDay</c>'s <c>findObjectNear(self, "litter", 8)</c>: the litter within 8 steps that the VIP has not seen
+    /// yet, counted as rubbish or as the worse kinds.
+    /// </summary>
+    private void CountLitter(Simulation simulation, Humanoid humanoid)
+    {
+        var litterAt = new Dictionary<TilePosition, Litter>();
+        foreach (var entity in simulation.Entities)
+        {
+            // World:getObject gives the first litter object of a tile.
+            if (entity is Litter { IsRemoved: false } litter)
+            {
+                litterAt.TryAdd(litter.Tile, litter);
+            }
+        }
+
+        if (litterAt.Count == 0)
         {
             return;
         }
 
-        if (!VipVisits.RoomsOf(simulation, humanoid.HospitalPlayer).Any())
+        ObjectVisitor.Visit(simulation.Map, humanoid.Tile, LitterSightDistance, tile =>
         {
-            GoHome(simulation, humanoid);
-            return;
-        }
+            if (litterAt.TryGetValue(tile, out var litter) && !_foundLitter.Contains(litter.Id))
+            {
+                _foundLitter.Add(litter.Id);
+                if (litter.IsRubbish)
+                {
+                    RubbishFound++;
+                }
+                else
+                {
+                    VomitFound++;
+                }
+            }
 
-        GetNextRoom(simulation, humanoid);
+            return false;
+        });
     }
 
     /// <summary><c>handleVIP</c>: reception has seen the VIP, who stands there for the rest of the day.</summary>
@@ -366,8 +429,8 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
             maxQueue = Math.Max(maxQueue, room.DoorQueue?.Count ?? 0);
         }
 
-        // 1. Litter: none to find yet, which counts as clean.
-        Rating--;
+        // 1. Litter: ten pieces or fewer seen count as clean.
+        Rating += RubbishFound + VomitFound <= MaxCleanLitter ? -1 : 1;
 
         // 2. Staff tiredness.
         var staff = StaffOf(simulation, player);
@@ -595,6 +658,13 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteTile(QueueTile);
         writer.WriteTile(QueueFace);
         writer.WriteTile(HomeTile);
+        writer.WriteInt32(RubbishFound);
+        writer.WriteInt32(VomitFound);
+        writer.WriteInt32(_foundLitter.Count);
+        foreach (var id in _foundLitter)
+        {
+            writer.WriteInt32(id);
+        }
     }
 
     internal static VipBehaviour ReadState(SimReader reader)
@@ -606,7 +676,7 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
             throw new InvalidDataException($"Unknown VIP phase {phase}.");
         }
 
-        return new VipBehaviour(name, 0)
+        var vip = new VipBehaviour(name, 0)
         {
             Phase = (VipPhase)phase,
             Rating = reader.ReadInt32(),
@@ -626,6 +696,15 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
             QueueTile = reader.ReadTile(),
             QueueFace = reader.ReadTile(),
             HomeTile = reader.ReadTile(),
+            RubbishFound = reader.ReadInt32(),
+            VomitFound = reader.ReadInt32(),
         };
+        var found = reader.ReadCount(MaxFoundLitter);
+        for (var i = 0; i < found; i++)
+        {
+            vip._foundLitter.Add(reader.ReadInt32());
+        }
+
+        return vip;
     }
 }

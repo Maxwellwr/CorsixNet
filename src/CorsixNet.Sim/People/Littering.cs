@@ -4,6 +4,7 @@
 
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Pathfinding;
 
 namespace CorsixNet.Sim.People;
 
@@ -18,12 +19,6 @@ internal static class Littering
     private const int BinDistance = 8;
 
     private const string BinType = "bin";
-
-    /// <summary>The neighbours in the order CorsixTH's pathfinder tries them: west, east, north, south.</summary>
-    private static readonly (int Dx, int Dy, TileFlags Travel)[] Neighbours =
-    [
-        (-1, 0, TileFlags.CanTravelWest), (1, 0, TileFlags.CanTravelEast), (0, -1, TileFlags.CanTravelNorth), (0, 1, TileFlags.CanTravelSouth),
-    ];
 
     /// <summary><c>Patient:setTile</c>: the patient steps onto <paramref name="tile"/>.</summary>
     internal static void OnTileEntered(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, TilePosition tile)
@@ -102,13 +97,9 @@ internal static class Littering
         return false;
     }
 
-    /// <summary>
-    /// <c>World:findObjectNear(self, "bin", 8)</c>: CorsixTH's object visitor spreads from the patient's tile over
-    /// passable tiles, not through doors, up to 8 steps, and looks for a bin on each tile next to one it reaches.
-    /// </summary>
+    /// <summary><c>World:findObjectNear(self, "bin", 8)</c>, by CorsixTH's object visitor.</summary>
     private static bool IsBinNear(Simulation simulation, TilePosition start)
     {
-        var map = simulation.Map;
         var bins = new HashSet<TilePosition>();
         foreach (var entity in simulation.Entities)
         {
@@ -118,48 +109,6 @@ internal static class Littering
             }
         }
 
-        if (bins.Count == 0)
-        {
-            return false;
-        }
-
-        // Every step costs the same, so a breadth-first search reaches the tiles in the visitor's order of distance.
-        var distances = new Dictionary<TilePosition, int> { [start] = 0 };
-        var open = new Queue<TilePosition>();
-        open.Enqueue(start);
-        while (open.Count > 0)
-        {
-            var node = open.Dequeue();
-            var distance = distances[node];
-            var flags = map[node.X, node.Y].Flags;
-            foreach (var (dx, dy, travel) in Neighbours)
-            {
-                if ((flags & travel) == 0)
-                {
-                    continue;
-                }
-
-                var next = new TilePosition(node.X + dx, node.Y + dy);
-                if (bins.Contains(next))
-                {
-                    return true;
-                }
-
-                var nextFlags = map[next.X, next.Y].Flags;
-                var throughDoor = travel switch
-                {
-                    TileFlags.CanTravelNorth => (flags & TileFlags.DoorNorth) != 0,
-                    TileFlags.CanTravelEast => (nextFlags & TileFlags.DoorWest) != 0,
-                    TileFlags.CanTravelSouth => (nextFlags & TileFlags.DoorNorth) != 0,
-                    _ => (flags & TileFlags.DoorWest) != 0,
-                };
-                if (distance < BinDistance && !throughDoor && (nextFlags & TileFlags.Passable) != 0 && distances.TryAdd(next, distance + 1))
-                {
-                    open.Enqueue(next);
-                }
-            }
-        }
-
-        return false;
+        return bins.Count > 0 && ObjectVisitor.Visit(simulation.Map, start, BinDistance, bins.Contains);
     }
 }

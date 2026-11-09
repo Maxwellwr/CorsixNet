@@ -62,6 +62,44 @@ public class VipTests
         Assert.Equal([vip.Id, first.Id, second.Id, third.Id], queue.Members);
     }
 
+    [Fact]
+    public void AVipCountsEachPieceOfLitterWithinEightStepsOnce()
+    {
+        // Vip:tickDay's findObjectNear(self, "litter", 8): a wall at x = 8 keeps the litter beyond it out of sight.
+        var map = TestMaps.FromRows(
+            "..................",
+            "........#.........",
+            "........#.........");
+        var simulation = new Simulation(map, seed: 1, rules: new LevelRules(10_000, [], []));
+        var vip = simulation.AddEntity(id => Humanoid.CreateVip(id, new TilePosition(1, 1), 0));
+        var behaviour = new VipBehaviour(1, 10);
+        vip.Behaviour = behaviour;
+
+        Litter.Drop(simulation, 0, LitterType.SodaCan, new TilePosition(3, 1), isMirrored: false);
+        Litter.Drop(simulation, 0, LitterType.Puke, new TilePosition(1, 2), isMirrored: false);
+        Litter.Drop(simulation, 0, LitterType.Paper, new TilePosition(16, 1), isMirrored: false);
+        Litter.Drop(simulation, 0, LitterType.Banana, new TilePosition(9, 2), isMirrored: false);
+
+        behaviour.OnEndDay(simulation, vip);
+        behaviour.OnEndDay(simulation, vip);
+        Assert.Equal(1, behaviour.RubbishFound);
+        Assert.Equal(1, behaviour.VomitFound);
+
+        // New litter is counted on the next day; what was seen and saved is not counted again after loading.
+        Litter.Drop(simulation, 0, LitterType.Bottle, new TilePosition(2, 0), isMirrored: false);
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var restored = Simulation.Load(stream);
+        Assert.Equal(simulation.ComputeStateHash(), restored.ComputeStateHash());
+
+        var restoredVip = restored.Entities.OfType<Humanoid>().Single(h => h.Behaviour is VipBehaviour);
+        var restoredBehaviour = (VipBehaviour)restoredVip.Behaviour!;
+        restoredBehaviour.OnEndDay(restored, restoredVip);
+        Assert.Equal(2, restoredBehaviour.RubbishFound);
+        Assert.Equal(1, restoredBehaviour.VomitFound);
+    }
+
     private static Humanoid Patient(Simulation simulation)
     {
         var patient = simulation.AddEntity(id => Humanoid.CreateRandomPatient(id, new TilePosition(1, 1), simulation.Random, 0));
