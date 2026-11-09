@@ -212,7 +212,10 @@ join.
 **Has:** sprite viewer (`--sprite-viewer`), map overlays for debugging.
 
 - Map editor: painting floor, walls, parcels, spawn points (`resizables/map_editor.lua`).
-- Cheats dialog (`cheats.lua`, `resizables/cheats_dialog.lua`).
+- Cheats dialog (`resizables/cheats_dialog.lua`) and the fax code that opens it; the cheats for research,
+  emergencies, epidemics, earthquakes, VIPs, machines and jumping to the month's or year's end, and the toggle
+  cheats (`cheats.lua`). Money, a patient, winning, losing, prices, the death count and the reputation are done
+  (`CheatCommand`), with no key in the client.
 - Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
   (Partial: debug keys H, Ctrl+1-4).
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.

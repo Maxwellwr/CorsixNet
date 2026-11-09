@@ -61,6 +61,7 @@ internal static class MoneyPanels
         TransactionKind.Overdraft => "Overdraft",
         TransactionKind.BuyLand => $"Buy parcel {transaction.Subject}",
         TransactionKind.Heating => "Heating",
+        TransactionKind.Cheat => "Cheat",
         _ => transaction.Kind.ToString(),
     };
 }

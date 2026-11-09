@@ -423,6 +423,10 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
 - **Statistics** (`Hospital.Statistics`, from `hospital.lua`). At the end of each month, after the bills and
   insurance, the month's money in and out, its wages, the balance, the visitors, cures and deaths so far and the
   reputation are recorded for the graphs; the first entry is the start of the game.
+- **Cheats** (`Cheats`, from `cheats.lua`). `CheatCommand` performs the menu cheats the simulation has the parts
+  for: money (10,000, `TransactionKind.Cheat`), a patient, winning or losing the level, prices up or down by 50
+  points, forgetting the deaths and the reputation to 1,000. Each that works marks `Hospital.Cheated`, except
+  losing.
 - **Room availability** (`LevelRules.IsRoomAvailable`, `Hospital.IsRoomDiscovered`, from `world.lua` and
   `hospital.lua`). A level has a room type when every object it needs has `objects[n].AvailableForLevel`; the
   hospital may build it from the start when they all have `StartAvail` too, otherwise once research discovers it.

@@ -30,6 +30,7 @@ public enum CommandKind : ushort
     PurchaseParcel = 15,
     SetTreatmentPrice = 16,
     SetRadiatorHeat = 17,
+    Cheat = 18,
 }
 
 /// <summary>
@@ -69,6 +70,7 @@ public abstract record Command
             CommandKind.Borrow => new BorrowCommand(reader.ReadBool()),
             CommandKind.Repay => new RepayCommand(reader.ReadBool()),
             CommandKind.PurchaseParcel => new PurchaseParcelCommand(reader.ReadInt32()),
+            CommandKind.Cheat => new CheatCommand(ReadCheat(reader)),
             CommandKind.SetRadiatorHeat => new SetRadiatorHeatCommand(reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
@@ -76,6 +78,12 @@ public abstract record Command
     }
 
     protected abstract void WriteArguments(SimWriter writer);
+
+    private static CheatKind ReadCheat(SimReader reader)
+    {
+        var cheat = reader.ReadByte();
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.MaxReputation ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+    }
 
     private static StaffClass ReadStaffClass(SimReader reader)
     {
@@ -496,4 +504,14 @@ public sealed record SetRadiatorHeatCommand(int Tenths) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Tenths);
+}
+
+/// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>
+public sealed record CheatCommand(CheatKind Cheat) : Command
+{
+    public override CommandKind Kind => CommandKind.Cheat;
+
+    public override void Execute(Simulation simulation, int player) => Cheats.Perform(simulation, player, Cheat);
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteByte((byte)Cheat);
 }
