@@ -77,7 +77,9 @@ public sealed class CustomLevelTests : IDisposable
 
         Assert.Equal(Difficulty.Hard, rules.Difficulty);
         Assert.Equal(3, rules.Staff.StartStaff.Count);
-        Assert.NotEqual(1, rules.StartCash);
+        // The campaign's cash is in HARD00.SAM's towns[5], which Hospital:Hospital only reads for a numbered level; a custom
+        // level keeps its own town.StartCash.
+        Assert.Equal(1, rules.StartCash);
     }
 
     [Fact]
