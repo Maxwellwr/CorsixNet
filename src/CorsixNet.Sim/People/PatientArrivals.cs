@@ -83,7 +83,7 @@ public sealed class PatientArrivals
             return;
         }
 
-        var count = _spawnHours[GameDate.FromHours(simulation.Tick + 1).Hour];
+        var count = _spawnHours[GameDate.FromHours(simulation.Hours + 1).Hour];
         for (var i = 0; i < count; i++)
         {
             SpawnPatient(simulation, ChooseHospital(simulation));

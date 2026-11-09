@@ -148,7 +148,7 @@ public static class StaffHiring
             StaffClass.Receptionist => new ReceptionistBehaviour(),
             _ => null,
         };
-        simulation.Hospitals[player].Spend(simulation.Tick, profile.Wage, TransactionKind.HireStaff, staffClass.ToString());
+        simulation.Hospitals[player].Spend(simulation.Hours, profile.Wage, TransactionKind.HireStaff, staffClass.ToString());
         return staff;
     }
 }

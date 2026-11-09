@@ -1,8 +1,11 @@
 // The menu cheats that the simulation has the parts for, ported from CorsixTH CorsixTH/Lua/cheats.lua
 // (Cheats:performCheat, announceCheat, cheatMoney, cheatPatient, cheatLose, cheatWin, cheatIncreasePrices,
-// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip, cheatEmergency, cheatEpidemic, cheatToggleEpidemic) and dialogs/resizables/cheats_dialog.lua
-// (UICheats:buttonClicked).
+// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip,
+// cheatEmergency, cheatEpidemic, cheatToggleEpidemic, cheatMonth, cheatYear) and
+// dialogs/resizables/cheats_dialog.lua (UICheats:buttonClicked).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
+
+using CorsixNet.Sim.Calendar;
 
 namespace CorsixNet.Sim.Economy;
 
@@ -50,6 +53,12 @@ public enum CheatKind : byte
 
     /// <summary><c>toggle_epidemic</c>: epidemics off, cancelling those under way, or back on.</summary>
     ToggleEpidemics = 14,
+
+    /// <summary><c>end_month</c>: the calendar jumps to the last hour of the month, which then ends.</summary>
+    EndMonth = 15,
+
+    /// <summary><c>end_year</c>: the calendar jumps to the last hour of the year, which then ends.</summary>
+    EndYear = 16,
 }
 
 /// <summary>
@@ -57,8 +66,7 @@ public enum CheatKind : byte
 /// (<c>Cheats:announceCheat</c>), except losing the level.
 /// </summary>
 /// <remarks>
-/// The other cheats wait for what they act on: research, showing the infected before an epidemic shows, machines, and
-/// jumping to the end of the month or year.
+/// The other cheats wait for what they act on: research, showing the infected before an epidemic shows, and machines.
 /// </remarks>
 public static class Cheats
 {
@@ -76,7 +84,7 @@ public static class Cheats
         switch (kind)
         {
             case CheatKind.Money:
-                hospital.Receive(simulation.Tick, 10_000, TransactionKind.Cheat, string.Empty);
+                hospital.Receive(simulation.Hours, 10_000, TransactionKind.Cheat, string.Empty);
                 break;
             case CheatKind.CreatePatient:
                 simulation.Arrivals.SpawnPatient(simulation, player);
@@ -132,6 +140,13 @@ public static class Cheats
                 break;
             case CheatKind.ToggleEpidemics:
                 Disasters.Epidemics.ToggleDisabled(simulation, hospital);
+                break;
+            case CheatKind.EndMonth:
+                var date = simulation.Date;
+                simulation.SkipToLastHour(date.Month == 12 ? new GameDate(date.Year + 1, 1, 1, 0) : new GameDate(date.Year, date.Month + 1, 1, 0));
+                break;
+            case CheatKind.EndYear:
+                simulation.SkipToLastHour(new GameDate(simulation.Date.Year + 1, 1, 1, 0));
                 break;
             default:
                 return;

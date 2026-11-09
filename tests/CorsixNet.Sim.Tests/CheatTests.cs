@@ -1,6 +1,9 @@
+using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
+using CorsixNet.Sim.Maps;
 
 namespace CorsixNet.Sim.Tests;
 
@@ -72,6 +75,53 @@ public class CheatTests
         var restored = Simulation.Load(stream);
         Assert.Equal(simulation.ComputeStateHash(), restored.ComputeStateHash());
         Assert.True(restored.Hospitals[0].Cheated);
+    }
+
+    [Fact]
+    public void TheMonthAndTheYearCanBeEndedAtOnce()
+    {
+        var simulation = NewSimulation();
+        Run(simulation, CheatKind.EndMonth);
+
+        // The jump lands on the month's last hour, which the tick then ends.
+        Assert.Equal(1, simulation.Tick);
+        Assert.Equal(new GameDate(1, 2, 1, 0), simulation.Date);
+        Assert.Equal((31 * GameDate.HoursPerDay) - 1, simulation.SkippedHours);
+        Assert.True(simulation.Hospitals[0].Cheated);
+
+        simulation.Schedule(0, new CheatCommand(CheatKind.EndYear));
+        simulation.Step();
+        Assert.Equal(new GameDate(2, 1, 1, 0), simulation.Date);
+
+        // Money moves at the calendar's hour, and the skipped hours are saved.
+        simulation.Schedule(0, new CheatCommand(CheatKind.Money));
+        simulation.Step();
+        Assert.Equal(new GameDate(2, 1, 1, 0).ToHours(), simulation.Hospitals[0].Transactions[0].Hour);
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var restored = Simulation.Load(stream);
+        Assert.Equal(simulation.Date, restored.Date);
+        Assert.Equal(simulation.ComputeStateHash(), restored.ComputeStateHash());
+    }
+
+    [Fact]
+    public void AnEmergencyPlannedInTheSkippedDaysIsReplanned()
+    {
+        var map = new LevelMap(10, 10, playerCount: 1);
+        var simulation = new Simulation(map, seed: 1, rules: new LevelRules(10_000, [], [], emergencies:
+        [
+            new PlannedEmergency(0, 1, 1, 4, 6, 16, 75, 400),
+            new PlannedEmergency(1, 3, 3, 4, 6, 16, 75, 400),
+        ]));
+        var state = simulation.Hospitals[0].Emergencies;
+        Assert.Equal(0, state.NextIndex);
+        state.NextDay = 15;
+
+        Run(simulation, CheatKind.EndMonth);
+
+        Assert.Equal(1, state.NextIndex);
+        Assert.Equal(3, state.NextMonth);
     }
 
     private static void Run(Simulation simulation, CheatKind cheat)

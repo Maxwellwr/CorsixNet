@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 40;
+    private const int FormatVersion = 41;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -144,8 +144,17 @@ public sealed class Simulation
     /// <summary>Number of ticks completed since the game started.</summary>
     public long Tick { get; private set; }
 
+    /// <summary>
+    /// The hour of the game's calendar: the ticks so far plus the hours the end-of-month and end-of-year cheats skipped
+    /// (CorsixTH's <c>game_date</c>).
+    /// </summary>
+    public long Hours => Tick + SkippedHours;
+
     /// <summary>The game date: each tick is one game hour, as in CorsixTH.</summary>
-    public GameDate Date => GameDate.FromHours(Tick);
+    public GameDate Date => GameDate.FromHours(Hours);
+
+    /// <summary>Hours of the calendar skipped by cheats (<see cref="SkipToLastHour"/>).</summary>
+    public long SkippedHours { get; private set; }
 
     public LevelMap Map { get; }
 
@@ -207,7 +216,7 @@ public sealed class Simulation
 
         // CorsixTH's World:onTick ticks the earthquake, then handles the end of a day before the hour that starts the next one.
         Earthquakes.Tick(Rules.Earthquakes, Random);
-        if (Date.Day != GameDate.FromHours(Tick + 1).Day)
+        if (Date.Day != GameDate.FromHours(Hours + 1).Day)
         {
             OnEndDay();
         }
@@ -237,7 +246,7 @@ public sealed class Simulation
         _entities.RemoveAll(entity => entity is Humanoid { IsDespawning: true } or ConstructionSite { IsDone: true } or Litter { IsRemoved: true } or Rat { IsGone: true });
 
         // Then the heat spreads, at the new hour's month (CorsixTH's World:onTick after the entities).
-        UpdateTemperatures(GameDate.FromHours(Tick + 1).Month);
+        UpdateTemperatures(GameDate.FromHours(Hours + 1).Month);
 
         Tick++;
     }
@@ -417,6 +426,7 @@ public sealed class Simulation
         }
 
         var tick = reader.ReadInt64();
+        var skippedHours = reader.ReadInt64();
         var random = SimRandom.FromState(reader.ReadUInt64(), reader.ReadUInt64());
         var nextEntityId = reader.ReadInt32();
         var nextSequence = reader.ReadInt64();
@@ -426,6 +436,7 @@ public sealed class Simulation
         var simulation = new Simulation(map, random, content ?? GameContent.Empty, rules)
         {
             Tick = tick,
+            SkippedHours = skippedHours,
             NextEntityId = nextEntityId,
             NextSequence = nextSequence,
         };
@@ -503,11 +514,33 @@ public sealed class Simulation
         return hash.Value;
     }
 
+    /// <summary>
+    /// <c>World:setEndMonth</c> and <c>setEndYear</c>: the calendar jumps to the last hour before
+    /// <paramref name="next"/>, so that this tick ends the month or year. An emergency planned in the hours skipped is
+    /// replanned (<c>World:wasEmergencySkipped</c>).
+    /// </summary>
+    internal void SkipToLastHour(GameDate next)
+    {
+        var previous = Hours;
+        var target = next.ToHours() - 1;
+        if (target <= previous)
+        {
+            return;
+        }
+
+        SkippedHours += target - previous;
+        foreach (var hospital in _hospitals)
+        {
+            Emergencies.OnCalendarSkipped(this, hospital, previous, target);
+        }
+    }
+
     private void Write(SimWriter writer, bool includeInputs)
     {
         writer.WriteUInt32(Magic);
         writer.WriteInt32(FormatVersion);
         writer.WriteInt64(Tick);
+        writer.WriteInt64(SkippedHours);
         writer.WriteUInt64(Random.State);
         writer.WriteUInt64(Random.Increment);
         writer.WriteInt32(NextEntityId);
@@ -613,7 +646,7 @@ public sealed class Simulation
         if (price <= hospital.Balance)
         {
             SetParcelOwner(parcel, player + 1);
-            hospital.Spend(Tick, checked((int)price), TransactionKind.BuyLand, parcel.ToString(CultureInfo.InvariantCulture));
+            hospital.Spend(Hours, checked((int)price), TransactionKind.BuyLand, parcel.ToString(CultureInfo.InvariantCulture));
         }
     }
 
@@ -747,15 +780,15 @@ public sealed class Simulation
                 CheckEndConditions(hospital, mayLose: false);
             }
 
-            hospital.PayWages(Tick, wages[hospital.Player]);
-            hospital.PayHeating(Tick);
-            hospital.PayInterest(Tick);
+            hospital.PayWages(Hours, wages[hospital.Player]);
+            hospital.PayHeating(Hours);
+            hospital.PayInterest(Hours);
             hospital.RaiseSalary(Rules.ScoreMaxIncrease);
-            hospital.PayInsurance(Tick);
+            hospital.PayInsurance(Hours);
             hospital.RecordMonth(wages[hospital.Player]);
             if (date.IsLastDayOfYear)
             {
-                hospital.OnEndYear(Tick, Random, Rules.Awards);
+                hospital.OnEndYear(Hours, Random, Rules.Awards);
 
                 // Hospital:onEndYear: at the end of the third year of level 3 the salary rises a lot, as in the original.
                 if (date.Year == 3 && Rules.LevelNumber == 3)

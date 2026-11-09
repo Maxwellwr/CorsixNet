@@ -104,8 +104,10 @@ entities and pending commands.
   one tick per 56 frames of 18 ms, to Speed up, eight ticks per frame). A network game runs at
   the server's Normal speed for now. The simulation knows nothing about real time.
 - **Calendar.** `Simulation.Date` (`Sim.Calendar.GameDate`, a port of CorsixTH's `date.lua`) follows
-  from the tick: days of 50 hours, months of the usual lengths, no leap years, the game starting at
-  hour 0 of 1 January of year 1. It needs no saved state of its own.
+  from `Simulation.Hours`, the tick plus the hours the end-of-month and end-of-year cheats skipped
+  (`SkippedHours`, saved): days of 50 hours, months of the usual lengths, no leap years, the game
+  starting at hour 0 of 1 January of year 1. Transactions are stamped with that hour; the tick itself
+  only counts steps, so commands and timers in ticks are not affected by a jump.
 - **Step order.** Commands scheduled for the current tick run first, in sequence order. If the
   tick is the last hour of a day, the end of the day follows, as in CorsixTH's `World:onTick`: at
   the end of a month every hospital pays its wages, then the candidates for hire are replaced. Then
@@ -527,8 +529,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   reputation are recorded for the graphs; the first entry is the start of the game.
 - **Cheats** (`Cheats`, from `cheats.lua`). `CheatCommand` performs the menu cheats the simulation has the parts
   for: money (10,000, `TransactionKind.Cheat`), a patient, winning or losing the level, prices up or down by 50
-  points, forgetting the deaths and the reputation to 1,000, an earthquake now and earthquakes off or on. Each
-  that works marks `Hospital.Cheated`, except losing.
+  points, forgetting the deaths and the reputation to 1,000, an earthquake now and earthquakes off or on, and
+  ending the month or year (the calendar jumps to its last hour, and a planned emergency in the skipped days is
+  replanned). Each that works marks `Hospital.Cheated`, except losing.
 - **Earthquakes** (`Simulation.Earthquakes`, from `earthquake.lua`). The level's `quake_control` entries are
   planned in turn: a random day of a random month of the game between their months. On that day a 25-hour
   warning quake comes, 600 hours later the main one, which does a round of damage every 16 hours until its

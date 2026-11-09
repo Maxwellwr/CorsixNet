@@ -100,7 +100,7 @@ public abstract record Command
     private static CheatKind ReadCheat(SimReader reader)
     {
         var cheat = reader.ReadByte();
-        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleEpidemics ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.EndYear ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
     }
 
     private static PatientAnswer ReadPatientAnswer(SimReader reader)
@@ -458,7 +458,7 @@ public sealed record BorrowCommand(bool AsMuchAsAllowed) : Command
     {
         if (player >= 0 && player < simulation.Hospitals.Count)
         {
-            simulation.Hospitals[player].Borrow(simulation.Tick, AsMuchAsAllowed);
+            simulation.Hospitals[player].Borrow(simulation.Hours, AsMuchAsAllowed);
         }
     }
 
@@ -477,7 +477,7 @@ public sealed record RepayCommand(bool AsMuchAsPossible) : Command
     {
         if (player >= 0 && player < simulation.Hospitals.Count)
         {
-            simulation.Hospitals[player].Repay(simulation.Tick, AsMuchAsPossible);
+            simulation.Hospitals[player].Repay(simulation.Hours, AsMuchAsPossible);
         }
     }
 

@@ -91,7 +91,7 @@ public sealed class VipVisits
     internal static void OnEndDay(Simulation simulation, Hospital hospital)
     {
         var vips = hospital.Vips;
-        var today = simulation.Tick / GameDate.HoursPerDay;
+        var today = simulation.Hours / GameDate.HoursPerDay;
         if (today != vips.NextVipDay)
         {
             return;
@@ -150,7 +150,7 @@ public sealed class VipVisits
         }
         else if (!accept)
         {
-            vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Tick / GameDate.HoursPerDay);
+            vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Hours / GameDate.HoursPerDay);
             vips.Declined++;
         }
         else
@@ -170,7 +170,7 @@ public sealed class VipVisits
         if (points.Count == 0)
         {
             // CorsixTH needs a spawn point; without one the visit is off.
-            hospital.Vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Tick / GameDate.HoursPerDay);
+            hospital.Vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Hours / GameDate.HoursPerDay);
             return null;
         }
 
@@ -198,7 +198,7 @@ public sealed class VipVisits
     {
         if (vip.Rating <= VipBehaviour.PleasedRating)
         {
-            hospital.Receive(simulation.Tick, vip.CashReward, TransactionKind.VipAward, string.Empty);
+            hospital.Receive(simulation.Hours, vip.CashReward, TransactionKind.VipAward, string.Empty);
             hospital.UnconditionalChangeReputation(vip.ReputationReward);
             hospital.Vips.PleasedThisYear++;
         }
@@ -207,7 +207,7 @@ public sealed class VipVisits
             hospital.UnconditionalChangeReputation(vip.ReputationReward);
         }
 
-        hospital.Vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Tick / GameDate.HoursPerDay);
+        hospital.Vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Hours / GameDate.HoursPerDay);
     }
 
     /// <summary>The rooms of a hospital, built or not, in the order they were made (CorsixTH's <c>world.rooms</c>).</summary>

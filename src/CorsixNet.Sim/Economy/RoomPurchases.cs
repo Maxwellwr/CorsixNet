@@ -41,7 +41,7 @@ public static class RoomPurchases
 
         foreach (var (objectId, count) in LevelRules.Needed(room))
         {
-            hospital.Spend(simulation.Tick, count * simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
+            hospital.Spend(simulation.Hours, count * simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
         }
     }
 
@@ -57,13 +57,13 @@ public static class RoomPurchases
     /// <summary>Pays for an object bought for a corridor.</summary>
     internal static void BuyObject(Simulation simulation, string objectId, int player)
     {
-        HospitalOf(simulation, player)?.Spend(simulation.Tick, simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
+        HospitalOf(simulation, player)?.Spend(simulation.Hours, simulation.Rules.ObjectCost(objectId), TransactionKind.BuyObject, objectId);
     }
 
     /// <summary>Pays for the room itself when it is confirmed; its objects were paid for already.</summary>
     internal static void PayForRoom(Simulation simulation, RoomDefinition room, int player)
     {
-        HospitalOf(simulation, player)?.Spend(simulation.Tick, simulation.Rules.RoomCost(room.Id), TransactionKind.BuildRoom, room.Id);
+        HospitalOf(simulation, player)?.Spend(simulation.Hours, simulation.Rules.RoomCost(room.Id), TransactionKind.BuildRoom, room.Id);
     }
 
     /// <summary>Sells back the objects bought for a room that is taken down unfinished, one transaction per object.</summary>
@@ -78,7 +78,7 @@ public static class RoomPurchases
         {
             for (var i = 0; i < count; i++)
             {
-                hospital.Receive(simulation.Tick, simulation.Rules.ObjectCost(objectId), TransactionKind.SellObject, objectId);
+                hospital.Receive(simulation.Hours, simulation.Rules.ObjectCost(objectId), TransactionKind.SellObject, objectId);
             }
         }
     }

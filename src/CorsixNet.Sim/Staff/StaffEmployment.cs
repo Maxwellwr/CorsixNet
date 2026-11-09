@@ -99,7 +99,7 @@ internal static class StaffEmployment
         }
 
         var hospital = simulation.Hospitals[humanoid.Employer];
-        hospital.Spend(simulation.Tick, profile.Wage, TransactionKind.Severance, profile.Class.ToString());
+        hospital.Spend(simulation.Hours, profile.Wage, TransactionKind.Severance, profile.Class.ToString());
         humanoid.IsFired = true;
         humanoid.RaiseRequest = 0;
         humanoid.RaiseTimer = -1;
