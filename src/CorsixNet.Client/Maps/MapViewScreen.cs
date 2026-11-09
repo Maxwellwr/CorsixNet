@@ -495,9 +495,10 @@ internal sealed class MapViewScreen : IScreen
             });
             DrawOverlay(batch, map, view);
             _buildTool.DrawPreview(batch, _diamond);
-            if ((_buildTool.IsActive || _furnishTool.IsActive) && _hoveredTile is { } cell)
+            if (_buildTool.IsActive && _hoveredTile is { } cell)
             {
-                // While building, the tile under the cursor has a red outline, as in CorsixTH's UIEditRoom:draw.
+                // While building a room, the tile under the cursor has a red outline, as in CorsixTH's UIEditRoom:draw.
+                // Furnishing the corridor is CorsixTH's plain UIPlaceObjects, which draws none.
                 batch.Draw(_cellOutline, new Vector2((32 * (cell.X - cell.Y)) - 32, 16 * (cell.X + cell.Y)), CellOutlineColor);
             }
             batch.End();
