@@ -215,9 +215,10 @@ and state hashing; tests for save/load round trips.
 
 ## 9. Sound and music
 
-**Has:** nothing.
+**Has:** the sound archive reader (`SoundArchive`, `ThemeHospitalInstall.LoadSounds`: `SOUND/DATA/SOUND-n.DAT` with
+the English fallback, names, WAV data, durations, wildcard names; `Src/th_sound.cpp`, `audio.lua`). Nothing plays yet.
 
-- Readers for the original's sound archives (`SOUND-0.DAT` / `.TAB`) and XMI/MIDI music (`audio.lua`, `Src/th_sound.cpp`).
+- A reader for XMI/MIDI music (`audio.lua`, `Src/xmi2mid.cpp`).
 - Positional sound effects for objects, doors, footsteps, machines; announcer speech; adviser voice.
 - Music playback and the jukebox (`dialogs/jukebox.lua`), MP3 replacement music, volumes (`resizables/sound_setting.lua`).
 
