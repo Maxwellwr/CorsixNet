@@ -504,10 +504,20 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
 
                 break;
-            case PatientPhase.Undressing:
-            case PatientPhase.WalkingToTrolley:
             case PatientPhase.AtTrolley:
             case PatientPhase.OnTrolley:
+                if (simulation.FindEntity(TargetId) is Room { RoomType: not RoomVisits.GeneralDiagnosisRoom } machineRoom)
+                {
+                    MachineStep(simulation, humanoid, machineRoom);
+                }
+                else
+                {
+                    GeneralDiagnosisStep(simulation, humanoid);
+                }
+
+                break;
+            case PatientPhase.Undressing:
+            case PatientPhase.WalkingToTrolley:
             case PatientPhase.WalkingBackToScreen:
             case PatientPhase.Dressing:
                 GeneralDiagnosisStep(simulation, humanoid);
@@ -1615,6 +1625,18 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             return;
         }
 
+        if (RoomVisits.HasExaminingObject(room.RoomType))
+        {
+            // UltrascanRoom:commandEnteringPatient: the doctor walks to the machine's other end and waits there.
+            Phase = PatientPhase.AtTrolley;
+            if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour doctor } staff)
+            {
+                doctor.OnPatientUndressed(simulation, staff, room);
+            }
+
+            return;
+        }
+
         Phase = PatientPhase.UsingObject;
         Use = ObjectUse.Start(simulation, humanoid, placed);
     }
@@ -1717,6 +1739,52 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     DiagnosisRoomIndex = _availableDiagnosisRooms.Count - 1;
                 }
 
+                LeaveRoom(simulation, humanoid);
+                return;
+        }
+    }
+
+    /// <summary>
+    /// A room with a machine the patient is examined on with the doctor (<c>UltrascanRoom:commandEnteringPatient</c>):
+    /// once the doctor stands at its other end, they use it together (<c>MultiUseObjectAction</c>); then the room is done
+    /// with the patient and the doctor meanders again. Without the doctor the patient leaves and looks for the room anew.
+    /// </summary>
+    private void MachineStep(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        var machine = RoomVisits.ExaminingObject(simulation, room);
+        switch (Phase)
+        {
+            case PatientPhase.AtTrolley:
+                if (machine is null || !room.StaffPresent)
+                {
+                    _availableDiagnosisRooms.Add(room.RoomType);
+                    Next = AfterRoom.SeekRoom;
+                    Seeking = RoomSeek.Diagnosis;
+                    DiagnosisRoomIndex = _availableDiagnosisRooms.Count - 1;
+                    LeaveRoom(simulation, humanoid);
+                    return;
+                }
+
+                if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley }, IsMoving: false } doctor)
+                {
+                    TrolleyUse = MultiObjectUse.Start(simulation, humanoid, machine, doctor);
+                    Phase = PatientPhase.OnTrolley;
+                }
+
+                return;
+            case PatientPhase.OnTrolley:
+                if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                {
+                    return;
+                }
+
+                TrolleyUse = null;
+                if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour examiner })
+                {
+                    examiner.OnExamined(room);
+                }
+
+                RoomVisits.DealtWithPatient(simulation, room);
                 LeaveRoom(simulation, humanoid);
                 return;
         }

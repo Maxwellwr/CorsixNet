@@ -18,6 +18,9 @@ public static class BaseGameContent
     public static readonly WallSet WhiteWalls = new(InsideNorth: 82, InsideWest: 83, OutsideNorth: 90, OutsideWest: 91, WindowNorth: 128, WindowWest: 129);
 
     /// <summary>The "green" wall set (walls/green.lua).</summary>
+    /// <summary>walls/yellow.lua.</summary>
+    public static readonly WallSet YellowWalls = new(InsideNorth: 84, InsideWest: 85, OutsideNorth: 92, OutsideWest: 93, WindowNorth: 132, WindowWest: 133);
+
     public static readonly WallSet GreenWalls = new(InsideNorth: 88, InsideWest: 89, OutsideNorth: 96, OutsideWest: 97, WindowNorth: 140, WindowWest: 141);
 
     /// <summary>The doctor's desk (objects/desk.lua). The doctor's chair is part of it.</summary>
@@ -283,6 +286,47 @@ public static class BaseGameContent
         LevelConfigId: 29,
         AdditionalObjects: ["extinguisher", "radiator", "plant", "bin", "loo", "sink"]);
 
+    /// <summary>
+    /// The ultrascanner (objects/machines/ultrascanner.lua): the patient lies on its bed from the west (facing north) while
+    /// the doctor scans them from the other end; one animation shows both. Facing south it uses the north animations.
+    /// CorsixTH draws it facing east from three tiles (<c>render_attach_position</c>); here from the first.
+    /// </summary>
+    public static readonly ObjectDefinition Ultrascanner = new(
+        "ultrascanner",
+        "Ultrascanner",
+        ObjectType: 22,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-1, -1, NeedWestSide), new(0, -1, CompleteCell), new(1, -1, UsePosition | CompleteCell),
+                    new(-1, 0, UsePosition | NeedWestSide), new(0, 0), new(1, 0, UsePosition),
+                    new(-1, 1, NeedWestSide), new(0, 1),
+                ],
+                UsePosition: (-1, 0),
+                SecondaryUsePosition: (1, -1)),
+            [Direction.East] = new(
+                [
+                    new(-1, -1, CompleteCell), new(0, -1, UsePosition | NeedNorthSide), new(1, -1, NeedNorthSide),
+                    new(-1, 0, CompleteCell), new(0, 0), new(1, 0),
+                    new(-1, 1, UsePosition | CompleteCell), new(0, 1, UsePosition),
+                ],
+                UsePosition: (0, -1),
+                SecondaryUsePosition: (-1, 1)),
+        },
+        MultiUsage: UltrascanMultiUsage());
+
+    /// <summary>The ultrascan (rooms/ultrascan.lua): a diagnosis room with a doctor.</summary>
+    public static readonly RoomDefinition Ultrascan = new(
+        "ultrascan",
+        "Ultrascan",
+        MinimumSize: 4,
+        FloorSprite: 19,
+        YellowWalls,
+        NeededObjects: new Dictionary<string, int> { ["ultrascanner"] = 1 },
+        LevelConfigId: 14,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -337,10 +381,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner],
         DoorAnimations,
         PatientAnimations);
 
@@ -382,6 +426,23 @@ public static class BaseGameContent
     /// doctor drawn in the animations (no secondary ones, so the doctor is hidden). Each phase lists three animations; the
     /// use plays the same position of each list. Defined for north and south.
     /// </summary>
+    /// <summary>
+    /// ultrascanner.lua's <c>multi_usage_animations</c>: the patient climbs onto the bed, the doctor takes the instrument,
+    /// examines them, puts it away, and the patient climbs off; each animation shows both, so the doctor is hidden.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> UltrascanMultiUsage()
+    {
+        static MultiUseAnimations[] Use(AnimationRef begin, AnimationRef begin2, AnimationRef inUse, AnimationRef finish, AnimationRef finish2) =>
+            [new MultiUseAnimations([new(begin), new(begin2)], new(inUse), [new(finish), new(finish2)])];
+
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.StandardMalePatient, HumanoidType.Doctor)] = Use(new(1560, 7), new(1568, 20), new(1614, 28), new(1574, 32), new(1610, 11)),
+            [(HumanoidType.StandardFemalePatient, HumanoidType.Doctor)] = Use(new(3084, 7), new(3092, 16), new(3096, 19), new(3100, 22), new(1618, 12)),
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
+
     /// <summary>loo.lua's animations for the standard patients: men pick one of two in-use animations.</summary>
     private static Dictionary<HumanoidType, UseAnimations> LooUse() => new()
     {
