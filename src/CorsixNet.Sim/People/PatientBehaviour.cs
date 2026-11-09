@@ -243,6 +243,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>Whether the patient was cured (CorsixTH's <c>cured</c>).</summary>
     public bool IsCured { get; private set; }
 
+    /// <summary>
+    /// Tiles to walk before the patient drops litter (CorsixTH's <c>litter_countdown</c>), or −1 until they reach the
+    /// hospital's floor; see <see cref="Littering"/>.
+    /// </summary>
+    public int LitterCountdown { get; internal set; } = -1;
+
     /// <summary>Whether the patient has caught an epidemic's disease (CorsixTH's <c>infected</c>); a cure ends it.</summary>
     public bool IsInfected { get; internal set; }
 
@@ -1206,6 +1212,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteBool(IsMarkedForVaccination);
         writer.WriteInt32(VaccinatingNurseId);
         writer.WriteByte((byte)_question);
+        writer.WriteInt32(LitterCountdown);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -1260,6 +1267,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.VaccinatingNurseId = reader.ReadInt32();
         var question = reader.ReadByte();
         patient._question = question <= (byte)PatientQuestion.NoTreatmentRoom ? (PatientQuestion)question : throw new InvalidDataException($"Unknown patient question {question}.");
+        patient.LitterCountdown = reader.ReadInt32();
         return patient;
     }
 }

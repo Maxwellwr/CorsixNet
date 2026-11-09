@@ -101,9 +101,9 @@ Done and committed:
   #122), VIP visits (V / Shift+V answer the invitation, PR #123), emergencies (E / Shift+E answer the
   fax, PR #124), epidemics (I / Shift+I cover up or declare, PR #125) and vaccinating their patients (J,
   PR #126), answering waiting patients' faxes (K / Shift+K / Ctrl+K, PR #127), computer opponents that
-  take their turns for patients and count them as visitors (PR #128). No game data in the cloud:
-  real-data tests were skipped there and the client was not run, so these want a look on MSI. Save
-  format version 35.
+  take their turns for patients and count them as visitors (PR #128), patients dropping litter and
+  people minding it (PR #129). No game data in the cloud: real-data tests were skipped there and the
+  client was not run, so these want a look on MSI. Save format version 36.
 
 Not done yet:
 

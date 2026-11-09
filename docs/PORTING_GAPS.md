@@ -37,8 +37,9 @@ objects from the level file.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
 - Machines: strength, wear per use, breakdown, smoking, explosion (room crash), repair by handymen,
   replacement and upgrade (`entities/machine.lua`, `dialogs/machine_dialog.lua`, `resizables/machine_menu.lua`).
-- Object state: plants being watered, bins filling, litter (`objects/litter.lua`, `plant.lua`, `bin.lua`).
-  Plants drooping (`PlantState`) and radiators heating tiles are done.
+- Object state: plants being watered, bins filling (`plant.lua`, `bin.lua`), litter being swept and the
+  "need a handyman" advice. Plants drooping (`PlantState`), radiators heating tiles, litter (`Litter`, its ranks)
+  and patients dropping rubbish (`Littering`) are done.
 - Optional room objects: buying extra items in the furniture step and later (room's "Choose Items"
   list with counts and prices), selling objects.
 - Object-specific use: benches (sitting while queueing), drinks machine (thirst), toilets, staff-room
@@ -112,7 +113,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
 - Earthquakes damaging machines and knocking patients over (`earthquake.lua`); planning, the warning and main
   quakes and the screen shake are done (`Earthquakes`).
-- Rats, litter and vomit, hospital cleanliness (`entities/rat.lua`, `objects/litter.lua`).
+- Rats, vomit and pee, soot from explosions, hospital cleanliness (`entities/rat.lua`, `humanoid_actions/vomit.lua`,
+  `pee.lua`, `room.lua`); patients dropping rubbish and people minding litter are done (`Littering`, `Feelings`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
 - Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).

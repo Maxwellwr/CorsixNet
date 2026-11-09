@@ -246,6 +246,13 @@ reception desk, bench, drinks machine, fire extinguisher, radiator, bin and plan
 (benches, drinks, watering plants) is not ported yet. A plant (`RoomObject.Plant`, `PlantState`, from
 `plant.lua`) droops a state every 64 days, sooner where it is warm (each day counts 1 plus the tile's temperature),
 from healthy to dead in five states; the client draws the idle frame plus the state. Nobody waters it yet.
+Litter (`Litter`, an entity of its own, from `objects/litter.lua`) lies on a tile, at most one piece per tile: a
+higher ranked kind (puke 4, dead rat 3, pee 2, rubbish 1, soot 99) replaces a lower one, otherwise the new piece is
+not dropped (`World:newLitter`). Patients drop rubbish (`Littering`, from `Patient:setTile`): on their first floor
+tile of the building they get a countdown of 20 to 100 tiles, each step at the hospital counts it down, and at 0, on a
+free floor tile of their hospital outside rooms, they drop a can, banana, paper or bottle (one time in 20 if a bin is
+within 8 steps by CorsixTH's object search) and start again at 30 to 150. Placing an object or building a room clears
+the cleanable litter from its tiles. Nobody sweeps it up yet.
 
 ## Money
 
@@ -441,6 +448,8 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   becomes 0, and the next day at 0 the patient is set to die: once out of rooms and doorways they die, count as a
   death of their disease and vanish. Outside rooms, patients also like an extinguisher within two tiles (0.0002),
   a plant by how healthy it is (−0.0003 + 0.0001 × state), and lose 0.00002 a day for standing (no benches yet).
+  Patients outside rooms and staff lose 0.0002 a day for each piece of rubbish within two tiles in the same room,
+  0.0004 for other litter.
 - **Policies** (`Hospital.Policies`, from `hospital.lua` and `hospital_policy.lua`). Each hospital has CorsixTH's
   policy window settings: `send_home` 0.1, `guess_cure` 0.9, `stop_procedure` 1.0 (up to 2.0), `goto_staffroom`
   from the level's `gbv.Tired`, staff allowed to move and granting raises. `SetPolicyCommand` sets one, in

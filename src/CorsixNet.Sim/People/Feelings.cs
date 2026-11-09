@@ -135,6 +135,9 @@ internal static class Feelings
 
             // Sitting makes happy, standing and walking do not; there are no benches yet.
             ChangeHappiness(simulation, humanoid, -0.00002m);
+
+            // Seeing litter makes unhappy, pee and puke more so. Vomiting at it is not ported yet.
+            SeeLitter(simulation, humanoid);
         }
 
         patient.Health = Math.Max(patient.Health - PatientBehaviour.DailyHealthLoss, 0m);
@@ -189,6 +192,30 @@ internal static class Feelings
         if (roomId != 0 && simulation.FindEntity(roomId) is Room { IsActive: true } room)
         {
             ChangeHappiness(simulation, humanoid, RoomHappinessFactor(simulation, room));
+        }
+
+        // Seeing litter makes unhappy, pee and puke more so (the end of Staff:tickDay).
+        SeeLitter(simulation, humanoid);
+    }
+
+    /// <summary>
+    /// The litter part of <c>Patient:tickDay</c> and <c>Staff:tickDay</c>: each piece in sight costs 0.0002 happiness if it is
+    /// rubbish (<c>anyLitter</c>), otherwise 0.0004.
+    /// </summary>
+    private static void SeeLitter(Simulation simulation, Humanoid humanoid)
+    {
+        var map = simulation.Map;
+        var roomId = map[humanoid.Tile.X, humanoid.Tile.Y].RoomId;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Litter { IsRemoved: false } litter
+                && Math.Abs(litter.Tile.X - humanoid.Tile.X) <= SightRange
+                && Math.Abs(litter.Tile.Y - humanoid.Tile.Y) <= SightRange
+                && map.Contains(litter.Tile.X, litter.Tile.Y)
+                && map[litter.Tile.X, litter.Tile.Y].RoomId == roomId)
+            {
+                ChangeHappiness(simulation, humanoid, litter.IsRubbish ? -0.0002m : -0.0004m);
+            }
         }
     }
 

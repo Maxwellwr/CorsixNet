@@ -1240,6 +1240,7 @@ internal sealed class MapViewScreen : IScreen
                 EntranceDoor door => door.Tile,
                 RoomDoor door => door.Tile,
                 RoomObject placed => ObjectDrawing.DrawTile(simulation.Content, placed.ObjectType, placed.Tile, placed.Orientation),
+                Litter { IsRemoved: false } litter => litter.Tile,
                 _ => null,
             };
             if (tile is not { } position)
@@ -1253,7 +1254,15 @@ internal sealed class MapViewScreen : IScreen
                 _entitiesByTile[position] = list;
             }
 
-            list.Add(entity);
+            // Litter lies on the floor, under whatever else is on its tile (CorsixTH's DrawingLayers.Litter).
+            if (entity is Litter)
+            {
+                list.Insert(0, entity);
+            }
+            else
+            {
+                list.Add(entity);
+            }
         }
 
         // A receptionist stands on the desk's own tile. Facing north or west (away from the viewer) they are
@@ -1328,6 +1337,9 @@ internal sealed class MapViewScreen : IScreen
                 case RoomObject placed:
                     var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
                     _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
+                    break;
+                case Litter litter:
+                    _animations.DrawFrame(batch, _animations.Animations.FirstFrame(litter.Animation), anchorX, anchorY, NoLayers, flipHorizontally: litter.IsMirrored);
                     break;
                 case RoomDoor roomDoor:
                     var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
