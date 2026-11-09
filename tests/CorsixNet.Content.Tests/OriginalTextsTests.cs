@@ -43,6 +43,18 @@ public class OriginalTextsTests
     }
 
     [Fact]
+    public void DescribesRoomsInParagraphs()
+    {
+        var texts = new OriginalTexts(Strings());
+
+        Assert.Equal(["A GP sees patients.", "Then sends them on."], texts.RoomDescription("gp"));
+        Assert.Equal(["Shrink."], texts.RoomDescription("psych"));
+        Assert.Null(texts.RoomDescription("ward"));
+        Assert.Equal("Fax 3", texts.String(44, 3));
+        Assert.Null(texts.String(44, 1000));
+    }
+
+    [Fact]
     public void NamesDiseasesInTheInstalledLanguage()
     {
         var install = RealGameData.Require();
@@ -54,12 +66,14 @@ public class OriginalTextsTests
         }
 
         Assert.False(string.IsNullOrWhiteSpace(texts.VipName(1)));
+        Assert.NotEmpty(texts.RoomDescription("gp")!);
+        Assert.NotEmpty(texts.RoomDescription("toilets")!);
     }
 
-    /// <summary>Section 4 holds "Name n", section 42 "VIP n" and section 44 "Fax n", with CorsixTH's 1-based n.</summary>
+    /// <summary>Section 4 holds "Name n", section 42 "VIP n", section 44 "Fax n" (CorsixTH's 1-based n) and section 57 two room descriptions.</summary>
     private static StringTable Strings()
     {
-        var sections = new string[48][];
+        var sections = new string[64][];
         for (var i = 0; i < sections.Length; i++)
         {
             sections[i] = [];
@@ -68,6 +82,7 @@ public class OriginalTextsTests
         sections[3] = [.. Enumerable.Range(1, 46).Select(n => $"Name {n}")];
         sections[41] = [.. Enumerable.Range(1, 11).Select(n => $"VIP {n}")];
         sections[43] = [.. Enumerable.Range(1, 218).Select(n => $"Fax {n}")];
+        sections[56] = [.. Enumerable.Range(1, 13).Select(n => $"Skip {n}"), ".", "A GP sees", " patients.//", "Then sends them on.", ".", "Shrink.", "..", ".", "Ignored"];
 
         var data = new List<byte> { (byte)sections.Length, 0 };
         foreach (var section in sections)

@@ -60,6 +60,9 @@ public sealed record GameConfig
     /// <summary>Whether the adviser keeps quiet (CorsixTH's <c>adviser_disabled</c>).</summary>
     public bool AdviserDisabled { get; init; }
 
+    /// <summary>Whether a room's description is shown the first time one is built (CorsixTH's <c>room_information_dialogs</c>).</summary>
+    public bool RoomInformationDialogs { get; init; } = true;
+
     /// <summary>How often the game saves itself: 0 never, 1 monthly, 2 weekly, 3 daily.</summary>
     public int AutosaveFrequency { get; init; } = 1;
 
@@ -165,6 +168,7 @@ public sealed record GameConfig
             Language = Text("language", defaults.Language),
             EnableScreenShake = Bool("enable_screen_shake", defaults.EnableScreenShake),
             AdviserDisabled = Bool("adviser_disabled", defaults.AdviserDisabled),
+            RoomInformationDialogs = Bool("room_information_dialogs", defaults.RoomInformationDialogs),
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
@@ -251,6 +255,15 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"adviser_disabled = {Lua(AdviserDisabled)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Room information dialogs. If set to true, a room's description is shown the
+            -- first time one is built.
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"room_information_dialogs = {Lua(RoomInformationDialogs)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------
