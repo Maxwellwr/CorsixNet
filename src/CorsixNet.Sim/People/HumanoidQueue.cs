@@ -47,7 +47,7 @@ public sealed class HumanoidQueue
 
     public TilePosition Face { get; }
 
-    public int MaxSize { get; }
+    public int MaxSize { get; private set; }
 
     /// <summary>The ids of the people in the queue, the front first.</summary>
     public IReadOnlyList<int> Members => _members;
@@ -94,6 +94,35 @@ public sealed class HumanoidQueue
             && (simulation.Hospitals[humanoid.HospitalPlayer].ActiveCheats & ToggleCheats.QueueJump) != 0 => 5,
         _ => 6,
     };
+
+    /// <summary>The longest a queue window can make a queue (<c>Queue:increaseMaxSize</c>).</summary>
+    public const int MaxMaxSize = 30;
+
+    /// <summary>
+    /// <c>Queue:increaseMaxSize</c> and <c>decreaseMaxSize</c>: the queue window's buttons make the queue longer or shorter,
+    /// from 0 to 30 people; a full queue only puts off newcomers.
+    /// </summary>
+    internal void ChangeMaxSize(int amount) => MaxSize = amount < 0 ? Math.Max(0, MaxSize + amount) : Math.Min(MaxMaxSize, MaxSize + amount);
+
+    /// <summary>Where someone stands in the queue, 0 at the front, or −1.</summary>
+    internal int IndexOf(int id) => _members.IndexOf(id);
+
+    /// <summary>
+    /// <c>Queue:movePatient</c> and <c>Queue:move</c>: the queue window moves someone from <paramref name="index"/> to
+    /// <paramref name="newIndex"/>, whatever their priority; those in between move up or down a place.
+    /// </summary>
+    internal void Move(Simulation simulation, int index, int newIndex)
+    {
+        if (index < 0 || index >= _members.Count || newIndex < 0 || newIndex >= _members.Count || index == newIndex)
+        {
+            return;
+        }
+
+        var id = _members[index];
+        _members.RemoveAt(index);
+        _members.Insert(newIndex, id);
+        Arrange(simulation);
+    }
 
     /// <summary>Takes the first in line out; everyone moves up.</summary>
     internal int Pop(Simulation simulation)

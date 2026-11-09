@@ -1209,16 +1209,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>Leaves the reception or door queue the patient stands in, if any.</summary>
-    private void LeaveQueue(Simulation simulation, Humanoid humanoid)
+    private void LeaveQueue(Simulation simulation, Humanoid humanoid) => CurrentQueue(simulation)?.Remove(simulation, humanoid.Id);
+
+    /// <summary>The reception desk's or room door's queue the patient stands in, or null.</summary>
+    internal HumanoidQueue? CurrentQueue(Simulation simulation) => Phase switch
     {
-        var queue = Phase switch
-        {
-            PatientPhase.InReceptionQueue => (simulation.FindEntity(TargetId) as RoomObject)?.Desk?.Queue,
-            PatientPhase.InDoorQueue => (simulation.FindEntity(TargetId) as Room)?.DoorQueue,
-            _ => null,
-        };
-        queue?.Remove(simulation, humanoid.Id);
-    }
+        PatientPhase.InReceptionQueue => (simulation.FindEntity(TargetId) as RoomObject)?.Desk?.Queue,
+        PatientPhase.InDoorQueue => (simulation.FindEntity(TargetId) as Room)?.DoorQueue,
+        _ => null,
+    };
 
     /// <summary>
     /// Leaves through a random spawn point, as CorsixTH's <c>Humanoid:despawn</c>. A patient sent home or put off by the
