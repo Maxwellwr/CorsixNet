@@ -132,6 +132,32 @@ public class WindowTests
         Assert.Equal(share - 1, research.Area(area).Share);
     }
 
+    [Fact]
+    public void ACellsTooltipShowsWhileTheMouseIsOverIt()
+    {
+        var host = new WindowTestHost();
+        var layer = new WindowLayer(text => text.Length * 6, 10) { Origin = new Point(8, 48) };
+        layer.Open(new TestWindow(() => { }));
+        var released = new MouseState(0, 0, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
+        layer.Update(host, released, released, Screen);
+
+        Assert.Equal("Does it", layer.TooltipAt(new Point(8 + 8 + 2, 48 + 16 + 8 + 16 + 4)));
+        Assert.Null(layer.TooltipAt(new Point(8 + 8 + 2, 48 + 16 + 8 + 4)));
+        Assert.Null(layer.TooltipAt(new Point(1000, 600)));
+    }
+
+    [Fact]
+    public void TheBottomPanelsTooltipsNameTheHotkeys()
+    {
+        var host = new WindowTestHost();
+        host.Hotkeys["ingame_panel_bankManager"] = "F1";
+        var cells = new BottomPanel(_ => { }).Rows(host).First().Cells;
+
+        Assert.Equal("Bank Manager (F1)", cells.Single(cell => cell.Text == "Bank").Tooltip);
+        Assert.Equal("Furnish corridor", cells.Single(cell => cell.Text == "Corridor").Tooltip);
+        Assert.Equal("Build rooms (B)", cells.Single(cell => cell.Text == "Build").Tooltip);
+    }
+
     private sealed class TestWindow(Action onClick) : UiWindow
     {
         public override string Title => "Test";
@@ -139,7 +165,7 @@ public class WindowTests
         public override IEnumerable<WindowRow> Rows(IWindowHost host)
         {
             yield return "First row";
-            yield return WindowCell.Button("Click", onClick);
+            yield return WindowCell.Button("Click", onClick) with { Tooltip = "Does it" };
         }
     }
 }

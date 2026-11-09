@@ -21,6 +21,7 @@ internal sealed class WindowLayer
     private static readonly Color ButtonHover = new(60, 90, 160);
     private static readonly Color DimText = new(140, 140, 140);
     private static readonly Color HighlightText = new(255, 220, 120);
+    private static readonly Color TooltipColor = new(40, 40, 24, 235);
 
     private readonly List<OpenWindow> _open = [];
     private readonly Func<string, int> _measure;
@@ -86,6 +87,16 @@ internal sealed class WindowLayer
 
         _open.RemoveAt(index);
         return true;
+    }
+
+    /// <summary>
+    /// The tooltip of the cell under the mouse in the front window under it (CorsixTH's <c>Window:getTooltipAt</c>),
+    /// or null. The windows must have been laid out by <see cref="Update"/>.
+    /// </summary>
+    public string? TooltipAt(Point mouse)
+    {
+        var hit = _open.LastOrDefault(open => open.Layout is { } layout && layout.Bounds.Contains(mouse));
+        return hit?.Layout!.Cells.FirstOrDefault(cell => cell.Area.Contains(mouse)).Cell?.Tooltip;
     }
 
     /// <summary>Closes every dialog; pinned windows stay.</summary>
@@ -208,6 +219,17 @@ internal sealed class WindowLayer
                 var barY = layout.Bounds.Y + layout.TitleBar.Height + ((track - barHeight) * open.Scroll / layout.MaxScroll);
                 batch.Draw(pixel, new Rectangle(layout.Bounds.Right - 4, barY, 3, barHeight), ButtonHover);
             }
+        }
+
+        if (_dragging is null && TooltipAt(mouse) is { } tooltip && _open.Count > 0)
+        {
+            // Above the cursor, kept on the screen the windows were laid out on (CorsixTH's UI:drawTooltip).
+            var screen = _open.Select(open => open.Layout?.Bounds ?? Rectangle.Empty).Aggregate(Rectangle.Union);
+            var width = _measure(tooltip) + (2 * 4);
+            var x = Math.Clamp(mouse.X - (width / 2), 0, Math.Max(0, screen.Right - width));
+            var y = Math.Max(0, mouse.Y - _lineHeight - 8);
+            batch.Draw(pixel, new Rectangle(x, y, width, _lineHeight), TooltipColor);
+            text.Draw(batch, tooltip, new Vector2(x + 4, y + 3));
         }
     }
 

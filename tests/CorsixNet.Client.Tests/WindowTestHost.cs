@@ -63,6 +63,10 @@ internal sealed class WindowTestHost : IWindowHost
 
     public bool HasNextLevel => true;
 
+    public Dictionary<string, string> Hotkeys { get; } = [];
+
+    public string? HotkeyText(string action) => Hotkeys.GetValueOrDefault(action);
+
     public bool? Started { get; private set; }
 
     public void StartLevel(bool next) => Started = next;
