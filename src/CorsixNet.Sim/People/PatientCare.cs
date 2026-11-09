@@ -297,6 +297,12 @@ public static class PatientCare
     /// </summary>
     private static void ReceiveMoneyForTreatment(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, string roomType)
     {
+        // Nothing at all in free build mode, not even the patient's view of the price.
+        if (simulation.Rules.FreeBuild)
+        {
+            return;
+        }
+
         var id = patient.IsDiagnosed ? patient.DiseaseId : DiseaseCatalog.DiagnosisPrefix + roomType;
         if (DiseaseCatalog.Find(id) is not { } paidFor)
         {

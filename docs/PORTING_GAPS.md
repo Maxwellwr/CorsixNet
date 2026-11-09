@@ -193,7 +193,10 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   `Campaigns/`, `Levels/`). Loading a custom level (`.level` + `.map`, with overlays) and reading a campaign file are
   done (`LevelMapLoader.LoadCustom`, `LoadCampaign`, `--map`, `--campaign`). The difficulty and what it changes (`LevelRules.Difficulty`, `--difficulty`)
   are done, except the ward's use of it, as there is no ward yet.
-- Free build mode and sandbox options (Partial: `LevelRules.Free` exists for missing level files).
+- Free build mode (Done in the simulation: `LevelRules.WithFreeBuild`, `free_build_mode` in `config.txt` for `--map`
+  levels outside a campaign, `--free-build` on the server; the client shows no free build texts yet: the progress
+  report's and the VIP and emergency faxes' remarks, `progress_report.lua`, `player_hospital.lua`). Sandbox options
+  beyond it are not done.
 - New game dialog, difficulty choice, main menu (`resizables/new_game.lua`, `main_menu.lua`).
 - AI hospitals (Partial: `computer[n]` opponents take their turns for patients and count them as
   visitors, as CorsixTH's `AIHospital` does; like CorsixTH's, they build nothing and play no part in

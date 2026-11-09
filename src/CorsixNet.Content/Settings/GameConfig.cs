@@ -62,6 +62,11 @@ public sealed record GameConfig
     /// <summary>The Theme Hospital folder; <see cref="PlaceholderInstall"/> or one that is not there means look for it.</summary>
     public string ThemeHospitalInstall { get; init; } = PlaceholderInstall;
 
+    /// <summary>
+    /// Whether a level from a map file (not a campaign's) is played without money (CorsixTH's <c>free_build_mode</c>).
+    /// </summary>
+    public bool FreeBuildMode { get; init; }
+
     /// <summary>The player's name in network games; empty for the default.</summary>
     public string PlayerName { get; init; } = string.Empty;
 
@@ -135,6 +140,7 @@ public sealed record GameConfig
             EnableScreenShake = Bool("enable_screen_shake", defaults.EnableScreenShake),
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
+            FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
             PlayerName = Text("player_name", defaults.PlayerName),
         };
     }
@@ -212,6 +218,15 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"autosave_frequency = {AutosaveFrequency}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Free build mode: levels from a map file (--map), but not campaign levels, are
+            -- played without money. Building and staff cost nothing and there are no goals.
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"free_build_mode = {Lua(FreeBuildMode)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------

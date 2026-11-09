@@ -154,15 +154,9 @@ public sealed class StaffRules
 
     /// <summary>
     /// The original game's staff for hire, but everyone works for nothing, as in CorsixTH's free build
-    /// mode: every salary and addition is 0, and the divisor is above the highest skill.
+    /// mode (<see cref="WithoutSalaries"/>).
     /// </summary>
-    public static StaffRules Free { get; } = new(
-        [0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        salaryAbilityDivisor: StaffProfile.MaxSkill + 1,
-        Default.DoctorThreshold,
-        Default.ConsultantThreshold,
-        Default.Levels);
+    public static StaffRules Free { get; } = Default.WithoutSalaries();
 
     public int SalaryAbilityDivisor { get; }
 
@@ -175,6 +169,19 @@ public sealed class StaffRules
 
     /// <summary>Who works in each player's hospital from the start (<c>start_staff</c>).</summary>
     public IReadOnlyList<StartingStaff> StartStaff => _startStaff;
+
+    /// <summary>
+    /// The same staff for hire, but everyone works for nothing, as CorsixTH's <c>StaffProfile:getFairWage</c> in free
+    /// build mode: every salary and addition is 0, and the divisor is above the highest skill.
+    /// </summary>
+    public StaffRules WithoutSalaries() => new(
+        [0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0],
+        salaryAbilityDivisor: StaffProfile.MaxSkill + 1,
+        DoctorThreshold,
+        ConsultantThreshold,
+        _levels,
+        _startStaff);
 
     /// <summary>The minimum salary of a class (<c>staff[n].MinSalary</c>).</summary>
     public int MinSalary(StaffClass staffClass) => _minSalaries[(int)staffClass];

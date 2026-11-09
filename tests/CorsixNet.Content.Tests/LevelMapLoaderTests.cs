@@ -1,6 +1,7 @@
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -170,6 +171,19 @@ public class LevelMapLoaderTests
 
         Assert.Equal(2, simulation.Entities.OfType<EntranceDoor>().Count());
         Assert.Equal(2, simulation.DelayedMapObjects.Count);
+    }
+
+    [Fact]
+    public void FreeBuildModeIsForLevelsOutsideTheCampaignOnly()
+    {
+        var loaded = Load(new MapFileBuilder().Tile(1, 1, parcel: 1));
+        Assert.True(loaded.WithFreeBuild().StartSimulation(seed: 1).Rules.FreeBuild);
+
+        var custom = loaded with { Rules = new LevelRules(40_000, [], []) };
+        Assert.Equal(0, custom.WithFreeBuild().StartSimulation(seed: 1).Hospitals[0].Balance);
+
+        var campaign = loaded with { Rules = new LevelRules(40_000, [], [], levelNumber: 3) };
+        Assert.Same(campaign, campaign.WithFreeBuild());
     }
 
     private static LoadedLevelMap Load(MapFileBuilder builder) => LevelMapLoader.Load(MapFile.Parse(builder.Build()));
