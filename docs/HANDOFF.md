@@ -169,6 +169,10 @@ Done and committed:
   Restart and Quit in the menu ask first.
   Rooms call staff by the dispatcher's score (path, queue x5, emergency, fatigue x40, -50 outside a
   room) instead of the nearest, and leave staff to a waiting room that scores better for them.
+  Edit room (bottom panel, then click a room): the room stops taking patients, its queue goes to
+  other rooms, its staff leave once no patient is inside, then its objects can be moved, bought or
+  sold; Confirm costs nothing again, Take down asks and gives half its cost back (Room.IsPaid,
+  IsClosing; save format 59). Not yet: going back to the blueprint to resize or move the door.
 
 Not done yet:
 

@@ -51,6 +51,7 @@ public enum CommandKind : ushort
     ConcentrateResearch = 36,
     PayBonus = 37,
     IncreaseSalary = 38,
+    EditRoom = 39,
 }
 
 /// <summary>
@@ -82,6 +83,7 @@ public abstract record Command
             CommandKind.PickUpObject => new PickUpObjectCommand(reader.ReadInt32()),
             CommandKind.ConfirmRoom => new ConfirmRoomCommand(reader.ReadInt32()),
             CommandKind.CancelRoom => new CancelRoomCommand(reader.ReadInt32()),
+            CommandKind.EditRoom => new EditRoomCommand(reader.ReadInt32()),
             CommandKind.HireStaff => new HireStaffCommand(ReadStaffClass(reader), reader.ReadInt32(), reader.ReadTile()),
             CommandKind.Meander => new MeanderCommand(reader.ReadInt32()),
             CommandKind.MarkBlueprint => new MarkBlueprintCommand(reader.ReadString(), new TileRect(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())),
@@ -392,10 +394,12 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
         if (simulation.FindEntity(RoomId) is Room room && RoomBuilder.CanConfirm(simulation, room, player))
         {
             room.IsActive = true;
-            if (simulation.Content.FindRoom(room.RoomType) is { } definition)
+            if (!room.IsPaid && simulation.Content.FindRoom(room.RoomType) is { } definition)
             {
                 RoomPurchases.PayForRoom(simulation, definition, player);
             }
+
+            room.IsPaid = true;
 
             // CorsixTH's World:markRoomAsBuilt: building a diagnosis room puts its diagnosis in the casebook.
             if (DiseaseCatalog.Find("diag_" + room.RoomType) is { } diagnosis && player < simulation.Hospitals.Count)
@@ -411,16 +415,49 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
 }
 
-/// <summary>Removes a room that is still being built, with its objects, door and walls.</summary>
+/// <summary>
+/// Starts editing a finished room (CorsixTH's <c>Room:tryToEdit</c>): it stops taking patients, sends its queue to
+/// other rooms and its people out, and can be furnished again once empty.
+/// </summary>
+public sealed record EditRoomCommand(int RoomId) : Command
+{
+    public override CommandKind Kind => CommandKind.EditRoom;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RoomId) is Room { IsActive: true } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
+        {
+            room.IsActive = false;
+            room.IsClosing = true;
+            RoomVisits.UpdateClosing(simulation, room);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>Removes a room that is still being built, with its objects, door and walls; one being edited sells for half its cost.</summary>
 public sealed record CancelRoomCommand(int RoomId) : Command
 {
     public override CommandKind Kind => CommandKind.CancelRoom;
 
     public override void Execute(Simulation simulation, int player)
     {
-        if (simulation.FindEntity(RoomId) is Room { IsActive: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
+        if (simulation.FindEntity(RoomId) is Room { IsActive: false, IsClosing: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
         {
             var definition = simulation.Content.FindRoom(room.RoomType);
+            if (room.IsPaid)
+            {
+                // UIEditRoom:abortRoom for a room that was paid for: half its cost back, objects included.
+                RoomBuilder.Remove(simulation, room);
+                if (definition is not null)
+                {
+                    RoomPurchases.RefundPaidRoom(simulation, definition, player);
+                }
+
+                return;
+            }
+
             if (definition is not null)
             {
                 RoomPurchases.SellExtraObjects(simulation, room, definition, player);

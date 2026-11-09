@@ -1,8 +1,10 @@
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Rooms;
+using CorsixNet.Sim.Serialization;
 using static CorsixNet.Sim.Definitions.FootprintFlags;
 
 namespace CorsixNet.Sim.Tests;
@@ -209,6 +211,104 @@ public class RoomLifecycleTests
         Assert.Equal(SnapshotMap(original.Map), SnapshotMap(restored.Map));
     }
 
+    [Fact]
+    public void AnEmptyRoomCanBeEditedAndConfirmedAgainWithoutPayingTwice()
+    {
+        var simulation = NewSimulation(new LevelRules(10_000, [KeyValuePair.Create("office", 1000)], [KeyValuePair.Create("cabinet", 300)]));
+        var room = BuildOffice(simulation);
+        var hospital = simulation.Hospitals[0];
+        var balance = hospital.Balance;
+
+        Run(simulation, new EditRoomCommand(room.Id), player: 1);
+        Assert.True(room.IsActive);
+
+        Run(simulation, new EditRoomCommand(room.Id));
+        Assert.False(room.IsActive);
+        Assert.False(room.IsClosing);
+        Assert.True(room.IsPaid);
+
+        // Being edited, its objects can be moved.
+        var cabinet = simulation.Entities.OfType<RoomObject>().First();
+        Run(simulation, new PickUpObjectCommand(cabinet.Id));
+        Assert.DoesNotContain(cabinet, simulation.Entities);
+        Run(simulation, new PlaceObjectCommand("cabinet", new(2, 2), Direction.North));
+
+        Run(simulation, new ConfirmRoomCommand(room.Id));
+        Assert.True(room.IsActive);
+        Assert.Equal(balance, hospital.Balance);
+    }
+
+    [Fact]
+    public void TakingDownAPaidRoomGivesHalfItsCostBack()
+    {
+        var simulation = NewSimulation(new LevelRules(10_000, [KeyValuePair.Create("office", 1000)], [KeyValuePair.Create("cabinet", 300)]));
+        var room = BuildOffice(simulation);
+        var hospital = simulation.Hospitals[0];
+        var balance = hospital.Balance;
+
+        Run(simulation, new EditRoomCommand(room.Id));
+        Run(simulation, new CancelRoomCommand(room.Id));
+
+        // Half of 1000 + 2 * 300, less half a cabinet once for its kind.
+        Assert.DoesNotContain(room, simulation.Entities);
+        Assert.Equal(balance + 800 - 150, hospital.Balance);
+    }
+
+    [Fact]
+    public void ARoomWithSomeoneInsideWaitsForThemToLeave()
+    {
+        var simulation = NewSimulation();
+        var room = BuildOffice(simulation);
+        var visitor = simulation.AddEntity(id => new Humanoid(id, new TilePosition(3, 3)));
+
+        Run(simulation, new EditRoomCommand(room.Id));
+        Assert.True(room.IsClosing);
+        Run(simulation, new PickUpObjectCommand(simulation.Entities.OfType<RoomObject>().First().Id));
+        Run(simulation, new CancelRoomCommand(room.Id));
+        Assert.Equal(2, simulation.Entities.OfType<RoomObject>().Count());
+        Assert.Contains(room, simulation.Entities);
+
+        visitor.PlaceAt(new TilePosition(9, 9));
+        simulation.Step();
+        Assert.False(room.IsClosing);
+        Assert.False(room.IsActive);
+    }
+
+    [Fact]
+    public void SavesKeepWhetherARoomIsPaidAndClosing()
+    {
+        var simulation = NewSimulation();
+        var room = BuildOffice(simulation);
+        simulation.AddEntity(id => new Humanoid(id, new TilePosition(3, 3)));
+        Run(simulation, new EditRoomCommand(room.Id));
+
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var restored = Simulation.Load(stream, Content);
+
+        Assert.Equal(simulation.ComputeStateHash(), restored.ComputeStateHash());
+        var copy = (Room)restored.FindEntity(room.Id)!;
+        Assert.True(copy.IsPaid);
+        Assert.True(copy.IsClosing);
+
+        using var wire = new MemoryStream();
+        new EditRoomCommand(5).Write(new SimWriter(wire));
+        wire.Position = 0;
+        Assert.Equal(new EditRoomCommand(5), Command.Read(new SimReader(wire)));
+    }
+
+    private static Room BuildOffice(Simulation simulation)
+    {
+        Run(simulation, new BuildRoomCommand(Plan));
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+        Run(simulation, new PlaceObjectCommand("cabinet", new(2, 2), Direction.North));
+        Run(simulation, new PlaceObjectCommand("cabinet", new(5, 2), Direction.North));
+        Run(simulation, new ConfirmRoomCommand(room.Id));
+        Assert.True(room.IsActive);
+        return room;
+    }
+
     private static void Run(Simulation simulation, Command command, int player = 0)
     {
         simulation.Schedule(player, command);
@@ -229,7 +329,7 @@ public class RoomLifecycleTests
         return tiles;
     }
 
-    private static Simulation NewSimulation()
+    private static Simulation NewSimulation(LevelRules? rules = null)
     {
         var map = TestMaps.FromRows(
             "............",
@@ -255,6 +355,6 @@ public class RoomLifecycleTests
 
         map.UpdatePathfinding();
         map.UpdateShadows();
-        return new Simulation(map, seed: 7, Content);
+        return new Simulation(map, seed: 7, Content, rules);
     }
 }

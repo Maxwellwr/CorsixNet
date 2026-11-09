@@ -219,6 +219,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private object? _adviserSession;
     private readonly HashSet<string> _roomsDescribed = new(StringComparer.Ordinal);
     private bool _tipShown;
+    private bool _pickingRoomToEdit;
 
     /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
     private SoundEffects _sounds;
@@ -360,6 +361,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (_hiring is not null)
             {
                 _hiring = null;
+            }
+            else if (_pickingRoomToEdit)
+            {
+                _pickingRoomToEdit = false;
             }
             else if (_windows.Any)
             {
@@ -1538,7 +1543,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 !leftDown && leftWasDown,
                 rightClicked,
                 pressed(Keys.Enter) || TakeButton(BuildButton.Confirm),
-                back || TakeButton(BuildButton.Back),
+                TakeDown(simulation, back || TakeButton(BuildButton.Back)),
                 pressed(Keys.P) || TakeButton(BuildButton.PickUp));
             var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
             if (tool is { } command)
@@ -1595,6 +1600,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var clicked = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released;
+        if (_pickingRoomToEdit)
+        {
+            PickRoomToEdit(simulation, clicked, mouse);
+            return;
+        }
+
         if (clicked && _hoveredTile is { } target)
         {
             var tile = new TilePosition(target.X, target.Y);
@@ -2256,7 +2267,64 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             case "corridor":
                 _windows.Open(new FurnishCorridorWindow(definition => _furnishTool.Start(definition)));
                 break;
+            case "edit":
+                // CorsixTH's edit room button: the next click on a room of the hospital edits it.
+                _pickingRoomToEdit = true;
+                _windows.CloseAll();
+                ShowNotice("Click a room to edit it; right click or Esc cancels");
+                break;
         }
+    }
+
+    /// <summary>
+    /// Picking the room to edit: a click on an active room of the player's sends it to be edited (<c>Room:tryToEdit</c>)
+    /// and opens it for furnishing; a right click gives up.
+    /// </summary>
+    private void PickRoomToEdit(Simulation simulation, bool clicked, MouseState mouse)
+    {
+        if (mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released)
+        {
+            _pickingRoomToEdit = false;
+            return;
+        }
+
+        if (!clicked || _hoveredTile is not { } target || !simulation.Map.Contains(target.X, target.Y))
+        {
+            return;
+        }
+
+        var player = _session!.Player;
+        if (simulation.FindEntity(simulation.Map[target.X, target.Y].RoomId) is Room { IsActive: true } room
+            && RoomBuilder.IsOwnedBy(simulation.Map, room, player)
+            && simulation.Content.FindRoom(room.RoomType) is { } definition)
+        {
+            _pickingRoomToEdit = false;
+            _session.Submit(new EditRoomCommand(room.Id));
+            _buildTool.StartEditing(definition, room.Id, simulation.Tick);
+        }
+    }
+
+    /// <summary>
+    /// Esc or Take down while editing a finished room: CorsixTH asks first (<c>confirmation.delete_room</c>), then sells
+    /// it for half its cost. While building a new room the build tool deals with it.
+    /// </summary>
+    private bool TakeDown(Simulation simulation, bool back)
+    {
+        if (!back || !_buildTool.IsEditing || _buildTool.IsPickingUp)
+        {
+            return back;
+        }
+
+        if (simulation.FindEntity(_buildTool.RoomId) is Room { IsActive: false, IsClosing: false } room)
+        {
+            _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
+            {
+                _session!.Submit(new CancelRoomCommand(room.Id));
+                _buildTool.Stop();
+            }));
+        }
+
+        return false;
     }
 
     void IWindowHost.StartHiring(StaffClass staffClass, int index)
