@@ -91,13 +91,14 @@ Done and committed:
   hospital's value, winning and losing, loans and interest (L / Shift+L), buying land (N), room availability
   by level, setting prices in the casebook (by command only), heating and boiler breakdowns (T / Shift+T),
   patients sent to the hospitals in turn; then the monthly statistics for the graphs (PR #109) and the bank
-  statement and graphs figures as text on F2 and F8 (PR #110). No game data in the cloud: real-data tests
-  were skipped there and the client was not run, so these want a look on MSI. Save format version 20.
+  statement and graphs figures as text on F2 and F8 (PR #110), hiring a receptionist straight onto a desk
+  (PR #111). No game data in the cloud: real-data tests were skipped there and the client was not run, so
+  these want a look on MSI. Save format version 20.
 
 Not done yet:
 
 - M5: hire window (the original's staff list with faces), staff names and descriptions from the
-  language files, staff meandering, hiring a receptionist straight onto a desk, benches, queue
+  language files, staff meandering, benches, queue
   priorities, staff called through a dispatcher.
 - Patients: diagnosis rooms other than general diagnosis, the crash trolley split over two tiles as
   CorsixTH draws it, treatment rooms other than the pharmacy (inflation for bloaty heads,

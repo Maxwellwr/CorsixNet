@@ -50,6 +50,23 @@ public class PatientFlowTests
     }
 
     [Fact]
+    public void AReceptionistCanBeHiredStraightOntoADeskWithoutOne()
+    {
+        var simulation = NewHospital();
+        var desk = PlaceReceptionDesk(simulation);
+
+        // The desk's tile is not passable: only a receptionist may be put there, and only while the desk has none.
+        Assert.Equal(StaffHireProblem.NotPassable, StaffHiring.CheckPlacement(simulation, StaffClass.Doctor, desk.Tile, 0));
+        Assert.Equal(StaffHireProblem.None, StaffHiring.CheckPlacement(simulation, StaffClass.Receptionist, desk.Tile, 0));
+        Run(simulation, new HireStaffCommand(StaffClass.Receptionist, 0, desk.Tile));
+        var receptionist = simulation.Entities.OfType<Humanoid>().Single(h => h.Type == HumanoidType.Receptionist);
+        StepFor(simulation, 400);
+
+        Assert.Equal(receptionist.Id, desk.Desk!.ReceptionistId);
+        Assert.Equal(StaffHireProblem.NotPassable, StaffHiring.CheckPlacement(simulation, StaffClass.Receptionist, desk.Tile, 0));
+    }
+
+    [Fact]
     public void ReceptionDesksAreBoughtWhenPlaced()
     {
         var simulation = NewHospital();
