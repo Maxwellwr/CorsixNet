@@ -26,13 +26,17 @@ public enum DoctorPhase : byte
 
     /// <summary>In general diagnosis: standing at the crash trolley for the patient (hidden while examining them).</summary>
     AtTrolley,
+
+    /// <summary>In general diagnosis: meandering about the room until a patient has undressed.</summary>
+    Waiting,
 }
 
 /// <summary>
 /// A doctor working in the GP's office: they go back and forth between the filing cabinet and the desk.
 /// At the desk, every round of the desk animation counts down; when a patient sits on the chair the doctor
 /// may conclude the consultation, the more likely the more skilled they are. In general diagnosis the doctor
-/// waits at the crash trolley, where the patient's use of it shows them both.
+/// meanders about the room; once a patient has undressed they go to the crash trolley and wait there, and the
+/// patient's use of it shows them both; then they meander again.
 /// </summary>
 public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 {
@@ -52,11 +56,12 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary>The doctor's use of the cabinet or desk, while it lasts.</summary>
     public ObjectUse? Use { get; private set; }
 
-    /// <summary>Wandering about while without a room.</summary>
+    /// <summary>Wandering about while without a room, or in general diagnosis between patients.</summary>
     private Meandering Meander { get; init; } = new();
 
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
+        Meander.Reset();
         RoomId = room.Id;
         Phase = DoctorPhase.WalkingToRoom;
         humanoid.WalkTo(simulation, inside);
@@ -70,13 +75,12 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             return;
         }
 
-        Meander.Reset();
-
         if (simulation.FindEntity(RoomId) is not Room room)
         {
             Phase = DoctorPhase.Idle;
             RoomId = 0;
             Use = null;
+            Meander.Reset();
             return;
         }
 
@@ -95,7 +99,8 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 room.StaffPresent = true;
                 if (string.Equals(room.RoomType, RoomVisits.GeneralDiagnosisRoom, StringComparison.Ordinal))
                 {
-                    WalkToTrolley(simulation, humanoid, room);
+                    // Room:commandEnteringStaff: the doctor meanders until a patient needs them.
+                    Wait();
                 }
                 else
                 {
@@ -107,6 +112,23 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 Phase = DoctorPhase.AtTrolley;
                 break;
             case DoctorPhase.AtTrolley:
+                if (!IsPatientComingToTrolley(simulation, room))
+                {
+                    // The patient left before being examined (sent home, gave up or died): no one to wait for.
+                    Wait();
+                }
+
+                break;
+            case DoctorPhase.Waiting:
+                if (IsPatientComingToTrolley(simulation, room))
+                {
+                    WalkToTrolley(simulation, humanoid, room);
+                }
+                else
+                {
+                    Meander.Update(simulation, humanoid);
+                }
+
                 break;
             case DoctorPhase.WalkingToCabinet:
                 if (RoomVisits.FindObject(simulation, room.Id, CabinetType) is { } cabinet)
@@ -210,9 +232,42 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     }
 
     /// <summary>
-    /// GeneralDiagRoom: the doctor waits for the patient at the trolley's secondary use position. CorsixTH's doctor
-    /// meanders about the room until the patient has undressed; meandering is not ported, so they wait there.
+    /// <c>GeneralDiagRoom:commandEnteringPatient</c>'s <c>after_use_screen1</c>: the patient has undressed, so the doctor
+    /// leaves off meandering and walks to the crash trolley.
     /// </summary>
+    internal void OnPatientUndressed(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (Phase == DoctorPhase.Waiting && RoomId == room.Id)
+        {
+            WalkToTrolley(simulation, humanoid, room);
+        }
+    }
+
+    /// <summary><c>after_use_trolley</c>: the examination is over and the doctor meanders again.</summary>
+    internal void OnExamined(Room room)
+    {
+        if (Phase == DoctorPhase.AtTrolley && RoomId == room.Id)
+        {
+            Wait();
+        }
+    }
+
+    /// <summary>Whether the room's patient is on their way to the trolley, waiting at it or lying on it.</summary>
+    private static bool IsPatientComingToTrolley(Simulation simulation, Room room) =>
+        simulation.FindEntity(room.PatientId) is Humanoid
+        {
+            Behaviour: PatientBehaviour { Phase: PatientPhase.WalkingToTrolley or PatientPhase.AtTrolley or PatientPhase.OnTrolley },
+        };
+
+    /// <summary>Meanders about the room until a patient needs the doctor, starting with a walk.</summary>
+    private void Wait()
+    {
+        Use = null;
+        Phase = DoctorPhase.Waiting;
+        Meander.Reset();
+    }
+
+    /// <summary>GeneralDiagRoom: the doctor waits for the patient at the trolley's secondary use position.</summary>
     private void WalkToTrolley(Simulation simulation, Humanoid humanoid, Room room)
     {
         Use = null;

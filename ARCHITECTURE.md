@@ -401,8 +401,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   agree to pay and home otherwise. Neither works on a patient in a room (CorsixTH makes them leave the room). Q and
   Shift+Q in the client, for the patient by the cursor, until the window exists.
 - **General diagnosis** (`PatientBehaviour.GeneralDiagnosisStep`, from `rooms/general_diag.lua` and
-  `use_screen.lua`). The room sends for a free doctor, who waits at the crash trolley's secondary use position
-  (CorsixTH's doctor meanders meanwhile). The patient undresses behind the screen (the screen's animation shows them;
+  `use_screen.lua`). The room sends for a free doctor, who meanders about the room until a patient has
+  undressed, then waits at the crash trolley's secondary use position, and meanders again after the examination
+  (`DoctorBehaviour.OnPatientUndressed`, `OnExamined`). The patient undresses behind the screen (the screen's animation shows them;
   they become a stripped patient, `Humanoid.Type` changes, and their clothes hang on the screen,
   `RoomObject.HangingClothes`), lies down on the trolley (the trolley's multi-use with the doctor, who is hidden; one
   of three animation variants), walks back and dresses. Then the room is done with them: they get further in the

@@ -110,9 +110,10 @@ Done and committed:
   sending a patient queueing for a room to another room of the same type (PR #138), levels with random
   emergencies (PR #139), the campaign's difficulty and `--difficulty` (PR #140), idle staff meandering
   (PR #141), handymen meandering within their parcel (PR #142), staff speed: slow juniors and tired
-  staff, fast consultants (PR #143), the pharmacy's nurse meandering between patients (PR #144). No game
-  data in the cloud: real-data tests were skipped there and the client was not run, so these want a look
-  on MSI. Save format version 47.
+  staff, fast consultants (PR #143), the pharmacy's nurse meandering between patients (PR #144), the
+  general diagnosis doctor meandering until the patient has undressed (PR #145). No game data in the
+  cloud: real-data tests were skipped there and the client was not run, so these want a look on MSI.
+  Save format version 47.
 
 Not done yet:
 
