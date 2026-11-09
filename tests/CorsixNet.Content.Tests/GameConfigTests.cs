@@ -32,6 +32,7 @@ public sealed class GameConfigTests : IDisposable
             autosave_frequency = 3
             theme_hospital_install = [[D:\Games\Theme Hospital\data\Game]]
             player_name = [[Maxim]]
+            free_build_mode = true
             """);
 
         Assert.Equal("German", config.Language);
@@ -43,6 +44,7 @@ public sealed class GameConfigTests : IDisposable
         Assert.Equal(3, config.AutosaveFrequency);
         Assert.Equal(@"D:\Games\Theme Hospital\data\Game", config.ThemeHospitalInstall);
         Assert.Equal("Maxim", config.PlayerName);
+        Assert.True(config.FreeBuildMode);
     }
 
     [Fact]
@@ -74,6 +76,7 @@ public sealed class GameConfigTests : IDisposable
             Height = 1080,
             EnableScreenShake = false,
             AutosaveFrequency = 2,
+            FreeBuildMode = true,
             ThemeHospitalInstall = @"C:\Games\Theme Hospital",
             PlayerName = "Name with ]] and ]=] in it]",
         };

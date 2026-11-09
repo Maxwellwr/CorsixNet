@@ -10,6 +10,7 @@ const string Usage = """
     Usage: CorsixNet.Server [game folder] [options]
       --level NAME   Original level to play (default LEVEL.L20, a two-player map)
       --map PATH     Map file to play instead, e.g. a CorsixTH .map or .level file
+      --free-build   Play the map file without money (CorsixTH's free build mode)
       --difficulty NAME  Difficulty of an original level: Easy, Medium (default) or Hard
       --port PORT    TCP port (default 7777)
       --public       Accept connections from other machines, not only this one
@@ -24,6 +25,7 @@ var level = "LEVEL.L20";
 string? mapPath = null;
 var port = 7777;
 var publicHost = false;
+var freeBuild = false;
 ulong seed = 1;
 var difficulty = Difficulty.Medium;
 for (var i = 0; i < args.Length; i++)
@@ -51,6 +53,9 @@ for (var i = 0; i < args.Length; i++)
         case "--public":
             publicHost = true;
             break;
+        case "--free-build":
+            freeBuild = true;
+            break;
         case "--help" or "-h":
             Console.WriteLine(Usage);
             return 0;
@@ -76,6 +81,11 @@ try
         var settings = gamePath is null ? ThemeHospitalInstall.Locate()
             : ThemeHospitalInstall.TryOpen(gamePath, out var found, out _) ? found : null;
         loaded = LevelMapLoader.LoadFile(mapPath, settings);
+        if (freeBuild)
+        {
+            loaded = loaded.WithFreeBuild();
+        }
+
         levelName = Path.GetFileName(mapPath);
     }
     else

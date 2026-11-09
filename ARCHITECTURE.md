@@ -319,6 +319,11 @@ come from the latest earlier entry. `LevelRulesLoader` reads them on top of Cors
 base_config.lua defaults. Without level files (`LevelRules.Free`) staff work for nothing, as in
 CorsixTH's free build mode.
 
+Free build mode itself (CorsixTH's `free_build_mode`) is `LevelRules.WithFreeBuild()`, saved with the rules: the
+hospital starts with nothing, rooms, objects and land cost nothing, staff work for nothing and never ask for a raise,
+`Hospital.Spend` and `Receive` do nothing, the bank lends nothing, there are no goals, no dollar signs float up, and
+every VIP brings 20 reputation. The level's own figures are kept, so the save holds them.
+
 - A doctor's abilities are rolled "one in n" from the entry for the month; a junior's skill is put
   below the junior threshold, a consultant's above the consultant threshold, everyone else's between.
 - The wage is the class's minimum salary plus skill divided by `SalaryAbilityDivisor`, plus for a

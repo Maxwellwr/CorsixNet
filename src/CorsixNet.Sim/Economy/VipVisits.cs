@@ -27,6 +27,9 @@ public sealed class VipVisits
     /// <summary>The fax asking accepts the VIP after this many days (<c>Date.hoursPerDay() * 20</c>).</summary>
     public const int InvitationDays = 20;
 
+    /// <summary>What every VIP visit brings in free build mode (<c>Vip:onDestroy</c>).</summary>
+    public const int FreeBuildReputationReward = 20;
+
     /// <summary>How far, in days, a visit may come before or after the level's average (<c>_generateNextVipDate</c>'s bound).</summary>
     private const int Bound = 30;
 
@@ -192,11 +195,16 @@ public sealed class VipVisits
 
     /// <summary>
     /// <c>Vip:onDestroy</c>: off the hospital grounds, the VIP's report brings a pleased hospital money and reputation,
-    /// and costs a displeased one reputation; then the next visit is planned.
+    /// and costs a displeased one reputation; in free build mode every visit brings 20 reputation and nothing else. Then
+    /// the next visit is planned.
     /// </summary>
     internal static void OnVipLeft(Simulation simulation, Hospital hospital, VipBehaviour vip)
     {
-        if (vip.Rating <= VipBehaviour.PleasedRating)
+        if (simulation.Rules.FreeBuild)
+        {
+            hospital.UnconditionalChangeReputation(FreeBuildReputationReward);
+        }
+        else if (vip.Rating <= VipBehaviour.PleasedRating)
         {
             hospital.Receive(simulation.Hours, vip.CashReward, TransactionKind.VipAward, string.Empty);
             hospital.UnconditionalChangeReputation(vip.ReputationReward);

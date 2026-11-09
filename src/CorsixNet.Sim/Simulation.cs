@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 48;
+    private const int FormatVersion = 49;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -73,6 +73,7 @@ public sealed class Simulation
             var land = (long)map.ParcelTileCount(player + 1) * Rules.LandCostPerTile;
             _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand, Rules.InterestRate, Rules.OverdraftDifferential);
             _hospitals[player].Policies = new HospitalPolicies(Rules.Tiredness.Tired);
+            _hospitals[player].FreeBuild = Rules.FreeBuild;
 
             _hospitals[player].ScheduleNextDisaster(Random, Rules.Difficulty);
             _hospitals[player].Vips.ScheduleNext(Random, Rules.MayorLaunch, today: 0);
@@ -264,9 +265,17 @@ public sealed class Simulation
         Tick++;
     }
 
-    /// <summary><c>World:newFloatingDollarSign</c>: a banknote with the amount floats up from the patient.</summary>
+    /// <summary>
+    /// <c>World:newFloatingDollarSign</c>: a banknote with the amount floats up from the patient, except in free build
+    /// mode.
+    /// </summary>
     internal void ShowFloatingDollarSign(Humanoid patient, int amount, bool insurance)
     {
+        if (Rules.FreeBuild)
+        {
+            return;
+        }
+
         _floatingDollarSigns.Add(new FloatingDollarSign(patient.HospitalPlayer, patient.Tile, amount, insurance, Tick));
     }
 
@@ -465,6 +474,7 @@ public sealed class Simulation
         for (var player = 0; player < map.PlayerCount; player++)
         {
             simulation._hospitals[player] = Hospital.Read(reader, player);
+            simulation._hospitals[player].FreeBuild = rules.FreeBuild;
         }
 
         var competitorCount = reader.ReadCount(rules.Competitors.Count);
@@ -648,8 +658,11 @@ public sealed class Simulation
         return false;
     }
 
-    /// <summary>What a parcel costs (CorsixTH's <c>Map:getParcelPrice</c>): its tiles at the level's land cost per tile.</summary>
-    public long ParcelPrice(int parcel) => (long)Map.ParcelTileCount(parcel) * Rules.LandCostPerTile;
+    /// <summary>
+    /// What a parcel costs (CorsixTH's <c>Map:getParcelPrice</c>): its tiles at the level's land cost per tile; nothing in
+    /// free build mode (<c>Hospital:purchasePlot</c>).
+    /// </summary>
+    public long ParcelPrice(int parcel) => Rules.FreeBuild ? 0 : (long)Map.ParcelTileCount(parcel) * Rules.LandCostPerTile;
 
     /// <summary>
     /// <c>Hospital:purchasePlot</c>: the player buys a parcel they may buy and can afford; it adds its price to the

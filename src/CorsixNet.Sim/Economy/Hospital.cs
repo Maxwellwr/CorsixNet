@@ -369,7 +369,14 @@ public sealed class Hospital
     /// What the hospital may owe the bank (<c>UIBankManager:increaseLoan</c>): a third of its value, rounded down to
     /// 5,000, and 10,000 more.
     /// </summary>
-    public long MaxLoan => (long)decimal.Floor(Value * 0.33m / LoanStep) * LoanStep + 10000;
+    /// <remarks>Nothing in free build mode (<c>UIBankManager:updateLoanCap</c>).</remarks>
+    public long MaxLoan => FreeBuild ? 0 : (long)decimal.Floor(Value * 0.33m / LoanStep) * LoanStep + 10000;
+
+    /// <summary>
+    /// Whether the level is played without money (<see cref="LevelRules.FreeBuild"/>): no money is spent or
+    /// taken in. Not saved: it comes from the level's rules.
+    /// </summary>
+    internal bool FreeBuild { get; set; }
 
     /// <summary>Interest on the loan run up this month (CorsixTH's <c>acc_loan_interest</c>).</summary>
     private decimal AccruedLoanInterest { get; set; }
@@ -622,11 +629,16 @@ public sealed class Hospital
     }
 
     /// <summary>
-    /// Pays money out; what is paid for land, a room or an object adds to the hospital's value (CorsixTH's
+    /// Pays money out, except in free build mode; what is paid for land, a room or an object adds to the hospital's value (CorsixTH's
     /// <c>spendMoney</c> with <c>changeValue</c>).
     /// </summary>
     internal void Spend(long tick, int amount, TransactionKind kind, string subject)
     {
+        if (FreeBuild)
+        {
+            return;
+        }
+
         if (kind is TransactionKind.BuyObject or TransactionKind.BuildRoom or TransactionKind.BuyLand)
         {
             Value += amount;
@@ -637,9 +649,14 @@ public sealed class Hospital
         Log(new Transaction(tick, kind, subject, -amount, Balance));
     }
 
-    /// <summary>Takes money in; what an object is sold for is taken off the hospital's value (<c>receiveMoney</c>).</summary>
+    /// <summary>Takes money in, except in free build mode; what an object is sold for is taken off the hospital's value (<c>receiveMoney</c>).</summary>
     internal void Receive(long tick, int amount, TransactionKind kind, string subject)
     {
+        if (FreeBuild)
+        {
+            return;
+        }
+
         if (kind == TransactionKind.SellObject)
         {
             Value -= amount;

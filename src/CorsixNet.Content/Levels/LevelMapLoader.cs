@@ -22,6 +22,13 @@ public sealed record LoadedLevelMap(LevelMap Map, IReadOnlyList<MapObjectPlaceme
         simulation.PlaceMapObjects(Objects);
         return simulation;
     }
+
+    /// <summary>
+    /// The level played in free build mode (<see cref="LevelRules.WithFreeBuild"/>), if it may be: CorsixTH's
+    /// <c>App:loadLevel</c> allows it only for levels outside a campaign, so an original campaign level stays as it is.
+    /// </summary>
+    public LoadedLevelMap WithFreeBuild() =>
+        Rules?.LevelNumber is not null ? this : this with { Rules = (Rules ?? LevelRules.Free).WithFreeBuild() };
 }
 
 /// <summary>Builds a <see cref="LevelMap"/> from a <see cref="MapFile"/>, following CorsixTH's rules.</summary>

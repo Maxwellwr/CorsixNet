@@ -211,7 +211,9 @@ else
     if (mapPath is not null)
     {
         var fullPath = Path.GetFullPath(mapPath);
-        levels.Insert(0, new LevelSource(Path.GetFileName(fullPath), () => LevelMapLoader.LoadFile(fullPath, install)));
+        levels.Insert(0, new LevelSource(Path.GetFileName(fullPath), () => config.FreeBuildMode
+            ? LevelMapLoader.LoadFile(fullPath, install).WithFreeBuild()
+            : LevelMapLoader.LoadFile(fullPath, install)));
     }
     else if (initialLevel is not null)
     {

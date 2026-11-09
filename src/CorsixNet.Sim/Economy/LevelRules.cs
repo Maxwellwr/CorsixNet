@@ -52,6 +52,12 @@ public sealed class LevelRules
     private readonly (string Id, ObjectAvailability Availability)[] _objectAvailability;
     private readonly Dictionary<string, ObjectAvailability> _availabilityLookup;
 
+    /// <summary>What the level file gives, kept for saving while free build mode hides it.</summary>
+    private readonly int _startCash;
+
+    private readonly EndConditions _endConditions;
+    private readonly StaffRules _staff;
+
     /// <param name="startCash">Each hospital's balance at the start.</param>
     /// <param name="roomCosts">Cost of each room type by room id, without its objects.</param>
     /// <param name="objectCosts">Cost of each object type by object id.</param>
@@ -115,13 +121,16 @@ public sealed class LevelRules
         Earthquakes = [.. earthquakes ?? []];
         InterestRate = interestRate;
         OverdraftDifferential = overdraftDifferential;
-        EndConditions = endConditions ?? EndConditions.None;
+        _endConditions = endConditions ?? EndConditions.None;
+        EndConditions = _endConditions;
         Awards = awards ?? AwardRules.Default;
         LandCostPerTile = landCostPerTile;
         StartReputation = startReputation;
         Diseases = diseases ?? DiseaseRules.Default;
+        _startCash = startCash;
         StartCash = startCash;
-        Staff = staff ?? StaffRules.Default;
+        _staff = staff ?? StaffRules.Default;
+        Staff = _staff;
         Population = [.. population ?? DefaultPopulation];
         _roomCosts = Sorted(roomCosts);
         _objectCosts = Sorted(objectCosts);
@@ -131,7 +140,14 @@ public sealed class LevelRules
         _availabilityLookup = _objectAvailability.ToDictionary(entry => entry.Id, entry => entry.Availability, StringComparer.Ordinal);
     }
 
-    public int StartCash { get; }
+    /// <summary>Each hospital's balance at the start; 0 in free build mode.</summary>
+    public int StartCash { get; private set; }
+
+    /// <summary>
+    /// Whether the level is played without money (CorsixTH's <c>free_build_mode</c>): the hospital starts with nothing,
+    /// building and staff cost nothing, no money comes in or goes out, and there are no goals.
+    /// </summary>
+    public bool FreeBuild { get; private set; }
 
     /// <summary>Each hospital's reputation at the start, from 0 to 1000.</summary>
     public int StartReputation { get; }
@@ -142,8 +158,8 @@ public sealed class LevelRules
     /// <summary>What a tile of land is worth, for the hospital's value.</summary>
     public int LandCostPerTile { get; }
 
-    /// <summary>The goals to win and lose the level by.</summary>
-    public EndConditions EndConditions { get; }
+    /// <summary>The goals to win and lose the level by; none in free build mode (<c>EndConditions:EndConditions</c>).</summary>
+    public EndConditions EndConditions { get; private set; }
 
     /// <summary>The bank's yearly interest on loans, in hundredths of a percent.</summary>
     public int InterestRate { get; }
@@ -151,8 +167,8 @@ public sealed class LevelRules
     /// <summary>What an overdraft costs a year on top of the interest, in hundredths of a percent.</summary>
     public int OverdraftDifferential { get; }
 
-    /// <summary>Salaries and who is available for hire when.</summary>
-    public StaffRules Staff { get; }
+    /// <summary>Salaries and who is available for hire when; in free build mode everyone works for nothing.</summary>
+    public StaffRules Staff { get; private set; }
 
     /// <summary>
     /// The level's <c>popn</c> entries in file order: patients in the first month, then from which month on the number
@@ -196,11 +212,28 @@ public sealed class LevelRules
     /// <summary>The difficulty, which sets how patients judge prices and how often the boiler breaks.</summary>
     public Difficulty Difficulty { get; }
 
-    /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
-    public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
+    /// <summary>What a room of this type costs, without its objects; 0 if the level does not say, or in free build mode.</summary>
+    public int RoomCost(string roomId) => FreeBuild ? 0 : _roomLookup.GetValueOrDefault(roomId);
 
-    /// <summary>What one object of this type costs; 0 if the level does not say.</summary>
-    public int ObjectCost(string objectId) => _objectLookup.GetValueOrDefault(objectId);
+    /// <summary>
+    /// What one object of this type costs; 0 if the level does not say, or in free build mode
+    /// (<c>Hospital:getObjectBuildCost</c>).
+    /// </summary>
+    public int ObjectCost(string objectId) => FreeBuild ? 0 : _objectLookup.GetValueOrDefault(objectId);
+
+    /// <summary>
+    /// The same level played in free build mode (CorsixTH's <c>free_build_mode</c>, which <c>App:loadLevel</c> allows for
+    /// levels outside a campaign): <see cref="StartCash"/>, the costs and the salaries are 0 and there are no goals.
+    /// </summary>
+    public LevelRules WithFreeBuild()
+    {
+        var rules = (LevelRules)MemberwiseClone();
+        rules.FreeBuild = true;
+        rules.StartCash = 0;
+        rules.EndConditions = EndConditions.None;
+        rules.Staff = _staff.WithoutSalaries();
+        return rules;
+    }
 
     /// <summary>What the objects a room needs cost together.</summary>
     public int NeededObjectsCost(RoomDefinition room)
@@ -245,11 +278,11 @@ public sealed class LevelRules
 
     internal void Write(SimWriter writer)
     {
-        writer.WriteInt32(StartCash);
+        writer.WriteInt32(_startCash);
         writer.WriteInt32(StartReputation);
         writer.WriteInt32(LandCostPerTile);
         Awards.Write(writer);
-        EndConditions.Write(writer);
+        _endConditions.Write(writer);
         writer.WriteInt32(InterestRate);
         writer.WriteInt32(OverdraftDifferential);
         WriteCosts(writer, _roomCosts);
@@ -262,7 +295,7 @@ public sealed class LevelRules
             writer.WriteBool(availability.AtStart);
         }
 
-        Staff.Write(writer);
+        _staff.Write(writer);
         writer.WriteInt32(Population.Count);
         foreach (var entry in Population)
         {
@@ -306,6 +339,7 @@ public sealed class LevelRules
         }
 
         writer.WriteByte((byte)Difficulty);
+        writer.WriteBool(FreeBuild);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -339,12 +373,13 @@ public sealed class LevelRules
             earthquakes[i] = new PlannedEarthquake(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32(), TirednessRules.Read(reader), reader.ReadInt32(),
+        var rules = new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32(), TirednessRules.Read(reader), reader.ReadInt32(),
             Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => PlannedEmergency.Read(reader)).ToList(), EpidemicRules.Read(reader),
             Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => new PlannedCompetitor(reader.ReadInt32(), reader.ReadString())).ToList(),
             reader.ReadInt32(), reader.ReadInt32() is var level and > 0 ? level : null,
             reader.ReadBool() ? new RandomEmergencies(reader.ReadInt32(), reader.ReadInt32()) : null,
             reader.ReadByte() is var difficulty && Enum.IsDefined((Difficulty)difficulty) ? (Difficulty)difficulty : throw new InvalidDataException($"Unknown difficulty {difficulty}."));
+        return reader.ReadBool() ? rules.WithFreeBuild() : rules;
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)
