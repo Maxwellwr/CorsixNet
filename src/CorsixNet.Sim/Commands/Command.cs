@@ -42,6 +42,8 @@ public enum CommandKind : ushort
     ShootRat = 27,
     SendPatientHome = 28,
     GuessPatientCure = 29,
+    ChangeQueueSize = 30,
+    MoveInQueue = 31,
 }
 
 /// <summary>
@@ -94,6 +96,8 @@ public abstract record Command
             CommandKind.ShootRat => new ShootRatCommand(reader.ReadInt32()),
             CommandKind.SendPatientHome => new SendPatientHomeCommand(reader.ReadInt32()),
             CommandKind.GuessPatientCure => new GuessPatientCureCommand(reader.ReadInt32()),
+            CommandKind.ChangeQueueSize => new ChangeQueueSizeCommand(reader.ReadInt32(), reader.ReadInt32()),
+            CommandKind.MoveInQueue => new MoveInQueueCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -714,6 +718,60 @@ public sealed record GuessPatientCureCommand(int PatientId) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(PatientId);
+}
+
+/// <summary>
+/// Makes the queue of a room's door or of a reception desk of the issuing player longer or shorter by
+/// <paramref name="Amount"/> (CorsixTH's queue window, <c>UIQueue:increaseMaxSize</c> and <c>decreaseMaxSize</c>: 1, 5
+/// with Shift or 10 with Ctrl).
+/// </summary>
+/// <param name="OwnerId">The room, or the reception desk object.</param>
+/// <param name="Amount">People to add to the queue's size, or to take off when negative.</param>
+public sealed record ChangeQueueSizeCommand(int OwnerId, int Amount) : Command
+{
+    public override CommandKind Kind => CommandKind.ChangeQueueSize;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        var queue = simulation.FindEntity(OwnerId) switch
+        {
+            Room room when RoomBuilder.IsOwnedBy(simulation.Map, room, player) => room.DoorQueue,
+            RoomObject { Desk: { } desk } placed when simulation.Map.GetParcelOwner(simulation.Map[placed.Tile.X, placed.Tile.Y].Parcel) == player + 1 => desk.Queue,
+            _ => null,
+        };
+        queue?.ChangeMaxSize(Amount);
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(OwnerId);
+        writer.WriteInt32(Amount);
+    }
+}
+
+/// <summary>
+/// Moves a patient of the issuing player's hospital to another place in the queue they stand in (CorsixTH's queue
+/// window, <c>Queue:movePatient</c>): 0 is the front.
+/// </summary>
+public sealed record MoveInQueueCommand(int PatientId, int Position) : Command
+{
+    public override CommandKind Kind => CommandKind.MoveInQueue;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(PatientId) is Humanoid { Behaviour: PatientBehaviour patient, IsDespawning: false } humanoid
+            && humanoid.HospitalPlayer == player
+            && patient.CurrentQueue(simulation) is { } queue)
+        {
+            queue.Move(simulation, queue.IndexOf(humanoid.Id), Position);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(PatientId);
+        writer.WriteInt32(Position);
+    }
 }
 
 /// <summary>
