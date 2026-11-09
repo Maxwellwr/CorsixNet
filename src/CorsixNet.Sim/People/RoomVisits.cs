@@ -1,5 +1,5 @@
 // Ported from CorsixTH CorsixTH/Lua/room.lua (tryAdvanceQueue, canHumanoidEnter, getUsageScore,
-// getEntranceXY), CorsixTH/Lua/rooms/gp.lua and CorsixTH/Lua/world.lua (findRoomNear).
+// getEntranceXY, tryToFindNearbyPatients, tryMovePatient), CorsixTH/Lua/rooms/gp.lua and CorsixTH/Lua/world.lua (findRoomNear).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Entities;
@@ -87,11 +87,7 @@ public static class RoomVisits
 
     internal static void Update(Simulation simulation, Room room)
     {
-        if (room.DoorQueue is null && simulation.FindEntity(room.DoorId) is RoomDoor door)
-        {
-            room.DoorQueue = new HumanoidQueue(OutsideTile(room, door), door.InsideTile(room.Area), MaxQueue);
-        }
-
+        EnsureQueue(simulation, room);
         if (room.StaffId == 0)
         {
             CallStaff(simulation, room);
@@ -159,6 +155,82 @@ public static class RoomVisits
                 patient.OnRoomBuilt(room.RoomType);
             }
         }
+
+        // Room:roomFinished.
+        TryToFindNearbyPatients(simulation, room);
+    }
+
+    /// <summary>
+    /// <c>Room:tryToFindNearbyPatients</c>: takes patients from the back of the queues of the hospital's other rooms of
+    /// the same type that have two or more in line, while they would be better off coming here (<c>tryMovePatient</c>).
+    /// The first in each line stays.
+    /// </summary>
+    internal static void TryToFindNearbyPatients(Simulation simulation, Room room)
+    {
+        if (!IsSupported(room.RoomType) || EnsureQueue(simulation, room) is null)
+        {
+            return;
+        }
+
+        var owner = Owner(simulation, room);
+        foreach (var oldRoom in simulation.Entities.OfType<Room>().ToList())
+        {
+            if (oldRoom.Id == room.Id || !string.Equals(oldRoom.RoomType, room.RoomType, StringComparison.Ordinal)
+                || Owner(simulation, oldRoom) != owner || oldRoom.DoorQueue is not { Count: >= 2 } oldQueue)
+            {
+                continue;
+            }
+
+            for (var index = oldQueue.Count - 1; index >= 1; index--)
+            {
+                if (simulation.FindEntity(oldQueue.Members[index]) is Humanoid patient && TryMovePatient(simulation, oldRoom, room, patient))
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// <c>tryMovePatient</c>: sends a patient queueing for <paramref name="oldRoom"/> to <paramref name="newRoom"/> if
+    /// the new room's usage score and distance beat the old one's. Returns whether to stop looking in the old room's
+    /// queue: when the new room can't be reached or isn't better. Someone who isn't a patient, or who is going home or to
+    /// die, is skipped.
+    /// </summary>
+    private static bool TryMovePatient(Simulation simulation, Room oldRoom, Room newRoom, Humanoid humanoid)
+    {
+        if (humanoid.Behaviour is not PatientBehaviour patient || patient.IsGoingHomeOrToDie
+            || simulation.FindEntity(newRoom.DoorId) is not RoomDoor newDoor || simulation.FindEntity(oldRoom.DoorId) is not RoomDoor oldDoor)
+        {
+            return false;
+        }
+
+        if (simulation.Pathfinder.FindDistance(simulation.Map, humanoid.StepTarget, OutsideTile(newRoom, newDoor)) is not { } newDistance)
+        {
+            return true;
+        }
+
+        var newScore = UsageScore(simulation, newRoom) + newDistance;
+        var oldScore = simulation.Pathfinder.FindDistance(simulation.Map, humanoid.StepTarget, OutsideTile(oldRoom, oldDoor)) is { } oldDistance
+            ? UsageScore(simulation, oldRoom) + oldDistance
+            : newScore + 1;
+        if (newScore >= oldScore)
+        {
+            return true;
+        }
+
+        patient.SendToRoom(simulation, humanoid, newRoom);
+        return false;
+    }
+
+    private static HumanoidQueue? EnsureQueue(Simulation simulation, Room room)
+    {
+        if (room.DoorQueue is null && simulation.FindEntity(room.DoorId) is RoomDoor door)
+        {
+            room.DoorQueue = new HumanoidQueue(OutsideTile(room, door), door.InsideTile(room.Area), MaxQueue);
+        }
+
+        return room.DoorQueue;
     }
 
     private static int UsageScore(Simulation simulation, Room room)

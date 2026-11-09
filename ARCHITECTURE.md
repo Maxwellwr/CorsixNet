@@ -381,6 +381,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
 - **Seeking a desk or a room** scores each candidate by path distance plus ten tiles per person queueing
   or on the way (a room with its staff in gets 50 tiles off, a full queue 1000 on). A patient joins a
   desk's queue once within 6 tiles of it; further away they walk towards it until they are.
+- **Taking patients from other queues** (`RoomVisits.TryToFindNearbyPatients`, room.lua's
+  `tryToFindNearbyPatients` and `tryMovePatient`): when a room is finished, when its staff comes in, and when a
+  patient leaves it with nobody in line, it looks at the hospital's other rooms of its type with two or more in
+  line and takes patients from the back while their score (distance plus the room's usage score) is lower for it;
+  the first in line stays, and patients going home or to die are left alone.
 - **The GP's office** (`RoomVisits`, `DoctorBehaviour`, from `room.lua` and `rooms/gp.lua`). An active
   room without staff sends for the nearest free doctor (CorsixTH's call dispatcher is not ported). The
   doctor goes back and forth between the cabinet and the desk; at the desk they stay for

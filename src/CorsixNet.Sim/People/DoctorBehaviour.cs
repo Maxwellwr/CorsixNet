@@ -97,6 +97,9 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 }
 
                 room.StaffPresent = true;
+
+                // Room:commandEnteringStaff.
+                RoomVisits.TryToFindNearbyPatients(simulation, room);
                 if (string.Equals(room.RoomType, RoomVisits.GeneralDiagnosisRoom, StringComparison.Ordinal))
                 {
                     // Room:commandEnteringStaff: the doctor meanders until a patient needs them.
