@@ -119,6 +119,7 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return Switch("Sound effects", _draft.PlaySounds, on => _draft = _draft with { PlaySounds = on });
         yield return Stepper("Sound volume", Percent(_draft.SoundVolume), () => _draft = _draft with { SoundVolume = Math.Max(0m, _draft.SoundVolume - 0.1m) }, () => _draft = _draft with { SoundVolume = Math.Min(1m, _draft.SoundVolume + 0.1m) });
         yield return Switch("Screen shake", _draft.EnableScreenShake, on => _draft = _draft with { EnableScreenShake = on });
+        yield return Switch("Adviser", !_draft.AdviserDisabled, on => _draft = _draft with { AdviserDisabled = !on });
         yield return Switch("Edge scrolling", !_draft.PreventEdgeScrolling, on => _draft = _draft with { PreventEdgeScrolling = !on });
         yield return Stepper("Scroll speed", _draft.ScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ScrollSpeed = Math.Max(1, _draft.ScrollSpeed - 1) }, () => _draft = _draft with { ScrollSpeed = Math.Min(10, _draft.ScrollSpeed + 1) });
         yield return Stepper("Shift scroll speed", _draft.ShiftScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ShiftScrollSpeed = Math.Max(1, _draft.ShiftScrollSpeed - 1) }, () => _draft = _draft with { ShiftScrollSpeed = Math.Min(10, _draft.ShiftScrollSpeed + 1) });

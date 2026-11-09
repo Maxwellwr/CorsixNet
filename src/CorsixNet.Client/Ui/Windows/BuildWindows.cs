@@ -127,6 +127,46 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
             WindowCell.Button("Research", () => host.Open(new ResearchWindow())),
             WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())),
             WindowCell.Button("Charts", () => host.Open(new GraphWindow())),
-            WindowCell.Button("Policy", () => host.Open(new PolicyWindow())));
+            WindowCell.Button("Policy", () => host.Open(new PolicyWindow())),
+            WindowCell.Button("Messages", () => host.Open(new AdviserHistoryWindow())));
+
+        // The adviser pops up from the panel (dialogs/adviser.lua): a click moves on, as a left click on him does;
+        // Quiet sends the rest to the history unsaid, as a right click does.
+        if (host.Adviser.Current is { } speech)
+        {
+            var adviser = host.Adviser;
+            var lines = Wrap($"Adviser: {speech}", WrapLength);
+            yield return WindowRow.Of(
+                WindowCell.Button(adviser.Queued > 0 ? "Next" : "OK", () => adviser.Next(Environment.TickCount64)),
+                WindowCell.Button("Quiet", adviser.DismissAll),
+                WindowCell.Line(lines[0], highlight: true));
+            foreach (var line in lines.Skip(1))
+            {
+                yield return WindowRow.Of(new WindowCell(string.Empty), new WindowCell(string.Empty), WindowCell.Line(line, highlight: true));
+            }
+        }
+    }
+
+    /// <summary>Characters on one line of the adviser's speech before it wraps.</summary>
+    public const int WrapLength = 110;
+
+    /// <summary>Breaks text into lines of at most <paramref name="length"/> characters at spaces (longer words stay whole).</summary>
+    public static IReadOnlyList<string> Wrap(string text, int length)
+    {
+        var lines = new List<string>();
+        var line = new System.Text.StringBuilder();
+        foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.Length > 0 && line.Length + 1 + word.Length > length)
+            {
+                lines.Add(line.ToString());
+                line.Clear();
+            }
+
+            line.Append(line.Length > 0 ? " " : string.Empty).Append(word);
+        }
+
+        lines.Add(line.ToString());
+        return lines;
     }
 }

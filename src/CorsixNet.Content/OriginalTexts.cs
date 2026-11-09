@@ -85,6 +85,12 @@ public sealed class OriginalTexts
     /// <summary>Names, descriptions and professions of staff.</summary>
     public StaffTexts Staff { get; }
 
+    /// <summary>
+    /// A string by CorsixTH's 1-based <c>S[section][index]</c> (<c>languages/original_strings.lua</c>), such as the
+    /// adviser's messages in S[11] and S[28], or null if missing or empty.
+    /// </summary>
+    public string? String(int section, int index) => _strings.Get(section - 1, index - 1) is { Length: > 0 } text ? text : null;
+
     /// <summary>The disease's texts, or null for an unknown disease or one missing from the strings.</summary>
     public DiseaseText? Disease(string diseaseId)
     {

@@ -213,6 +213,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
     private readonly OriginalTexts? _texts;
+    private readonly Adviser _adviser = new();
+    private readonly Random _adviserRandom = new();
+    private AdviserChecks _adviserChecks;
+    private object? _adviserSession;
 
     /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
     private SoundEffects _sounds;
@@ -242,6 +246,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         string? configPath = null)
     {
         _config = config ?? new GameConfig();
+        _adviser.IsEnabled = !_config.AdviserDisabled;
+        _adviserChecks = new AdviserChecks(_adviser, _adviserRandom);
         _configPath = configPath;
         _install = install;
         _device = device;
@@ -403,6 +409,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _previousMouse = mouse;
             return;
         }
+
+        UpdateAdviser();
 
         // Windows over the map take the mouse while it is over them: the map sees no clicks and no wheel then.
         var realMouse = mouse;
@@ -2045,6 +2053,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>Whether there is a game with a hospital of the local player for windows to show.</summary>
+    /// <summary>
+    /// Lets the adviser watch the game and move on through his messages; a new game or a loaded one starts him
+    /// afresh.
+    /// </summary>
+    private void UpdateAdviser()
+    {
+        if (!ReferenceEquals(_session, _adviserSession))
+        {
+            _adviserSession = _session;
+            _adviser.Clear();
+            _adviserChecks = new AdviserChecks(_adviser, _adviserRandom);
+        }
+
+        if (IsWindowHostReady)
+        {
+            var now = Environment.TickCount64;
+            _adviserChecks.Observe(Simulation!, _session!.Player, _texts, now);
+            _adviser.Update(now);
+        }
+    }
+
+    Adviser IWindowHost.Adviser => _adviser;
+
     private bool IsWindowHostReady => _session is { Simulation: { } simulation, Player: var player } && player < simulation.Hospitals.Count;
 
     Simulation IWindowHost.Simulation => Simulation!;
@@ -2142,6 +2173,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void ApplyConfig(GameConfig config)
     {
         _config = config;
+        _adviser.IsEnabled = !config.AdviserDisabled;
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
         _sounds = SoundEffects.Load(_install, config);
@@ -2405,7 +2437,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>
-    /// <c>ResearchRoom:roomFinished</c>'s advice <c>research_room_need_researcher</c>, as a notice until the adviser exists:
+    /// <c>ResearchRoom:roomFinished</c>'s advice <c>research_room_need_researcher</c>, as the adviser's advice:
     /// a research department finished while the hospital has no researcher, whom it needs to work at all.
     /// </summary>
     private void NoticeIfResearchNeedsResearcher(Simulation simulation, Command command)
@@ -2414,7 +2446,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (command is ConfirmRoomCommand confirm && simulation.FindEntity(confirm.RoomId) is Room { RoomType: "research" }
             && !simulation.Entities.Any(e => e is Humanoid { Profile.IsResearcher: true, IsFired: false } staff && staff.Employer == player))
         {
-            ShowNotice("Research department: hire a doctor who is a researcher, nobody else can work there");
+            _adviser.Say(AdviserChecks.ResearchRoomNeedResearcher.Text(_texts), Environment.TickCount64);
         }
     }
 

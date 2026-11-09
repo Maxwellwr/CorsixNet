@@ -77,6 +77,9 @@ internal interface IWindowHost
     /// <summary>Closes a window.</summary>
     void Close(UiWindow window);
 
+    /// <summary>The adviser, who says the game's advice over the bottom panel.</summary>
+    Adviser Adviser { get; }
+
     /// <summary>Shows a short notice in the status line.</summary>
     void Notice(string text);
 

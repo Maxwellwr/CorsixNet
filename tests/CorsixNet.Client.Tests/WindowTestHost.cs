@@ -24,6 +24,8 @@ internal sealed class WindowTestHost : IWindowHost
 
     public OriginalTexts? Texts => null;
 
+    public Adviser Adviser { get; } = new();
+
     public List<Command> Submitted { get; } = [];
 
     public List<UiWindow> Opened { get; } = [];
