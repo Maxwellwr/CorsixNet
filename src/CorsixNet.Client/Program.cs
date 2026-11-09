@@ -7,6 +7,7 @@ using CorsixNet.Client.SpriteViewer;
 using CorsixNet.Content;
 using CorsixNet.Content.Levels;
 using CorsixNet.Content.Saves;
+using CorsixNet.Content.Settings;
 using CorsixNet.Formats;
 using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Transport;
@@ -29,6 +30,7 @@ const string Usage = """
       --capture FILE    After a few seconds, save the map view to a PNG file and quit
       --sprite-viewer   Browse sprite sheets instead of maps
       --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
+      --config FILE     Use another settings file (default: config.txt in the CorsixNet settings folder)
 
     Multiplayer (lockstep):
       --host [PORT]     Host a game on the level (default LEVEL.L20, a two-player map) and join it
@@ -38,6 +40,7 @@ const string Usage = """
     """;
 
 string? gamePath = null;
+string? configPath = null;
 string? initialLevel = null;
 string? campaignPath = null;
 string? mapPath = null;
@@ -45,7 +48,7 @@ string? initialSheet = null;
 string? connectTo = null;
 int? hostPort = null;
 var publicHost = false;
-var playerName = "Player";
+string? playerName = null;
 var spriteViewer = false;
 var zoom = 1f;
 var overlay = MapOverlay.None;
@@ -126,6 +129,9 @@ for (var i = 0; i < args.Length; i++)
         case "--capture" when i + 1 < args.Length:
             capturePath = Path.GetFullPath(args[++i]);
             break;
+        case "--config" when i + 1 < args.Length:
+            configPath = Path.GetFullPath(args[++i]);
+            break;
         case "--sprite-viewer":
             spriteViewer = true;
             break;
@@ -144,10 +150,28 @@ for (var i = 0; i < args.Length; i++)
     }
 }
 
+GameConfig config;
+try
+{
+    configPath ??= GameConfig.DefaultPath();
+    config = GameConfig.Load(configPath);
+}
+catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException)
+{
+    Console.Error.WriteLine($"The settings file {configPath} could not be read ({e.Message}); using the defaults.");
+    config = new GameConfig();
+}
+
+playerName ??= config.PlayerName is { Length: > 0 } configured ? configured : "Player";
+
 ThemeHospitalInstall? install;
 if (gamePath is null)
 {
-    install = ThemeHospitalInstall.Locate();
+    // The settings' game folder if it is there, as CorsixTH's theme_hospital_install; otherwise look for the game.
+    install = config.ThemeHospitalInstall != GameConfig.PlaceholderInstall
+        && ThemeHospitalInstall.TryOpen(config.ThemeHospitalInstall, out var configuredInstall, out _)
+        ? configuredInstall
+        : ThemeHospitalInstall.Locate();
 }
 else if (!ThemeHospitalInstall.TryOpen(gamePath, out install, out var error))
 {
@@ -241,7 +265,7 @@ else
             loadPath = new SaveGameStore(SaveGameStore.DefaultDirectory()).MostRecentAutosave();
         }
 
-        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale, speed, loadPath);
+        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale, speed, loadPath, config);
         if (capturePath is not null)
         {
             // Give the demo time to build and furnish its room before capturing.
@@ -252,7 +276,7 @@ else
     };
 }
 
-using var game = new CorsixNetGame($"CorsixNet - {install.RootPath}", createScreen);
+using var game = new CorsixNetGame($"CorsixNet - {install.RootPath}", createScreen, config.Width, config.Height, config.Fullscreen);
 game.Run();
 return 0;
 

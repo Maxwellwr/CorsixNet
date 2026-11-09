@@ -54,11 +54,18 @@ public sealed class SaveGameStore
     public string AutosavePath(GameDate date) => Path.Combine(Directory, AutosaveFolder, AutosaveName(date));
 
     /// <summary>
-    /// Whether a step from <paramref name="before"/> to <paramref name="after"/> began the last day of a month: CorsixTH's
-    /// default (monthly) autosave is made then, after the day's end.
+    /// Whether a step from <paramref name="before"/> to <paramref name="after"/> began a day on which CorsixTH autosaves
+    /// (<c>World:onEndDay</c>, after the day's end) at the given frequency: 0 never, 1 monthly (the last day of the
+    /// month, the default), 2 weekly (also days 6, 13, 20 and 27), 3 daily.
     /// </summary>
-    public static bool IsAutosaveDue(GameDate before, GameDate after) =>
-        after.Hour == 0 && after != before && after.IsLastDayOfMonth;
+    public static bool IsAutosaveDue(GameDate before, GameDate after, int frequency = 1) =>
+        after.Hour == 0 && after != before && frequency switch
+        {
+            3 => true,
+            2 => after.IsLastDayOfMonth || after.Day is 6 or 13 or 20 or 27,
+            1 => after.IsLastDayOfMonth,
+            _ => false,
+        };
 
     /// <summary>Saves the game to <paramref name="path"/>; a file already there is only replaced once the save is written.</summary>
     public static void Save(string path, string levelName, Simulation simulation)

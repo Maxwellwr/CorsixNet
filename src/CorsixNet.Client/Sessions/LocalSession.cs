@@ -6,8 +6,8 @@ using CorsixNet.Sim.Commands;
 namespace CorsixNet.Client.Sessions;
 
 /// <summary>
-/// A single-player game: the client runs the simulation by the clock, and saves it at the start of each month's last
-/// day when given a saves folder (CorsixTH's default monthly autosave).
+/// A single-player game: the client runs the simulation by the clock, and saves it when given a saves folder, at the
+/// settings' autosave frequency (CorsixTH's default is monthly, at the start of each month's last day).
 /// </summary>
 internal sealed class LocalSession : IGameSession
 {
@@ -17,12 +17,14 @@ internal sealed class LocalSession : IGameSession
     private readonly GameClock _clock = new();
 
     private readonly SaveGameStore? _autosaves;
+    private readonly int _autosaveFrequency;
 
-    public LocalSession(string name, Simulation simulation, SaveGameStore? autosaves = null)
+    public LocalSession(string name, Simulation simulation, SaveGameStore? autosaves = null, int autosaveFrequency = 1)
     {
         Name = name;
         Simulation = simulation;
         _autosaves = autosaves;
+        _autosaveFrequency = autosaveFrequency;
     }
 
     /// <summary>Why the last autosave failed, or null.</summary>
@@ -55,7 +57,7 @@ internal sealed class LocalSession : IGameSession
         {
             var before = Simulation.Date;
             Simulation.Step();
-            if (_autosaves is not null && SaveGameStore.IsAutosaveDue(before, Simulation.Date))
+            if (_autosaves is not null && SaveGameStore.IsAutosaveDue(before, Simulation.Date, _autosaveFrequency))
             {
                 Autosave(_autosaves);
             }
