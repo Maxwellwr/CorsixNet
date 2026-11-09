@@ -291,6 +291,12 @@ public sealed class Humanoid : Entity
     }
 
     /// <summary>Puts the humanoid on a tile without walking, as CorsixTH's <c>setTilePositionSpeed</c>.</summary>
+    /// <summary>
+    /// The tile that objects watching tiles (entrance doors) count the humanoid on: the tile being entered from the
+    /// start of a step, as the walk action tells them then.
+    /// </summary>
+    internal TilePosition CountedTile => IsCrossingDoor ? _doorExit : IsStepping ? Neighbour(Tile, Facing) : Tile;
+
     internal void PlaceAt(TilePosition tile)
     {
         _path.Clear();

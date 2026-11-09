@@ -134,6 +134,10 @@ entities and pending commands.
   meander by themselves (`Meandering`): a walk to such a tile, then 5 to 40 ticks standing, and so on; with nowhere
   to walk to they stand still until sent somewhere. Handymen (`HandymanBehaviour`, nothing else to do yet) meander
   too, outside rooms only within the parcel they are kept to (`SetHandymanParcelCommand`, 0 for all).
+- **Moving staff.** `MoveStaffCommand` (`StaffMoving`) is CorsixTH's pickup action and `UIPlaceStaff` in one step:
+  the member of staff leaves their room or desk (`StaffEmployment.Detach`, as when fired), is put on a tile where a new
+  member of staff could be placed (their own desk counting as free) and starts afresh as if just hired; a handyman keeps
+  his parcel. The client shows the picking up; not while treating a patient with an object.
 
 Presentation details are derived in the client, not stored in the simulation. Examples are
 pixel offsets during a step and which tile a walking humanoid is drawn with. Animation timing

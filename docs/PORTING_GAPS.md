@@ -59,7 +59,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   (two steps, cancel puts candidate back) (`dialogs/hire_staff.lua`, `place_staff.lua`, `staff_profile.lua`).
 - Staff management screen: list, salaries, raise, fire, train (`fullscreen/staff_management.lua`). Firing and
   answering a raise request are commands only (`FireStaffCommand`, `AnswerRaiseCommand`).
-- Staff window: picking up and moving a member of staff, sending home (`dialogs/staff_dialog.lua`, `humanoid_actions/pickup.lua`).
+- Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
+  command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
   partial: today a room just sends for the nearest free member of staff (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Handyman: sweeping litter and vomit, watering plants, repairing machines, task priorities
@@ -77,7 +78,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
 - Tiredness animations (yawn, check watch, tap foot) (`humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`).
   Staff speed (juniors, consultants, tiredness, the no-rest cheat) is done (`Tiredness.UpdateSpeed`).
-- Picking staff up with the hand cursor and dropping them in another room.
+- Picking staff up with the hand cursor (the grab cursor, the staff drawn under it, `pickup.wav`); the move itself is
+  done (`MoveStaffCommand`), but not while the member of staff is treating a patient with an object.
 
 ## 4. Patients, diseases, epidemics, VIPs, emergencies, disasters
 
