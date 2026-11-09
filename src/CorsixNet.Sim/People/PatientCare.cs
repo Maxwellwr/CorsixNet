@@ -160,15 +160,13 @@ public static class PatientCare
             hospital.Cured++;
             hospital.CuredThisYear++;
             entry.Recoveries++;
+            patient.Cure();
             patient.SetNextGoHome();
         }
         else
         {
             // Patient:die with Hospital:humanoidDeath.
-            hospital.Deaths++;
-            hospital.DeathsThisYear++;
-            entry.Fatalities++;
-            hospital.ChangeReputation(simulation.Random, ReputationChange.Death, entry);
+            RecordDeath(simulation, hospital, entry);
             patient.SetNextDie();
         }
 
@@ -253,6 +251,19 @@ public static class PatientCare
     /// <c>Hospital:updateNotCuredCounts</c> from <c>Patient:goHome</c>: the patient goes home without a cure, sent home or
     /// because of the price, which changes the reputation for their disease.
     /// </summary>
+    /// <summary><c>Hospital:humanoidDeath</c>: the death counts, the disease's fatalities and the reputation.</summary>
+    internal static void RecordDeath(Simulation simulation, Hospital hospital, DiseaseCase? entry)
+    {
+        if (entry is not null)
+        {
+            entry.Fatalities++;
+        }
+
+        hospital.Deaths++;
+        hospital.DeathsThisYear++;
+        hospital.ChangeReputation(simulation.Random, ReputationChange.Death, entry);
+    }
+
     internal static void NotCured(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, ReputationChange reason)
     {
         if (patient.Disease is not { } disease)

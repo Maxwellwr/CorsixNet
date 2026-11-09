@@ -84,10 +84,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: health dropping over time, thirst, toilets, boredom, leaving angry, complaining (warmth and
-  its effect on happiness, and prices changing happiness, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
-- Health and death: dying in place with the death animation, grim reaper and gates to hell, patients
-  getting worse (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
+- Patient needs: thirst, toilets, vomiting, boredom, leaving angry, complaining (warmth and its effect on
+  happiness, prices changing happiness, health dropping and patients giving up are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
+- Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
+  icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
 - Queue features: priorities (emergencies, VIP), benches, queue window to reorder or send home,
   patients rerouting to shorter queues (`queue.lua`, `dialogs/queue_dialog.lua`).
 - Patient window: health, happiness, thirst, warmth, diagnosis progress, send home, guess cure
