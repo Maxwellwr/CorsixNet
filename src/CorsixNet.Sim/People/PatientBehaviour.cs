@@ -77,6 +77,22 @@ public enum PatientPhase : byte
     Waiting,
 }
 
+/// <summary>What a line of the patient window's treatment history says.</summary>
+public enum TreatmentHistoryKind : byte
+{
+    /// <summary>A room the patient was dealt with in; <see cref="TreatmentHistoryEntry.Id"/> is the room type.</summary>
+    Room,
+
+    /// <summary>The patient was diagnosed; <see cref="TreatmentHistoryEntry.Id"/> is the disease.</summary>
+    Diagnosis,
+
+    /// <summary>The patient was cured (<c>_S.dynamic_info.patient.actions.cured</c>).</summary>
+    Cured,
+}
+
+/// <summary>A line of the patient window's treatment history (CorsixTH's <c>treatment_history</c>).</summary>
+public readonly record struct TreatmentHistoryEntry(TreatmentHistoryKind Kind, string Id);
+
 /// <summary>What a waiting patient's fax asks the player (CorsixTH's patient faxes).</summary>
 public enum PatientQuestion : byte
 {
@@ -152,7 +168,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>What each day costs a patient's health (<c>changeAttribute("health", -0.004)</c>).</summary>
     internal const decimal DailyHealthLoss = 0.004m;
 
+    /// <summary>How many days of health the patient window's graph shows (<c>health_history.size</c>).</summary>
+    public const int HealthHistorySize = 20;
+
+    /// <summary>The most lines of treatment history a save may hold.</summary>
+    private const int MaxTreatmentHistory = 1024;
+
     private readonly List<string> _availableDiagnosisRooms = [];
+    private readonly List<decimal> _healthHistory = [];
+    private readonly List<TreatmentHistoryEntry> _treatmentHistory = [];
 
     public override BehaviourKind Kind => BehaviourKind.Patient;
 
@@ -260,6 +284,21 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>Whether the patient shows the thirsty mood (CorsixTH's <c>setMood("thirsty", "activate")</c>).</summary>
     public bool IsThirsty { get; internal set; }
+
+    /// <summary>Whether the patient shows the sad mood: happiness below 0.3 at the end of the day (<c>sad2</c>).</summary>
+    public bool IsSad { get; internal set; }
+
+    /// <summary>
+    /// The patient's health on each of their last <see cref="HealthHistorySize"/> days in the hospital, oldest first, for
+    /// the patient window's graph (CorsixTH's <c>health_history</c> ring).
+    /// </summary>
+    public IReadOnlyList<decimal> HealthHistory => _healthHistory;
+
+    /// <summary>
+    /// The rooms the patient was dealt with in, their diagnosis and their cure, in order, for the patient window
+    /// (CorsixTH's <c>treatment_history</c>).
+    /// </summary>
+    public IReadOnlyList<TreatmentHistoryEntry> TreatmentHistory => _treatmentHistory;
 
     /// <summary>Whether the patient has caught an epidemic's disease (CorsixTH's <c>infected</c>); a cure ends it.</summary>
     public bool IsInfected { get; internal set; }
@@ -737,6 +776,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
 
         IsDealtWith = true;
+
+        // GPRoom:dealtWithPatient and Room:dealtWithPatient: the room goes into the history before the diagnosis or
+        // the cure that it brings. CorsixTH leaves out facilities such as toilets, of which there are none yet.
+        AddToTreatmentHistory(new TreatmentHistoryEntry(TreatmentHistoryKind.Room, room.RoomType));
         PatientCare.DealtWith(simulation, room, humanoid, this);
         Use?.Interrupt();
     }
@@ -1206,6 +1249,19 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// fed up and goes home, unless they are in the room that cures them.
     /// </summary>
     /// <returns>False when health was already 0, which ends the patient's day.</returns>
+    internal void AddToTreatmentHistory(TreatmentHistoryEntry entry) => _treatmentHistory.Add(entry);
+
+    /// <summary><c>Patient:_dailyHealthHistoryRefresh</c>: today's health goes into the graph, the oldest day out.</summary>
+    internal void RecordHealth()
+    {
+        if (_healthHistory.Count == HealthHistorySize)
+        {
+            _healthHistory.RemoveAt(0);
+        }
+
+        _healthHistory.Add(Health);
+    }
+
     internal bool OnEndDayHealth(Simulation simulation, Humanoid humanoid)
     {
         var health = Health;
@@ -1332,6 +1388,19 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteDecimal(ToiletNeed);
         writer.WriteInt32(DrinkTimeout);
         writer.WriteBool(IsThirsty);
+        writer.WriteBool(IsSad);
+        writer.WriteInt32(_healthHistory.Count);
+        foreach (var health in _healthHistory)
+        {
+            writer.WriteDecimal(health);
+        }
+
+        writer.WriteInt32(_treatmentHistory.Count);
+        foreach (var entry in _treatmentHistory)
+        {
+            writer.WriteByte((byte)entry.Kind);
+            writer.WriteString(entry.Id);
+        }
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -1391,6 +1460,22 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.ToiletNeed = reader.ReadDecimal();
         patient.DrinkTimeout = reader.ReadInt32();
         patient.IsThirsty = reader.ReadBool();
+        patient.IsSad = reader.ReadBool();
+        var days = reader.ReadCount(HealthHistorySize);
+        for (var i = 0; i < days; i++)
+        {
+            patient._healthHistory.Add(reader.ReadDecimal());
+        }
+
+        var lines = reader.ReadCount(MaxTreatmentHistory);
+        for (var i = 0; i < lines; i++)
+        {
+            var kind = reader.ReadByte();
+            patient._treatmentHistory.Add(new TreatmentHistoryEntry(
+                kind <= (byte)TreatmentHistoryKind.Cured ? (TreatmentHistoryKind)kind : throw new InvalidDataException($"Unknown treatment history line {kind}."),
+                reader.ReadString()));
+        }
+
         return patient;
     }
 }

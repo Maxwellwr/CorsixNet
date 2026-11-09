@@ -150,6 +150,7 @@ public static class PatientCare
             hospital.CuredThisYear++;
             entry.Recoveries++;
             patient.Cure();
+            patient.AddToTreatmentHistory(new TreatmentHistoryEntry(TreatmentHistoryKind.Cured, string.Empty));
             patient.SetNextGoHome();
         }
         else
@@ -282,6 +283,7 @@ public static class PatientCare
     internal static void SetDiagnosed(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, DiseaseDefinition disease)
     {
         patient.IsDiagnosed = true;
+        patient.AddToTreatmentHistory(new TreatmentHistoryEntry(TreatmentHistoryKind.Diagnosis, disease.Id));
         simulation.Hospitals[humanoid.HospitalPlayer].CaseOf(disease, simulation.Rules.Diseases).Discovered = true;
     }
 

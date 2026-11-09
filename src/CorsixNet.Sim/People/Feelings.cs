@@ -63,6 +63,12 @@ internal static class Feelings
     /// <summary>One person's day, from <see cref="Simulation"/>'s end of the day.</summary>
     internal static void OnEndDay(Simulation simulation, Humanoid humanoid)
     {
+        // Patient:tickDay begins with the sad mood, before it knows whether the patient is still in the hospital.
+        if (humanoid.Behaviour is PatientBehaviour sadOrNot)
+        {
+            sadOrNot.IsSad = humanoid.Happiness < 0.3m;
+        }
+
         // No use for those going home.
         if (humanoid.IsDespawning || humanoid.IsFired || humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome })
         {
@@ -113,6 +119,8 @@ internal static class Feelings
         {
             return;
         }
+
+        patient.RecordHealth();
 
         // In the corridor (not in a room, nor going in or out), plants, extinguishers and standing about count.
         if (patient.Phase is < PatientPhase.EnteringRoom or > PatientPhase.LeavingRoom
