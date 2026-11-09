@@ -314,6 +314,7 @@ public static class PatientCare
         }
 
         hospital.ReceiveForTreatment(simulation.Hours, entry, amount, patient.InsuranceCompany);
+        simulation.ShowFloatingDollarSign(humanoid, amount, patient.InsuranceCompany != 0);
         patient.PayAmount = 0;
     }
 

@@ -431,7 +431,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   known, as CorsixTH's `World:markRoomAsBuilt` does), and with a reputation above 500 times reputation / 500.
   A disease cured in the pharmacy has the level's drug rating as its cure effectiveness and costs the drug's
   price (`gbv.StartRating` and `gbv.StartCost`, both 100) for each cure (`TransactionKind.DrugCost`, paid to one
-  of five drug companies at random); research improving them is not there yet.
+  of five drug companies at random); research improving them is not there yet. A payment shows a banknote with
+  the amount floating up from the patient for 100 ticks (`Simulation.FloatingDollarSigns`, from
+  `World:newFloatingDollarSign`; not saved), drawn by the client from `DATA/Money01V`, blue for insurance.
 - **Reputation** (`Hospital`, from `hospital.lua`). The hospital starts at the level's `StartRep` (500) and each
   non-pseudo disease at 500. A cure adds 1, a death takes 4, a patient sent home or giving up waiting 3
   (`Kicked`, also counted in the disease's `TurnedAway`), one refusing a price 2 (`OverPriced`); both count in

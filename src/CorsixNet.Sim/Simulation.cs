@@ -39,6 +39,7 @@ public sealed class Simulation
     private const string Radiator = "radiator";
 
     private readonly List<Entity> _entities = [];
+    private readonly List<FloatingDollarSign> _floatingDollarSigns = [];
     private readonly List<ScheduledCommand> _pending = [];
     private readonly List<MapObjectPlacement> _delayedObjects = [];
     private readonly Hospital[] _hospitals;
@@ -164,6 +165,9 @@ public sealed class Simulation
     /// <summary>All entities, in increasing id order.</summary>
     public IReadOnlyList<Entity> Entities => _entities;
 
+    /// <summary>The banknotes floating up from patients who have just paid. Not part of the saved state.</summary>
+    public IReadOnlyList<FloatingDollarSign> FloatingDollarSigns => _floatingDollarSigns;
+
     /// <summary>Map objects waiting for their parcel to get an owner, in map order.</summary>
     public IReadOnlyList<MapObjectPlacement> DelayedMapObjects => _delayedObjects;
 
@@ -248,7 +252,16 @@ public sealed class Simulation
         // Then the heat spreads, at the new hour's month (CorsixTH's World:onTick after the entities).
         UpdateTemperatures(GameDate.FromHours(Hours + 1).Month);
 
+        // World:onTick: every floating dollar sign rises a step and goes when its lifetime is up.
+        _floatingDollarSigns.RemoveAll(sign => sign.Age(Tick + 1) >= FloatingDollarSign.Lifetime);
+
         Tick++;
+    }
+
+    /// <summary><c>World:newFloatingDollarSign</c>: a banknote with the amount floats up from the patient.</summary>
+    internal void ShowFloatingDollarSign(Humanoid patient, int amount, bool insurance)
+    {
+        _floatingDollarSigns.Add(new FloatingDollarSign(patient.HospitalPlayer, patient.Tile, amount, insurance, Tick));
     }
 
     /// <summary>

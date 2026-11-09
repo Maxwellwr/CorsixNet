@@ -125,7 +125,7 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
 - Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
-- Floating dollar signs when a patient pays.
+- Floating dollar signs for products (sodas: the drinks machine is not used yet). Those for treatments are done.
 
 ## 5. Economy, bank, loans, prices
 

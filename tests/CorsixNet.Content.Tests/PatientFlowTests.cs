@@ -166,6 +166,43 @@ public class PatientFlowTests
     }
 
     [Fact]
+    public void ADollarSignFloatsUpFromAPatientWhoPays()
+    {
+        var simulation = NewStaffedHospital();
+        var hospital = simulation.Hospitals[0];
+        FloatingDollarSign? sign = null;
+        for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay && sign is null; tick++)
+        {
+            var paymentsBefore = hospital.Transactions.Count(t => t.Kind == TransactionKind.Treatment);
+            simulation.Step();
+            if (hospital.Transactions.Count(t => t.Kind == TransactionKind.Treatment) > paymentsBefore)
+            {
+                sign = Assert.Single(simulation.FloatingDollarSigns, s => s.StartTick == simulation.Tick - 1);
+            }
+        }
+
+        Assert.NotNull(sign);
+        var payment = hospital.Transactions.Last(t => t.Kind == TransactionKind.Treatment);
+        Assert.Equal(payment.Amount, sign.Amount);
+        Assert.Equal(0, sign.Player);
+        Assert.False(sign.Insurance);
+        Assert.True(GpArea.Contains(sign.Tile), $"The patient paid at {sign.Tile}.");
+
+        // Not part of the saved state.
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var loaded = Simulation.Load(stream, BaseGameContent.Create());
+        Assert.Empty(loaded.FloatingDollarSigns);
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+
+        StepFor(simulation, FloatingDollarSign.Lifetime - 2);
+        Assert.Contains(sign, simulation.FloatingDollarSigns);
+        simulation.Step();
+        Assert.DoesNotContain(sign, simulation.FloatingDollarSigns);
+    }
+
+    [Fact]
     public void OnLevelOneTheGpDiagnosesPatientsAndIsPaid()
     {
         var install = RealGameData.Require();
