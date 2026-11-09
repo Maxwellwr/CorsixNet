@@ -329,6 +329,16 @@ public static class ObjectPlacer
     {
         var map = simulation.Map;
         var roomId = map[tile.X, tile.Y].RoomId;
+
+        // World:prepareFootprintTilesForBuild: litter goes from the tiles the object takes up.
+        foreach (var part in definition.Orientations[orientation].Footprint)
+        {
+            if ((part.Flags & FootprintFlags.CompleteCell) != 0 || !part.IsUsePosition)
+            {
+                Litter.RemoveAllAt(simulation, new TilePosition(tile.X + part.X, tile.Y + part.Y));
+            }
+        }
+
         var placed = simulation.AddEntity(id => new RoomObject(id, definition.Id, tile, orientation, roomId));
         if (definition.Id == PlantType)
         {

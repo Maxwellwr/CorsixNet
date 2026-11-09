@@ -384,6 +384,15 @@ public static class RoomBuilder
             DoorOutsideWasBuildable = map[outside.X, outside.Y].Has(TileFlags.Buildable),
         });
 
+        // Room:Room's World:prepareRectangleTilesForBuild: litter goes from the room's area.
+        for (var y = area.Y; y < area.Bottom; y++)
+        {
+            for (var x = area.X; x < area.Right; x++)
+            {
+                Litter.RemoveAllAt(simulation, new TilePosition(x, y));
+            }
+        }
+
         for (var x = area.X; x < area.Right; x++)
         {
             SetInsideWall(simulation, walls, ref map[x, area.Y], north: true);

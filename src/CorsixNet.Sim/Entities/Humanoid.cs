@@ -443,6 +443,12 @@ public sealed class Humanoid : Entity
         simulation.NotifyOccupantChange(next, 1);
         simulation.NotifyOccupantChange(Tile, -1);
 
+        // CorsixTH's walk action moves the humanoid to the next tile when the step starts (Patient:setTile).
+        if (Behaviour is PatientBehaviour patient)
+        {
+            Littering.OnTileEntered(simulation, this, patient, next);
+        }
+
         if (door is not null && doorAnimations is not null)
         {
             CrossDoor(simulation, door, doorAnimations, direction, next);
