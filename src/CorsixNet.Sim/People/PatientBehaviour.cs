@@ -356,6 +356,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 if (simulation.FindEntity(TargetId) is Room room && room.PatientId == humanoid.Id)
                 {
                     room.PatientId = 0;
+
+                    // Room:onHumanoidLeave: there might be other rooms like this one with patients queueing.
+                    if (room.DoorQueue is { Count: 0 } && room.IsActive && room.StaffPresent)
+                    {
+                        RoomVisits.TryToFindNearbyPatients(simulation, room);
+                    }
                 }
 
                 switch (Next)
@@ -570,6 +576,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             GoHome(simulation, humanoid, ReputationChange.OverPriced);
         }
     }
+
+    /// <summary>
+    /// Whether the patient is going home or to die, so that another room must not take them from a queue
+    /// (<c>tryMovePatient</c> in room.lua; there are no toilets yet to be going to).
+    /// </summary>
+    internal bool IsGoingHomeOrToDie => Phase == PatientPhase.GoingHome || IsSetToDie || Next == AfterRoom.Die;
 
     /// <summary>
     /// <c>UIQueue:onMouseUp</c>: a patient on their way to a room, or queueing at its door, is dropped on another active

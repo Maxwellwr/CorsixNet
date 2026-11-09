@@ -104,6 +104,9 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
                 }
 
                 room.StaffPresent = true;
+
+                // Room:commandEnteringStaff.
+                RoomVisits.TryToFindNearbyPatients(simulation, room);
                 Wait();
                 break;
             case NursePhase.WalkingToObject:

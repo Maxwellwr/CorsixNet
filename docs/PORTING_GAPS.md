@@ -95,10 +95,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   the toilet growing (`Needs`) are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
-- Queue features: benches, the queue window itself, patients rerouting to shorter queues (`queue.lua`,
-  `dialogs/queue_dialog.lua`). Priorities for VIPs, the inspector and emergency patients, and the window's size
-  buttons, moving patients in the queue and sending a patient to another room of the same type as commands
-  (`ChangeQueueSizeCommand`, `MoveInQueueCommand`, `SendPatientToRoomCommand`) are done.
+- Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,
+  the inspector and emergency patients, rooms taking patients from other rooms' queues (`TryToFindNearbyPatients`), and
+  the window's size buttons, moving patients in the queue and sending a patient to another room of the same type as
+  commands (`ChangeQueueSizeCommand`, `MoveInQueueCommand`, `SendPatientToRoomCommand`) are done.
 - Patient window: health, happiness, thirst, warmth, diagnosis progress (`dialogs/patient.lua`). Its send home
   and guess cure buttons are done as commands (`SendPatientHomeCommand`, `GuessPatientCureCommand`; Q and Shift+Q
   in the client).
