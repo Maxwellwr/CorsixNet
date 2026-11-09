@@ -1,4 +1,5 @@
 using System.Globalization;
+using CorsixNet.Client.Audio;
 using CorsixNet.Client.Rendering;
 using CorsixNet.Client.Sessions;
 using CorsixNet.Content;
@@ -157,6 +158,9 @@ internal sealed class MapViewScreen : IScreen
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
     private readonly OriginalTexts? _texts;
 
+    /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
+    private readonly SoundEffects _sounds;
+
     /// <summary>Creates the view for a local game on <paramref name="levels"/>, or for <paramref name="networkSession"/> if given.</summary>
     public MapViewScreen(
         ThemeHospitalInstall install,
@@ -189,6 +193,9 @@ internal sealed class MapViewScreen : IScreen
         _objects = new ObjectDrawing(_animations);
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
         _texts = LoadTexts(install, _config);
+        _sounds = SoundEffects.Load(install, _config);
+        _buildTool.PlaySound = _sounds.Play;
+        _furnishTool.PlaySound = _sounds.Play;
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
         _pixel = new Texture2D(device, 1, 1);
@@ -486,6 +493,14 @@ internal sealed class MapViewScreen : IScreen
         _diamond.Dispose();
         _cellOutline.Dispose();
         _pixel.Dispose();
+        _sounds.Dispose();
+    }
+
+    /// <summary>Where on the map view the middle of a tile is, for sounds heard there.</summary>
+    private Vector2 ScreenOf(TilePosition tile)
+    {
+        var topLeft = _camera.TopLeft(ViewSize);
+        return (Camera.TileCenter(tile.X, tile.Y) - topLeft.ToVector2()) * _camera.Zoom;
     }
 
     private Point ViewSize => new(_device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight));
@@ -1063,7 +1078,10 @@ internal sealed class MapViewScreen : IScreen
                 .FirstOrDefault();
             if (shot is not null)
             {
+                // Rat:onClick.
                 _session.Submit(new ShootRatCommand(shot.Id));
+                _sounds.Play("shotgun.wav");
+                _sounds.Play("deadrat2.wav");
             }
         }
 
@@ -1074,7 +1092,9 @@ internal sealed class MapViewScreen : IScreen
             var hand = new TilePosition(handPoint.X, handPoint.Y);
             if (_pickedUpStaff is { } carried)
             {
+                // UIPlaceStaff:close: put down or not, the member of staff is let go.
                 _pickedUpStaff = null;
+                _sounds.Play("plac_st2.wav");
                 if (simulation.FindEntity(carried) is Humanoid held && held.Tile != hand)
                 {
                     var problem = StaffMoving.Check(simulation, carried, hand, _session.Player);
@@ -1098,6 +1118,7 @@ internal sealed class MapViewScreen : IScreen
                     .FirstOrDefault();
                 if (_pickedUpStaff is not null)
                 {
+                    _sounds.Play("pickup.wav"); // the pickup action
                     ShowNotice("Picked up; M puts them down at the cursor");
                 }
             }
@@ -1115,6 +1136,10 @@ internal sealed class MapViewScreen : IScreen
             if (chosen is not null)
             {
                 _session.Submit(shift ? new GuessPatientCureCommand(chosen.Id) : new SendPatientHomeCommand(chosen.Id));
+                if (!shift)
+                {
+                    _sounds.PlayAt("sack.wav", ScreenOf(chosen.Tile), ViewSize); // UIPatient:goHome
+                }
             }
         }
 
@@ -1156,17 +1181,21 @@ internal sealed class MapViewScreen : IScreen
         {
             var parcel = simulation.Map[landAt.X, landAt.Y].Parcel;
             var price = simulation.ParcelPrice(parcel);
+            // UITownMap's purchase: the till rings, or the wrong-choice buzz.
             if (!simulation.IsParcelPurchasable(parcel, _session.Player))
             {
                 ShowNotice($"Parcel {parcel} is not for sale");
+                _sounds.Play("Wrong2.wav");
             }
             else if (price > simulation.Hospitals[_session.Player].Balance)
             {
                 ShowNotice($"Not enough money for parcel {parcel}: it costs {MoneyText.Format(price)}");
+                _sounds.Play("Wrong2.wav");
             }
             else
             {
                 _session.Submit(new PurchaseParcelCommand(parcel));
+                _sounds.Play("cashreg.wav");
             }
         }
 
@@ -1262,6 +1291,7 @@ internal sealed class MapViewScreen : IScreen
                 if (problem == StaffHireProblem.None)
                 {
                     _session.Submit(new HireStaffCommand(staffClass, 0, tile));
+                    _sounds.Play("plac_st2.wav"); // UIPlaceStaff:close
                 }
                 else
                 {

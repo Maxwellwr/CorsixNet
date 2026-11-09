@@ -13,8 +13,8 @@ namespace CorsixNet.Content.Settings;
 /// <c>width = 800</c> and <c>language = [[English]]</c>, with CorsixTH's setting names and defaults.
 /// </summary>
 /// <remarks>
-/// Only the settings CorsixNet acts on are read and written; CorsixTH's others (sound, movies, the options dialog's
-/// game rules, ...) are left out until there is something they change.
+/// Only the settings CorsixNet acts on are read and written; CorsixTH's others (announcements, music, movies, the
+/// options dialog's game rules, ...) are left out until there is something they change.
 /// </remarks>
 public sealed record GameConfig
 {
@@ -66,6 +66,12 @@ public sealed record GameConfig
     /// Whether a level from a map file (not a campaign's) is played without money (CorsixTH's <c>free_build_mode</c>).
     /// </summary>
     public bool FreeBuildMode { get; init; }
+
+    /// <summary>Whether sound effects are played (<c>play_sounds</c>).</summary>
+    public bool PlaySounds { get; init; } = true;
+
+    /// <summary>The volume of sound effects, from 0 to 1 (<c>sound_volume</c>).</summary>
+    public decimal SoundVolume { get; init; } = 0.5m;
 
     /// <summary>The player's name in network games; empty for the default.</summary>
     public string PlayerName { get; init; } = string.Empty;
@@ -141,6 +147,8 @@ public sealed record GameConfig
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
+            PlaySounds = Bool("play_sounds", defaults.PlaySounds),
+            SoundVolume = values.GetValueOrDefault("sound_volume") is decimal volume ? volume : defaults.SoundVolume,
             PlayerName = Text("player_name", defaults.PlayerName),
         };
     }
@@ -236,6 +244,15 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"theme_hospital_install = {Quote(ThemeHospitalInstall)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Sounds: By default enabled and set at level 0.5
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"play_sounds = {Lua(PlaySounds)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"sound_volume = {SoundVolume.ToString(CultureInfo.InvariantCulture)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------

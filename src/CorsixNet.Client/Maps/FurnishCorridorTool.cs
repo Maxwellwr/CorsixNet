@@ -20,6 +20,9 @@ internal sealed class FurnishCorridorTool
     private static readonly Color BlockedGhost = new Color(120, 120, 120) * 0.9f;
     private static readonly Direction[] Turns = [Direction.North, Direction.East, Direction.South, Direction.West];
 
+    /// <summary>Plays one of the original's interface sounds (CorsixTH's <c>UI:playSound</c>), if set.</summary>
+    public Action<string>? PlaySound { get; set; }
+
     private ObjectDefinition? _placing;
     private Direction _orientation;
     private TilePosition? _ghostTile;
@@ -78,6 +81,8 @@ internal sealed class FurnishCorridorTool
 
         if (input.RightClicked)
         {
+            // UIPlaceObjects:tryNextOrientation.
+            PlaySound?.Invoke("swoosh.wav");
             Turn();
         }
 
@@ -88,6 +93,7 @@ internal sealed class FurnishCorridorTool
         {
             var command = new PlaceObjectCommand(_placing.Id, target, _orientation);
             Stop();
+            PlaySound?.Invoke("place_r.wav"); // UIPlaceObjects:placeObject
             return command;
         }
 

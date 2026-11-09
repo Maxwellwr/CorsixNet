@@ -220,9 +220,15 @@ and state hashing; tests for save/load round trips.
 **Has:** the sound archive reader (`SoundArchive`, `ThemeHospitalInstall.LoadSounds`: `SOUND/DATA/SOUND-n.DAT` with
 the English fallback, names, WAV data, durations, wildcard names; `Src/th_sound.cpp`, `audio.lua`); the music list
 and XMI to MIDI conversion (`ThemeHospitalInstall.MusicTracks`, `Xmi.ToMidi`; `audio.lua`'s `Audio:init`,
-`Src/xmi2mid.cpp`). Nothing plays yet.
+`Src/xmi2mid.cpp`). The client plays sound effects (`SoundEffects` over MonoGame, `SoundChoice` for wildcards and
+the distance falloff of `sound_player::play_at`; `play_sounds` and `sound_volume` in `config.txt`) for the actions it
+has: the build tool's door and window clicks, placing and turning objects, hiring and picking up and putting down
+staff, buying a parcel, shooting a rat, sending a patient home (positional).
 
-- Positional sound effects for objects, doors, footsteps, machines; announcer speech; adviser voice.
+- Sound effects the simulation causes: objects, doors (`eledoor2.wav`), footsteps, machines, the earthquake
+  (`quake.wav`), cheers and boos at the year end, vaccination (`vaccin.wav`), patients' coughs and other idle sounds;
+  the interface's hover and button sounds once there are windows; announcer speech; adviser voice;
+  `play_announcements` and `announcement_volume`.
 - Music playback and the jukebox (`dialogs/jukebox.lua`), MP3 replacement music, volumes (`resizables/sound_setting.lua`).
 
 ## 10. Network
@@ -241,10 +247,10 @@ join.
 
 - Options dialog: resolution, fullscreen, language, audio, scroll speed, edge scrolling, zoom, mouse
   capture, adviser on/off, ... (`resizables/options.lua`, `graphics_settings.lua`, `customise.lua`).
-- The rest of the config file (`config_finder.lua`): sound, movies, scrolling and zoom speeds, edge scrolling, the
-  options dialog's game rules, `config.path.txt`; game data folder selection (`resizables/folder_settings.lua`,
-  `directory_browser.lua`). `config.txt` with the language, window, screen shake, autosave frequency, game folder and
-  player name is done (`GameConfig`).
+- The rest of the config file (`config_finder.lua`): announcements, music, movies, scrolling and zoom speeds, edge
+  scrolling, the options dialog's game rules, `config.path.txt`; game data folder selection
+  (`resizables/folder_settings.lua`, `directory_browser.lua`). `config.txt` with the language, window, screen shake,
+  autosave frequency, game folder, player name and sound effects is done (`GameConfig`).
 - Hotkeys file.
 - Update check (`resizables/update.lua`).
 

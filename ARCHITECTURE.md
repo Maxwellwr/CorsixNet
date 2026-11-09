@@ -138,6 +138,10 @@ entities and pending commands.
   the member of staff leaves their room or desk (`StaffEmployment.Detach`, as when fired), is put on a tile where a new
   member of staff could be placed (their own desk counting as free) and starts afresh as if just hired; a handyman keeps
   his parcel. The client shows the picking up; not while treating a patient with an object.
+- **Sound effects.** The client's `SoundEffects` plays `SOUND-n.DAT`'s WAV files through MonoGame, as CorsixTH's
+  `UI:playSound` (heard alike everywhere) and `Entity:playSound` (quieter away from the view's centre and not heard
+  off it, `SoundChoice.VolumeAt`). It is driven by the client's own actions only, never by the simulation, and is
+  silent without the archive, with `play_sounds = false` or without a sound device.
 
 Presentation details are derived in the client, not stored in the simulation. Examples are
 pixel offsets during a step and which tile a walking humanoid is drawn with. Animation timing
