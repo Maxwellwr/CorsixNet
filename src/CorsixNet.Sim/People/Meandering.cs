@@ -26,7 +26,10 @@ internal sealed class Meandering
     /// <param name="simulation">The simulation.</param>
     /// <param name="humanoid">The member of staff.</param>
     /// <param name="parcel">The only parcel to wander in (a handyman's), or 0 for any.</param>
-    internal void Update(Simulation simulation, Humanoid humanoid, int parcel = 0)
+    /// <param name="loop">
+    /// Called at the start of each round (CorsixTH's <c>loop_callback</c>); when it returns true the meander ends there.
+    /// </param>
+    internal void Update(Simulation simulation, Humanoid humanoid, int parcel = 0, Func<bool>? loop = null)
     {
         if (_idleTicks == Forever)
         {
@@ -43,6 +46,11 @@ internal sealed class Meandering
         if (!simulation.Pathfinder.TryFindIdleTile(simulation.Map, start, simulation.Random.NextInclusive(1, 24), out var tile, parcel) || tile == start)
         {
             _idleTicks = Forever;
+            return;
+        }
+
+        if (loop is not null && loop())
+        {
             return;
         }
 

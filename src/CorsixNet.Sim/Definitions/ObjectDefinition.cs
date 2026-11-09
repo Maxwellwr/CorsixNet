@@ -123,6 +123,7 @@ public sealed record MultiUseAnimations(IReadOnlyList<MultiUsePhase> Begin, Mult
 /// <param name="WalkInToUse">Whether the user walks from the use position onto the object first (CorsixTH's <c>walk_in_to_use</c>).</param>
 /// <param name="UsageSouth">Animations of use facing south, for objects that have their own (and, mirrored, east without its own).</param>
 /// <param name="UsageWest">Animations of use facing west, for objects that have their own (and, mirrored, north without its own).</param>
+/// <param name="VisibleWhileUsed">Whether the object stays drawn while used, its use animation showing only the user (<c>object_visible</c>).</param>
 /// <param name="MultiUsage">
 /// Animations of two people using the object together, per facing direction and by the kinds of the one using it
 /// and the one with them. A direction without its own mirrors the opposite one, as CorsixTH's <c>orient_mirror</c>.
@@ -140,7 +141,8 @@ public sealed record ObjectDefinition(
     bool WalkInToUse = false,
     IReadOnlyDictionary<Direction, IReadOnlyDictionary<(HumanoidType Primary, HumanoidType Secondary), IReadOnlyList<MultiUseAnimations>>>? MultiUsage = null,
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageSouth = null,
-    IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageWest = null)
+    IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageWest = null,
+    bool VisibleWhileUsed = false)
 {
     /// <summary>
     /// The animation variants for <paramref name="primary"/> using the object facing <paramref name="orientation"/> with

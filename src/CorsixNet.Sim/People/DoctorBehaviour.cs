@@ -29,6 +29,15 @@ public enum DoctorPhase : byte
 
     /// <summary>In general diagnosis: meandering about the room until a patient has undressed.</summary>
     Waiting,
+
+    /// <summary>In the research department: walking to a desk, cabinet, computer or atom analyser.</summary>
+    WalkingToResearchObject,
+
+    /// <summary>In the research department: working at it.</summary>
+    UsingResearchObject,
+
+    /// <summary>In the research department: meandering a few rounds before the next.</summary>
+    ResearchMeandering,
 }
 
 /// <summary>
@@ -58,6 +67,18 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 
     /// <summary>Wandering about while without a room, or in general diagnosis between patients.</summary>
     private Meandering Meander { get; init; } = new();
+
+    /// <summary>In the research department: what the researcher goes to or works at, or 0 (<c>reserved_for</c>).</summary>
+    public int ResearchObjectId { get; private set; }
+
+    /// <summary>What the researcher worked at last, which they don't take again at once.</summary>
+    private int _previousResearchObject;
+
+    /// <summary>Rounds at the desk left (<c>desk_use_time</c>).</summary>
+    private int _researchRounds;
+
+    /// <summary>Meander rounds left before the next object (<c>num_meanders</c>).</summary>
+    private int _researchMeanders;
 
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
@@ -100,7 +121,12 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 
                 // Room:commandEnteringStaff.
                 RoomVisits.TryToFindNearbyPatients(simulation, room);
-                if (RoomVisits.HasExaminingObject(room.RoomType))
+                if (string.Equals(room.RoomType, RoomVisits.ResearchRoom, StringComparison.Ordinal))
+                {
+                    // ResearchRoom:commandEnteringStaff.
+                    StartResearchCycle(simulation, humanoid, room);
+                }
+                else if (RoomVisits.HasExaminingObject(room.RoomType))
                 {
                     // Room:commandEnteringStaff: the doctor meanders until a patient needs them.
                     Wait();
@@ -132,6 +158,11 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                     Meander.Update(simulation, humanoid);
                 }
 
+                break;
+            case DoctorPhase.WalkingToResearchObject:
+            case DoctorPhase.UsingResearchObject:
+            case DoctorPhase.ResearchMeandering:
+                ResearchStep(simulation, humanoid, room);
                 break;
             case DoctorPhase.WalkingToCabinet:
                 if (RoomVisits.FindObject(simulation, room.Id, CabinetType) is { } cabinet)
@@ -219,6 +250,103 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         }
     }
 
+    /// <summary>
+    /// <c>ResearchRoom:doStaffUseCycle</c>: to the nearest free desk, cabinet, computer or atom analyser (a desk for 7 to 14
+    /// rounds), then 2 to 4 rounds of meandering, then again.
+    /// </summary>
+    private void StartResearchCycle(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Use = null;
+        Meander.Reset();
+        if (RoomVisits.FindFreeResearchObject(simulation, room, humanoid, _previousResearchObject) is { } placed)
+        {
+            ResearchObjectId = placed.Id;
+            Phase = DoctorPhase.WalkingToResearchObject;
+            if (string.Equals(placed.ObjectType, DeskType, StringComparison.Ordinal))
+            {
+                _researchRounds = simulation.Random.NextInclusive(7, 14);
+            }
+
+            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, placed));
+        }
+        else
+        {
+            Phase = DoctorPhase.ResearchMeandering;
+        }
+
+        _researchMeanders = simulation.Random.NextInclusive(2, 4);
+    }
+
+    /// <summary>
+    /// The research cycle: work at the object; the desk gives 100 points once done, a computer 500, an atom analyser 800
+    /// (the cabinet none); then meander until the rounds are up.
+    /// </summary>
+    private void ResearchStep(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        switch (Phase)
+        {
+            case DoctorPhase.WalkingToResearchObject:
+                if (simulation.FindEntity(ResearchObjectId) is not RoomObject target || humanoid.Tile != RoomVisits.UseTile(simulation, target))
+                {
+                    ResearchObjectId = 0;
+                    Phase = DoctorPhase.ResearchMeandering;
+                    return;
+                }
+
+                Phase = DoctorPhase.UsingResearchObject;
+                Use = ObjectUse.Start(simulation, humanoid, target);
+                break;
+            case DoctorPhase.UsingResearchObject:
+                var used = simulation.FindEntity(ResearchObjectId) as RoomObject;
+                switch (Use?.Update(simulation, humanoid) ?? ObjectUseEvent.Done)
+                {
+                    case ObjectUseEvent.Loop:
+                        _researchRounds--;
+                        if (_researchRounds <= 0)
+                        {
+                            Use!.Interrupt();
+                        }
+
+                        break;
+                    case ObjectUseEvent.Done:
+                        var points = used?.ObjectType switch
+                        {
+                            DeskType => 100,
+                            "computer" => 500,
+                            "analyser" => 800,
+                            _ => 0,
+                        };
+                        if (points > 0 && humanoid.Employer >= 0 && humanoid.Employer < simulation.Hospitals.Count)
+                        {
+                            var hospital = simulation.Hospitals[humanoid.Employer];
+                            hospital.Research.AddPoints(simulation, hospital, points);
+                        }
+
+                        _previousResearchObject = ResearchObjectId;
+                        ResearchObjectId = 0;
+                        Use = null;
+                        Phase = DoctorPhase.ResearchMeandering;
+                        Meander.Reset();
+                        break;
+                }
+
+                break;
+            case DoctorPhase.ResearchMeandering:
+                Meander.Update(simulation, humanoid, loop: () =>
+                {
+                    _researchMeanders--;
+                    if (_researchMeanders > 0)
+                    {
+                        return false;
+                    }
+
+                    StartResearchCycle(simulation, humanoid, room);
+                    return true;
+                });
+                break;
+        }
+    }
+
     /// <summary>GPRoom:doStaffUseCycle: to the cabinet, then the desk.</summary>
     private void StartCycle(Simulation simulation, Humanoid humanoid, Room room)
     {
@@ -298,6 +426,10 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteInt32(DeskUseTime);
         ObjectUse.WriteOptional(writer, Use);
         Meander.Write(writer);
+        writer.WriteInt32(ResearchObjectId);
+        writer.WriteInt32(_previousResearchObject);
+        writer.WriteInt32(_researchRounds);
+        writer.WriteInt32(_researchMeanders);
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
@@ -309,6 +441,10 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             DeskUseTime = reader.ReadInt32(),
             Use = ObjectUse.ReadOptional(reader),
             Meander = Meandering.Read(reader),
+            ResearchObjectId = reader.ReadInt32(),
+            _previousResearchObject = reader.ReadInt32(),
+            _researchRounds = reader.ReadInt32(),
+            _researchMeanders = reader.ReadInt32(),
         };
     }
 }
