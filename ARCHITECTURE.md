@@ -427,7 +427,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   person's warmth moves a quarter towards their tile's temperature; below 0.22 (11 °C) or above 0.36 (18 °C)
   happiness drops by a tenth of the gap, otherwise it rises by 0.005. Staff also gain or lose 5 % of how far their
   wage is from the fair wage, and a little for a plant, extinguisher, bin, bookcase, skeleton or TV within two
-  tiles in the same room. Receptionists and staff on `payroll.MaxSalary` (2000) are always happy. A patient paying
+  tiles in the same room, and in an active room a thousandth per step of `round(ln windows)` (doubled in a staff
+  room; only the external wall's windows count, as in CorsixTH) and of `round(ln area / smallest area)`.
+  Receptionists and staff on `payroll.MaxSalary` (2000) are always happy. A patient paying
   loses half the price distortion. Happiness feeds the treatment's service quality and the happiness goals.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a

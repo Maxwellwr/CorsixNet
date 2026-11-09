@@ -1,5 +1,6 @@
 // How warm and happy people feel day by day, ported from CorsixTH CorsixTH/Lua/entities/humanoid.lua
-// (Humanoid:tickDay, changeAttribute, findObjectsInSquare) and entities/humanoids/staff.lua (Staff:tickDay).
+// (Humanoid:tickDay, changeAttribute, findObjectsInSquare), entities/humanoids/staff.lua (Staff:tickDay) and room.lua
+// (Room:calculateHappinessFactor, countWindows).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Entities;
@@ -16,9 +17,8 @@ namespace CorsixNet.Sim.People;
 /// them.
 /// </summary>
 /// <remarks>
-/// Not yet: tiredness (staff working while tired or resting), resting on the staff room's sofa or games, a room's
-/// windows and space (<c>Room:calculateHappinessFactor</c>), the cold and hot mood icons, and patients' own daily
-/// effects (waiting, health, vomit, thirst).
+/// Not yet: tiredness (staff working while tired or resting), resting on the staff room's sofa or games, the cold and
+/// hot mood icons, and patients' own daily effects (waiting, health, vomit, thirst).
 /// </remarks>
 internal static class Feelings
 {
@@ -46,6 +46,19 @@ internal static class Feelings
         ("skeleton", 0.002m),
         ("tv", 0.0005m),
     ];
+
+    /// <summary>
+    /// <c>e^(k + 0.5)</c> for k = 0, 1, …: <c>math.round(math.log(x))</c> (CorsixTH rounds half up) is how many of these
+    /// <c>x</c> reaches, which keeps the logarithm out of the simulation.
+    /// </summary>
+    private static readonly decimal[] RoundedLogSteps =
+    [
+        1.6487212707001281m, 4.4816890703380645m, 12.182493960703473m, 33.115451958692312m, 90.017131300521814m,
+        244.69193226422039m, 665.14163304436181m, 1808.0424144560632m, 4914.7688402991344m, 13359.726829661872m,
+    ];
+
+    /// <summary>The external wall's window sprites, which CorsixTH's <c>countWindows</c> looks for (<c>window_tile</c>).</summary>
+    private static readonly ushort[] WindowTiles = [116, 117, 118, 119, 120, 121, 124, 125, 126, 127];
 
     /// <summary>One person's day, from <see cref="Simulation"/>'s end of the day.</summary>
     internal static void OnEndDay(Simulation simulation, Humanoid humanoid)
@@ -122,6 +135,73 @@ internal static class Feelings
         {
             ChangeHappiness(simulation, humanoid, ObjectsInSight(simulation, humanoid, objectType).Count * happiness);
         }
+
+        // A room with windows and space to spare is nicer to be in.
+        var roomId = simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId;
+        if (roomId != 0 && simulation.FindEntity(roomId) is Room { IsActive: true } room)
+        {
+            ChangeHappiness(simulation, humanoid, RoomHappinessFactor(simulation, room));
+        }
+    }
+
+    /// <summary>
+    /// <c>Room:calculateHappinessFactor</c>: a thousandth for each step of the rounded natural logarithm of the window
+    /// count (doubled in a staff room), and likewise of how many times the room's area is its smallest allowed area.
+    /// </summary>
+    /// <remarks>
+    /// CorsixTH counts the tiles from the room's corner to one past its far corner whose north or west wall is one of
+    /// the external wall's windows. The windows a player builds into a room's walls use other sprites, so only the
+    /// building's own windows along a room count.
+    /// </remarks>
+    internal static decimal RoomHappinessFactor(Simulation simulation, Room room)
+    {
+        var map = simulation.Map;
+        var windows = 0;
+        for (var x = room.Area.X; x <= room.Area.Right; x++)
+        {
+            for (var y = room.Area.Y; y <= room.Area.Bottom; y++)
+            {
+                if (map.Contains(x, y) && (Array.IndexOf(WindowTiles, map[x, y].NorthWall) >= 0 || Array.IndexOf(WindowTiles, map[x, y].WestWall) >= 0))
+                {
+                    windows++;
+                }
+            }
+        }
+
+        var factor = 0m;
+        if (windows > 0)
+        {
+            if (room.RoomType == "staff_room")
+            {
+                // Staff are pleased to rest in a staff room with windows.
+                windows *= 2;
+            }
+
+            factor += RoundedLog(windows) / 1000m;
+        }
+
+        if (simulation.Content.FindRoom(room.RoomType) is { MinimumSize: > 0 } definition)
+        {
+            var extraSpace = room.Area.Width * room.Area.Height / (decimal)(definition.MinimumSize * definition.MinimumSize);
+            if (extraSpace > 1)
+            {
+                factor += RoundedLog(extraSpace) / 1000m;
+            }
+        }
+
+        return factor;
+    }
+
+    /// <summary><c>math.round(math.log(x))</c> for <paramref name="x"/> ≥ 1.</summary>
+    private static int RoundedLog(decimal x)
+    {
+        var steps = 0;
+        while (steps < RoundedLogSteps.Length && x >= RoundedLogSteps[steps])
+        {
+            steps++;
+        }
+
+        return steps;
     }
 
     /// <summary>
