@@ -55,6 +55,7 @@ public static class LevelMapLoader
         var map = new LevelMap(MapFile.Size, MapFile.Size, file.PlayerCount);
         var objects = new List<MapObjectPlacement>();
         var maxParcel = 0;
+        var dividerWalls = new List<(int X, int Y, bool North, ushort Sprite)>();
 
         for (var player = 0; player < file.PlayerCount; player++)
         {
@@ -93,8 +94,18 @@ public static class LevelMapLoader
                 tile.Flags = travel;
                 tile.Floor = MapFile.BlockSprite(raw.Floor);
 
-                // Divider walls separate parcels of different owners and are only
-                // shown in multiplayer; they are not built at load time.
+                // Divider walls separate parcels of different owners: they are kept with the original tiles
+                // and go up when the owners are set below.
+                if (IsDividerWall(raw.NorthWall))
+                {
+                    dividerWalls.Add((x, y, true, MapFile.BlockSprite(raw.NorthWall)));
+                }
+
+                if (IsDividerWall(raw.WestWall))
+                {
+                    dividerWalls.Add((x, y, false, MapFile.BlockSprite(raw.WestWall)));
+                }
+
                 if (raw.NorthWall == 0 || IsDividerWall(raw.NorthWall))
                 {
                     if (tile.Floor is >= FirstPondFoliage and <= LastPondFoliage)
@@ -159,8 +170,23 @@ public static class LevelMapLoader
 
         map.ParcelCount = maxParcel + 1;
 
-        // As in CorsixTH's Map:load, parcel N starts out owned by player N if there is one;
-        // the remaining parcels are for sale.
+        // CorsixTH's level_map::load keeps the tiles, divider walls included, as original_cells.
+        map.KeepOriginalTiles();
+        foreach (var (x, y, north, sprite) in dividerWalls)
+        {
+            ref var original = ref map.OriginalTile(x, y);
+            if (north)
+            {
+                original.NorthWall = sprite;
+            }
+            else
+            {
+                original.WestWall = sprite;
+            }
+        }
+
+        // As in CorsixTH's Map:load, parcel N starts out owned by player N if there is one; the remaining parcels
+        // are for sale, and show as grass until they are bought.
         for (var parcel = 1; parcel < map.ParcelCount; parcel++)
         {
             map.SetParcelOwner(parcel, parcel <= map.PlayerCount ? parcel : 0);

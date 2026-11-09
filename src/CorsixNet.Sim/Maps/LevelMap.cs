@@ -19,10 +19,19 @@ public sealed class LevelMap
 
     private const int LastWallSprite = 164;
 
+    /// <summary>First of the nine bush sprites dotted over parcels without an owner.</summary>
+    private const ushort GrassDecoration = 192;
+
+    /// <summary>Divider wall sprites: north wall with no owner on this side; +1 west, +2 owned.</summary>
+    private const ushort DividerWall = 142;
+
     private readonly MapTile[] _tiles;
     private readonly TilePosition[] _cameraTiles;
     private readonly TilePosition[] _heliportTiles;
     private int[] _parcelOwners = [0];
+
+    /// <summary>The tiles as the map file has them (CorsixTH's <c>original_cells</c>), or null if not kept.</summary>
+    private MapTile[]? _originalTiles;
 
     public LevelMap(int width, int height, int playerCount)
     {
@@ -61,12 +70,84 @@ public sealed class LevelMap
     /// <summary>The player (1-based) owning <paramref name="parcel"/>, or 0 if nobody owns it.</summary>
     public int GetParcelOwner(int parcel) => _parcelOwners[parcel];
 
-    /// <summary>Sets the owner of a parcel. Use <see cref="Simulation.SetParcelOwner"/> during a game.</summary>
-    public void SetParcelOwner(int parcel, int owner)
+    /// <summary>Whether the map keeps the tiles of its file (see <see cref="KeepOriginalTiles"/>).</summary>
+    public bool HasOriginalTiles => _originalTiles is not null;
+
+    /// <summary>
+    /// Remembers the current tiles as the map file's own (CorsixTH's <c>original_cells</c>): from now on a parcel
+    /// without an owner shows as grass, and its tiles come back when it gets one.
+    /// </summary>
+    public void KeepOriginalTiles() => _originalTiles = (MapTile[])_tiles.Clone();
+
+    /// <summary>
+    /// The tile as the map file has it (CorsixTH's <c>get_original_tile</c>); the current tile on a map that keeps
+    /// no originals.
+    /// </summary>
+    public ref MapTile OriginalTile(int x, int y)
+    {
+        _ = this[x, y];
+        return ref (_originalTiles ?? _tiles)[(y * Width) + x];
+    }
+
+    /// <summary>
+    /// Sets the owner of a parcel. Use <see cref="Simulation.SetParcelOwner"/> during a game. On a map that keeps its
+    /// original tiles this is CorsixTH's <c>level_map::set_parcel_owner</c>: an owned parcel gets its tiles back, one
+    /// without an owner becomes mown grass with a few bushes and no walls or flags, and divider walls go up between
+    /// indoor parcels of different owners and come down between parcels of the same owner.
+    /// </summary>
+    /// <returns>The tiles that lost a divider wall, so rooms beside them can get their walls back.</returns>
+    public IReadOnlyList<TilePosition> SetParcelOwner(int parcel, int owner)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(owner);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(owner, PlayerCount);
         _parcelOwners[parcel] = owner;
+        if (_originalTiles is not { } originals || parcel <= 0)
+        {
+            return [];
+        }
+
+        var split = new List<TilePosition>();
+        for (var y = 0; y < Height; y++)
+        {
+            for (var x = 0; x < Width; x++)
+            {
+                var index = (y * Width) + x;
+                ref var tile = ref _tiles[index];
+                if (tile.Parcel == parcel)
+                {
+                    var original = originals[index];
+                    if (owner != 0)
+                    {
+                        tile.Floor = original.Floor;
+                        tile.NorthWall = original.NorthWall;
+                        tile.WestWall = original.WestWall;
+                        tile.Flags = original.Flags;
+                    }
+                    else
+                    {
+                        // Nicely mown grass pattern, and now and then a bush.
+                        tile.Floor = (ushort)(((x & 1) << 1) + 1);
+                        tile.NorthWall = ((x | y) & 7) == 0 ? (ushort)(GrassDecoration + ((x ^ y) % 9)) : (ushort)0;
+                        tile.WestWall = 0;
+                        tile.Flags = TileFlags.None;
+                    }
+                }
+
+                if (AddRemoveDividerWall(originals, index, x, 1, north: false, parcel))
+                {
+                    split.Add(new TilePosition(x, y));
+                }
+
+                if (AddRemoveDividerWall(originals, index, y, Width, north: true, parcel))
+                {
+                    split.Add(new TilePosition(x, y));
+                }
+            }
+        }
+
+        UpdatePathfinding();
+        UpdateShadows();
+        return split;
     }
 
     /// <summary>Number of tiles in <paramref name="parcel"/> (CorsixTH's <c>Map:getParcelTileCount</c>).</summary>
@@ -240,6 +321,15 @@ public sealed class LevelMap
             writer.WriteInt32(tile.RoomId);
             writer.WriteInt32(tile.ObjectId);
         }
+
+        writer.WriteBool(_originalTiles is not null);
+        foreach (var tile in _originalTiles ?? [])
+        {
+            writer.WriteUInt16(tile.Floor);
+            writer.WriteUInt16(tile.NorthWall);
+            writer.WriteUInt16(tile.WestWall);
+            writer.WriteUInt32((uint)tile.Flags);
+        }
     }
 
     /// <summary>Reads a map written by <see cref="Write"/>.</summary>
@@ -283,7 +373,73 @@ public sealed class LevelMap
             };
         }
 
+        if (reader.ReadBool())
+        {
+            map._originalTiles = new MapTile[map._tiles.Length];
+            for (var i = 0; i < map._tiles.Length; i++)
+            {
+                map._originalTiles[i] = new MapTile
+                {
+                    Floor = reader.ReadUInt16(),
+                    NorthWall = reader.ReadUInt16(),
+                    WestWall = reader.ReadUInt16(),
+                    Flags = (TileFlags)reader.ReadUInt32(),
+                    Parcel = map._tiles[i].Parcel,
+                };
+            }
+        }
+
         return map;
+    }
+
+    /// <summary>
+    /// CorsixTH's <c>addRemoveDividerWalls</c>: where indoor tiles of two parcels meet on the tile's north or west
+    /// edge, a divider wall stands if their owners differ; one next to <paramref name="parcel"/> goes if they match.
+    /// </summary>
+    /// <returns>Whether a divider wall was removed.</returns>
+    private bool AddRemoveDividerWall(MapTile[] originals, int index, int coordinate, int delta, bool north, int parcel)
+    {
+        if (coordinate <= 0 || !originals[index].Has(TileFlags.Hospital) || !originals[index - delta].Has(TileFlags.Hospital))
+        {
+            return false;
+        }
+
+        ref var tile = ref _tiles[index];
+        var other = _tiles[index - delta];
+        if (tile.Parcel == other.Parcel)
+        {
+            return false;
+        }
+
+        var owner = GetParcelOwner(tile.Parcel);
+        var otherOwner = GetParcelOwner(other.Parcel);
+        if (owner != otherOwner)
+        {
+            var wall = (ushort)(DividerWall + (north ? 0 : 1) + (owner != 0 ? 2 : 0));
+            if (north)
+            {
+                tile.NorthWall = wall;
+            }
+            else
+            {
+                tile.WestWall = wall;
+            }
+        }
+        else if (tile.Parcel == parcel || other.Parcel == parcel)
+        {
+            if (north)
+            {
+                tile.NorthWall = 0;
+            }
+            else
+            {
+                tile.WestWall = 0;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 
     private static bool IsWall(ushort wallSprite, bool tall)
