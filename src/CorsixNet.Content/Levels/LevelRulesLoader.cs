@@ -2,13 +2,14 @@
 // CorsixTH/Lua/map.lua (Map:_loadOriginalCampaignLevel), CorsixTH/Lua/hospital.lua (Hospital:Hospital,
 // Hospital:getObjectBuildCost) and CorsixTH/Lua/world.lua (World:getAvailableRooms); the fallback
 // starting cash and reputation are CorsixTH/Lua/base_config.lua's town.StartCash and StartRep, and the staff settings fall back
-// to the same file's staff, gbv and staff_levels.
+// to the same file's staff, gbv and staff_levels. The planned earthquakes are CorsixTH/Lua/earthquake.lua's quake_control.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
 using System.Text.RegularExpressions;
 using CorsixNet.Formats;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.People;
@@ -88,7 +89,28 @@ public static partial class LevelRulesLoader
             EndConditionsFromConfig(config, startCash, startReputation),
             TownInt(config, levelNumber, "InterestRate") ?? Hospital.DefaultInterestRate,
             TownInt(config, levelNumber, "OverdraftDiff") ?? Hospital.DefaultOverdraftDifferential,
-            ObjectAvailabilityFromConfig(config, content));
+            ObjectAvailabilityFromConfig(config, content),
+            EarthquakesFromConfig(config));
+    }
+
+    /// <summary>
+    /// The <c>quake_control[n].StartMonth</c>, <c>EndMonth</c> and <c>Severity</c> entries from 0 up to the first one the
+    /// files leave out; a missing field counts as 0. CorsixTH's base_config.lua has none.
+    /// </summary>
+    public static IEnumerable<PlannedEarthquake> EarthquakesFromConfig(LevelConfig config)
+    {
+        for (var i = 0; ; i++)
+        {
+            var startMonth = config.GetInt($"quake_control[{i}].StartMonth");
+            var endMonth = config.GetInt($"quake_control[{i}].EndMonth");
+            var severity = config.GetInt($"quake_control[{i}].Severity");
+            if (startMonth is null && endMonth is null && severity is null)
+            {
+                yield break;
+            }
+
+            yield return new PlannedEarthquake(startMonth ?? 0, endMonth ?? 0, severity ?? 0);
+        }
     }
 
     /// <summary>

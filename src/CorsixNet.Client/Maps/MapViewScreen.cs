@@ -7,6 +7,7 @@ using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
@@ -38,6 +39,9 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 internal sealed class MapViewScreen : IScreen
 {
     private const float PanSpeed = 900f;
+
+    /// <summary>How far an earthquake at full strength moves the view, in map pixels (CorsixTH's <c>shake_screen_max_movement</c>).</summary>
+    private const float ShakeMaxMovement = 50f;
     private const float ZoomStep = 1.25f;
     private const int StatusHeight = 36;
 
@@ -316,11 +320,33 @@ internal sealed class MapViewScreen : IScreen
         _previousMouse = mouse;
     }
 
+    /// <summary>
+    /// Where an earthquake moves the view this frame (CorsixTH's <c>GameUI:draw</c> with <c>shake_screen_intensity</c>);
+    /// the view keeps still while the game is paused, as CorsixTH's "pause" stage stops the shaking.
+    /// </summary>
+    private Point ShakeOffset()
+    {
+        var intensity = _session is { IsPaused: false, Simulation: { } simulation } ? simulation.Earthquakes.Shake switch
+        {
+            EarthquakeShake.Warning => 0.2f,
+            EarthquakeShake.Small => 0.5f,
+            EarthquakeShake.Large => 1f,
+            _ => 0f,
+        } : 0f;
+        if (intensity == 0f)
+        {
+            return Point.Zero;
+        }
+
+        int Offset() => (int)MathF.Floor((0.5f - _random.NextSingle()) * intensity * ShakeMaxMovement * 2);
+        return new Point(Offset(), Offset());
+    }
+
     public void Draw(SpriteBatch batch)
     {
         var viewSize = ViewSize;
         var worldSize = _camera.WorldSize(viewSize);
-        var topLeft = _camera.TopLeft(viewSize);
+        var topLeft = _camera.TopLeft(viewSize) + ShakeOffset();
         var scale = _blocks.Scale;
         EnsureTarget(new Point(worldSize.X * scale, worldSize.Y * scale));
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
@@ -27,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 21;
+    private const int FormatVersion = 22;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -81,6 +82,9 @@ public sealed class Simulation
 
         _parcelAdjacency = ParcelAdjacency(map);
         MakeAvailableStaff(0);
+
+        // CorsixTH's World:World plans the first earthquake after the candidates for hire and before the arrivals.
+        Earthquakes = Earthquakes.Start(Rules.Earthquakes, Random);
         Arrivals = PatientArrivals.Start(this);
     }
 
@@ -98,6 +102,9 @@ public sealed class Simulation
 
     /// <summary>The level's money settings. Part of the saved state.</summary>
     public LevelRules Rules { get; }
+
+    /// <summary>The world's earthquakes. Part of the saved state.</summary>
+    public Earthquakes Earthquakes { get; private set; } = null!;
 
     /// <summary>When patients arrive. Part of the saved state.</summary>
     public PatientArrivals Arrivals { get; private set; } = null!;
@@ -175,7 +182,8 @@ public sealed class Simulation
             scheduled.Command.Execute(this, scheduled.Player);
         }
 
-        // CorsixTH's World:onTick handles the end of a day before the hour that starts the next one.
+        // CorsixTH's World:onTick ticks the earthquake, then handles the end of a day before the hour that starts the next one.
+        Earthquakes.Tick(Rules.Earthquakes, Random);
         if (Date.Day != GameDate.FromHours(Tick + 1).Day)
         {
             OnEndDay();
@@ -375,6 +383,7 @@ public sealed class Simulation
             simulation._hospitals[player] = Hospital.Read(reader, player);
         }
 
+        simulation.Earthquakes = Earthquakes.Read(reader);
         simulation.Arrivals = PatientArrivals.Read(reader);
 
         foreach (var pool in simulation._availableStaff)
@@ -455,6 +464,7 @@ public sealed class Simulation
             hospital.Write(writer);
         }
 
+        Earthquakes.Write(writer);
         Arrivals.Write(writer);
 
         foreach (var pool in _availableStaff)
@@ -617,6 +627,7 @@ public sealed class Simulation
             hospital.OnEndDayHeating(Random, radiators[hospital.Player], handymen[hospital.Player], date.DaysInMonth);
         }
 
+        Earthquakes.OnEndDay(date);
         Arrivals.OnEndDay(this);
         if (!date.IsLastDayOfMonth)
         {
