@@ -65,6 +65,12 @@ internal sealed class MapViewScreen : IScreen
     private static readonly Color DatePanelColor = new(40, 40, 40);
     private static readonly Color MoneyPanelColor = new(0, 0, 0, 200);
 
+    private static readonly Color RoomListHover = new(60, 90, 160, 220);
+
+    private static readonly Color RoomListHoverBlocked = new(90, 60, 60, 220);
+
+    private static readonly Color RoomListBlocked = new(150, 150, 150);
+
     /// <summary>Width of the frame drawn around the map while building.</summary>
     private const int BuildFrameWidth = 3;
 
@@ -141,6 +147,12 @@ internal sealed class MapViewScreen : IScreen
 
     /// <summary>The money panel shown over the map: none, the bank statement (F2) or the graphs' figures (F8).</summary>
     private MoneyPanel _moneyPanel;
+
+    /// <summary>Whether the list of rooms to build is open (B), a stand-in for CorsixTH's build room window.</summary>
+    private bool _roomList;
+
+    /// <summary>The list's room rows on screen, from the last time it was drawn, for clicks.</summary>
+    private readonly List<(Rectangle Row, RoomDefinition Room)> _roomListRows = [];
     private string? _notice;
     private long _noticeUntil;
 
@@ -298,7 +310,11 @@ internal sealed class MapViewScreen : IScreen
 
         if (Pressed(Keys.Escape))
         {
-            if (_buildTool.IsActive || _furnishTool.IsActive)
+            if (_roomList)
+            {
+                _roomList = false;
+            }
+            else if (_buildTool.IsActive || _furnishTool.IsActive)
             {
                 _buildBack = true;
             }
@@ -504,6 +520,7 @@ internal sealed class MapViewScreen : IScreen
         _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
         DrawDatePanel(batch, viewport);
         DrawMoneyPanel(batch);
+        DrawRoomList(batch);
         batch.End();
     }
 
@@ -1354,6 +1371,33 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
+        // The room list (B): a click on a room starts it; a click elsewhere, B or Esc closes the list.
+        if (_roomList)
+        {
+            if (mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released)
+            {
+                var chosen = _roomListRows.FirstOrDefault(row => row.Row.Contains(mouse.X, mouse.Y));
+                _roomList = false;
+                if (chosen.Room is { } picked)
+                {
+                    TryStartRoom(simulation, picked);
+                }
+
+                return;
+            }
+
+            if (pressed(Keys.B) && !(ctrl || shift || alt))
+            {
+                _roomList = false;
+                return;
+            }
+        }
+        else if (pressed(Keys.B) && !(ctrl || shift || alt) && !_buildTool.IsActive && !_furnishTool.IsActive)
+        {
+            _roomList = true;
+            return;
+        }
+
         var roomToBuild = alt && shift ? "research" : alt ? "toilets" : shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
 
         // Until the build room window exists, Ctrl+Shift+B goes through every room type in turn, also while drawing a
@@ -1364,23 +1408,9 @@ internal sealed class MapViewScreen : IScreen
             _anyRoomIndex = (_anyRoomIndex + 1) % simulation.Content.Rooms.Count;
             roomToBuild = simulation.Content.Rooms[_anyRoomIndex].Id;
         }
-        if (pressed(Keys.B) && (!_buildTool.IsActive || anyRoom) && simulation.Content.FindRoom(roomToBuild) is { } roomType)
+        if (pressed(Keys.B) && (ctrl || shift || alt) && (!_buildTool.IsActive || anyRoom) && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
-            // As in the original, a room can only be started once discovered and with its whole cost in the bank.
-            if (!RoomPurchases.CanBuild(simulation, roomType, _session.Player))
-            {
-                ShowNotice(simulation.Rules.IsRoomAvailable(roomType)
-                    ? $"The {roomType.Name} has not been researched yet"
-                    : $"There is no {roomType.Name} on this level");
-            }
-            else if (RoomPurchases.CanAfford(simulation, roomType, _session.Player))
-            {
-                _buildTool.Start(roomType);
-            }
-            else
-            {
-                ShowNotice($"Not enough money for a {roomType.Name}: it costs {MoneyText.Format(simulation.Rules.BuildCost(roomType))}");
-            }
+            TryStartRoom(simulation, roomType);
         }
 
         var back = _buildBack;
@@ -1935,6 +1965,91 @@ internal sealed class MapViewScreen : IScreen
         _text.Draw(batch, speed, new Vector2(box.X + 8, 4 + _text.LineHeight + 2));
     }
 
+    /// <summary>
+    /// Starts building a room: as in the original, only once discovered and with its whole cost in the bank; otherwise
+    /// says why not.
+    /// </summary>
+    private void TryStartRoom(Simulation simulation, RoomDefinition roomType)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        if (RoomListProblem(simulation, roomType) is { } problem)
+        {
+            ShowNotice($"{roomType.Name}: {problem}");
+            _sounds.Play("Wrong2.wav");
+            return;
+        }
+
+        _buildTool.Start(roomType);
+    }
+
+    /// <summary>Why the player cannot start a room now, or null when they can.</summary>
+    private string? RoomListProblem(Simulation simulation, RoomDefinition room)
+    {
+        var player = _session!.Player;
+        if (!simulation.Rules.IsRoomAvailable(room))
+        {
+            return "not on this level";
+        }
+
+        if (!RoomPurchases.CanBuild(simulation, room, player))
+        {
+            return "not researched yet";
+        }
+
+        return RoomPurchases.CanAfford(simulation, room, player) ? null : "not enough money";
+    }
+
+    /// <summary>
+    /// The list of rooms (B), a stand-in for CorsixTH's build room window (<c>dialogs/build_room.lua</c>): every room type
+    /// with what it costs in all, or why it cannot be built; the one under the cursor is highlighted.
+    /// </summary>
+    private void DrawRoomList(SpriteBatch batch)
+    {
+        _roomListRows.Clear();
+        if (!_roomList || _session is not { Simulation: { } simulation } session || session.Player >= simulation.Hospitals.Count)
+        {
+            return;
+        }
+
+        var hospital = simulation.Hospitals[session.Player];
+        var rooms = simulation.Content.Rooms.OrderBy(room => room.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        var rows = rooms.Select(room => (Room: room, Cost: MoneyText.Format(RoomPurchases.BuildCost(simulation, hospital, room)), Problem: RoomListProblem(simulation, room))).ToList();
+        const string title = "Build a room (click one; B or Esc closes)";
+        var lineHeight = _text.LineHeight + 4;
+        var nameWidth = rows.Max(row => _text.Measure(row.Room.Name).Width);
+        var costWidth = rows.Max(row => _text.Measure(row.Cost).Width);
+        var problemWidth = rows.Max(row => row.Problem is null ? 0 : _text.Measure(row.Problem).Width);
+        var width = Math.Max(_text.Measure(title).Width, nameWidth + costWidth + problemWidth + 48) + 24;
+        var box = new Rectangle(8, StatusHeight + 8, width, ((rows.Count + 1) * lineHeight) + 12);
+        batch.Draw(_pixel, box, MoneyPanelColor);
+        _text.Draw(batch, title, new Vector2(box.X + 12, box.Y + 6));
+        var mouse = Mouse.GetState();
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var (room, cost, problem) = rows[i];
+            var row = new Rectangle(box.X + 4, box.Y + 6 + ((i + 1) * lineHeight) - 2, box.Width - 8, lineHeight);
+            _roomListRows.Add((row, room));
+            if (row.Contains(mouse.X, mouse.Y))
+            {
+                batch.Draw(_pixel, row, problem is null ? RoomListHover : RoomListHoverBlocked);
+            }
+
+            var tint = problem is null ? Color.White : RoomListBlocked;
+            var y = row.Y + 2;
+            _text.Draw(batch, room.Name, new Vector2(box.X + 12, y), tint: tint);
+            var costRight = box.X + 12 + nameWidth + 24 + costWidth;
+            _text.Draw(batch, cost, new Vector2(costRight - _text.Measure(cost).Width, y), tint: tint);
+            if (problem is not null)
+            {
+                _text.Draw(batch, problem, new Vector2(costRight + 24, y), tint: tint);
+            }
+        }
+    }
+
     private void DrawMoneyPanel(SpriteBatch batch)
     {
         if (_moneyPanel == MoneyPanel.None || _session is not { Simulation: { } simulation } session || session.Player >= simulation.Hospitals.Count)
@@ -1982,7 +2097,7 @@ internal sealed class MapViewScreen : IScreen
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-6: speed   Z: hold to speed up" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office (Shift: pharmacy, Ctrl: general diagnosis, Alt: toilets, Alt+Shift: research)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build a room (Shift: pharmacy, Ctrl: general diagnosis, Alt: toilets, Alt+Shift: research)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];
