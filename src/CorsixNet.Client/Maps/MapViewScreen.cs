@@ -219,8 +219,8 @@ internal sealed class MapViewScreen : IScreen
 
     private LevelMap? Map => _session?.Simulation?.Map;
 
-    /// <summary>Lists the original levels in the game's LEVELS folder, in campaign order.</summary>
-    public static IReadOnlyList<LevelSource> OriginalLevels(ThemeHospitalInstall install)
+    /// <summary>Lists the original levels in the game's LEVELS folder, in campaign order, at a difficulty.</summary>
+    public static IReadOnlyList<LevelSource> OriginalLevels(ThemeHospitalInstall install, Difficulty difficulty = Difficulty.Medium)
     {
         var folder = install.FindDirectory("LEVELS");
         if (folder is null)
@@ -234,7 +234,7 @@ internal sealed class MapViewScreen : IScreen
             .Select(name => (Name: name.ToUpperInvariant(), Number: int.TryParse(name.AsSpan(7), NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : int.MaxValue))
             .OrderBy(level => level.Number)
             .ThenBy(level => level.Name, StringComparer.Ordinal)
-            .Select(level => new LevelSource(level.Name, () => LevelMapLoader.LoadOriginal(install, level.Name)))
+            .Select(level => new LevelSource(level.Name, () => LevelMapLoader.LoadOriginal(install, level.Name, difficulty)))
             .ToList();
     }
 

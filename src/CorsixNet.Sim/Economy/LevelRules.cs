@@ -75,6 +75,7 @@ public sealed class LevelRules
     /// <param name="scoreMaxIncrease">The most the player's salary rises in a month (<c>gbv.ScoreMaxInc</c>).</param>
     /// <param name="levelNumber">The campaign level's number, or null for another map.</param>
     /// <param name="randomEmergencies">Random emergencies instead of the planned ones, or null for none.</param>
+    /// <param name="difficulty">The campaign's difficulty; medium for every other level.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -98,8 +99,10 @@ public sealed class LevelRules
         IEnumerable<PlannedCompetitor>? competitors = null,
         int scoreMaxIncrease = DefaultScoreMaxIncrease,
         int? levelNumber = null,
-        RandomEmergencies? randomEmergencies = null)
+        RandomEmergencies? randomEmergencies = null,
+        Difficulty difficulty = Difficulty.Medium)
     {
+        Difficulty = Enum.IsDefined(difficulty) ? difficulty : throw new ArgumentOutOfRangeException(nameof(difficulty));
         RandomEmergencies = randomEmergencies;
         ScoreMaxIncrease = scoreMaxIncrease;
         LevelNumber = levelNumber;
@@ -189,6 +192,9 @@ public sealed class LevelRules
 
     /// <summary>The level's random emergencies, which replace the planned ones; null when it has none.</summary>
     public RandomEmergencies? RandomEmergencies { get; }
+
+    /// <summary>The difficulty, which sets how patients judge prices and how often the boiler breaks.</summary>
+    public Difficulty Difficulty { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -298,6 +304,8 @@ public sealed class LevelRules
             writer.WriteInt32(random.Mean);
             writer.WriteInt32(random.Variance);
         }
+
+        writer.WriteByte((byte)Difficulty);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -335,7 +343,8 @@ public sealed class LevelRules
             Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => PlannedEmergency.Read(reader)).ToList(), EpidemicRules.Read(reader),
             Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => new PlannedCompetitor(reader.ReadInt32(), reader.ReadString())).ToList(),
             reader.ReadInt32(), reader.ReadInt32() is var level and > 0 ? level : null,
-            reader.ReadBool() ? new RandomEmergencies(reader.ReadInt32(), reader.ReadInt32()) : null);
+            reader.ReadBool() ? new RandomEmergencies(reader.ReadInt32(), reader.ReadInt32()) : null,
+            reader.ReadByte() is var difficulty && Enum.IsDefined((Difficulty)difficulty) ? (Difficulty)difficulty : throw new InvalidDataException($"Unknown difficulty {difficulty}."));
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

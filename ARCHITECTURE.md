@@ -269,8 +269,11 @@ Each player has a `Hospital` with a balance and a log of its latest transactions
 CorsixTH's `hospital.lua`. What things cost depends on the level, so the prices travel with the
 saved state as `LevelRules`: starting cash, each room type's own cost and each object type's
 cost. `LevelRulesLoader` reads them from the original's level files, as CorsixTH does: the
-difficulty's base file (`FULL00.SAM`, medium difficulty), then the level's own file
-(`FULL01.SAM` for `LEVEL.L1`). The format (`#towns[1].StartCash.IllRate 40000 2`) is read by
+difficulty's base file (`FULL00.SAM` at medium difficulty, `EASY00.SAM` or `HARD00.SAM`), then the level's
+own file (`FULL01.SAM` for `LEVEL.L1`). Only the original campaign has a difficulty (`--difficulty` in the client
+and server); every other map is medium. `LevelRules.Difficulty` also sets the price distortion at which patients
+find a price low or too high (−0.3/0.4, −0.4/0.3, −0.5/0.2) and the days between heating disasters (300, 200,
+150), as CorsixTH's `hospital.lua` does. The format (`#towns[1].StartCash.IllRate 40000 2`) is read by
 `LevelConfig`. Rooms find their price through their number in those files (`LevelConfigId`, 7
 for the GP's office), objects through their object type. Without level files everything is free.
 
@@ -448,7 +451,7 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   costs its tiles at `gbv.LandCostPerTile` and adds that to the hospital's value (`PurchaseParcelCommand`).
 - **Heating** (`Hospital`, from `hospital.lua` and `town_map.lua`). The radiators' heat is set in tenths from 1 to
   10 (`SetRadiatorHeatCommand`, 5 at the start). Each day runs up heat × 10 × radiators × 7.5 over the month, paid
-  at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (medium difficulty) comes a chance
+  at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (300 easy, 150 hard) comes a chance
   of a disaster: an open hospital with radiators and fewer than one handyman per 8 of them may have its boiler
   break, stuck at full or no heat, until 10–30 repairs are done (1 to 3 a day, the more handymen the more).
 - **Warmth and happiness** (`Humanoid.Warmth`, `Humanoid.Happiness`, `Feelings`, from `humanoid.lua` and

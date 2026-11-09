@@ -217,6 +217,35 @@ public class LevelRulesLoaderTests
         Assert.Null(Read("#emergency_control[0].StartMonth.EndMonth.Min.Max.Illness.PercWin.Bonus 4 5 4 6 16 75 400"));
     }
 
+    [Theory]
+    [InlineData("easy", Difficulty.Easy)]
+    [InlineData("Medium", Difficulty.Medium)]
+    [InlineData("FULL", Difficulty.Medium)]
+    [InlineData("hard", Difficulty.Hard)]
+    public void DifficultiesAreReadByNameAndNameTheirFiles(string name, Difficulty difficulty)
+    {
+        Assert.True(LevelRulesLoader.TryParseDifficulty(name, out var read));
+        Assert.Equal(difficulty, read);
+        Assert.Equal(name.ToUpperInvariant() == "MEDIUM" ? "FULL" : name.ToUpperInvariant(), LevelRulesLoader.FilePrefix(read));
+        Assert.Equal(difficulty, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), 1, BaseGameContent.Create(), difficulty).Difficulty);
+    }
+
+    [Fact]
+    public void AnUnknownDifficultyIsNotRead() => Assert.False(LevelRulesLoader.TryParseDifficulty("nightmare", out _));
+
+    [Fact]
+    public void OnlyTheCampaignHasADifficulty()
+    {
+        var install = RealGameData.Require();
+        var content = BaseGameContent.Create();
+
+        var easy = LevelRulesLoader.LoadOriginal(install, "LEVEL.L3", content, Difficulty.Easy);
+        var hard = LevelRulesLoader.LoadOriginal(install, "LEVEL.L3", content, Difficulty.Hard);
+        Assert.Equal(Difficulty.Easy, easy.Difficulty);
+        Assert.Equal(Difficulty.Hard, hard.Difficulty);
+        Assert.Equal(Difficulty.Medium, LevelRulesLoader.LoadOriginal(install, "LEVEL.L20", content, Difficulty.Hard).Difficulty);
+    }
+
     [Fact]
     public void TheOriginalLevelsPlanEarthquakesWithTheirMonthsInOrder()
     {

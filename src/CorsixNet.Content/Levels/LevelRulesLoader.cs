@@ -20,8 +20,30 @@ namespace CorsixNet.Content.Levels;
 /// <summary>Builds a level's <see cref="LevelRules"/> from the original game's level files.</summary>
 public static partial class LevelRulesLoader
 {
-    /// <summary>The original's medium difficulty, which CorsixTH's campaign uses by default.</summary>
-    public const string DefaultDifficulty = "FULL";
+    /// <summary>
+    /// The prefix of a difficulty's level files (<c>EASY</c>, <c>FULL</c> or <c>HARD</c>, CorsixTH's <c>easy</c>,
+    /// <c>full</c> and <c>hard</c>).
+    /// </summary>
+    public static string FilePrefix(Difficulty difficulty) => difficulty switch
+    {
+        Difficulty.Easy => "EASY",
+        Difficulty.Medium => "FULL",
+        Difficulty.Hard => "HARD",
+        _ => throw new ArgumentOutOfRangeException(nameof(difficulty)),
+    };
+
+    /// <summary>Reads a difficulty by name: easy, medium (or full, as CorsixTH calls it) or hard, in any case.</summary>
+    public static bool TryParseDifficulty(string text, out Difficulty difficulty)
+    {
+        difficulty = text.ToUpperInvariant() switch
+        {
+            "EASY" => Difficulty.Easy,
+            "MEDIUM" or "FULL" => Difficulty.Medium,
+            "HARD" => Difficulty.Hard,
+            _ => 0,
+        };
+        return difficulty != 0;
+    }
 
     /// <summary>Starting cash when the level files give none (CorsixTH's base_config.lua).</summary>
     public const int DefaultStartCash = 40000;
@@ -63,19 +85,23 @@ public static partial class LevelRulesLoader
     /// Reads the settings of a level: the difficulty's base file (such as <c>FULL00.SAM</c>), then,
     /// for a campaign level, the level's own file (such as <c>FULL01.SAM</c>).
     /// </summary>
-    public static LevelConfig LoadConfig(ThemeHospitalInstall install, int? levelNumber, string difficulty = DefaultDifficulty)
+    public static LevelConfig LoadConfig(ThemeHospitalInstall install, int? levelNumber, Difficulty difficulty = Difficulty.Medium)
     {
-        var config = LevelConfig.Parse(install.ReadDataFile("LEVELS", $"{difficulty}00.SAM"));
+        var prefix = FilePrefix(difficulty);
+        var config = LevelConfig.Parse(install.ReadDataFile("LEVELS", $"{prefix}00.SAM"));
         if (levelNumber is >= 1 and <= CampaignLevels)
         {
-            config.Apply(install.ReadDataFile("LEVELS", $"{difficulty}{levelNumber:00}.SAM"));
+            config.Apply(install.ReadDataFile("LEVELS", $"{prefix}{levelNumber:00}.SAM"));
         }
 
         return config;
     }
 
-    /// <summary>The money settings of level <paramref name="levelNumber"/> (if any) for the given content.</summary>
-    public static LevelRules FromConfig(LevelConfig config, int? levelNumber, GameContent content)
+    /// <summary>
+    /// The money settings of level <paramref name="levelNumber"/> (if any) for the given content, at the difficulty its
+    /// files were read for.
+    /// </summary>
+    public static LevelRules FromConfig(LevelConfig config, int? levelNumber, GameContent content, Difficulty difficulty = Difficulty.Medium)
     {
         // A level's own town settings win over the general ones.
         var startCash = (levelNumber is { } level ? config.GetInt($"towns[{level}].StartCash") : null)
@@ -109,7 +135,8 @@ public static partial class LevelRulesLoader
             CompetitorsFromConfig(config),
             config.GetInt("gbv.ScoreMaxInc") ?? LevelRules.DefaultScoreMaxIncrease,
             levelNumber,
-            RandomEmergenciesFromConfig(config));
+            RandomEmergenciesFromConfig(config),
+            difficulty);
     }
 
     /// <summary>
@@ -372,10 +399,16 @@ public static partial class LevelRulesLoader
     }
 
     /// <summary>The money settings for an original level map such as <c>LEVEL.L1</c>, or for any other map.</summary>
-    public static LevelRules LoadOriginal(ThemeHospitalInstall install, string mapFileName, GameContent content, string difficulty = DefaultDifficulty)
+    /// <remarks>As in CorsixTH's <c>Map:load</c>, only the original campaign's levels have a difficulty; any other map is medium.</remarks>
+    public static LevelRules LoadOriginal(ThemeHospitalInstall install, string mapFileName, GameContent content, Difficulty difficulty = Difficulty.Medium)
     {
         var level = LevelNumber(mapFileName);
-        return FromConfig(LoadConfig(install, level, difficulty), level, content);
+        if (level is not (>= 1 and <= CampaignLevels))
+        {
+            difficulty = Difficulty.Medium;
+        }
+
+        return FromConfig(LoadConfig(install, level, difficulty), level, content, difficulty);
     }
 
     [GeneratedRegex(@"^LEVEL\.L(\d+)$", RegexOptions.IgnoreCase)]

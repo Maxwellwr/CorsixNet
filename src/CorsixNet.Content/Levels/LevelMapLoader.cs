@@ -165,12 +165,12 @@ public static class LevelMapLoader
 
     /// <summary>
     /// Loads an original level map, such as <c>LEVEL.L1</c>, from the game's LEVELS folder, with the
-    /// level's money settings at the original's medium difficulty.
+    /// level's money settings at the given difficulty (medium by default).
     /// </summary>
-    public static LoadedLevelMap LoadOriginal(ThemeHospitalInstall install, string fileName)
+    public static LoadedLevelMap LoadOriginal(ThemeHospitalInstall install, string fileName, Difficulty difficulty = Difficulty.Medium)
     {
         var level = Load(MapFile.Parse(install.ReadDataFile("LEVELS", fileName)));
-        return level with { Rules = LevelRulesLoader.LoadOriginal(install, fileName, BaseGameContent.Create()) };
+        return level with { Rules = LevelRulesLoader.LoadOriginal(install, fileName, BaseGameContent.Create(), difficulty) };
     }
 
     /// <summary>

@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 43;
+    private const int FormatVersion = 44;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -73,7 +73,7 @@ public sealed class Simulation
             _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand, Rules.InterestRate, Rules.OverdraftDifferential);
             _hospitals[player].Policies = new HospitalPolicies(Rules.Tiredness.Tired);
 
-            _hospitals[player].ScheduleNextDisaster(Random);
+            _hospitals[player].ScheduleNextDisaster(Random, Rules.Difficulty);
             _hospitals[player].Vips.ScheduleNext(Random, Rules.MayorLaunch, today: 0);
             Emergencies.Start(this, _hospitals[player]);
 
@@ -725,7 +725,7 @@ public sealed class Simulation
         foreach (var hospital in _hospitals)
         {
             hospital.OnEndDay();
-            hospital.OnEndDayHeating(Random, radiators[hospital.Player], handymen[hospital.Player], date.DaysInMonth);
+            hospital.OnEndDayHeating(Random, radiators[hospital.Player], handymen[hospital.Player], date.DaysInMonth, Rules.Difficulty);
 
             // PlayerHospital's end of the day: rat holes, then rats.
             Rats.OnEndDay(this, hospital);
