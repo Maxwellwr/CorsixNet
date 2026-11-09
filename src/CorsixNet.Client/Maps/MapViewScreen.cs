@@ -33,7 +33,8 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// Shows the map of a game session with a movable, zoomable camera.
 /// </summary>
 /// <remarks>
-/// Keys: arrows/WASD or right/middle-drag pan, wheel zoom, Home reset camera,
+/// Keys: arrows/WASD, screen edges or right/middle-drag pan, wheel or =/− zoom, 0 original size, Alt+digit remember
+/// the view and Ctrl+digit go back to it, Home reset camera,
 /// PgUp/PgDn previous/next level (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
@@ -164,6 +165,9 @@ internal sealed class MapViewScreen : IScreen
 
     /// <summary>Scrolling and zooming the view as CorsixTH does, with the player's speeds.</summary>
     private readonly MapScrolling _scrolling;
+
+    /// <summary>Views remembered with Alt+digit, by digit (CorsixTH's <c>recallpositions</c>).</summary>
+    private readonly (Vector2 Center, float Zoom)?[] _recallPositions = new (Vector2 Center, float Zoom)?[10];
 
     /// <summary>Time not yet scrolled for, less than an interface tick.</summary>
     private double _scrollMilliseconds;
@@ -308,6 +312,8 @@ internal sealed class MapViewScreen : IScreen
         {
             ResetCamera();
         }
+
+        UpdateCameraKeys(keys, mouse, viewSize, Pressed);
 
         // Shift+O opens the hospital early instead.
         if (Pressed(Keys.O) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
@@ -897,6 +903,48 @@ internal sealed class MapViewScreen : IScreen
         return null;
     }
 
+    /// <summary>
+    /// CorsixTH's camera hotkeys: = and − zoom in and out towards the cursor (five times as far with Shift,
+    /// <c>World:adjustZoom</c>), 0 goes back to the original size (<c>World:resetZoom</c>), Alt+digit remembers the view
+    /// and Ctrl+digit goes back to it (<c>GameUI:setMapRecallPosition</c>, <c>recallMapPosition</c>). Until the hire window
+    /// exists, Ctrl+1 to Ctrl+4 hire staff instead, so only Ctrl+0 and Ctrl+5 to Ctrl+9 recall.
+    /// </summary>
+    private void UpdateCameraKeys(KeyboardState keys, MouseState mouse, Point viewSize, Func<Keys, bool> pressed)
+    {
+        var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
+        var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
+        var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
+        var zoomDelta = (pressed(Keys.OemPlus) ? 1 : 0) - (pressed(Keys.OemMinus) ? 1 : 0);
+        if (zoomDelta != 0 && !control && !alt
+            && _scrolling.Zoomed(_camera.Zoom, zoomDelta * (shift ? 5 : 1), _device.Viewport.Width) is { } zoomed)
+        {
+            _camera.ZoomAt((float)zoomed, new Point(mouse.X, mouse.Y - StatusHeight), viewSize);
+        }
+
+        if (pressed(Keys.D0) && !control && !alt && !shift)
+        {
+            _camera.ZoomAt(1f, new Point(viewSize.X / 2, viewSize.Y / 2), viewSize);
+        }
+
+        for (var digit = 0; digit <= 9; digit++)
+        {
+            if (!pressed(Keys.D0 + digit))
+            {
+                continue;
+            }
+
+            if (alt && !control)
+            {
+                _recallPositions[digit] = (_camera.Center, _camera.Zoom);
+            }
+            else if (control && !alt && digit is 0 or >= 5 && _recallPositions[digit] is var (center, zoom))
+            {
+                _camera.ZoomAt(zoom, new Point(viewSize.X / 2, viewSize.Y / 2), viewSize);
+                _camera.Center = center;
+            }
+        }
+    }
+
     private void ResetCamera()
     {
         if (Map is { } map && _session is not null)
@@ -971,6 +1019,7 @@ internal sealed class MapViewScreen : IScreen
         }
 
         var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
+        var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
         (Keys Key, GameSpeed Speed)[] speedKeys =
         [
             (Keys.D1, GameSpeed.Slowest), (Keys.D2, GameSpeed.Slower), (Keys.D3, GameSpeed.Normal),
@@ -978,7 +1027,7 @@ internal sealed class MapViewScreen : IScreen
         ];
         foreach (var (key, speed) in speedKeys)
         {
-            if (!control && pressed(key))
+            if (!control && !alt && pressed(key))
             {
                 session.SetSpeed(speed);
             }

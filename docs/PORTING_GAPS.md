@@ -253,7 +253,8 @@ join.
   window, screen shake, autosave frequency, game folder, player name, sound effects and scrolling
   (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`) is done
   (`GameConfig`).
-- Hotkeys file.
+- Hotkeys file (`hotkeys.txt`). The camera's hotkeys (zoom in and out, original size, remembering and recalling
+  views) are done with CorsixTH's default keys.
 - Update check (`resizables/update.lua`).
 
 ## 12. Map editor and tools
@@ -276,6 +277,6 @@ join.
 mirroring, blueprint drawing, bitmap fonts, palette remaps.
 
 - Wall transparency (walls cut away), animated map elements.
-- Smoke from broken machines, explosion animations. (Screen shake during earthquakes is done; the
-  `enable_screen_shake` option is not.)
+- Smoke from broken machines, explosion animations. (Screen shake during earthquakes and the
+  `enable_screen_shake` option are done.)
 - Video playback (Smacker intro/win/lose movies).
