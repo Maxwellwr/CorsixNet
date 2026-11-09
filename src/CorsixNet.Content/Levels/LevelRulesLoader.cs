@@ -128,6 +128,52 @@ public static partial class LevelRulesLoader
         return config;
     }
 
+    /// <summary>
+    /// The money settings of a CorsixTH custom level, from its <c>.level</c> file's settings (<c>Map:loadMapConfig</c> on
+    /// top of base_config.lua, whose values are this loader's defaults). A file whose <c>overlay.difficulty</c> (easy,
+    /// full or hard) and <c>overlay.level_number</c> (1 to 12) name a campaign level gets that level's files read on top,
+    /// which then win over the file's own settings, and plays at that difficulty; otherwise it plays at medium.
+    /// </summary>
+    /// <exception cref="InvalidDataException">The overlay is incomplete or names no campaign level.</exception>
+    /// <exception cref="InvalidOperationException">The overlay needs the original game, which is not at hand.</exception>
+    public static LevelRules LoadCustom(LevelConfig config, ThemeHospitalInstall? install, GameContent content)
+    {
+        var difficulty = Difficulty.Medium;
+        var overlayDifficulty = config["overlay.difficulty"];
+        var overlayLevel = config.GetInt("overlay.level_number");
+        if (overlayDifficulty is not null || overlayLevel is not null)
+        {
+            if (overlayDifficulty is null || overlayLevel is null)
+            {
+                throw new InvalidDataException("The level's overlay needs both a difficulty and a level number.");
+            }
+
+            difficulty = overlayDifficulty switch
+            {
+                "easy" => Difficulty.Easy,
+                "full" => Difficulty.Medium,
+                "hard" => Difficulty.Hard,
+                _ => throw new InvalidDataException($"Incorrect overlay difficulty {overlayDifficulty}."),
+            };
+            if (overlayLevel is not (>= 1 and <= CampaignLevels))
+            {
+                throw new InvalidDataException($"Incorrect overlay level number {overlayLevel}.");
+            }
+
+            if (install is null)
+            {
+                throw new InvalidOperationException("The level's overlay needs the original game's level files.");
+            }
+
+            var prefix = FilePrefix(difficulty);
+            config.Apply(install.ReadDataFile("LEVELS", $"{prefix}00.SAM"));
+            config.Apply(install.ReadDataFile("LEVELS", $"{prefix}{overlayLevel:00}.SAM"));
+            ApplyCorsixThAdditions(config, overlayLevel.Value);
+        }
+
+        return FromConfig(config, null, content, difficulty);
+    }
+
     /// <summary>CorsixTH's extra settings for campaign level <paramref name="levelNumber"/>, if it has any.</summary>
     public static void ApplyCorsixThAdditions(LevelConfig config, int levelNumber)
     {
