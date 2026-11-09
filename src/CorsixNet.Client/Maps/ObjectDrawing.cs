@@ -36,6 +36,8 @@ internal sealed class ObjectDrawing
         ["screen"] = new() { [N] = 1022, [E] = 1022 },
         ["bench"] = new() { [N] = 112, [E] = 114 },
         ["drinks_machine"] = new() { [S] = 170, [W] = 172, [N] = 174, [E] = 176 },
+        ["loo"] = new() { [N] = 1760, [S] = 1760 },
+        ["sink"] = new() { [N] = 1748, [S] = 1748 },
         ["extinguisher"] = new() { [N] = 178, [E] = 468, [S] = 470 },
         ["radiator"] = new() { [N] = 750, [E] = 752 },
         ["bin"] = new() { [N] = 1752, [S] = 1752 },

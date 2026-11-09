@@ -79,7 +79,17 @@ public readonly record struct AnimationRef(int Id, int Length);
 /// animations of use (one picked at random each time round) and an optional one to finish, as in
 /// CorsixTH's <c>usage_animations</c>.
 /// </summary>
-public sealed record UseAnimations(AnimationRef? Begin, IReadOnlyList<AnimationRef> InUse, AnimationRef? Finish);
+/// <param name="Begin">The first animation (<c>begin_use</c>).</param>
+/// <param name="InUse">The animation of use, or several to pick from at random (<c>in_use</c>).</param>
+/// <param name="Finish">The animation that ends the use (<c>finish_use</c>).</param>
+/// <param name="Begin2">A second begin animation after the first (<c>begin_use_2</c>).</param>
+/// <param name="Finish2">A second finish animation after the first (<c>finish_use_2</c>).</param>
+public sealed record UseAnimations(AnimationRef? Begin, IReadOnlyList<AnimationRef> InUse, AnimationRef? Finish, AnimationRef? Begin2 = null, AnimationRef? Finish2 = null)
+{
+    /// <summary>Every animation the use may play.</summary>
+    public IEnumerable<AnimationRef> All =>
+        new[] { Begin, Begin2, Finish, Finish2 }.OfType<AnimationRef>().Concat(InUse);
+}
 
 /// <summary>
 /// One phase of two people using an object together: the animation of the one who uses it, and the animation the

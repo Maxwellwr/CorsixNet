@@ -32,6 +32,9 @@ public static class RoomVisits
     /// <summary>General diagnosis's room type.</summary>
     internal const string GeneralDiagnosisRoom = "general_diag";
 
+    /// <summary>The toilets' room type: no staff, as many patients at once as there are toilets.</summary>
+    internal const string ToiletsRoom = "toilets";
+
     /// <summary>The object patients lie on in general diagnosis.</summary>
     internal const string TrolleyType = "crash_trolley";
 
@@ -87,6 +90,12 @@ public static class RoomVisits
 
     internal static void Update(Simulation simulation, Room room)
     {
+        if (string.Equals(room.RoomType, ToiletsRoom, StringComparison.Ordinal))
+        {
+            TryAdvanceToiletsQueue(simulation, room);
+            return;
+        }
+
         EnsureQueue(simulation, room);
         if (room.StaffId == 0)
         {
@@ -142,6 +151,21 @@ public static class RoomVisits
     /// <summary>A room started working: the patients of its hospital who wait for a room of its kind go to look for it.</summary>
     internal static void OnRoomActivated(Simulation simulation, Room room)
     {
+        if (string.Equals(room.RoomType, ToiletsRoom, StringComparison.Ordinal))
+        {
+            // Patient:notifyNewRoom: patients who found no toilets may try again.
+            var hospital = Owner(simulation, room);
+            foreach (var entity in simulation.Entities)
+            {
+                if (entity is Humanoid { Behaviour: PatientBehaviour { GoingToToilet: ToiletVisit.NoToilets } waiting } humanoid && humanoid.HospitalPlayer == hospital)
+                {
+                    waiting.GoingToToilet = ToiletVisit.No;
+                }
+            }
+
+            return;
+        }
+
         if (!IsSupported(room.RoomType))
         {
             return;
@@ -233,6 +257,97 @@ public static class RoomVisits
         return room.DoorQueue;
     }
 
+    /// <summary>Whether the player's hospital has an active room of the type (<c>World:findRoomNear</c> finding one).</summary>
+    internal static bool HasRoom(Simulation simulation, int player, string roomType)
+    {
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Room { IsActive: true } room && string.Equals(room.RoomType, roomType, StringComparison.Ordinal) && Owner(simulation, room) == player)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// <c>World:findFreeObjectNearToUse</c>: the object of the type in the room that nobody else goes to or uses, nearest to
+    /// the humanoid by path.
+    /// </summary>
+    internal static RoomObject? FindFreeObject(Simulation simulation, Room room, Humanoid humanoid, string objectType)
+    {
+        var taken = new HashSet<int>();
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Humanoid { Behaviour: PatientBehaviour { ToiletObjectId: > 0 } other } someone && someone.Id != humanoid.Id)
+            {
+                taken.Add(other.ToiletObjectId);
+            }
+        }
+
+        RoomObject? best = null;
+        var bestDistance = 0;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is RoomObject placed && placed.RoomId == room.Id && string.Equals(placed.ObjectType, objectType, StringComparison.Ordinal)
+                && !taken.Contains(placed.Id)
+                && simulation.Pathfinder.FindDistance(simulation.Map, humanoid.Tile, UseTile(simulation, placed)) is { } distance
+                && (best is null || distance < bestDistance))
+            {
+                best = placed;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// <c>ToiletRoom:getPatientCount</c>: the patients inside, not counting those at a sink unless the room has a single
+    /// toilet (then it is private).
+    /// </summary>
+    internal static int ToiletsPatientCount(Simulation simulation, Room room, int toilets)
+    {
+        var users = 0;
+        var atSink = 0;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Humanoid { Behaviour: PatientBehaviour patient } && patient.TargetId == room.Id
+                && patient.Phase is >= PatientPhase.EnteringRoom and < PatientPhase.LeavingRoom)
+            {
+                users++;
+                if (patient.Phase == PatientPhase.UsingSink)
+                {
+                    atSink++;
+                }
+            }
+        }
+
+        return toilets == 1 ? users : users - atSink;
+    }
+
+    /// <summary>How many toilets the room has (<c>ToiletRoom:roomFinished</c>'s <c>maximum_patients</c>).</summary>
+    private static int CountToilets(Simulation simulation, Room room) =>
+        simulation.Entities.OfType<RoomObject>().Count(o => o.RoomId == room.Id && string.Equals(o.ObjectType, "loo", StringComparison.Ordinal));
+
+    /// <summary>The toilets let the first in line in while fewer patients are inside than it has toilets (<c>canHumanoidEnter</c>).</summary>
+    private static void TryAdvanceToiletsQueue(Simulation simulation, Room room)
+    {
+        if (EnsureQueue(simulation, room) is not { Count: > 0 } queue || simulation.FindEntity(room.DoorId) is not RoomDoor door
+            || ToiletsPatientCount(simulation, room, CountToilets(simulation, room)) >= CountToilets(simulation, room))
+        {
+            return;
+        }
+
+        var front = queue.Pop(simulation);
+        queue.VisitorCount++;
+        if (simulation.FindEntity(front) is Humanoid { Behaviour: PatientBehaviour patient } humanoid)
+        {
+            patient.LetIn(simulation, humanoid, room, door);
+        }
+    }
+
     private static int UsageScore(Simulation simulation, Room room)
     {
         var queue = room.DoorQueue;
@@ -245,9 +360,13 @@ public static class RoomVisits
             }
         }
 
-        var patients = room.PatientId != 0 ? 1 : 0;
-        var score = ((queue?.Count ?? 0) + expected + patients - MaximumPatients) * TileFactor;
-        if (room.StaffPresent)
+        var toilets = string.Equals(room.RoomType, ToiletsRoom, StringComparison.Ordinal);
+        var maximum = toilets ? CountToilets(simulation, room) : MaximumPatients;
+        var patients = toilets ? ToiletsPatientCount(simulation, room, maximum) : room.PatientId != 0 ? 1 : 0;
+        var score = ((queue?.Count ?? 0) + expected + patients - maximum) * TileFactor;
+
+        // A room without required staff (the toilets) is always ready.
+        if (room.StaffPresent || toilets)
         {
             score -= ReadinessBonus;
         }

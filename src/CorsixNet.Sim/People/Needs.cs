@@ -13,7 +13,7 @@ namespace CorsixNet.Sim.People;
 /// by 0.004 to 0.008 plus a fiftieth of their warmth, and the need for the toilet by 0.002 to 0.008 (0.008 to 0.026 for
 /// gut rot and the squits). Above 0.7 thirst costs happiness every day and the patient, in a corridor, looks for a drinks
 /// machine within 8 steps every few days and goes to buy a can (<see cref="PatientBehaviour.GoForDrink"/>). Above 0.75
-/// need for the toilet a patient does it on the floor four days in ten; going to the toilets is not ported yet.
+/// need for the toilet a patient does it on the floor four days in ten, otherwise goes to the toilets.
 /// </summary>
 internal static class Needs
 {
@@ -64,7 +64,7 @@ internal static class Needs
 
     /// <summary>
     /// <c>Patient:handleToiletNeed</c>: four times in ten the patient does it on the floor; otherwise, unless waiting for a
-    /// decision, they want the toilet, and as the hospital has no toilets (not ported yet) they remember there are none.
+    /// decision, they want the toilet and go to the toilets, or remember the hospital has none.
     /// </summary>
     private static void HandleToiletNeed(Simulation simulation, Humanoid humanoid, PatientBehaviour patient)
     {
@@ -77,7 +77,15 @@ internal static class Needs
         else if (patient.GoingToToilet == ToiletVisit.No && patient.Phase != PatientPhase.Waiting)
         {
             patient.IsNeedingToilet = true;
-            patient.GoingToToilet = ToiletVisit.NoToilets;
+            if (!RoomVisits.HasRoom(simulation, humanoid.HospitalPlayer, RoomVisits.ToiletsRoom))
+            {
+                // Reset when toilets are built (Patient:notifyNewRoom).
+                patient.GoingToToilet = ToiletVisit.NoToilets;
+            }
+            else
+            {
+                patient.GoToToilets(simulation, humanoid);
+            }
         }
     }
 

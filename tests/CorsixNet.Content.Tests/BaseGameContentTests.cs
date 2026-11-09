@@ -14,7 +14,7 @@ public class BaseGameContentTests
         var animations = BaseGameContent.Create().Objects
             .SelectMany(o => o.UsageTables)
             .SelectMany(table => table.Values)
-            .SelectMany(use => use.InUse.Append(use.Begin ?? use.InUse[0]).Append(use.Finish ?? use.InUse[0]))
+            .SelectMany(use => use.All)
             .Distinct()
             .ToList();
 

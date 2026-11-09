@@ -246,6 +246,43 @@ public static class BaseGameContent
     /// <summary>The extra objects the GP's office, the pharmacy and general diagnosis take (their <c>objects_additional</c>).</summary>
     private static readonly string[] AdditionalRoomObjects = ["extinguisher", "radiator", "plant", "bin"];
 
+    /// <summary>The toilet (objects/loo.lua), used from the tile in front; facing south it uses the north animations.</summary>
+    public static readonly ObjectDefinition Loo = new(
+        "loo",
+        "Toilet",
+        ObjectType: 51,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: LooUse(),
+        UsageSouth: LooUse());
+
+    /// <summary>The toilet sink (objects/sink.lua); only the standard patients have animations for it.</summary>
+    public static readonly ObjectDefinition Sink = new(
+        "sink",
+        "Toilet Sink",
+        ObjectType: 32,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: SinkUse(),
+        UsageSouth: SinkUse());
+
+    /// <summary>The toilets (rooms/toilets.lua): no staff, as many patients at once as there are toilets.</summary>
+    public static readonly RoomDefinition Toilets = new(
+        "toilets",
+        "Toilets",
+        MinimumSize: 4,
+        FloorSprite: 21,
+        GreenWalls,
+        NeededObjects: new Dictionary<string, int> { ["loo"] = 1, ["sink"] = 1 },
+        LevelConfigId: 29,
+        AdditionalObjects: ["extinguisher", "radiator", "plant", "bin", "loo", "sink"]);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -300,10 +337,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink],
         DoorAnimations,
         PatientAnimations);
 
@@ -345,6 +382,20 @@ public static class BaseGameContent
     /// doctor drawn in the animations (no secondary ones, so the doctor is hidden). Each phase lists three animations; the
     /// use plays the same position of each list. Defined for north and south.
     /// </summary>
+    /// <summary>loo.lua's animations for the standard patients: men pick one of two in-use animations.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> LooUse() => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(new(1712, 15), [new(1728, 45), new(1732, 32)], new(1740, 27), Begin2: new(1716, 25), Finish2: new(1744, 18)),
+        [HumanoidType.StandardFemalePatient] = new(new(3132, 18), [new(3144, 48)], new(3152, 26), Begin2: new(3136, 25), Finish2: new(3156, 18)),
+    };
+
+    /// <summary>sink.lua's animations for the standard patients.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> SinkUse() => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(new(1776, 18), [new(1780, 4)], new(1784, 39)),
+        [HumanoidType.StandardFemalePatient] = new(new(3160, 18), [new(3164, 5)], new(3168, 39)),
+    };
+
     /// <summary>
     /// The drinks machine's <c>in_use</c> animations for the standard male and female patients; it has them facing south,
     /// east and west, and north mirrors west. CorsixTH's one-pixel <c>added_animation_offset_while_in_use</c> facing north
