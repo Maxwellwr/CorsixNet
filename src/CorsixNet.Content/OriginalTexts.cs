@@ -74,7 +74,17 @@ public sealed class OriginalTexts
         ["autopsy"] = (45, 0),
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
+    /// <summary>The rooms of S[57]'s descriptions, in order (original_strings.lua's <c>ids</c>).</summary>
+    private static readonly string[] DescribedRooms =
+    [
+        "gp", "psych", "ward", "operating_theatre", "pharmacy", "cardiogram", "scanner", "ultrascan", "blood_machine",
+        "x_ray", "inflation", "dna_fixer", "hair_restoration", "slack_tongue", "fracture_clinic", "training",
+        "electrolysis", "jelly_vat", "staff_room", "tv_room", "general_diag", "research", "toilets", "decontamination",
+        "no_room",
+    ];
+
     private readonly StringTable _strings;
+    private Dictionary<string, IReadOnlyList<string>>? _roomDescriptions;
 
     public OriginalTexts(StringTable strings)
     {
@@ -90,6 +100,17 @@ public sealed class OriginalTexts
     /// adviser's messages in S[11] and S[28], or null if missing or empty.
     /// </summary>
     public string? String(int section, int index) => _strings.Get(section - 1, index - 1) is { Length: > 0 } text ? text : null;
+
+    /// <summary>
+    /// A room's description, shown the first time one is built (CorsixTH's <c>room_descriptions</c>): paragraphs
+    /// from S[57] from its 14th string on, one room after each ".", joined until a "//" ends a paragraph; ".." ends
+    /// the list. Null for a room the strings do not describe.
+    /// </summary>
+    public IReadOnlyList<string>? RoomDescription(string roomId)
+    {
+        _roomDescriptions ??= ParseRoomDescriptions(_strings);
+        return _roomDescriptions.GetValueOrDefault(roomId);
+    }
 
     /// <summary>The disease's texts, or null for an unknown disease or one missing from the strings.</summary>
     public DiseaseText? Disease(string diseaseId)
@@ -116,4 +137,56 @@ public sealed class OriginalTexts
     /// minister), or null if missing.
     /// </summary>
     public string? VipName(int number) => number >= 1 ? _strings.Get(VipNamesSection, number) : null;
+
+    private static Dictionary<string, IReadOnlyList<string>> ParseRoomDescriptions(StringTable strings)
+    {
+        const int Section = 56;
+        var descriptions = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+        List<string>? paragraphs = null;
+        var room = -1;
+        for (var index = 13; strings.Get(Section, index) is { } text; index++)
+        {
+            if (text == "..")
+            {
+                break;
+            }
+
+            if (text == ".")
+            {
+                room++;
+                if (room >= DescribedRooms.Length)
+                {
+                    break;
+                }
+
+                paragraphs = [string.Empty];
+                descriptions[DescribedRooms[room]] = paragraphs;
+                continue;
+            }
+
+            if (paragraphs is null)
+            {
+                continue;
+            }
+
+            var ends = text.Contains("//", StringComparison.Ordinal);
+            var part = text.Replace("//", string.Empty, StringComparison.Ordinal);
+            paragraphs[^1] += part.EndsWith('.') ? part + " " : part;
+            if (ends)
+            {
+                paragraphs.Add(string.Empty);
+            }
+        }
+
+        foreach (var list in descriptions.Values.Cast<List<string>>())
+        {
+            list.RemoveAll(string.IsNullOrWhiteSpace);
+            for (var i = 0; i < list.Count; i++)
+            {
+                list[i] = list[i].Trim();
+            }
+        }
+
+        return descriptions;
+    }
 }

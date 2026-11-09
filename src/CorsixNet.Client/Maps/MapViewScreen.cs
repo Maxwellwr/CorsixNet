@@ -217,6 +217,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly Random _adviserRandom = new();
     private AdviserChecks _adviserChecks;
     private object? _adviserSession;
+    private readonly HashSet<string> _roomsDescribed = new(StringComparer.Ordinal);
+    private bool _tipShown;
 
     /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
     private SoundEffects _sounds;
@@ -2064,6 +2066,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _adviserSession = _session;
             _adviser.Clear();
             _adviserChecks = new AdviserChecks(_adviser, _adviserRandom);
+            _roomsDescribed.Clear();
+            if (IsWindowHostReady)
+            {
+                // Rooms already built in a loaded game have had their description.
+                _roomsDescribed.UnionWith(Simulation!.Entities.OfType<Room>().Where(room => room.IsActive).Select(room => room.RoomType));
+
+                // CorsixTH shows a tip with the main menu; here, with the first game.
+                if (!_tipShown)
+                {
+                    _tipShown = true;
+                    _windows.Open(new TipOfTheDayWindow(_adviserRandom.Next(TipOfTheDayWindow.Tips.Count)));
+                }
+            }
         }
 
         if (IsWindowHostReady)
@@ -2071,6 +2086,22 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var now = Environment.TickCount64;
             _adviserChecks.Observe(Simulation!, _session!.Player, _texts, now);
             _adviser.Update(now);
+            DescribeNewRooms(Simulation!, _session.Player);
+        }
+    }
+
+    /// <summary>
+    /// <c>Room:roomFinished</c>: the first time a kind of room is built, its description from the game's texts.
+    /// </summary>
+    private void DescribeNewRooms(Simulation simulation, int player)
+    {
+        foreach (var room in simulation.Entities.OfType<Room>())
+        {
+            if (room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, player) && _roomsDescribed.Add(room.RoomType)
+                && _config.RoomInformationDialogs && _texts?.RoomDescription(room.RoomType) is { Count: > 0 } description)
+            {
+                _windows.Open(new InformationWindow(description, simulation.Content.FindRoom(room.RoomType)?.Name ?? "Information"));
+            }
         }
     }
 
@@ -2134,10 +2165,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 QuickSave(load: action == "quickload");
                 break;
             case "restart":
-                ((IWindowHost)this).StartLevel(next: false);
+                _windows.Open(new ConfirmWindow(Confirmation(7, "Are you sure you want to restart the level?"), () => ((IWindowHost)this).StartLevel(next: false)));
                 break;
             case "quit":
-                ExitRequested = true;
+                _windows.Open(new ConfirmWindow(Confirmation(1, "Are you sure you want to quit?"), () => ExitRequested = true));
                 break;
             case "options":
                 _windows.Open(new OptionsWindow(_config, ApplyConfig));
@@ -2147,6 +2178,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 break;
         }
     }
+
+    /// <summary>CorsixTH's <c>confirmation</c> texts, S[35][index], with an English stand-in.</summary>
+    private string Confirmation(int index, string fallback) => _texts?.String(35, index) ?? fallback;
 
     /// <summary>Saves the local game to a file, saying so or why not.</summary>
     private bool SaveGameTo(string path)

@@ -164,6 +164,9 @@ Done and committed:
   the reception at month ends of year 1, the first cure/death, the first raise request, the boiler,
   earthquakes, new machines and VIPs walking in. Texts come from the game's strings (S[11], S[28],
   S[21], S[62]) with English stand-ins. Not yet: benches, queues, litter, machines, level progress.
+  Dialogs (information.lua, confirm_dialog.lua, tip_of_the_day.lua): a tip of the day with the first
+  game, a room's description from S[57] the first time one is built (room_information_dialogs), and
+  Restart and Quit in the menu ask first.
 
 Not done yet:
 
