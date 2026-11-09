@@ -468,6 +468,21 @@ public class PatientFlowTests
         Run(simulation, new HireStaffCommand(StaffClass.Nurse, 0, new(15, 16)));
     }
 
+    /// <summary>A second GP's office where the pharmacy would go, without a doctor of its own.</summary>
+    internal static Room BuildSecondGp(Simulation simulation)
+    {
+        Run(simulation, new BuildRoomCommand(new RoomPlan("gp", PharmacyArea, new DoorPlacement(new(13, PharmacyArea.Bottom), EdgeOrientation.North))));
+        var room = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "gp" && !r.IsActive);
+        foreach (var type in new[] { "desk", "cabinet", "chair" })
+        {
+            PlaceAnywhere(simulation, type, PharmacyArea);
+        }
+
+        Run(simulation, new ConfirmRoomCommand(room.Id));
+        Assert.True(room.IsActive);
+        return room;
+    }
+
     /// <summary>General diagnosis south-west of the GP's office, with a second doctor.</summary>
     private static void BuildGeneralDiagnosis(Simulation simulation)
     {
