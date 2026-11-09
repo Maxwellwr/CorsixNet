@@ -30,8 +30,10 @@ first original level:
 
 | Key | Action |
 |---|---|
-| Arrows / WASD, right or middle drag | Pan |
-| Mouse wheel | Zoom |
+| Arrows / WASD, screen edges, right or middle drag | Pan (Shift: faster; speeds in `config.txt`) |
+| Mouse wheel, = / - (Shift: five times as far) | Zoom |
+| 0 | Original size |
+| Alt+0-9 / Ctrl+0, Ctrl+5-9 | Remember the view / go back to it |
 | PgUp / PgDn | Previous / next level |
 | O | Cycle overlay (passable, hospital, parcels, temperature) |
 | U | Cycle sprite smoothing: original, 2x, 4x |

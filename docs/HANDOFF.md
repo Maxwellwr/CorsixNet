@@ -125,8 +125,10 @@ Done and committed:
   home), with play_sounds and sound_volume in config.txt; sounds the simulation causes are not played
   yet (PR #159). Scrolling as CorsixTH: keys and screen edges in 18 ms ticks with scroll_speed,
   shift_scroll_speed and the growing multiplier, the wheel zooming with momentum through zoom_speed, and
-  prevent_edge_scrolling (PR #160). No game data in the cloud: real-data tests were skipped there and
-  the client was not run, so these want a look on MSI. Save format version 49.
+  prevent_edge_scrolling (PR #160). Camera hotkeys: = and - zoom (Shift five times as far), 0 original
+  size, Alt+digit remembers the view and Ctrl+0, Ctrl+5-9 recall it, as Ctrl+1-4 still hire (PR #161).
+  No game data in the cloud: real-data tests were skipped there and the client was not run, so these
+  want a look on MSI. Save format version 49.
 
 Not done yet:
 
