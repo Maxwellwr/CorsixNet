@@ -71,6 +71,9 @@ public enum TransactionKind : byte
 
     /// <summary>A month's wage for a member of staff who was fired (<c>severance</c>); the subject is their class.</summary>
     Severance = 17,
+
+    /// <summary>A pleased VIP's grant (CorsixTH's <c>vip_award</c>).</summary>
+    VipAward = 18,
 }
 
 /// <summary>
@@ -133,6 +136,9 @@ public enum YearEndAwardKind : byte
 
     /// <summary>Fine: at most <c>CuresVDeathsPoor</c> cures per death.</summary>
     DeathsOverCures,
+
+    /// <summary>Trophy (in reputation): every VIP of the year left pleased.</summary>
+    HappyVips,
 }
 
 /// <summary>A trophy, award or fine the hospital got at a year end, and what it brought.</summary>
@@ -453,6 +459,9 @@ public sealed class Hospital
 
     /// <summary>The hospital policy window's settings.</summary>
     public HospitalPolicies Policies { get; internal set; } = new();
+
+    /// <summary>VIPs asking to visit, on their way and gone (<see cref="VipVisits"/>).</summary>
+    public VipVisits Vips { get; internal set; } = new();
 
     /// <summary>Whether the boiler is broken, so that the radiators are stuck at full or no heat (CorsixTH's <c>heating_broke</c>).</summary>
     public bool IsHeatingBroken { get; private set; }
@@ -996,6 +1005,8 @@ public sealed class Hospital
         JudgeYear(random, prices);
 
         VisitorsThisYear = 0;
+        Vips.ThisYear = 0;
+        Vips.PleasedThisYear = 0;
         CuredThisYear = 0;
         NotCuredThisYear = 0;
         DeathsThisYear = 0;
@@ -1037,7 +1048,7 @@ public sealed class Hospital
 
     /// <summary>
     /// <c>UIAnnualReport:checkTrophiesAndAwards</c>. Nothing counts unless more than one patient was cured this year,
-    /// except the fines. The trophies for drinks sold and pleased VIPs are left out until drinks are sold and VIPs come.
+    /// except the fines. The trophy for drinks sold is left out until drinks are sold.
     /// </summary>
     private void JudgeYear(SimRandom random, AwardRules prices)
     {
@@ -1045,6 +1056,11 @@ public sealed class Hospital
         var anybodyCured = CuredThisYear > 1;
 
         // Trophies.
+        if (anybodyCured && Vips.ThisYear > 0 && Vips.PleasedThisYear == Vips.ThisYear)
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.HappyVips, 0, (prices[AwardRules.TrophyMayorBonus] * Vips.PleasedThisYear) + random.NextInclusive(1, 5)));
+        }
+
         if (anybodyCured && LowestReputationThisYear > prices[AwardRules.Reputation])
         {
             _lastYearAwards.Add(new(YearEndAwardKind.ConsistentReputation, prices[AwardRules.TrophyReputationBonus], 0));
@@ -1198,6 +1214,7 @@ public sealed class Hospital
         writer.WriteInt32(OpenTimer);
         writer.WriteInt32(OpenTickTimer);
         Policies.Write(writer);
+        Vips.Write(writer);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)
@@ -1231,7 +1248,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Severance)
+            if (kind > (byte)TransactionKind.VipAward)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -1255,7 +1272,7 @@ public sealed class Hospital
         for (var i = 0; i < awards; i++)
         {
             var kind = reader.ReadByte();
-            if (kind > (byte)YearEndAwardKind.DeathsOverCures)
+            if (kind > (byte)YearEndAwardKind.HappyVips)
             {
                 throw new InvalidDataException($"Unknown year end award {kind}.");
             }
@@ -1308,6 +1325,7 @@ public sealed class Hospital
         hospital.OpenTimer = reader.ReadInt32();
         hospital.OpenTickTimer = reader.ReadInt32();
         hospital.Policies = HospitalPolicies.Read(reader);
+        hospital.Vips = VipVisits.Read(reader);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)

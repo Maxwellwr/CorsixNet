@@ -1,6 +1,6 @@
 // The menu cheats that the simulation has the parts for, ported from CorsixTH CorsixTH/Lua/cheats.lua
 // (Cheats:performCheat, announceCheat, cheatMoney, cheatPatient, cheatLose, cheatWin, cheatIncreasePrices,
-// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake) and dialogs/resizables/cheats_dialog.lua
+// cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip) and dialogs/resizables/cheats_dialog.lua
 // (UICheats:buttonClicked).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -38,6 +38,9 @@ public enum CheatKind : byte
 
     /// <summary><c>toggle_earthquake</c>: earthquakes off, or back on. These are the world's, so every hospital's.</summary>
     ToggleEarthquakes = 10,
+
+    /// <summary><c>vip</c>: a VIP asks to visit now (<c>Hospital:createVip</c>), even if one is already on the way.</summary>
+    Vip = 11,
 }
 
 /// <summary>
@@ -45,7 +48,7 @@ public enum CheatKind : byte
 /// (<c>Cheats:announceCheat</c>), except losing the level.
 /// </summary>
 /// <remarks>
-/// The other cheats wait for what they act on: research, emergencies, epidemics, VIPs, machines, and
+/// The other cheats wait for what they act on: research, emergencies, epidemics, machines, and
 /// jumping to the end of the month or year.
 /// </remarks>
 public static class Cheats
@@ -100,6 +103,9 @@ public static class Cheats
                 break;
             case CheatKind.ToggleEarthquakes:
                 simulation.Earthquakes.ToggleDisabled();
+                break;
+            case CheatKind.Vip:
+                VipVisits.Invite(simulation, hospital);
                 break;
             default:
                 return;

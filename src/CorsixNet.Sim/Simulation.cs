@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 29;
+    private const int FormatVersion = 30;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -73,6 +73,7 @@ public sealed class Simulation
             _hospitals[player].Policies = new HospitalPolicies(Rules.Tiredness.Tired);
 
             _hospitals[player].ScheduleNextDisaster(Random);
+            _hospitals[player].Vips.ScheduleNext(Random, Rules.MayorLaunch, today: 0);
 
             // CorsixTH's Hospital:Hospital: the rooms of the level whose objects are all there from the start.
             foreach (var room in Content.Rooms)
@@ -207,9 +208,11 @@ public sealed class Simulation
         }
 
         // The opening watch counts down after the entities, as CorsixTH's UI windows tick after them.
+        // So do the faxes, which take their default choice when they run out.
         foreach (var hospital in _hospitals)
         {
             hospital.TickOpeningWatch();
+            VipVisits.TickInvitation(this, hospital);
         }
 
         // People who have left the map go now, as CorsixTH's _flushDestroyedEntities.
@@ -666,12 +669,19 @@ public sealed class Simulation
         {
             if (entity is Humanoid humanoid)
             {
+                (humanoid.Behaviour as VipBehaviour)?.OnEndDay(this, humanoid);
                 Feelings.OnEndDay(this, humanoid);
             }
             else if (entity is RoomObject { Plant: { } plant } placed)
             {
                 plant.OnEndDay(Temperatures[placed.Tile.X, placed.Tile.Y] / (decimal)TileTemperatures.Max);
             }
+        }
+
+        // World:onEndDay: then perhaps a VIP asks to visit, before the earthquakes.
+        foreach (var hospital in _hospitals)
+        {
+            VipVisits.OnEndDay(this, hospital);
         }
 
         Earthquakes.OnEndDay(date);

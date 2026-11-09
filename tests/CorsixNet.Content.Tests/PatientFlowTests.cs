@@ -433,10 +433,10 @@ public class PatientFlowTests
         Assert.InRange(total / 2000m, 7.4m, 8.1m);
     }
 
-    private static RoomObject Desk(Simulation simulation) => simulation.Entities.OfType<RoomObject>().Single(o => o.Desk is not null);
+    internal static RoomObject Desk(Simulation simulation) => simulation.Entities.OfType<RoomObject>().Single(o => o.Desk is not null);
 
     /// <summary>A hospital with a GP's office, a doctor, a receptionist and a staffed reception desk.</summary>
-    private static Simulation NewStaffedHospital(LevelRules? rules = null, bool weakDoctor = false)
+    internal static Simulation NewStaffedHospital(LevelRules? rules = null, bool weakDoctor = false)
     {
         var simulation = NewHospital(rules);
         Run(simulation, new BuildRoomCommand(new RoomPlan("gp", GpArea, new DoorPlacement(new(6, GpArea.Bottom), EdgeOrientation.North))));
@@ -540,13 +540,13 @@ public class PatientFlowTests
         return simulation;
     }
 
-    private static void Run(Simulation simulation, Command command)
+    internal static void Run(Simulation simulation, Command command)
     {
         simulation.Schedule(0, command);
         simulation.Step();
     }
 
-    private static void StepFor(Simulation simulation, int ticks)
+    internal static void StepFor(Simulation simulation, int ticks)
     {
         for (var i = 0; i < ticks; i++)
         {

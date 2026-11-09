@@ -150,9 +150,9 @@ public static class ReceptionDesks
 
         var resetTimer = true;
         if (simulation.FindEntity(state.ReceptionistId) is Humanoid { Profile: { } profile }
-            && simulation.FindEntity(state.Queue.Front) is Humanoid { Behaviour: PatientBehaviour patient } front)
+            && simulation.FindEntity(state.Queue.Front) is Humanoid { Behaviour: IQueueMember member } front)
         {
-            if (patient.IsStandingInQueue(front))
+            if (member.IsStandingInQueue(front))
             {
                 state.AdvanceTimer++;
             }
@@ -166,7 +166,15 @@ public static class ReceptionDesks
             {
                 state.Queue.Pop(simulation);
                 state.Queue.VisitorCount++;
-                patient.OnSeenAtReception(simulation, front);
+                switch (member)
+                {
+                    case PatientBehaviour patient:
+                        patient.OnSeenAtReception(simulation, front);
+                        break;
+                    case VipBehaviour vip:
+                        vip.OnSeenAtReception();
+                        break;
+                }
             }
         }
 

@@ -37,6 +37,9 @@ public enum HumanoidType : byte
     StrippedMalePatient = 7,
 
     StrippedFemalePatient = 8,
+
+    /// <summary>A VIP visiting the hospital (CorsixTH's "VIP", who looks like the inspector).</summary>
+    Vip = 9,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -61,6 +64,7 @@ public sealed class Humanoid : Entity
     private readonly List<TilePosition> _path = [];
     private readonly byte[] _layers = new byte[LayerCount];
     private int _doorTicks;
+    private bool _skipStepTick;
     private TilePosition _doorExit;
     private TilePosition? _resumeTo;
 
@@ -101,6 +105,12 @@ public sealed class Humanoid : Entity
 
     /// <summary>Hours the raise request still waits for an answer, or −1 (CorsixTH's <c>quitting_in</c>).</summary>
     public int QuittingIn { get; internal set; } = -1;
+
+    /// <summary>
+    /// Whether the humanoid moves at half speed, every other tick skipped (CorsixTH's <c>slow_animation</c>, which VIPs
+    /// have).
+    /// </summary>
+    public bool IsSlow { get; internal set; }
 
     /// <summary>The kind of person; a patient changes it when undressing and dressing (CorsixTH's <c>setType</c>).</summary>
     public HumanoidType Type { get; internal set; }
@@ -332,6 +342,16 @@ public sealed class Humanoid : Entity
 
         if (IsStepping)
         {
+            // Entity:_tick: slow humanoids skip every other tick, the first one included.
+            if (IsSlow)
+            {
+                _skipStepTick = !_skipStepTick;
+                if (_skipStepTick)
+                {
+                    return;
+                }
+            }
+
             StepProgress++;
             if (StepProgress < TicksPerStep)
             {
@@ -596,6 +616,8 @@ public sealed class Humanoid : Entity
             RaiseTimer = reader.ReadInt32(),
             RaiseRequest = reader.ReadInt32(),
             QuittingIn = reader.ReadInt32(),
+            IsSlow = reader.ReadBool(),
+            _skipStepTick = reader.ReadBool(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -649,6 +671,8 @@ public sealed class Humanoid : Entity
         writer.WriteInt32(RaiseTimer);
         writer.WriteInt32(RaiseRequest);
         writer.WriteInt32(QuittingIn);
+        writer.WriteBool(IsSlow);
+        writer.WriteBool(_skipStepTick);
 
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)
@@ -711,6 +735,10 @@ public sealed class Humanoid : Entity
         layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
         return new Humanoid(id, tile, type, layers) { HospitalPlayer = hospitalPlayer };
     }
+
+    /// <summary>A VIP visiting <paramref name="hospitalPlayer"/>'s hospital, who walks slowly (<c>World:spawnVIP</c>).</summary>
+    public static Humanoid CreateVip(int id, TilePosition tile, int hospitalPlayer) =>
+        new(id, tile, HumanoidType.Vip) { HospitalPlayer = hospitalPlayer, IsSlow = true };
 
     /// <summary>
     /// Creates a newly hired member of staff, as CorsixTH's <c>Staff:setProfile</c> does: the type

@@ -7,14 +7,24 @@ using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.People;
 
+/// <summary>Someone who can stand in a <see cref="HumanoidQueue"/>.</summary>
+internal interface IQueueMember
+{
+    /// <summary>Goes to a place in the queue, then turns to face <paramref name="face"/>.</summary>
+    void TakeQueuePlace(Simulation simulation, Humanoid humanoid, TilePosition tile, TilePosition face);
+
+    /// <summary>Whether they stand at their place in the queue, so that they may be seen.</summary>
+    bool IsStandingInQueue(Humanoid humanoid);
+}
+
 /// <summary>
 /// A queue of people waiting at a reception desk or a room's door, as CorsixTH's <c>Queue</c>. Members
 /// stand on the idle tiles found from the queue's position: the first on the nearest, the next one
 /// beside them and so on, each facing the one ahead.
 /// </summary>
 /// <remarks>
-/// Everyone queueing here is a patient, so CorsixTH's priorities (staff, VIPs, emergencies first) do not
-/// come into play yet. Benches come later.
+/// Of CorsixTH's priorities (people leaving, staff, guests, emergencies, then the other patients) only guests
+/// (VIPs) come before patients yet, as only they queue with them. Benches come later.
 /// </remarks>
 public sealed class HumanoidQueue
 {
@@ -53,12 +63,25 @@ public sealed class HumanoidQueue
 
     public bool Contains(int id) => _members.Contains(id);
 
-    /// <summary>Adds someone at the back and sends them to their place.</summary>
+    /// <summary>
+    /// Adds someone behind everyone of the same or a higher priority and sends them to their place
+    /// (<c>Queue:push</c>).
+    /// </summary>
     internal void Push(Simulation simulation, Humanoid humanoid)
     {
-        _members.Add(humanoid.Id);
+        var priority = Priority(humanoid);
+        var index = _members.Count;
+        while (index > 0 && Priority(simulation.FindEntity(_members[index - 1]) as Humanoid) > priority)
+        {
+            index--;
+        }
+
+        _members.Insert(index, humanoid.Id);
         Arrange(simulation);
     }
+
+    /// <summary><c>_getHumanoidQueuePriority</c>: a smaller number goes first; VIPs (3) before patients (6).</summary>
+    private static int Priority(Humanoid? humanoid) => humanoid?.Behaviour is VipBehaviour ? 3 : 6;
 
     /// <summary>Takes the first in line out; everyone moves up.</summary>
     internal int Pop(Simulation simulation)
@@ -89,7 +112,7 @@ public sealed class HumanoidQueue
     {
         for (var i = 0; i < _members.Count; i++)
         {
-            if (simulation.FindEntity(_members[i]) is not Humanoid { Behaviour: PatientBehaviour patient } humanoid
+            if (simulation.FindEntity(_members[i]) is not Humanoid { Behaviour: IQueueMember member } humanoid
                 || !simulation.Pathfinder.TryFindIdleTile(simulation.Map, Position, i, out var tile))
             {
                 continue;
@@ -101,7 +124,7 @@ public sealed class HumanoidQueue
                 face = ahead;
             }
 
-            patient.TakeQueuePlace(simulation, humanoid, tile, face);
+            member.TakeQueuePlace(simulation, humanoid, tile, face);
         }
     }
 
