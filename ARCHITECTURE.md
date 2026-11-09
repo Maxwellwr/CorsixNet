@@ -130,7 +130,9 @@ entities and pending commands.
   Door queues, knocking and swing doors are not ported yet.
 - **Wandering.** `MeanderCommand` ports `meander.lua`: the humanoid walks to one of the 24 nearest
   idle tiles (`Pathfinder.TryFindIdleTile`), whose search does not go through doors, so wandering
-  people keep out of rooms. The demo's walkers use it.
+  people keep out of rooms. The demo's walkers use it. Doctors, nurses and receptionists with no room or desk
+  meander by themselves (`Meandering`): a walk to such a tile, then 5 to 40 ticks standing, and so on; with nowhere
+  to walk to they stand still until sent somewhere.
 
 Presentation details are derived in the client, not stored in the simulation. Examples are
 pixel offsets during a step and which tile a walking humanoid is drawn with. Animation timing

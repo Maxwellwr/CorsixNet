@@ -108,9 +108,9 @@ Done and committed:
   year cheats (PR #134), the fax code cheats (PR #135), the patient window's send home and guess cure as
   commands, Q and Shift+Q (PR #136), the queue window's size and reordering as commands (PR #137),
   sending a patient queueing for a room to another room of the same type (PR #138), levels with random
-  emergencies (PR #139), the campaign's difficulty and `--difficulty` (PR #140). No game data in the
-  cloud: real-data tests were skipped there and the client was not run, so these want a look on MSI.
-  Save format version 44.
+  emergencies (PR #139), the campaign's difficulty and `--difficulty` (PR #140), idle staff meandering
+  (PR #141). No game data in the cloud: real-data tests were skipped there and the client was not run,
+  so these want a look on MSI. Save format version 45.
 
 Not done yet:
 

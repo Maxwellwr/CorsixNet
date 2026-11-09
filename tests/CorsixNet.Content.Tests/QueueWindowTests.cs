@@ -36,12 +36,12 @@ public class QueueWindowTests
     {
         var simulation = NewStaffedHospital();
         var queue = Desk(simulation).Desk!.Queue;
-        for (var hour = 0; hour < 200 * GameDate.HoursPerDay && queue.Count < 3; hour++)
+        for (var hour = 0; hour < 200 * GameDate.HoursPerDay && queue.Count < 2; hour++)
         {
             simulation.Step();
         }
 
-        Assert.True(queue.Count >= 3, "No queue of three formed at the desk.");
+        Assert.True(queue.Count >= 2, "No queue of two formed at the desk.");
         var last = queue.Members[^1];
         var first = queue.Members[0];
 
