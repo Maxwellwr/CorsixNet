@@ -1,0 +1,103 @@
+// Thirst and the need for the toilet, ported from CorsixTH CorsixTH/Lua/entities/humanoids/patient.lua
+// (Patient:tickDay, _dailyBowelChecks, _handleExcessThirst, Patient:setDisease).
+// Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
+
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Pathfinding;
+
+namespace CorsixNet.Sim.People;
+
+/// <summary>
+/// A patient's thirst and need for the toilet. Each day in the hospital, except for emergency patients, thirst grows
+/// by 0.004 to 0.008 plus a fiftieth of their warmth, and the need for the toilet by 0.002 to 0.008 (0.008 to 0.026 for
+/// gut rot and the squits). Above 0.7 thirst costs happiness every day and the patient, in a corridor, looks for a drinks
+/// machine within 8 steps every few days. Buying the drink and going to the toilet are not ported yet.
+/// </summary>
+internal static class Needs
+{
+    /// <summary>A patient starts looking for a drink above this thirst.</summary>
+    internal const decimal ExcessThirst = 0.7m;
+
+    /// <summary>How far a thirsty patient looks for a drinks machine (<c>findObjectNear(self, "drinks_machine", 8)</c>).</summary>
+    private const int MachineDistance = 8;
+
+    private const string DrinksMachineType = "drinks_machine";
+
+    /// <summary>Steps of CorsixTH's <c>math.random()</c> here.</summary>
+    private const int RandomSteps = 1_000_000;
+
+    /// <summary>CorsixTH's <c>math.random()</c>: from 0 up to, not including, 1.</summary>
+    internal static decimal Random(SimRandom random) => random.Next(RandomSteps) / (decimal)RandomSteps;
+
+    /// <summary>The thirst and toilet part of <c>Patient:tickDay</c>, after the day's loss of health.</summary>
+    internal static void OnEndDay(Simulation simulation, Humanoid humanoid, PatientBehaviour patient)
+    {
+        if (patient.EmergencyIndex != 0)
+        {
+            return;
+        }
+
+        patient.Thirst = Clamp(patient.Thirst + (humanoid.Warmth * 0.02m) + (0.004m * Random(simulation.Random)) + 0.004m);
+
+        // Patient:_dailyBowelChecks. Peeing on the floor or going to the toilet above 0.75 is not ported yet.
+        var moreLooUse = patient.Disease?.MoreLooUse ?? false;
+        patient.ToiletNeed = Clamp(patient.ToiletNeed + (moreLooUse
+            ? (0.018m * Random(simulation.Random)) + 0.008m
+            : (0.006m * Random(simulation.Random)) + 0.002m));
+
+        if (patient.Thirst > ExcessThirst)
+        {
+            HandleExcessThirst(simulation, humanoid, patient);
+        }
+    }
+
+    /// <summary>
+    /// <c>Patient:_handleExcessThirst</c>: unhappy and thirsty; in a corridor, unless they looked a day or few ago, the
+    /// patient looks for a drinks machine nearby and, seven times in ten, would go and buy a drink.
+    /// </summary>
+    private static void HandleExcessThirst(Simulation simulation, Humanoid humanoid, PatientBehaviour patient)
+    {
+        Feelings.ChangeHappiness(simulation, humanoid, -0.002m);
+        patient.IsThirsty = true;
+
+        // Don't look for a drinks machine too often.
+        if (patient.DrinkTimeout > 0)
+        {
+            patient.DrinkTimeout--;
+            return;
+        }
+
+        // Only in the corridors: not in a room, nor going in or out, nor on the way home.
+        if (patient.Phase is >= PatientPhase.EnteringRoom and <= PatientPhase.LeavingRoom
+            || patient.Phase == PatientPhase.GoingHome
+            || simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId != 0)
+        {
+            return;
+        }
+
+        if (!IsMachineNear(simulation, humanoid) || simulation.Random.NextInclusive(1, 10) < 3)
+        {
+            patient.DrinkTimeout = simulation.Random.NextInclusive(2, 4);
+        }
+
+        // Patient:_constructGetSodaAction, walking to the machine and buying a drink, is not ported yet.
+    }
+
+    /// <summary><c>World:findObjectNear(self, "drinks_machine", 8)</c>, by CorsixTH's object visitor.</summary>
+    private static bool IsMachineNear(Simulation simulation, Humanoid humanoid)
+    {
+        var machines = new HashSet<TilePosition>();
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is RoomObject { ObjectType: DrinksMachineType } machine)
+            {
+                machines.Add(machine.Tile);
+            }
+        }
+
+        return machines.Count > 0 && ObjectVisitor.Visit(simulation.Map, humanoid.Tile, MachineDistance, machines.Contains);
+    }
+
+    private static decimal Clamp(decimal value) => Math.Clamp(value, 0m, 1m);
+}

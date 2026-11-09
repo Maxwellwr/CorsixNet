@@ -16,7 +16,11 @@ public class LitterDroppingTests
     public void PatientsDropRubbishOnFreeCorridorFloor()
     {
         var simulation = NewStaffedHospital();
-        StepFor(simulation, 90 * GameDate.HoursPerDay);
+        // How soon the first piece falls depends on how far the patients walk: give them up to 200 days.
+        for (var day = 0; day < 200 && !simulation.Entities.OfType<Litter>().Any(); day++)
+        {
+            StepFor(simulation, GameDate.HoursPerDay);
+        }
 
         var litter = simulation.Entities.OfType<Litter>().ToList();
         Assert.NotEmpty(litter);

@@ -249,6 +249,18 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     public int LitterCountdown { get; internal set; } = -1;
 
+    /// <summary>How thirsty the patient is, from 0 to 1 (CorsixTH's <c>thirst</c> attribute); see <see cref="Needs"/>.</summary>
+    public decimal Thirst { get; internal set; }
+
+    /// <summary>How much the patient needs the toilet, from 0 to 1 (CorsixTH's <c>toilet_need</c> attribute).</summary>
+    public decimal ToiletNeed { get; internal set; }
+
+    /// <summary>Days before a thirsty patient looks for a drinks machine again (CorsixTH's <c>timeout</c>).</summary>
+    public int DrinkTimeout { get; internal set; }
+
+    /// <summary>Whether the patient shows the thirsty mood (CorsixTH's <c>setMood("thirsty", "activate")</c>).</summary>
+    public bool IsThirsty { get; internal set; }
+
     /// <summary>Whether the patient has caught an epidemic's disease (CorsixTH's <c>infected</c>); a cure ends it.</summary>
     public bool IsInfected { get; internal set; }
 
@@ -386,9 +398,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>
     /// The first half of <c>Patient:setDisease</c>: the disease, nothing diagnosed yet, all its diagnosis rooms
-    /// still to visit, and who pays.
+    /// still to visit, and who pays; and some thirst and need for the toilet to start with, unless only emergencies
+    /// bring the disease.
     /// </summary>
-    internal void SetDisease(DiseaseDefinition disease, int insuranceCompany)
+    internal void SetDisease(DiseaseDefinition disease, int insuranceCompany, SimRandom random)
     {
         DiseaseId = disease.Id;
         IsDiagnosed = false;
@@ -396,6 +409,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         _availableDiagnosisRooms.Clear();
         _availableDiagnosisRooms.AddRange(disease.DiagnosisRooms);
         InsuranceCompany = insuranceCompany;
+
+        // Alien patients do not have the animations for these things.
+        if (!disease.OnlyEmergency)
+        {
+            Thirst = Needs.Random(random) * 0.2m;
+            ToiletNeed = Needs.Random(random) * 0.2m;
+        }
     }
 
     /// <summary>
@@ -1213,6 +1233,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteInt32(VaccinatingNurseId);
         writer.WriteByte((byte)_question);
         writer.WriteInt32(LitterCountdown);
+        writer.WriteDecimal(Thirst);
+        writer.WriteDecimal(ToiletNeed);
+        writer.WriteInt32(DrinkTimeout);
+        writer.WriteBool(IsThirsty);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -1268,6 +1292,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         var question = reader.ReadByte();
         patient._question = question <= (byte)PatientQuestion.NoTreatmentRoom ? (PatientQuestion)question : throw new InvalidDataException($"Unknown patient question {question}.");
         patient.LitterCountdown = reader.ReadInt32();
+        patient.Thirst = reader.ReadDecimal();
+        patient.ToiletNeed = reader.ReadDecimal();
+        patient.DrinkTimeout = reader.ReadInt32();
+        patient.IsThirsty = reader.ReadBool();
         return patient;
     }
 }

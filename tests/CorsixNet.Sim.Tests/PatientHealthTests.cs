@@ -130,7 +130,7 @@ public class PatientHealthTests
     {
         var humanoid = simulation.AddEntity(id => Humanoid.CreatePatient(id, tile, simulation.Random, PatientLook.Standard, 0));
         var patient = new PatientBehaviour { Health = health };
-        patient.SetDisease(Cold, 0);
+        patient.SetDisease(Cold, 0, simulation.Random);
         humanoid.Behaviour = patient;
         return (humanoid, patient);
     }

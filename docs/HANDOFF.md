@@ -104,8 +104,9 @@ Done and committed:
   take their turns for patients and count them as visitors (PR #128), patients dropping litter and
   people minding it (PR #129), rat holes and rats coming with litter, shot with X (PR #130), the
   player's salary and the salary offered on winning (PR #131), the VIP rating counting the litter they
-  see (PR #132). No game data in the cloud: real-data tests were skipped there and the client was not
-  run, so these want a look on MSI. Save format version 39.
+  see (PR #132), patients' thirst and need for the toilet growing (PR #133). No game data in the cloud:
+  real-data tests were skipped there and the client was not run, so these want a look on MSI. Save
+  format version 40.
 
 Not done yet:
 

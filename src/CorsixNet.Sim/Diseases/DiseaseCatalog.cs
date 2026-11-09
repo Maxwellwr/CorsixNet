@@ -120,6 +120,7 @@ public static class DiseaseCatalog
         {
             EmergencyNumber = 14,
             NonVisualsId = 17,
+            MoreLooUse = true,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
             TreatmentRooms = ["pharmacy"],
@@ -241,6 +242,7 @@ public static class DiseaseCatalog
         {
             EmergencyNumber = 18,
             NonVisualsId = 13,
+            MoreLooUse = true,
             IsContagious = true,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
             TreatmentRooms = ["pharmacy"],

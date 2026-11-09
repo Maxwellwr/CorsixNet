@@ -51,6 +51,9 @@ public sealed class DiseaseDefinition
     /// <summary>At most this many patients come with it in an emergency (<c>emergency_number</c>); 0 for pseudo diseases.</summary>
     public int EmergencyNumber { get; init; }
 
+    /// <summary>Whether its patients need the toilet about three times as fast (<c>more_loo_use</c>).</summary>
+    public bool MoreLooUse { get; init; }
+
     /// <summary>Whether the disease spreads in epidemics.</summary>
     public bool IsContagious { get; init; }
 
