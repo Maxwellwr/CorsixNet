@@ -148,6 +148,10 @@ Done and committed:
   F7 progress report (the level's goals and where the hospital stands), F11 the cheats window (F11 no
   longer runs all research at once; it is a button there), the annual report at each year end, and
   the level's end (won: salary offer and Next level; lost: why, and Restart).
+  The bottom panel (balance; Build, Corridor, Hire, Faxes and the dialogs as buttons) is always there;
+  Corridor opens the furnish corridor window (prices, how many, Buy puts one on the cursor); while
+  furnishing a room the edit panel lists what is still needed, sells extra objects (Buy) and has
+  Confirm, Pick up and Take down.
 
 Not done yet:
 

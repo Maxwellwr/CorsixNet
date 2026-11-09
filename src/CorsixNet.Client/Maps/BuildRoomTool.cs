@@ -115,6 +115,39 @@ internal sealed class BuildRoomTool
             ? (_placing.Id, tile, _orientation, _placeProblem == ObjectPlacementProblem.None ? Color.White : BlockedGhost)
             : null;
 
+    /// <summary>The room being built, while building.</summary>
+    public RoomDefinition? RoomType => IsActive ? _room : null;
+
+    /// <summary>Whether the room is being furnished: the step with the edit panel's items and buttons.</summary>
+    public bool IsFurnishing => _phase == Phase.Objects;
+
+    /// <summary>Whether the pick up button is down.</summary>
+    public bool IsPickingUp => _pickingUp;
+
+    /// <summary>The objects the room still needs, counting commands on their way.</summary>
+    public IReadOnlyList<(string ObjectType, int Count)> Missing(Simulation simulation) =>
+        _phase == Phase.Objects && simulation.FindEntity(_roomId) is Room room ? Remaining(simulation, room) : [];
+
+    /// <summary>Whether Enter would confirm the room now.</summary>
+    public bool CanConfirm(Simulation simulation) =>
+        _phase == Phase.Objects && !_pickingUp && _pending.Count == 0 && simulation.FindEntity(_roomId) is Room room
+        && Remaining(simulation, room).Count == 0 && RoomBuilder.CanConfirm(simulation, room, _player);
+
+    /// <summary>
+    /// Puts an extra object the room allows on the cursor while furnishing (the edit panel's buy list, CorsixTH's
+    /// <c>UIPlaceObjects:addObjects</c>); it is bought when placed and sold back if the room is taken down.
+    /// </summary>
+    public void PlaceExtra(ObjectDefinition definition)
+    {
+        if (_phase != Phase.Objects || _room is null || !_room.Allows(definition.Id) || definition.Orientations.Count == 0)
+        {
+            return;
+        }
+
+        _pickingUp = false;
+        StartPlacing(definition, Turns.First(definition.Orientations.ContainsKey));
+    }
+
     public void Start(RoomDefinition room)
     {
         _room = room;
@@ -499,8 +532,9 @@ internal sealed class BuildRoomTool
             return UpdatePickingUp(simulation, room, input);
         }
 
-        // An object whose last missing piece got placed meanwhile (say, by a command still on its way) is dropped.
-        if (_placing is not null && !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id))
+        // An object whose last missing piece got placed meanwhile (say, by a command still on its way) is dropped; an
+        // extra object the room does not need stays on the cursor until it is placed.
+        if (_placing is not null && (_room!.NeededObjects?.ContainsKey(_placing.Id) ?? false) && !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id))
         {
             StopPlacing();
         }

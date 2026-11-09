@@ -115,6 +115,12 @@ internal abstract class UiWindow
     /// </summary>
     public virtual bool IsSameAs(UiWindow other) => other.GetType() == GetType();
 
+    /// <summary>
+    /// Whether the window is part of the screen rather than a dialog, such as the bottom panel: it sits at the bottom,
+    /// has no title bar and is not closed with Esc.
+    /// </summary>
+    public virtual bool IsPinned => false;
+
     /// <summary>Whether the window has nothing more to show, such as a patient who has gone home; it is closed then.</summary>
     public virtual bool IsDone(IWindowHost host) => false;
 
