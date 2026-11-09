@@ -737,6 +737,7 @@ Format readers in `CorsixNet.Formats`:
 | `PaletteRemaps` | Colour remap tables (`QDATA/GHOST*.DAT`), for example the red room blueprint |
 | `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. `StaffTexts` (Content) names and describes staff from them: the simulation keeps no text, so the picks come from the profile's fixed random values; the client shows them for a member of staff under the cursor. `OriginalTexts` adds disease names, causes, symptoms and cures and the VIPs' names, which the client's status line uses |
 | `SoundArchive` | The original's sound effects and speech (`SOUND/DATA/SOUND-n.DAT`): the table of WAV files by name, looked up in any case of letters, their durations from the WAV headers, and the names a `*` wildcard matches, as CorsixTH's `th_sound.cpp` and `audio.lua`; `ThemeHospitalInstall.LoadSounds` falls back to English as `Audio:initSpeech` does |
+| `Xmi` | The original's music (`SOUND/MIDI/*.XMI`) converted to a type 0 standard MIDI file as CorsixTH's `xmi2mid.cpp` does: times × 100, notes ending with a velocity-0 note-on, the first tempo setting the division; `ThemeHospitalInstall.MusicTracks` lists the tracks titled and ordered by `MIDI.TXT` |
 
 Images stay as palette indices so that the renderer can apply palette effects.
 The client converts them to textures.

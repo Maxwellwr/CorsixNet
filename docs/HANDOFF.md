@@ -118,8 +118,9 @@ Done and committed:
   #150), staff names and descriptions from them, shown for the member of staff under the cursor (PR
   #151), disease and VIP names in the status line (PR #152), rooms taking patients from the back of
   other rooms' queues (PR #153), the settings file `config.txt` in CorsixTH's format (PR #154), free
-  build mode (PR #155). No game data in the cloud: real-data tests were skipped there and the client was
-  not run, so these want a look on MSI. Save format version 49.
+  build mode (PR #155), the sound archive reader (PR #156), the music list and XMI to MIDI conversion
+  (PR #157). No game data in the cloud: real-data tests were skipped there and the client was not run,
+  so these want a look on MSI. Save format version 49.
 
 Not done yet:
 
