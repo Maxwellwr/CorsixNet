@@ -28,6 +28,11 @@ public sealed class GameConfigTests : IDisposable
             audio = true
             sound_volume = 0.25
             play_sounds = false
+            prevent_edge_scrolling = true
+            scrolling_momentum = 0.5
+            zoom_speed = 120
+            scroll_speed = 3
+            shift_scroll_speed = 6.5
             midi_api = nil -- [[alsa]]
             enable_screen_shake = false
             autosave_frequency = 3
@@ -48,6 +53,7 @@ public sealed class GameConfigTests : IDisposable
         Assert.True(config.FreeBuildMode);
         Assert.False(config.PlaySounds);
         Assert.Equal(0.25m, config.SoundVolume);
+        Assert.Equal(new(3, 6.5, 120, 0.5, true), config.ScrollSettings());
     }
 
     [Fact]
@@ -82,6 +88,11 @@ public sealed class GameConfigTests : IDisposable
             FreeBuildMode = true,
             PlaySounds = false,
             SoundVolume = 0.75m,
+            PreventEdgeScrolling = true,
+            ScrollingMomentum = 0.9m,
+            ZoomSpeed = 200,
+            ScrollSpeed = 1.5m,
+            ShiftScrollSpeed = 8,
             ThemeHospitalInstall = @"C:\Games\Theme Hospital",
             PlayerName = "Name with ]] and ]=] in it]",
         };
