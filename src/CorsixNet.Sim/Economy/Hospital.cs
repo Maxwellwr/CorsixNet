@@ -91,6 +91,9 @@ public enum TransactionKind : byte
 
     /// <summary>A nurse's vaccination during an epidemic's cover-up (<c>vaccination</c>); the subject is the disease.</summary>
     Vaccination = 23,
+
+    /// <summary>A can sold from a drinks machine (<c>drinks</c>, <c>Hospital:sellSodaToPatient</c>).</summary>
+    Drinks = 24,
 }
 
 /// <summary>
@@ -156,6 +159,9 @@ public enum YearEndAwardKind : byte
 
     /// <summary>Trophy (in reputation): every VIP of the year left pleased.</summary>
     HappyVips,
+
+    /// <summary>Trophy: more cans sold from the drinks machines than <c>CansofCoke</c>.</summary>
+    DrinksSoldTrophy,
 }
 
 /// <summary>A trophy, award or fine the hospital got at a year end, and what it brought.</summary>
@@ -444,6 +450,9 @@ public sealed class Hospital
 
     /// <summary>Patients cured so far (CorsixTH's <c>num_cured</c>).</summary>
     public int Cured { get; internal set; }
+
+    /// <summary>Cans sold from the drinks machines this year (<c>sodas_sold</c>).</summary>
+    public int SodasSold { get; internal set; }
 
     /// <summary>Patients who died so far (CorsixTH's <c>num_deaths</c>).</summary>
     public int Deaths { get; internal set; }
@@ -1119,6 +1128,7 @@ public sealed class Hospital
     {
         JudgeYear(random, prices);
 
+        SodasSold = 0;
         VisitorsThisYear = 0;
         Vips.ThisYear = 0;
         Vips.PleasedThisYear = 0;
@@ -1133,7 +1143,7 @@ public sealed class Hospital
         var reputation = 0;
         foreach (var award in _lastYearAwards)
         {
-            if (award.Kind <= YearEndAwardKind.ManyCuredTrophy)
+            if (award.Kind is <= YearEndAwardKind.ManyCuredTrophy or YearEndAwardKind.DrinksSoldTrophy)
             {
                 trophyMoney += award.Money;
             }
@@ -1163,14 +1173,19 @@ public sealed class Hospital
 
     /// <summary>
     /// <c>UIAnnualReport:checkTrophiesAndAwards</c>. Nothing counts unless more than one patient was cured this year,
-    /// except the fines. The trophy for drinks sold is left out until drinks are sold.
+    /// except the fines and the trophy for drinks sold.
     /// </summary>
     private void JudgeYear(SimRandom random, AwardRules prices)
     {
         _lastYearAwards.Clear();
         var anybodyCured = CuredThisYear > 1;
 
-        // Trophies.
+        // Trophies. The one for drinks sold counts even when nobody was cured.
+        if (SodasSold > prices[AwardRules.CansofCoke])
+        {
+            _lastYearAwards.Add(new(YearEndAwardKind.DrinksSoldTrophy, prices[AwardRules.CansofCokeBonus], 0));
+        }
+
         if (anybodyCured && Vips.ThisYear > 0 && Vips.PleasedThisYear == Vips.ThisYear)
         {
             _lastYearAwards.Add(new(YearEndAwardKind.HappyVips, 0, (prices[AwardRules.TrophyMayorBonus] * Vips.PleasedThisYear) + random.NextInclusive(1, 5)));
@@ -1261,6 +1276,7 @@ public sealed class Hospital
 
         writer.WriteInt32(Visitors);
         writer.WriteInt32(Cured);
+        writer.WriteInt32(SodasSold);
         writer.WriteInt32(Deaths);
         writer.WriteInt32(NotCured);
         writer.WriteInt32(Reputation);
@@ -1373,7 +1389,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Vaccination)
+            if (kind > (byte)TransactionKind.Drinks)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -1383,6 +1399,7 @@ public sealed class Hospital
 
         hospital.Visitors = reader.ReadInt32();
         hospital.Cured = reader.ReadInt32();
+        hospital.SodasSold = reader.ReadInt32();
         hospital.Deaths = reader.ReadInt32();
         hospital.NotCured = reader.ReadInt32();
         hospital.Reputation = reader.ReadInt32();
@@ -1397,7 +1414,7 @@ public sealed class Hospital
         for (var i = 0; i < awards; i++)
         {
             var kind = reader.ReadByte();
-            if (kind > (byte)YearEndAwardKind.HappyVips)
+            if (kind > (byte)YearEndAwardKind.DrinksSoldTrophy)
             {
                 throw new InvalidDataException($"Unknown year end award {kind}.");
             }

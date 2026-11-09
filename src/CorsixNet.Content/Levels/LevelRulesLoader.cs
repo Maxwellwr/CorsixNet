@@ -222,7 +222,8 @@ public static partial class LevelRulesLoader
             config.GetInt("gbv.ScoreMaxInc") ?? LevelRules.DefaultScoreMaxIncrease,
             levelNumber,
             RandomEmergenciesFromConfig(config),
-            difficulty);
+            difficulty,
+            config.GetInt("gbv.SodaPrice") ?? LevelRules.DefaultSodaPrice);
     }
 
     /// <summary>

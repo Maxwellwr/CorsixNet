@@ -147,6 +147,7 @@ internal sealed class MapViewScreen : IScreen
     private readonly GameSpeed _initialSpeed;
     private bool _demoDeskPending;
     private bool _demoDiagnosisPending;
+    private bool _demoMachinePending;
     private int? _selected;
 
     /// <summary>The member of staff picked up with M, to be put down with M again.</summary>
@@ -217,6 +218,7 @@ internal sealed class MapViewScreen : IScreen
         _demoPending = demo;
         _demoDeskPending = demo;
         _demoDiagnosisPending = demo;
+        _demoMachinePending = demo;
         if (demo)
         {
             foreach (var item in (string[])["desk", "cabinet", "chair", .. DemoRadiators])
@@ -619,7 +621,7 @@ internal sealed class MapViewScreen : IScreen
         }
 
         // The demo's steps belong to the game it was started on.
-        _demoPending = _demoDeskPending = _demoDiagnosisPending = false;
+        _demoPending = _demoDeskPending = _demoDiagnosisPending = _demoMachinePending = false;
         _demoFurniture.Clear();
         PrepareMapIfReady();
         ShowNotice($"Loaded {Path.GetFileName(path)}");
@@ -849,6 +851,33 @@ internal sealed class MapViewScreen : IScreen
     }
 
     /// <summary>
+    /// Once the demo's reception desk stands, buys a drinks machine a few tiles from it, for the patients who grow thirsty
+    /// while they wait.
+    /// </summary>
+    private void PlaceDemoDrinksMachine()
+    {
+        if (!_demoMachinePending || _session is null || Simulation is not { } simulation
+            || simulation.Entities.OfType<RoomObject>().FirstOrDefault(o => o.Desk is not null) is not { } desk)
+        {
+            return;
+        }
+
+        _demoMachinePending = false;
+        foreach (var tile in _hospitalTiles.Where(t => Math.Abs(t.X - desk.Tile.X) + Math.Abs(t.Y - desk.Tile.Y) >= 3)
+            .OrderBy(t => Math.Abs(t.X - desk.Tile.X) + Math.Abs(t.Y - desk.Tile.Y)).ThenBy(t => t.Y).ThenBy(t => t.X))
+        {
+            foreach (var orientation in new[] { Direction.South, Direction.East, Direction.North, Direction.West })
+            {
+                if (ObjectPlacer.Check(simulation, "drinks_machine", tile, orientation, _session.Player) == ObjectPlacementProblem.None)
+                {
+                    _session.Submit(new PlaceObjectCommand("drinks_machine", tile, orientation));
+                    return;
+                }
+            }
+        }
+    }
+
+    /// <summary>
     /// Once the demo's pharmacy works, builds general diagnosis near the camera and hires a second doctor for it, so
     /// that patients the GP cannot diagnose at once get examined and come back.
     /// </summary>
@@ -1013,6 +1042,7 @@ internal sealed class MapViewScreen : IScreen
         FurnishDemoRoom();
         PlaceDemoReceptionDesk();
         BuildDemoGeneralDiagnosis();
+        PlaceDemoDrinksMachine();
         if (Simulation is not { } simulation || !_wander || _hospitalTiles.Count == 0 || _session.IsPaused)
         {
             return;

@@ -81,6 +81,20 @@ public class YearEndTests
     }
 
     [Fact]
+    public void SellingMoreCansThanTheLevelAsksWinsATrophyEvenWithoutCures()
+    {
+        var hospital = new Hospital(0, 0, reputation: 600, value: 200_000);
+        hospital.SodasSold = AwardRules.Default[AwardRules.CansofCoke] + 1;
+
+        hospital.OnEndYear(100, new SimRandom(4), AwardRules.Default);
+
+        var trophy = hospital.LastYearAwards.Single(a => a.Kind == YearEndAwardKind.DrinksSoldTrophy);
+        Assert.Equal(AwardRules.Default[AwardRules.CansofCokeBonus], trophy.Money);
+        Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.TrophyBonus, Amount: 1000 });
+        Assert.Equal(0, hospital.SodasSold);
+    }
+
+    [Fact]
     public void OneCureIsNotEnoughForATrophy()
     {
         var hospital = new Hospital(0, 0, reputation: 600, value: 200_000);

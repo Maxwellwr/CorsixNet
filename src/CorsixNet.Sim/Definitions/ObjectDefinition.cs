@@ -108,9 +108,11 @@ public sealed record MultiUseAnimations(IReadOnlyList<MultiUsePhase> Begin, Mult
 /// <param name="ObjectType">Object type number in map files ("thob").</param>
 /// <param name="Orientations">Layout per facing direction; directions without one cannot be used.</param>
 /// <param name="CorridorObject">Whether the object may stand outside rooms.</param>
-/// <param name="UsageNorth">Animations of use when the object faces north (and, mirrored, west), by kind of humanoid.</param>
-/// <param name="UsageEast">Animations of use when the object faces east (and, mirrored, south), by kind of humanoid.</param>
+/// <param name="UsageNorth">Animations of use when the object faces north (and, mirrored, west without its own), by kind of humanoid.</param>
+/// <param name="UsageEast">Animations of use when the object faces east (and, mirrored, south without its own), by kind of humanoid.</param>
 /// <param name="WalkInToUse">Whether the user walks from the use position onto the object first (CorsixTH's <c>walk_in_to_use</c>).</param>
+/// <param name="UsageSouth">Animations of use facing south, for objects that have their own (and, mirrored, east without its own).</param>
+/// <param name="UsageWest">Animations of use facing west, for objects that have their own (and, mirrored, north without its own).</param>
 /// <param name="MultiUsage">
 /// Animations of two people using the object together, per facing direction and by the kinds of the one using it
 /// and the one with them. A direction without its own mirrors the opposite one, as CorsixTH's <c>orient_mirror</c>.
@@ -126,7 +128,9 @@ public sealed record ObjectDefinition(
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageNorth = null,
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageEast = null,
     bool WalkInToUse = false,
-    IReadOnlyDictionary<Direction, IReadOnlyDictionary<(HumanoidType Primary, HumanoidType Secondary), IReadOnlyList<MultiUseAnimations>>>? MultiUsage = null)
+    IReadOnlyDictionary<Direction, IReadOnlyDictionary<(HumanoidType Primary, HumanoidType Secondary), IReadOnlyList<MultiUseAnimations>>>? MultiUsage = null,
+    IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageSouth = null,
+    IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageWest = null)
 {
     /// <summary>
     /// The animation variants for <paramref name="primary"/> using the object facing <paramref name="orientation"/> with
@@ -162,17 +166,37 @@ public sealed record ObjectDefinition(
 
     /// <summary>
     /// The animations for <paramref name="type"/> using the object facing <paramref name="orientation"/>, and
-    /// whether they are mirrored; south and west mirror east and north as in CorsixTH.
+    /// whether they are mirrored: a direction without animations of its own mirrors the opposite one
+    /// (<c>action_use_object_start</c>'s <c>orient_mirror</c>: north and west, east and south).
     /// </summary>
     public (UseAnimations Animations, bool Flip)? Usage(Direction orientation, HumanoidType type)
     {
-        var (table, flip) = orientation switch
+        var table = UsageTable(orientation);
+        var flip = false;
+        if (table is null)
         {
-            Direction.North => (UsageNorth, false),
-            Direction.East => (UsageEast, false),
-            Direction.South => (UsageEast, true),
-            _ => (UsageNorth, true),
-        };
+            table = UsageTable(orientation switch
+            {
+                Direction.North => Direction.West,
+                Direction.West => Direction.North,
+                Direction.East => Direction.South,
+                _ => Direction.East,
+            });
+            flip = true;
+        }
+
         return table is not null && table.TryGetValue(type, out var animations) ? (animations, flip) : null;
     }
+
+    /// <summary>All the tables of use animations the object has.</summary>
+    public IEnumerable<IReadOnlyDictionary<HumanoidType, UseAnimations>> UsageTables =>
+        new[] { UsageNorth, UsageEast, UsageSouth, UsageWest }.Where(table => table is not null)!;
+
+    private IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageTable(Direction orientation) => orientation switch
+    {
+        Direction.North => UsageNorth,
+        Direction.East => UsageEast,
+        Direction.South => UsageSouth,
+        _ => UsageWest,
+    };
 }

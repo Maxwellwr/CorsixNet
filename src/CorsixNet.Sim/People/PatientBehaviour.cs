@@ -282,6 +282,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>Days before a thirsty patient looks for a drinks machine again (CorsixTH's <c>timeout</c>).</summary>
     public int DrinkTimeout { get; internal set; }
 
+    /// <summary>
+    /// The drinks machine the patient is on the way to or buying a can from, or 0. Meanwhile <see cref="Phase"/> keeps
+    /// what they were doing, which they go back to with the can (<c>Patient:_constructGetSodaAction</c>).
+    /// </summary>
+    public int DrinksMachineId { get; private set; }
+
+    /// <summary>The use of the drinks machine once the patient stands at it.</summary>
+    private ObjectUse? _drinkUse;
+
     /// <summary>Whether the patient shows the thirsty mood (CorsixTH's <c>setMood("thirsty", "activate")</c>).</summary>
     public bool IsThirsty { get; internal set; }
 
@@ -329,6 +338,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal bool IsStatic(Humanoid humanoid) => Phase switch
     {
+        _ when DrinksMachineId != 0 => false,
         PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue => IsStandingInQueue(humanoid),
         PatientPhase.Waiting or PatientPhase.SeekRoom => !humanoid.IsMoving,
         _ => false,
@@ -340,6 +350,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (IsSetToDie && !IsInRoom && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0)
         {
             Die(simulation, humanoid);
+            return;
+        }
+
+        if (DrinksMachineId != 0)
+        {
+            GetDrink(simulation, humanoid);
             return;
         }
 
@@ -747,6 +763,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
 
         QueueTile = tile;
+
+        // Away at the drinks machine, the patient keeps the place and walks to it with the can (action_queue_get_soda).
+        if (DrinksMachineId != 0)
+        {
+            return;
+        }
+
         if (humanoid.Tile != tile || humanoid.IsMoving)
         {
             humanoid.WalkTo(simulation, tile);
@@ -761,7 +784,129 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Next = AfterRoom.GoHome;
         Phase = PatientPhase.EnteringRoom;
         TargetId = room.Id;
-        humanoid.WalkTo(simulation, door.InsideTile(room.Area));
+
+        // A patient called in while getting a drink comes in with the can, as CorsixTH's queued actions run in turn.
+        if (DrinksMachineId == 0)
+        {
+            humanoid.WalkTo(simulation, door.InsideTile(room.Area));
+        }
+    }
+
+    /// <summary>
+    /// <c>Patient:_constructGetSodaAction</c>: a thirsty patient in a corridor walks to the drinks machine and buys a can,
+    /// then goes back to what they were doing; one in a queue keeps their place (<c>action_queue_get_soda</c>).
+    /// </summary>
+    internal void GoForDrink(Simulation simulation, Humanoid humanoid, RoomObject machine)
+    {
+        if (DrinksMachineId != 0 || Phase is not (PatientPhase.SeekReception or PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue
+            or PatientPhase.SeekRoom or PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue or PatientPhase.Waiting))
+        {
+            return;
+        }
+
+        if (humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, machine)))
+        {
+            DrinksMachineId = machine.Id;
+        }
+    }
+
+    /// <summary>At the machine, the patient uses it; with the can, they go back to what they were doing.</summary>
+    private void GetDrink(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.FindEntity(DrinksMachineId) is not RoomObject machine)
+        {
+            EndDrink(simulation, humanoid);
+            return;
+        }
+
+        if (_drinkUse is null)
+        {
+            if (humanoid.Tile != RoomVisits.UseTile(simulation, machine))
+            {
+                EndDrink(simulation, humanoid);
+                return;
+            }
+
+            _drinkUse = ObjectUse.Start(simulation, humanoid, machine);
+            return;
+        }
+
+        if (_drinkUse.Update(simulation, humanoid) == ObjectUseEvent.Done)
+        {
+            AfterDrink(simulation, humanoid);
+            EndDrink(simulation, humanoid);
+        }
+    }
+
+    /// <summary>
+    /// <c>patient_drinks_machine_after_use</c>: less thirsty, more in need of the toilet, the can is paid for unless the
+    /// patient was sent home meanwhile, and six times in ten it will be dropped within 1 to 12 tiles.
+    /// </summary>
+    private void AfterDrink(Simulation simulation, Humanoid humanoid)
+    {
+        var random = simulation.Random;
+        Thirst = Math.Clamp(Thirst - (0.7m + (Needs.Random(random) * 0.3m)), 0m, 1m);
+        ToiletNeed = Math.Clamp(ToiletNeed + 0.05m + (Needs.Random(random) * 0.05m), 0m, 1m);
+        IsThirsty = false;
+        if (Phase != PatientPhase.GoingHome && humanoid.HospitalPlayer >= 0 && humanoid.HospitalPlayer < simulation.Hospitals.Count)
+        {
+            // Hospital:sellSodaToPatient and receiveMoneyForProduct.
+            var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
+            var price = simulation.Rules.SodaPrice;
+            simulation.ShowFloatingDollarSign(humanoid, price, insurance: false);
+            hospital.Receive(simulation.Hours, price, TransactionKind.Drinks, string.Empty);
+            hospital.SodasSold++;
+        }
+
+        if (Needs.Random(random) < 0.6m)
+        {
+            LitterCountdown = random.NextInclusive(1, 12);
+        }
+    }
+
+    /// <summary>Done with the drinks machine, or it is gone: back to what the patient was doing.</summary>
+    private void EndDrink(Simulation simulation, Humanoid humanoid)
+    {
+        if (_drinkUse is { Phase: not ObjectUsePhase.Done } use)
+        {
+            humanoid.ClearActionAnimation();
+            humanoid.PlaceAt(use.OldTile);
+        }
+
+        DrinksMachineId = 0;
+        _drinkUse = null;
+        switch (Phase)
+        {
+            case PatientPhase.WalkingToReception:
+                Phase = PatientPhase.SeekReception;
+                break;
+            case PatientPhase.WalkingToRoom:
+                if (simulation.FindEntity(TargetId) is Room room && simulation.FindEntity(room.DoorId) is RoomDoor door)
+                {
+                    humanoid.WalkTo(simulation, RoomVisits.OutsideTile(room, door));
+                }
+                else
+                {
+                    Phase = PatientPhase.SeekRoom;
+                }
+
+                break;
+            case PatientPhase.EnteringRoom:
+                if (simulation.FindEntity(TargetId) is Room calledIn && simulation.FindEntity(calledIn.DoorId) is RoomDoor calledDoor)
+                {
+                    humanoid.WalkTo(simulation, calledDoor.InsideTile(calledIn.Area));
+                }
+
+                break;
+            case PatientPhase.InReceptionQueue:
+            case PatientPhase.InDoorQueue:
+                if (humanoid.Tile != QueueTile)
+                {
+                    humanoid.WalkTo(simulation, QueueTile);
+                }
+
+                break;
+        }
     }
 
     /// <summary>
@@ -1298,6 +1443,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     private void Die(Simulation simulation, Humanoid humanoid)
     {
         IsSetToDie = false;
+        DrinksMachineId = 0;
+        _drinkUse = null;
         var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
         PatientCare.RecordDeath(simulation, hospital, Disease is { } disease ? hospital.CaseOf(disease, simulation.Rules.Diseases) : null);
         if (EmergencyIndex > 0)
@@ -1339,6 +1486,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         TargetId = 0;
         var points = simulation.Arrivals.SpawnPointsOf(simulation.Map);
         HomeTile = points.Count > 0 ? points[simulation.Random.Next(points.Count)] : humanoid.Tile;
+
+        // Sent home on the way to the drinks machine, the patient goes; at the machine, they finish buying first (the
+        // use is must_happen), and the walk home starts after.
+        if (DrinksMachineId != 0 && _drinkUse is not null)
+        {
+            return;
+        }
+
+        DrinksMachineId = 0;
         if (!humanoid.WalkTo(simulation, HomeTile))
         {
             HomeTile = humanoid.Tile;
@@ -1387,6 +1543,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteDecimal(Thirst);
         writer.WriteDecimal(ToiletNeed);
         writer.WriteInt32(DrinkTimeout);
+        writer.WriteInt32(DrinksMachineId);
+        ObjectUse.WriteOptional(writer, _drinkUse);
         writer.WriteBool(IsThirsty);
         writer.WriteBool(IsSad);
         writer.WriteInt32(_healthHistory.Count);
@@ -1459,6 +1617,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.Thirst = reader.ReadDecimal();
         patient.ToiletNeed = reader.ReadDecimal();
         patient.DrinkTimeout = reader.ReadInt32();
+        patient.DrinksMachineId = reader.ReadInt32();
+        patient._drinkUse = ObjectUse.ReadOptional(reader);
         patient.IsThirsty = reader.ReadBool();
         patient.IsSad = reader.ReadBool();
         var days = reader.ReadCount(HealthHistorySize);

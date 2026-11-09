@@ -40,9 +40,9 @@ objects from the level file.
 - Object state: plants being watered, bins filling (`plant.lua`, `bin.lua`), litter being swept and the
   "need a handyman" advice. Plants drooping (`PlantState`), radiators heating tiles, litter (`Litter`, its ranks)
   and patients dropping rubbish (`Littering`) are done.
-- Optional room objects: buying extra items in the furniture step and later (room's "Choose Items"
-  list with counts and prices), selling objects.
-- Object-specific use: benches (sitting while queueing), drinks machine (thirst), toilets, staff-room
+- Optional room objects: the "Choose Items" window (counts and prices) and buying them after the furniture step,
+  selling objects. Extra objects placed while furnishing are bought and sold back.
+- Object-specific use: benches (sitting while queueing), toilets, staff-room
   sofa/TV/video game/pool table, training projector and lecture chairs, research desk/computer/autopsy.
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
 - Special entities: helicopter (emergencies), gates to hell (death) (`objects/helicopter.lua`, `gates_to_hell.lua`).
@@ -92,9 +92,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: buying drinks, toilets and peeing, vomiting, boredom, leaving angry, complaining (warmth and its
+- Patient needs: toilets and peeing, vomiting, boredom, leaving angry, complaining (warmth and its
   effect on happiness, prices changing happiness, health dropping, patients giving up, and thirst and the need for
-  the toilet growing (`Needs`) are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
+  the toilet growing (`Needs`), and thirsty patients buying a can from the drinks machine, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
 - Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,
@@ -128,7 +128,7 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
 - Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
-- Floating dollar signs for products (sodas: the drinks machine is not used yet). Those for treatments are done.
+- Floating dollar signs are done for treatments and cans from the drinks machine.
 
 ## 5. Economy, bank, loans, prices
 
