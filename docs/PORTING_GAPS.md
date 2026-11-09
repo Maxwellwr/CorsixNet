@@ -92,8 +92,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   patients rerouting to shorter queues (`queue.lua`, `dialogs/queue_dialog.lua`).
 - Patient window: health, happiness, thirst, warmth, diagnosis progress, send home, guess cure
   (`dialogs/patient.lua`).
-- Faxes asking what to do with a patient (guess cure, send home, wait), patient policy thresholds
-  (`fullscreen/hospital_policy.lua`, `fax.lua`). Partial: default policy values are applied.
+- Faxes asking what to do with a patient (guess cure, send home, wait) and the policy window
+  (`fullscreen/hospital_policy.lua`, `fax.lua`). The policies themselves are done (`HospitalPolicies`,
+  `SetPolicyCommand`).
 - Emergencies: helicopter, timed group of patients with one disease, bonus or penalty
   (`world.lua` `nextEmergency`, `objects/helicopter.lua`).
 - Epidemics: contagious diseases spreading between patients, inspector, vaccination by nurses, cover-up
