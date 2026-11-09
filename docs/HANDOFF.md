@@ -179,6 +179,8 @@ Done and committed:
   Hotkeys come from hotkeys.txt beside config.txt (CorsixTH's action names, written with the defaults
   when missing): the dialogs, Ctrl+H the adviser's history, Shift+A the adviser on or off (saved),
   pause, speed up and quick save/load. The camera, speeds and stand-in keys stay fixed.
+  Menu, New game (new_game.lua): the original campaign from level 1 at Junior, Doctor or Consultant
+  (the difficulties whose level files are installed); the levels list follows that campaign.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
