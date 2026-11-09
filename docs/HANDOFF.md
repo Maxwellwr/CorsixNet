@@ -102,8 +102,9 @@ Done and committed:
   fax, PR #124), epidemics (I / Shift+I cover up or declare, PR #125) and vaccinating their patients (J,
   PR #126), answering waiting patients' faxes (K / Shift+K / Ctrl+K, PR #127), computer opponents that
   take their turns for patients and count them as visitors (PR #128), patients dropping litter and
-  people minding it (PR #129). No game data in the cloud: real-data tests were skipped there and the
-  client was not run, so these want a look on MSI. Save format version 36.
+  people minding it (PR #129), rat holes and rats coming with litter, shot with X (PR #130). No game
+  data in the cloud: real-data tests were skipped there and the client was not run, so these want a look
+  on MSI. Save format version 37.
 
 Not done yet:
 

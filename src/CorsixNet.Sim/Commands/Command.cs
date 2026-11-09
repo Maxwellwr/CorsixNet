@@ -39,6 +39,7 @@ public enum CommandKind : ushort
     AnswerEpidemic = 24,
     Vaccinate = 25,
     AnswerPatient = 26,
+    ShootRat = 27,
 }
 
 /// <summary>
@@ -88,6 +89,7 @@ public abstract record Command
             CommandKind.AnswerEpidemic => new AnswerEpidemicCommand(reader.ReadBool()),
             CommandKind.Vaccinate => new VaccinateCommand(reader.ReadInt32()),
             CommandKind.AnswerPatient => new AnswerPatientCommand(reader.ReadInt32(), ReadPatientAnswer(reader)),
+            CommandKind.ShootRat => new ShootRatCommand(reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -670,6 +672,25 @@ public sealed record AnswerPatientCommand(int PatientId, PatientAnswer Answer) :
         writer.WriteInt32(PatientId);
         writer.WriteByte((byte)Answer);
     }
+}
+
+/// <summary>
+/// Shoots a rat of the issuing player's hospital (CorsixTH's click on a rat, <c>Rat:onClick</c>); a dead rat is left on
+/// the floor.
+/// </summary>
+public sealed record ShootRatCommand(int RatId) : Command
+{
+    public override CommandKind Kind => CommandKind.ShootRat;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RatId) is Rat { IsGone: false } rat && rat.Player == player)
+        {
+            Disasters.Rats.Shoot(simulation, player, rat);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RatId);
 }
 
 /// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>

@@ -74,6 +74,15 @@ internal static class Littering
     /// <summary>Whether anything stands on the tile, as CorsixTH's <c>World:getObjects</c> knows objects by their own tile.</summary>
     private static bool AnyObjectAt(Simulation simulation, TilePosition tile)
     {
+        // A rat hole in a north or west wall is an object on its tile too.
+        foreach (var hospital in simulation.Hospitals)
+        {
+            if (hospital.Ratholes.Any(hole => hole.IsVisible && hole.Tile == tile))
+            {
+                return true;
+            }
+        }
+
         foreach (var entity in simulation.Entities)
         {
             var at = entity switch

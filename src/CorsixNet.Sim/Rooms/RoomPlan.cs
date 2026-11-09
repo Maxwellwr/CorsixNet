@@ -384,12 +384,16 @@ public static class RoomBuilder
             DoorOutsideWasBuildable = map[outside.X, outside.Y].Has(TileFlags.Buildable),
         });
 
-        // Room:Room's World:prepareRectangleTilesForBuild: litter goes from the room's area.
-        for (var y = area.Y; y < area.Bottom; y++)
+        // Room:Room's World:prepareRectangleTilesForBuild: litter goes from the room's area, rat holes from its edge.
+        for (var x = area.X; x < area.Right; x++)
         {
-            for (var x = area.X; x < area.Right; x++)
+            for (var y = area.Y; y < area.Bottom; y++)
             {
                 Litter.RemoveAllAt(simulation, new TilePosition(x, y));
+                if (x == area.X || x == area.Right - 1 || y == area.Y || y == area.Bottom - 1)
+                {
+                    Disasters.Rats.RemoveRatholesAt(simulation, new TilePosition(x, y));
+                }
             }
         }
 

@@ -12,6 +12,7 @@ public enum EntityKind : byte
     RoomObject = 5,
     ConstructionSite = 6,
     Litter = 7,
+    Rat = 8,
 }
 
 /// <summary>
@@ -55,6 +56,7 @@ public abstract class Entity
             EntityKind.RoomObject => RoomObject.ReadState(id, reader),
             EntityKind.ConstructionSite => Rooms.ConstructionSite.ReadState(id, reader),
             EntityKind.Litter => Litter.ReadState(id, reader),
+            EntityKind.Rat => Rat.ReadState(id, reader),
             _ => throw new InvalidDataException($"Unknown entity kind {(byte)kind}."),
         };
     }

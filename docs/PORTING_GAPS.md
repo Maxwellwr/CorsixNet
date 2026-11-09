@@ -45,8 +45,9 @@ objects from the level file.
 - Object-specific use: benches (sitting while queueing), drinks machine (thirst), toilets, staff-room
   sofa/TV/video game/pool table, training projector and lecture chairs, research desk/computer/autopsy.
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
-- Special entities: helicopter (emergencies), gates to hell (death), rat holes and rats
-  (`objects/helicopter.lua`, `gates_to_hell.lua`, `rathole.lua`, `entities/rat.lua`).
+- Special entities: helicopter (emergencies), gates to hell (death) (`objects/helicopter.lua`, `gates_to_hell.lua`).
+  Rat holes and rats are done (`Rats`, `Rat`), except clicking a rat (X shoots the one by the cursor), the kill
+  cursor and sounds, the debug rat, and rat holes closing when a room is edited or removed.
 
 ## 3. Staff and their behaviour
 
@@ -113,8 +114,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
 - Earthquakes damaging machines and knocking patients over (`earthquake.lua`); planning, the warning and main
   quakes and the screen shake are done (`Earthquakes`).
-- Rats, vomit and pee, soot from explosions, hospital cleanliness (`entities/rat.lua`, `humanoid_actions/vomit.lua`,
-  `pee.lua`, `room.lua`); patients dropping rubbish and people minding litter are done (`Littering`, `Feelings`).
+- Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
+  patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
 - Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
