@@ -16,6 +16,9 @@ public sealed class SimReader
         _stream = stream;
     }
 
+    /// <summary>The format version of the state being read, for readers of parts that changed since an older version.</summary>
+    public int Version { get; set; }
+
     public byte ReadByte()
     {
         var value = _stream.ReadByte();

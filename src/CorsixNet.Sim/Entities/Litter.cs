@@ -112,6 +112,9 @@ public sealed class Litter : Entity
         return simulation.AddEntity(id => new Litter(id, player, type, tile, isMirrored));
     }
 
+    /// <summary><c>Litter:remove</c>: swept up by a handyman.</summary>
+    internal void Remove() => IsRemoved = true;
+
     /// <summary><c>World:removeAllLitter</c>: the cleanable litter of a tile goes, as when something is built there.</summary>
     internal static void RemoveAllAt(Simulation simulation, TilePosition tile)
     {

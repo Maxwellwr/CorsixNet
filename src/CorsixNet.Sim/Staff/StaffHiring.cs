@@ -201,6 +201,9 @@ public static class StaffHiring
 
         // Staff:onPlaceInCorridor.
         Tiredness.UpdateSpeed(simulation, staff);
+
+        // Room:onHumanoidEnter, when put down in a room.
+        RoomVisits.SettleIdleStaff(simulation, staff, placed: true);
         return staff;
     }
 
