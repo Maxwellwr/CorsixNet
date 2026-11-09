@@ -64,6 +64,21 @@ public enum PatientPhase : byte
     /// <summary>In general diagnosis: dressing behind the screen.</summary>
     Dressing,
 
+    /// <summary>In the toilets: walking to a free toilet.</summary>
+    WalkingToLoo,
+
+    /// <summary>In the toilets: on the toilet.</summary>
+    UsingLoo,
+
+    /// <summary>In the toilets: walking to a free sink.</summary>
+    WalkingToSink,
+
+    /// <summary>In the toilets: washing their hands.</summary>
+    UsingSink,
+
+    /// <summary>In the toilets: waiting a moment for a sink to come free.</summary>
+    WaitingForSink,
+
     /// <summary>Walking out of the room's door.</summary>
     LeavingRoom,
 
@@ -97,6 +112,9 @@ public enum ToiletVisit : byte
 
     /// <summary><c>"no-toilets"</c>: the patient wanted the toilet and the hospital has none.</summary>
     NoToilets,
+
+    /// <summary><c>"yes"</c>: on the way to or in the toilets.</summary>
+    Yes,
 }
 
 /// <summary>What a line of the patient window's treatment history says.</summary>
@@ -163,6 +181,12 @@ internal enum AfterRoom : byte
 
     /// <summary>The treatment failed and the patient dies.</summary>
     Die,
+
+    /// <summary>Out of the toilets: back to the room or the reception desk the patient was going to (<c>ToiletRoom:dealtWithPatient</c>).</summary>
+    AfterToilets,
+
+    /// <summary>No toilet was free inside: back into the toilets' queue.</summary>
+    ToiletsAgain,
 }
 
 /// <summary>
@@ -331,6 +355,21 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>Where the patient stands with the toilet (<c>going_to_toilet</c>).</summary>
     public ToiletVisit GoingToToilet { get; internal set; }
 
+    /// <summary>The toilet or sink the patient goes to or uses in the toilets, which nobody else takes (<c>reserved_for</c>).</summary>
+    public int ToiletObjectId { get; private set; }
+
+    /// <summary>Rounds of the toilet's in-use animation left (<c>use_time</c>).</summary>
+    private int _looRounds;
+
+    /// <summary>Ticks left before looking for a free sink again.</summary>
+    private int _sinkWait;
+
+    /// <summary>The room type the patient was going to before the toilets, or empty (<c>next_room_to_visit</c>).</summary>
+    private string _afterToiletsRoom = string.Empty;
+
+    /// <summary>Whether the patient was looking for the reception desk before the toilets.</summary>
+    private bool _afterToiletsReception;
+
     /// <summary>
     /// Whether the patient is away from what they were doing: getting a drink or doing something on the spot. Their
     /// <see cref="Phase"/> keeps what they go back to.
@@ -444,6 +483,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             case PatientPhase.WalkingToObject:
                 ArriveAtObject(simulation, humanoid);
                 break;
+            case PatientPhase.WalkingToLoo:
+            case PatientPhase.UsingLoo:
+            case PatientPhase.WalkingToSink:
+            case PatientPhase.UsingSink:
+            case PatientPhase.WaitingForSink:
+                ToiletsStep(simulation, humanoid);
+                break;
             case PatientPhase.UsingObject:
                 if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
                 {
@@ -483,6 +529,16 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     case AfterRoom.SeekRoom:
                         Phase = PatientPhase.SeekRoom;
                         TargetId = 0;
+                        break;
+                    case AfterRoom.AfterToilets:
+                        AfterToilets(simulation, humanoid);
+                        break;
+                    case AfterRoom.ToiletsAgain:
+                        if (!GoToToilets(simulation, humanoid))
+                        {
+                            AfterToilets(simulation, humanoid);
+                        }
+
                         break;
                     case AfterRoom.Die:
                         // Dying (falling down, and the trip to heaven or hell) is not animated yet: the patient is gone.
@@ -939,6 +995,199 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>SeekToiletsAction</c>: the patient leaves any queue and walks to the best toilets of their hospital
+    /// (<c>findRoomNear(self, "toilets", nil, "advanced")</c>), remembering where they were going. Returns false when
+    /// the hospital has none or the patient is not in a corridor doing something they can break off.
+    /// </summary>
+    internal bool GoToToilets(Simulation simulation, Humanoid humanoid)
+    {
+        if (IsSidetracked || IsSetToDie || Phase is not (PatientPhase.SeekReception or PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue
+            or PatientPhase.SeekRoom or PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue or PatientPhase.LeavingRoom)
+            || RoomVisits.FindBest(simulation, humanoid, RoomVisits.ToiletsRoom) is not { } room
+            || simulation.FindEntity(room.DoorId) is not RoomDoor door)
+        {
+            return false;
+        }
+
+        // Out of the toilets again (no toilet was free), the patient keeps what they were going to do.
+        if (Phase != PatientPhase.LeavingRoom)
+        {
+            _afterToiletsReception = Phase is PatientPhase.SeekReception or PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue;
+            _afterToiletsRoom = Phase is PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue && simulation.FindEntity(TargetId) is Room going
+                ? going.RoomType
+                : string.Empty;
+            LeaveQueue(simulation, humanoid);
+        }
+
+        GoingToToilet = ToiletVisit.Yes;
+        Waiting = -1;
+        TargetId = room.Id;
+        Phase = PatientPhase.WalkingToRoom;
+        humanoid.WalkTo(simulation, RoomVisits.OutsideTile(room, door));
+        return true;
+    }
+
+    /// <summary>
+    /// <c>ToiletRoom:onHumanoidEnter</c>: the patient walks to the nearest free toilet; with none free, they go out and
+    /// queue again.
+    /// </summary>
+    private void EnterToilets(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (RoomVisits.FindFreeObject(simulation, room, humanoid, "loo") is not { } loo)
+        {
+            Next = AfterRoom.ToiletsAgain;
+            LeaveRoom(simulation, humanoid);
+            return;
+        }
+
+        ToiletObjectId = loo.Id;
+        Phase = PatientPhase.WalkingToLoo;
+        _looRounds = simulation.Random.NextInclusive(0, 2);
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, loo));
+    }
+
+    /// <summary>
+    /// The toilets' loop callback and the sink: after the rounds on the toilet the patient needs it 0.85 to 1 less;
+    /// standard patients then wash their hands at a free sink, or wait a moment for one (half the time) or leave without,
+    /// unhappy; then they go back to what they were doing.
+    /// </summary>
+    private void ToiletsStep(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.FindEntity(TargetId) is not Room room)
+        {
+            LeaveToilets(simulation, humanoid);
+            return;
+        }
+
+        var placed = simulation.FindEntity(ToiletObjectId) as RoomObject;
+        switch (Phase)
+        {
+            case PatientPhase.WalkingToLoo:
+            case PatientPhase.WalkingToSink:
+                if (placed is null || humanoid.Tile != RoomVisits.UseTile(simulation, placed))
+                {
+                    LeaveToilets(simulation, humanoid);
+                    return;
+                }
+
+                var onLoo = Phase == PatientPhase.WalkingToLoo;
+                Use = ObjectUse.Start(simulation, humanoid, placed, prolonged: onLoo);
+                Phase = onLoo ? PatientPhase.UsingLoo : PatientPhase.UsingSink;
+                break;
+            case PatientPhase.UsingLoo:
+                switch (Use?.Update(simulation, humanoid) ?? ObjectUseEvent.Done)
+                {
+                    case ObjectUseEvent.Loop:
+                        _looRounds--;
+                        if (_looRounds <= 0)
+                        {
+                            Relieved(simulation);
+                            Use!.Interrupt();
+                        }
+
+                        break;
+                    case ObjectUseEvent.Done:
+                        if (GoingToToilet == ToiletVisit.Yes)
+                        {
+                            Relieved(simulation);
+                        }
+
+                        Use = null;
+                        ToiletObjectId = 0;
+                        if (humanoid.Type is HumanoidType.StandardMalePatient or HumanoidType.StandardFemalePatient)
+                        {
+                            GoToSink(simulation, humanoid, room);
+                        }
+                        else
+                        {
+                            LeaveToilets(simulation, humanoid);
+                        }
+
+                        break;
+                }
+
+                break;
+            case PatientPhase.UsingSink:
+                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+                {
+                    LeaveToilets(simulation, humanoid);
+                }
+
+                break;
+            case PatientPhase.WaitingForSink:
+                _sinkWait--;
+                if (_sinkWait <= 0)
+                {
+                    GoToSink(simulation, humanoid, room);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>The toilets' loop callback when the use time runs out.</summary>
+    private void Relieved(Simulation simulation)
+    {
+        IsNeedingToilet = false;
+        ToiletNeed = Math.Clamp(ToiletNeed - (0.85m + (Needs.Random(simulation.Random) * 0.15m)), 0m, 1m);
+        GoingToToilet = ToiletVisit.No;
+    }
+
+    /// <summary><c>toilets_find_sink</c>.</summary>
+    private void GoToSink(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (RoomVisits.FindFreeObject(simulation, room, humanoid, "sink") is { } sink)
+        {
+            ToiletObjectId = sink.Id;
+            Phase = PatientPhase.WalkingToSink;
+            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, sink));
+            return;
+        }
+
+        // If there is a queue to wash hands there is a chance we might not bother, but the patient won't be happy.
+        if (simulation.Random.NextInclusive(1, 4) > 2)
+        {
+            Phase = PatientPhase.WaitingForSink;
+            _sinkWait = 5;
+        }
+        else
+        {
+            Feelings.ChangeHappiness(simulation, humanoid, -0.08m);
+            LeaveToilets(simulation, humanoid);
+        }
+    }
+
+    /// <summary><c>ToiletRoom:dealtWithPatient</c>: out of the toilets, then back to what the patient was doing.</summary>
+    private void LeaveToilets(Simulation simulation, Humanoid humanoid)
+    {
+        ToiletObjectId = 0;
+        Next = AfterRoom.AfterToilets;
+        LeaveRoom(simulation, humanoid);
+    }
+
+    /// <summary>Back to the room the patient was going to (<c>SeekRoomAction</c>), or to the reception desk.</summary>
+    private void AfterToilets(Simulation simulation, Humanoid humanoid)
+    {
+        TargetId = 0;
+        if (GoingToToilet == ToiletVisit.Yes)
+        {
+            GoingToToilet = ToiletVisit.No;
+        }
+
+        var roomType = _afterToiletsRoom;
+        _afterToiletsRoom = string.Empty;
+        if (_afterToiletsReception)
+        {
+            _afterToiletsReception = false;
+            Phase = PatientPhase.SeekReception;
+        }
+        else if (roomType.Length == 0 || !GoToBestRoom(simulation, humanoid, roomType))
+        {
+            Phase = PatientPhase.SeekRoom;
+        }
+    }
+
+    /// <summary>
     /// <c>Patient:atFullyEmptyTile</c>: walking, standing about, looking for a room or queueing, not on the way home or to
     /// die, on a buildable hospital tile of the patient's own hospital.
     /// </summary>
@@ -1307,6 +1556,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     private void EnterRoom(Simulation simulation, Humanoid humanoid)
     {
+        if (simulation.FindEntity(TargetId) is Room { RoomType: RoomVisits.ToiletsRoom } toilets)
+        {
+            EnterToilets(simulation, humanoid, toilets);
+            return;
+        }
+
         if (simulation.FindEntity(TargetId) is not Room room || RoomVisits.PatientObject(simulation, room) is not { } placed)
         {
             LeaveRoom(simulation, humanoid);
@@ -1722,6 +1977,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteBool(HasVomited);
         writer.WriteBool(IsNeedingToilet);
         writer.WriteByte((byte)GoingToToilet);
+        writer.WriteInt32(ToiletObjectId);
+        writer.WriteInt32(_looRounds);
+        writer.WriteInt32(_sinkWait);
+        writer.WriteString(_afterToiletsRoom);
+        writer.WriteBool(_afterToiletsReception);
         writer.WriteBool(IsThirsty);
         writer.WriteBool(IsSad);
         writer.WriteInt32(_healthHistory.Count);
@@ -1803,7 +2063,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.HasVomited = reader.ReadBool();
         patient.IsNeedingToilet = reader.ReadBool();
         var toilet = reader.ReadByte();
-        patient.GoingToToilet = toilet <= (byte)ToiletVisit.NoToilets ? (ToiletVisit)toilet : throw new InvalidDataException($"Unknown toilet visit {toilet}.");
+        patient.GoingToToilet = toilet <= (byte)ToiletVisit.Yes ? (ToiletVisit)toilet : throw new InvalidDataException($"Unknown toilet visit {toilet}.");
+        patient.ToiletObjectId = reader.ReadInt32();
+        patient._looRounds = reader.ReadInt32();
+        patient._sinkWait = reader.ReadInt32();
+        patient._afterToiletsRoom = reader.ReadString();
+        patient._afterToiletsReception = reader.ReadBool();
         patient.IsThirsty = reader.ReadBool();
         patient.IsSad = reader.ReadBool();
         var days = reader.ReadCount(HealthHistorySize);

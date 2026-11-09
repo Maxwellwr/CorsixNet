@@ -15,8 +15,15 @@ public enum ObjectUsePhase : byte
     WalkIn,
 
     Begin,
+
+    /// <summary>The second begin animation (<c>begin_use_2</c>).</summary>
+    Begin2,
+
     InUse,
     Finish,
+
+    /// <summary>The second finish animation (<c>finish_use_2</c>).</summary>
+    Finish2,
 
     /// <summary>Stepping back off the object.</summary>
     WalkOut,
@@ -69,13 +76,20 @@ public sealed class ObjectUse
     public bool IsUsing => Phase is ObjectUsePhase.Begin or ObjectUsePhase.InUse or ObjectUsePhase.Finish;
 
     /// <summary>Starts using <paramref name="placed"/>; the humanoid stands at its use position.</summary>
-    internal static ObjectUse Start(Simulation simulation, Humanoid humanoid, RoomObject placed)
+    /// <param name="simulation">The simulation.</param>
+    /// <param name="humanoid">Who uses the object.</param>
+    /// <param name="placed">The object.</param>
+    /// <param name="prolonged">
+    /// False to play the in-use animation once even where the object has begin, in-use and finish animations
+    /// (CorsixTH's <c>setProlongedUsage(false)</c>).
+    /// </param>
+    internal static ObjectUse Start(Simulation simulation, Humanoid humanoid, RoomObject placed, bool prolonged = true)
     {
         var layout = Layout(simulation, placed);
         var old = layout?.FinishUsePosition is { } finish
             ? new TilePosition(placed.Tile.X + finish.X, placed.Tile.Y + finish.Y)
             : humanoid.Tile;
-        var use = new ObjectUse(placed.Id, old);
+        var use = new ObjectUse(placed.Id, old) { StopRequested = !prolonged };
         if (simulation.Content.FindObject(placed.ObjectType)?.WalkInToUse == true)
         {
             use.Phase = ObjectUsePhase.WalkIn;
@@ -195,9 +209,11 @@ public sealed class ObjectUse
         return phase switch
         {
             ObjectUsePhase.Begin => animations.Begin,
+            ObjectUsePhase.Begin2 => animations.Begin2,
             ObjectUsePhase.InUse when animations.InUse.Count == 1 => animations.InUse[0],
             ObjectUsePhase.InUse when animations.InUse.Count > 1 => animations.InUse[simulation.Random.Next(animations.InUse.Count)],
             ObjectUsePhase.Finish => animations.Finish,
+            ObjectUsePhase.Finish2 => animations.Finish2,
             _ => null,
         };
     }

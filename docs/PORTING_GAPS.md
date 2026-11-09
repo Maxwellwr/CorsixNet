@@ -16,7 +16,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 |---|---|
 | Diagnosis rooms: X-ray, scanner, ultrascan, blood machine, cardiogram, psychiatry (also a treatment room), ward (also treatment) | `rooms/x_ray_room.lua`, `scanner_room.lua`, `ultrascan.lua`, `blood_machine_room.lua`, `cardiogram.lua`, `psych.lua`, `ward.lua` |
 | Treatment rooms: operating theatre, inflation, fracture clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination | `rooms/operating_theatre.lua`, `inflation.lua`, `fracture_clinic.lua`, `hair_restoration.lua`, `slack_tongue.lua`, `dna_fixer.lua`, `electrolysis.lua`, `jelly_vat.lua`, `decontamination.lua` |
-| Facilities: staff room, toilets, training room, research department | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
+| Facilities: staff room, training room, research department | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Rooms discovered by research (availability by level and at the start is ported) | `research_department.lua` |
 | Editing a finished room (back to blueprint: resize, move the door; add, move or remove objects), deleting a room | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
@@ -42,7 +42,7 @@ objects from the level file.
   and patients dropping rubbish (`Littering`) are done.
 - Optional room objects: the "Choose Items" window (counts and prices) and buying them after the furniture step,
   selling objects. Extra objects placed while furnishing are bought and sold back.
-- Object-specific use: benches (sitting while queueing), toilets, staff-room
+- Object-specific use: benches (sitting while queueing), staff-room
   sofa/TV/video game/pool table, training projector and lecture chairs, research desk/computer/autopsy.
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
 - Special entities: helicopter (emergencies), gates to hell (death) (`objects/helicopter.lua`, `gates_to_hell.lua`).
@@ -92,9 +92,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: going to the toilets, boredom, leaving angry, complaining (warmth and its
+- Patient needs: boredom, leaving angry, complaining (warmth and its
   effect on happiness, prices changing happiness, health dropping, patients giving up, and thirst and the need for
-  the toilet growing (`Needs`), thirsty patients buying a can from the drinks machine, and vomiting and peeing on the floor, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
+  the toilet growing (`Needs`), thirsty patients buying a can from the drinks machine, vomiting and peeing on the floor, and going to the toilets, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
 - Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,

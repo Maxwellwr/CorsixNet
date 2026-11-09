@@ -148,6 +148,7 @@ internal sealed class MapViewScreen : IScreen
     private bool _demoDeskPending;
     private bool _demoDiagnosisPending;
     private bool _demoMachinePending;
+    private bool _demoToiletsPending;
     private int? _selected;
 
     /// <summary>The member of staff picked up with M, to be put down with M again.</summary>
@@ -219,6 +220,7 @@ internal sealed class MapViewScreen : IScreen
         _demoDeskPending = demo;
         _demoDiagnosisPending = demo;
         _demoMachinePending = demo;
+        _demoToiletsPending = demo;
         if (demo)
         {
             foreach (var item in (string[])["desk", "cabinet", "chair", .. DemoRadiators])
@@ -621,7 +623,7 @@ internal sealed class MapViewScreen : IScreen
         }
 
         // The demo's steps belong to the game it was started on.
-        _demoPending = _demoDeskPending = _demoDiagnosisPending = _demoMachinePending = false;
+        _demoPending = _demoDeskPending = _demoDiagnosisPending = _demoMachinePending = _demoToiletsPending = false;
         _demoFurniture.Clear();
         PrepareMapIfReady();
         ShowNotice($"Loaded {Path.GetFileName(path)}");
@@ -851,6 +853,34 @@ internal sealed class MapViewScreen : IScreen
     }
 
     /// <summary>
+    /// Once the demo's general diagnosis works, builds toilets near the camera with two toilets and a sink, for the
+    /// patients who need them.
+    /// </summary>
+    private void BuildDemoToilets()
+    {
+        if (!_demoToiletsPending || _session is null || Simulation is not { } simulation
+            || !simulation.Entities.OfType<Room>().Any(room => room is { IsActive: true, RoomType: "general_diag" }))
+        {
+            return;
+        }
+
+        _demoToiletsPending = false;
+        var start = simulation.Map.GetCameraTile(Math.Min(_session.Player, simulation.Map.PlayerCount - 1));
+        if (simulation.Content.FindRoom("toilets") is not { } room || FindRoomSpot(simulation.Map, room, start) is not { } plan)
+        {
+            return;
+        }
+
+        _session.Submit(new BuildRoomCommand(plan));
+        foreach (var item in new[] { "loo", "loo", "sink" })
+        {
+            _demoFurniture.Enqueue(item);
+        }
+
+        EnqueueDemoRadiators();
+    }
+
+    /// <summary>
     /// Once the demo's reception desk stands, buys a drinks machine a few tiles from it, for the patients who grow thirsty
     /// while they wait.
     /// </summary>
@@ -1043,6 +1073,7 @@ internal sealed class MapViewScreen : IScreen
         PlaceDemoReceptionDesk();
         BuildDemoGeneralDiagnosis();
         PlaceDemoDrinksMachine();
+        BuildDemoToilets();
         if (Simulation is not { } simulation || !_wander || _hospitalTiles.Count == 0 || _session.IsPaused)
         {
             return;
@@ -1310,7 +1341,7 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
-        var roomToBuild = shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
+        var roomToBuild = alt ? "toilets" : shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
         if (pressed(Keys.B) && !_buildTool.IsActive && simulation.Content.FindRoom(roomToBuild) is { } roomType)
         {
             // As in the original, a room can only be started once discovered and with its whole cost in the bank.
@@ -1896,7 +1927,7 @@ internal sealed class MapViewScreen : IScreen
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-6: speed   Z: hold to speed up" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office (Shift: pharmacy, Ctrl: general diagnosis)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build GP office (Shift: pharmacy, Ctrl: general diagnosis, Alt: toilets)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];
