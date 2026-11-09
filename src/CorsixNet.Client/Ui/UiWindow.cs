@@ -88,6 +88,12 @@ internal interface IWindowHost
 
     /// <summary>Puts a candidate for hire on the cursor, to be placed in the hospital with a click (CorsixTH's UIPlaceStaff).</summary>
     void StartHiring(StaffClass staffClass, int index);
+
+    /// <summary>Whether there is a level after this one to go on to.</summary>
+    bool HasNextLevel { get; }
+
+    /// <summary>Starts the next level, or this one again.</summary>
+    void StartLevel(bool next);
 }
 
 /// <summary>

@@ -145,6 +145,9 @@ Done and committed:
   right click or Esc cancels; Ctrl+1-4 still hire at once), F4 the town map (counts, heating, parcels
   with Buy), and the watch opens by itself while a countdown runs (opening, emergency, epidemic) with
   "Open now".
+  F7 progress report (the level's goals and where the hospital stands), F11 the cheats window (F11 no
+  longer runs all research at once; it is a button there), the annual report at each year end, and
+  the level's end (won: salary offer and Next level; lost: why, and Restart).
 
 Not done yet:
 

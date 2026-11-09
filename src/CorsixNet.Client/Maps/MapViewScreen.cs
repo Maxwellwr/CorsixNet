@@ -39,7 +39,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// the view and Ctrl+digit go back to it, Home reset camera,
 /// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or quit.
 /// Clicking a member of staff, a patient, a room or a desk opens their window; C faxes, Y hire staff, F4 town map.
-/// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
+/// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F7 progress report, F11 cheats, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
@@ -154,6 +154,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The candidate for hire on the cursor, to be placed with a click.</summary>
     private (StaffClass Class, StaffProfile Profile)? _hiring;
+
+    /// <summary>The year when last looked, so that a new one opens the annual report.</summary>
+    private int? _lastYearSeen;
+
+    /// <summary>The level's outcome when last looked, so that winning or losing opens the level's end.</summary>
+    private EndOutcome _lastOutcome;
 
     /// <summary>Whether a countdown ran when last looked, so that a new one opens the watch.</summary>
     private bool _watchRan;
@@ -619,6 +625,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _levelIndex = index;
+        _lastYearSeen = null;
+        _lastOutcome = EndOutcome.None;
         _session?.Dispose();
         _session = null;
         try
@@ -1239,12 +1247,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _wander = !_wander;
         }
 
-        // Until the cheats window exists, F11 is CorsixTH's all_research cheat.
-        if (pressed(Keys.F11))
-        {
-            _session.Submit(new CheatCommand(CheatKind.AllResearch));
-            ShowNotice("Cheat: all research");
-        }
 
         // Until the watch window exists, Shift+O opens the hospital early, as clicking the watch's button does.
         if (pressed(Keys.O) && (keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift)) && _session.Player < simulation.Hospitals.Count && !simulation.Hospitals[_session.Player].IsOpen)
@@ -1958,6 +1960,21 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _watchRan = watch;
+
+        // The annual report at the year end, the winning letter or losing fax at the level's end.
+        var hospital = Simulation!.Hospitals[_session.Player];
+        if (_lastYearSeen is { } seen && Simulation.Date.Year > seen)
+        {
+            _windows.Open(new AnnualReportWindow());
+        }
+
+        _lastYearSeen = Simulation.Date.Year;
+        if (hospital.Outcome != EndOutcome.None && hospital.Outcome != _lastOutcome)
+        {
+            _windows.Open(new LevelEndWindow());
+        }
+
+        _lastOutcome = hospital.Outcome;
         if (pressed(Keys.Y))
         {
             _windows.Toggle(new HireWindow());
@@ -1977,8 +1994,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             (Keys.F4, () => new TownMapWindow()),
             (Keys.F5, () => new CasebookWindow()),
             (Keys.F6, () => new ResearchWindow()),
+            (Keys.F7, () => new ProgressReportWindow()),
             (Keys.F8, () => new GraphFiguresWindow()),
             (Keys.F9, () => new PolicyWindow()),
+            (Keys.F11, () => new CheatsWindow()),
         ];
         foreach (var (key, window) in dialogs)
         {
@@ -2017,6 +2036,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     void IWindowHost.CenterOn(TilePosition tile) => _camera.Center = Camera.TileCenter(tile.X, tile.Y);
+
+    bool IWindowHost.HasNextLevel => _session is LocalSession && _levelIndex + 1 < _levels.Count;
+
+    void IWindowHost.StartLevel(bool next)
+    {
+        if (_session is not LocalSession)
+        {
+            return;
+        }
+
+        _windows.CloseAll();
+        SelectLevel(next ? Math.Min(_levelIndex + 1, _levels.Count - 1) : _levelIndex);
+    }
 
     void IWindowHost.StartHiring(StaffClass staffClass, int index)
     {
