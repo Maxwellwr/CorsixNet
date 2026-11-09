@@ -152,6 +152,10 @@ Done and committed:
   Corridor opens the furnish corridor window (prices, how many, Buy puts one on the cursor); while
   furnishing a room the edit panel lists what is still needed, sells extra objects (Buy) and has
   Confirm, Pick up and Take down.
+  Esc with no window open opens the menu (CorsixTH's menu bar) instead of quitting: save (to a new
+  file or over one, after asking), load (manual saves, quick save, autosaves), quick save/load,
+  restart, quit, the options (sounds, volume, screen shake, edge scrolling, scroll speeds, autosave;
+  Apply saves config.txt and uses them at once), the levels list, the charts and cheats.
 
 Not done yet:
 
