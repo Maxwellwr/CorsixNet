@@ -100,7 +100,7 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 
                 // Room:commandEnteringStaff.
                 RoomVisits.TryToFindNearbyPatients(simulation, room);
-                if (string.Equals(room.RoomType, RoomVisits.GeneralDiagnosisRoom, StringComparison.Ordinal))
+                if (RoomVisits.HasExaminingObject(room.RoomType))
                 {
                     // Room:commandEnteringStaff: the doctor meanders until a patient needs them.
                     Wait();
@@ -275,7 +275,7 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     {
         Use = null;
         Phase = DoctorPhase.WalkingToTrolley;
-        if (RoomVisits.FindObject(simulation, room.Id, RoomVisits.TrolleyType) is { } trolley)
+        if (RoomVisits.ExaminingObject(simulation, room) is { } trolley)
         {
             humanoid.WalkTo(simulation, RoomVisits.SecondaryUseTile(simulation, trolley));
         }

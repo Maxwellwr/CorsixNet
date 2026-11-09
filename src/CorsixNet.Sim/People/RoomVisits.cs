@@ -38,6 +38,19 @@ public static class RoomVisits
     /// <summary>The object patients lie on in general diagnosis.</summary>
     internal const string TrolleyType = "crash_trolley";
 
+    /// <summary>The ultrascan's room type.</summary>
+    internal const string UltrascanRoom = "ultrascan";
+
+    /// <summary>
+    /// The rooms whose doctor meanders until a patient is ready, then waits at the secondary use position of the object
+    /// the patient is examined on, which they use together: the crash trolley, the ultrascanner.
+    /// </summary>
+    private static readonly Dictionary<string, string> ExaminingObjects = new(StringComparer.Ordinal)
+    {
+        [GeneralDiagnosisRoom] = TrolleyType,
+        [UltrascanRoom] = "ultrascanner",
+    };
+
     /// <summary>
     /// What each room type patients can be seen in needs: the kind of staff it sends for (CorsixTH's
     /// <c>required_staff</c>) and the object the patient is seen at.
@@ -47,7 +60,15 @@ public static class RoomVisits
         [PatientBehaviour.FirstRoom] = (BehaviourKind.Doctor, "chair"),
         [PharmacyRoom] = (BehaviourKind.Nurse, "pharmacy_cabinet"),
         [GeneralDiagnosisRoom] = (BehaviourKind.Doctor, "screen"),
+        [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
     };
+
+    /// <summary>The object the room's patient is examined on with the doctor, or null for rooms without one.</summary>
+    internal static RoomObject? ExaminingObject(Simulation simulation, Room room) =>
+        ExaminingObjects.TryGetValue(room.RoomType, out var type) ? FindObject(simulation, room.Id, type) : null;
+
+    /// <summary>Whether the room's doctor meanders until a patient is ready to be examined.</summary>
+    internal static bool HasExaminingObject(string roomType) => ExaminingObjects.ContainsKey(roomType);
 
     /// <summary>How many tiles further a patient walks for one person fewer in the queue.</summary>
     private const int TileFactor = 10;
