@@ -75,7 +75,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Training: training room, consultant teaching, skill growth, gaining abilities (`rooms/training.lua`).
 - Surgeons, psychiatrists, researchers actually being required by rooms.
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
-- Staff speed, tiredness animations (yawn, check watch, tap foot) (`humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`).
+- Tiredness animations (yawn, check watch, tap foot) (`humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`).
+  Staff speed (juniors, consultants, tiredness, the no-rest cheat) is done (`Tiredness.UpdateSpeed`).
 - Picking staff up with the hand cursor and dropping them in another room.
 
 ## 4. Patients, diseases, epidemics, VIPs, emergencies, disasters

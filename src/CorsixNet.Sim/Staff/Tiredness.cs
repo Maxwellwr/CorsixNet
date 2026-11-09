@@ -1,5 +1,5 @@
 // How staff tire, ported from CorsixTH CorsixTH/Lua/entities/humanoids/staff.lua (Staff:tick, tickDay, isTiring,
-// tire, checkIfNeedRest, isVeryTired, isCrackUpTired) and base_config.lua (gbv.Tired, VeryTired, CrackUpTired).
+// tire, checkIfNeedRest, isVeryTired, isCrackUpTired, updateSpeed) and base_config.lua (gbv.Tired, VeryTired, CrackUpTired).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Economy;
@@ -35,8 +35,8 @@ public sealed record TirednessRules(int Tired, int VeryTired, int CrackUpTired)
 /// unhappy, all the more without a staff room to rest in.
 /// </summary>
 /// <remarks>
-/// Not yet: going to the staff room and resting there (the staff room is not built yet), being on call, walking slower
-/// when very tired, the tired mood icon and the no-rest cheat.
+/// Not yet: going to the staff room and resting there (the staff room is not built yet), being on call and the tired
+/// mood icon.
 /// </remarks>
 internal static class Tiredness
 {
@@ -45,6 +45,8 @@ internal static class Tiredness
 
     /// <summary>The staff room's room type.</summary>
     internal const string StaffRoomType = "staff_room";
+
+    private const string TrainingRoomType = "training";
 
     /// <summary>One hour of tiring (<c>Staff:tick</c>'s <c>isTiring</c> and <c>tire</c>).</summary>
     internal static void TireIfWorking(Simulation simulation, Humanoid humanoid)
@@ -84,6 +86,39 @@ internal static class Tiredness
             // Resting and no longer very tired: things can only get better.
             Feelings.ChangeHappiness(simulation, humanoid, 0.006m);
         }
+    }
+
+    /// <summary>
+    /// <c>Staff:updateSpeed</c>, at the end of every tick: juniors walk slowly and consultants fast; very tired staff
+    /// one step slower and those tired enough to crack up two (receptionists never); a doctor in the training room
+    /// slowly; with the no-rest cheat everyone fast.
+    /// </summary>
+    internal static void UpdateSpeed(Simulation simulation, Humanoid humanoid)
+    {
+        var profile = humanoid.Profile!;
+        var level = profile.IsJunior ? 1 : profile.IsConsultant ? 3 : 2;
+        if (RoomOf(simulation, humanoid) is { RoomType: TrainingRoomType } && profile.Class == StaffClass.Doctor)
+        {
+            level = 1;
+        }
+        else if (HasNoRestCheat(simulation, humanoid))
+        {
+            level = 3;
+        }
+        else if (profile.Class != StaffClass.Receptionist)
+        {
+            if (IsCrackUpTired(simulation, humanoid.Fatigue))
+            {
+                level -= 2;
+            }
+            else if (IsVeryTired(simulation, humanoid.Fatigue))
+            {
+                level--;
+            }
+        }
+
+        humanoid.IsFast = level >= 3;
+        humanoid.IsSlow = level <= 1;
     }
 
     private static bool HasNoRestCheat(Simulation simulation, Humanoid humanoid) =>

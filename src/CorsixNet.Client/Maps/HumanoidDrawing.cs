@@ -70,7 +70,8 @@ internal sealed class HumanoidDrawing
         }
 
         var animations = WalkAnimations.GetValueOrDefault(humanoid.Type, WalkAnimations[HumanoidType.StandardMalePatient]);
-        var p = humanoid.StepProgress;
+        // A fast step moves twice as far each tick (walk.lua's factor 2).
+        var p = humanoid.StepProgress * (Humanoid.TicksPerStep / humanoid.StepTicks);
         int animation;
         bool flip;
         int offsetX = 0, offsetY = 0;

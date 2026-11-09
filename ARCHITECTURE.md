@@ -494,6 +494,10 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   who are not resting lose 0.02, and 0.01 more from fatigue 0.5; resting in a staff room brings 0.006. Fatigue
   lowers the treatment's service quality and the GP's diagnosis bonus, and a consultant stays at the desk only
   while a random draw is at least their fatigue. Going to the staff room and resting there are not ported yet.
+  Every tick sets the staff's speed (`Tiredness.UpdateSpeed`, `Staff:updateSpeed`): juniors slow (every other tick
+  skipped, `IsSlow`), consultants fast (a step in 4 ticks rather than 8, `IsFast`), one step slower when very tired
+  and two when tired enough to crack up (not receptionists), doctors slow in the training room, everyone fast with
+  the no-rest cheat. A step keeps the speed it started with.
 - **Firing and raises** (`StaffEmployment`, from `staff.lua`). `FireStaffCommand` pays a month's wage as
   severance, costs 3 reputation (as a kicked patient) and sends the member of staff out through a spawn point
   (`LeavingBehaviour`); wages, feelings and the end conditions no longer count them. A nurse or doctor in the middle

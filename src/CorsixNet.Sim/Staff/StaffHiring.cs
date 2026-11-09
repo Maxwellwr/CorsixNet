@@ -149,6 +149,9 @@ public static class StaffHiring
             StaffClass.Handyman => new HandymanBehaviour(),
             _ => null,
         };
+
+        // Staff:onPlaceInCorridor.
+        Tiredness.UpdateSpeed(simulation, staff);
         simulation.Hospitals[player].Spend(simulation.Hours, profile.Wage, TransactionKind.HireStaff, staffClass.ToString());
         return staff;
     }
