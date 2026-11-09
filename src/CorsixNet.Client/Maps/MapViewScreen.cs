@@ -1,5 +1,6 @@
 using System.Globalization;
 using CorsixNet.Client.Audio;
+using CorsixNet.Client.Input;
 using CorsixNet.Client.Rendering;
 using CorsixNet.Client.Sessions;
 using CorsixNet.Client.Ui;
@@ -208,6 +209,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Where the settings are saved, or null to leave the file alone.</summary>
     private readonly string? _configPath;
 
+    /// <summary>The keys for the dialogs and other actions, from <c>hotkeys.txt</c> next to the settings.</summary>
+    private readonly Hotkeys _hotkeys;
+
     /// <summary>The game install, for reloading the sounds when the options change.</summary>
     private readonly ThemeHospitalInstall _install;
 
@@ -252,6 +256,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _adviser.IsEnabled = !_config.AdviserDisabled;
         _adviserChecks = new AdviserChecks(_adviser, _adviserRandom);
         _configPath = configPath;
+        _hotkeys = LoadHotkeys(configPath);
         _install = install;
         _device = device;
         _initialSpeed = speed;
@@ -683,15 +688,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// building. Loading without a quick save makes one, as CorsixTH does.
     /// </summary>
     /// <returns>Whether another game was loaded.</returns>
-    private bool UpdateQuickSave(Func<Keys, bool> pressed)
+    private bool UpdateQuickSave(KeyboardState keys, Func<Keys, bool> pressed)
     {
         if (_session is not LocalSession local)
         {
             return false;
         }
 
-        var save = pressed(Keys.S);
-        var load = pressed(Keys.L);
+        var save = HotkeyInput.Pressed(_hotkeys["ingame_quickSave"], keys, pressed);
+        var load = HotkeyInput.Pressed(_hotkeys["ingame_quickLoad"], keys, pressed);
         if (!save && !load)
         {
             return false;
@@ -1255,7 +1260,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         // While building, P is the pick-up key.
-        if (pressed(Keys.Space) || (pressed(Keys.P) && !_buildTool.IsActive))
+        if (pressed(Keys.Space) || (HotkeyInput.Pressed(_hotkeys["ingame_pause"], keys, pressed) && !_buildTool.IsActive))
         {
             if (session.IsPaused)
             {
@@ -1267,7 +1272,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
-        if (keys.IsKeyDown(Keys.Z))
+        if (HotkeyInput.Held(_hotkeys["ingame_gamespeed_speedup"], keys))
         {
             session.SetSpeed(GameSpeed.SpeedUp);
         }
@@ -1305,7 +1310,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var ctrl = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
 
         var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
-        if (alt && shift && UpdateQuickSave(pressed))
+        if (UpdateQuickSave(keys, pressed))
         {
             // Another game now: this frame's input was meant for the old one.
             return;
@@ -1560,7 +1565,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
-        if (pressed(Keys.H) && _hoveredTile is { } spawnAt)
+        if (pressed(Keys.H) && !keys.IsKeyDown(Keys.LeftControl) && !keys.IsKeyDown(Keys.RightControl) && _hoveredTile is { } spawnAt)
         {
             _session.Submit(new SpawnHumanoidCommand(new TilePosition(spawnAt.X, spawnAt.Y)));
         }
@@ -1989,8 +1994,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>
-    /// CorsixTH's fullscreen dialogs' hotkeys (its default <c>hotkeys</c> in config_finder.lua): F1 bank manager, F2 bank
-    /// statement, F5 casebook, F6 research, F8 graphs, F9 policy, each opening its window or closing it again. F3 (staff
+    /// CorsixTH's dialogs' hotkeys, read from <c>hotkeys.txt</c> (see <see cref="Hotkeys"/>): by default F1 bank manager,
+    /// F2 bank statement, F4 town map, F5 casebook, F6 research, F7 progress report, F8 graphs, F9 policy, Ctrl+H the
+    /// adviser's history, Y hire, C faxes, F11 cheats, each opening its window or closing it again. F3 (staff
     /// management) stays the level list for now; Shift+F3 opens staff management.
     /// </summary>
     private void UpdateWindowKeys(KeyboardState keys, Func<Keys, bool> pressed)
@@ -2004,7 +2010,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _seenFaxes = faxes;
-        if (pressed(Keys.C))
+        if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))
         {
             _windows.Toggle(new FaxWindow());
         }
@@ -2031,33 +2037,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _lastOutcome = hospital.Outcome;
-        if (pressed(Keys.Y))
+        if (HotkeyInput.Pressed(_hotkeys["ingame_toggleAdvisor"], keys, pressed))
         {
-            _windows.Toggle(new HireWindow());
-            _sounds.Play("selectx.wav");
+            ToggleAdviser();
         }
 
-        if (pressed(Keys.F3) && (keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift)))
-        {
-            _windows.Toggle(new StaffManagementWindow());
-            _sounds.Play("selectx.wav");
-        }
-
-        (Keys Key, Func<UiWindow> Window)[] dialogs =
+        (string Action, Func<UiWindow> Window)[] dialogs =
         [
-            (Keys.F1, () => new BankManagerWindow()),
-            (Keys.F2, () => new BankStatementWindow()),
-            (Keys.F4, () => new TownMapWindow()),
-            (Keys.F5, () => new CasebookWindow()),
-            (Keys.F6, () => new ResearchWindow()),
-            (Keys.F7, () => new ProgressReportWindow()),
-            (Keys.F8, () => new GraphWindow()),
-            (Keys.F9, () => new PolicyWindow()),
-            (Keys.F11, () => new CheatsWindow()),
+            ("ingame_panel_hireStaff", () => new HireWindow()),
+            ("ingame_panel_staffManage", () => new StaffManagementWindow()),
+            ("ingame_panel_bankManager", () => new BankManagerWindow()),
+            ("ingame_panel_bankStats", () => new BankStatementWindow()),
+            ("ingame_panel_townMap", () => new TownMapWindow()),
+            ("ingame_panel_casebook", () => new CasebookWindow()),
+            ("ingame_panel_research", () => new ResearchWindow()),
+            ("ingame_panel_status", () => new ProgressReportWindow()),
+            ("ingame_panel_charts", () => new GraphWindow()),
+            ("ingame_panel_policy", () => new PolicyWindow()),
+            ("ingame_panel_adviserHistory", () => new AdviserHistoryWindow()),
+            ("ingame_showCheatWindow", () => new CheatsWindow()),
         ];
-        foreach (var (key, window) in dialogs)
+        foreach (var (action, window) in dialogs)
         {
-            if (pressed(key))
+            if (HotkeyInput.Pressed(_hotkeys[action], keys, pressed))
             {
                 _windows.Toggle(window());
                 _sounds.Play("selectx.wav");
@@ -2065,7 +2067,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
-    /// <summary>Whether there is a game with a hospital of the local player for windows to show.</summary>
     /// <summary>
     /// Lets the adviser watch the game and move on through his messages; a new game or a loaded one starts him
     /// afresh.
@@ -2118,6 +2119,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     Adviser IWindowHost.Adviser => _adviser;
 
+    /// <summary>Whether there is a game with a hospital of the local player for windows to show.</summary>
     private bool IsWindowHostReady => _session is { Simulation: { } simulation, Player: var player } && player < simulation.Hospitals.Count;
 
     Simulation IWindowHost.Simulation => Simulation!;
@@ -2264,6 +2266,57 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             ShowNotice($"Cannot save: {e.Message}");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// <c>GameUI:toggleAdviser</c> (Shift+A by default): the adviser falls silent or speaks again, and the setting is
+    /// saved.
+    /// </summary>
+    private void ToggleAdviser()
+    {
+        _config = _config with { AdviserDisabled = !_config.AdviserDisabled };
+        _adviser.IsEnabled = !_config.AdviserDisabled;
+        if (!_adviser.IsEnabled)
+        {
+            _adviser.DismissAll();
+        }
+
+        if (_configPath is not null)
+        {
+            try
+            {
+                _config.Save(_configPath);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                ShowNotice($"Cannot save the settings: {e.Message}");
+                return;
+            }
+        }
+
+        ShowNotice(_adviser.IsEnabled ? "The adviser is back" : "The adviser is quiet");
+    }
+
+    /// <summary>
+    /// The hotkeys from <c>hotkeys.txt</c> beside the settings file (written with the defaults if missing); the defaults
+    /// without a settings file or when the file can't be read.
+    /// </summary>
+    private static Hotkeys LoadHotkeys(string? configPath)
+    {
+        if (configPath is null || Path.GetDirectoryName(Path.GetFullPath(configPath)) is not { } folder)
+        {
+            return new Hotkeys();
+        }
+
+        try
+        {
+            return Hotkeys.Load(Path.Combine(folder, Hotkeys.FileName));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            Console.Error.WriteLine($"Cannot read {Hotkeys.FileName}: {e.Message}; using the default keys.");
+            return new Hotkeys();
         }
     }
 

@@ -176,6 +176,21 @@ Done and committed:
   Replays: a local game records its start and every command (LocalSession.Recording); Menu, Save
   replay writes Replays/*.cnreplay in the saves folder, Watch replay plays one back (ReplaySession,
   the player's commands ignored) and the status line says whether it matched the recorded hash.
+  Hotkeys come from hotkeys.txt beside config.txt (CorsixTH's action names, written with the defaults
+  when missing): the dialogs, Ctrl+H the adviser's history, Shift+A the adviser on or off (saved),
+  pause, speed up and quick save/load. The camera, speeds and stand-in keys stay fixed.
+
+Needs MSI (game data or a live look; the cloud has neither):
+
+- Every window and the adviser from the second overnight batch: nothing was seen on screen.
+- Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
+  scanner, blood machine, cardiogram, psychiatry, ward, operating theatre, inflation, fracture
+  clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination, staff
+  room, training room.
+- Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and
+  explosions without repairs would only do harm.
+- Benches (sitting animations), the death animation, staff yawning and checking their watch, staff
+  using the staff room.
 
 Not done yet:
 
