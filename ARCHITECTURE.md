@@ -633,7 +633,7 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
 The client buys a reception desk with F (a stand-in for the original's corridor furnishing window;
 Tab and Shift+Tab go through the other corridor objects),
 draws use animations, and puts a receptionist facing away from the viewer in front of the desk on its
-tile, otherwise behind it. B builds a GP's office, Shift+B a pharmacy and Ctrl+B general diagnosis until the build window exists; the
+tile, otherwise behind it. B opens a list of the rooms to build, with their costs and why one cannot be built, until the build window exists; the
 status line shows how many patients were cured and died. `--demo` hires the most skilled candidate of each kind,
 places a desk once its GP's office works and builds and furnishes a pharmacy, then general diagnosis with a second doctor. `--speed` starts a local game at
 another speed, which helps watching patients come and go.

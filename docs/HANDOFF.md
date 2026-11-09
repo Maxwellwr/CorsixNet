@@ -73,13 +73,13 @@ Done and committed:
   diagnosis room or go home, as CorsixTH's default policies say. The demo's patient chair keeps off the
   front walls. Save format version 6.
 - Pharmacy and treatment (see ARCHITECTURE.md, "The pharmacy", "Treatment", "Two people using an
-  object"): Shift+B builds a pharmacy, a nurse goes to its cabinet and gives diagnosed patients their drink
+  object"): the pharmacy, built from the room list (B); a nurse goes to its cabinet and gives diagnosed patients their drink
   (the cabinet's multi-use animations, patient drawn into the nurse's); they pay, are cured or die, and the
   drug is paid for. Patients waiting for a room go to one built later. The status line counts cures and
   deaths; `--demo` builds a pharmacy and hires the best candidates; `--speed` sets the starting speed.
-  Save format version 7. Live-checked with `--demo --speed AndThenSomeMore`: keyboard input injected from a
-  Remote Control session does not reach the window, hence `--speed`.
-- General diagnosis (see ARCHITECTURE.md, "General diagnosis"): Ctrl+B builds it; patients undress behind
+  Save format version 7. Live-checked with `--demo --speed AndThenSomeMore`. Keys injected from a Remote Control session reach the window
+  through SendInput or PostMessage, not keybd_event.
+- General diagnosis (see ARCHITECTURE.md, "General diagnosis"): built from the room list (B); patients undress behind
   the screen, the doctor examines them on the crash trolley, they dress, pay and go back to the GP. With a
   weak GP on level one it takes cures from 0 to 8 in five months. `--demo` builds it after the pharmacy
   and hires a second doctor. Save format version 8.

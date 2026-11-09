@@ -133,8 +133,6 @@ internal sealed class MapViewScreen : IScreen
     private readonly SaveGameStore _saves = new(SaveGameStore.DefaultDirectory());
     private int _levelIndex;
 
-    /// <summary>The room type Ctrl+Shift+B last chose, as an index into the content's rooms.</summary>
-    private int _anyRoomIndex = -1;
     private string? _error;
     private MapOverlay _overlay;
     private RenderTarget2D? _target;
@@ -1190,7 +1188,7 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(new OpenHospitalCommand());
         }
 
-        // Until the build window exists: B builds a GP's office, Shift+B a pharmacy, Ctrl+B general diagnosis.
+        // Until the build room window exists, B opens a list of the rooms to build.
         var wasBuilding = _buildTool.IsActive;
         var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         var ctrl = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
@@ -1386,31 +1384,16 @@ internal sealed class MapViewScreen : IScreen
                 return;
             }
 
-            if (pressed(Keys.B) && !(ctrl || shift || alt))
+            if (pressed(Keys.B))
             {
                 _roomList = false;
                 return;
             }
         }
-        else if (pressed(Keys.B) && !(ctrl || shift || alt) && !_buildTool.IsActive && !_furnishTool.IsActive)
+        else if (pressed(Keys.B) && !_buildTool.IsActive && !_furnishTool.IsActive)
         {
             _roomList = true;
             return;
-        }
-
-        var roomToBuild = alt && shift ? "research" : alt ? "toilets" : shift ? "pharmacy" : ctrl ? "general_diag" : "gp";
-
-        // Until the build room window exists, Ctrl+Shift+B goes through every room type in turn, also while drawing a
-        // blueprint.
-        var anyRoom = ctrl && shift && pressed(Keys.B) && (!_buildTool.IsActive || _buildTool.IsDrawingBlueprint) && simulation.Content.Rooms.Count > 0;
-        if (anyRoom)
-        {
-            _anyRoomIndex = (_anyRoomIndex + 1) % simulation.Content.Rooms.Count;
-            roomToBuild = simulation.Content.Rooms[_anyRoomIndex].Id;
-        }
-        if (pressed(Keys.B) && (ctrl || shift || alt) && (!_buildTool.IsActive || anyRoom) && simulation.Content.FindRoom(roomToBuild) is { } roomType)
-        {
-            TryStartRoom(simulation, roomType);
         }
 
         var back = _buildBack;
@@ -2097,7 +2080,7 @@ internal sealed class MapViewScreen : IScreen
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-6: speed   Z: hold to speed up" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build a room (Shift: pharmacy, Ctrl: general diagnosis, Alt: toilets, Alt+Shift: research)   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
+            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build a room   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
         }
 
         var tile = map[position.X, position.Y];
