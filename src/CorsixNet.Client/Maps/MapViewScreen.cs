@@ -219,7 +219,7 @@ internal sealed class MapViewScreen : IScreen
         _demoDiagnosisPending = demo;
         if (demo)
         {
-            foreach (var item in new[] { "desk", "cabinet", "chair" })
+            foreach (var item in (string[])["desk", "cabinet", "chair", .. DemoRadiators])
             {
                 _demoFurniture.Enqueue(item);
             }
@@ -747,7 +747,7 @@ internal sealed class MapViewScreen : IScreen
         var confirm = !_demoFurniture.TryPeek(out var next) || simulation.Content.FindRoom(room.RoomType)?.Allows(next) != true;
         foreach (var tile in DemoFurnitureTiles(room.Area, objectId))
         {
-            foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
+            foreach (var orientation in DemoOrientations(objectId))
             {
                 if (ObjectPlacer.Check(simulation, objectId, tile, orientation, _session.Player) == ObjectPlacementProblem.None)
                 {
@@ -764,6 +764,26 @@ internal sealed class MapViewScreen : IScreen
             }
         }
     }
+
+    /// <summary>
+    /// Two radiators for each demo room: without them its staff grow cold and unhappy in the first winter, ask for a raise
+    /// and are fired when nobody answers (Humanoid:tickDay, Staff:checkIfWaitedTooLongForRaise); two keep a room of four
+    /// by four tiles comfortable at the default heat.
+    /// </summary>
+    private static readonly string[] DemoRadiators = ["radiator", "radiator"];
+
+    private void EnqueueDemoRadiators()
+    {
+        foreach (var radiator in DemoRadiators)
+        {
+            _demoFurniture.Enqueue(radiator);
+        }
+    }
+
+    /// <summary>The orientations the demo tries for an object; radiators only have sprites facing north and east.</summary>
+    private static Direction[] DemoOrientations(string objectId) => string.Equals(objectId, "radiator", StringComparison.Ordinal)
+        ? [Direction.North, Direction.East]
+        : [Direction.North, Direction.East, Direction.South, Direction.West];
 
     /// <summary>
     /// The tiles of the demo room in the order they are tried for an object: row by row from the back. The
@@ -810,6 +830,7 @@ internal sealed class MapViewScreen : IScreen
         {
             _session.Submit(new BuildRoomCommand(pharmacyPlan));
             _demoFurniture.Enqueue("pharmacy_cabinet");
+            EnqueueDemoRadiators();
             var area = pharmacyPlan.Area;
             keepClear = new TileRect(area.X - 2, area.Y - 2, area.Width + 4, area.Height + 4);
         }
@@ -849,6 +870,7 @@ internal sealed class MapViewScreen : IScreen
         _session.Submit(new BuildRoomCommand(plan));
         _demoFurniture.Enqueue("screen");
         _demoFurniture.Enqueue("crash_trolley");
+        EnqueueDemoRadiators();
         var area = new TileRect(plan.Area.X - 1, plan.Area.Y - 1, plan.Area.Width + 2, plan.Area.Height + 2);
         var tile = _hospitalTiles.Where(t => !area.Contains(t) && simulation.Map[t.X, t.Y].Has(TileFlags.Passable) && simulation.Map[t.X, t.Y].RoomId == 0)
             .OrderBy(t => Math.Abs(t.X - start.X) + Math.Abs(t.Y - start.Y)).ThenBy(t => t.Y).ThenBy(t => t.X).FirstOrDefault();
