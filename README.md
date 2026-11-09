@@ -44,7 +44,7 @@ first original level:
 | Left click | Select a patient, or send the selected one walking |
 | R | Toggle random wandering |
 | Space / P | Pause or resume the game (P picks up while building) |
-| 1-5 | Game speed: slowest, slower, normal, max speed, and then some more |
+| 1-6 | Game speed: slowest, slower, normal, max speed, and then some more, insane (CorsixNet only: 21 times normal) |
 | Z (hold) | Speed up, eight game hours per tick |
 | Ctrl+1-4 | Hire the first doctor, nurse, handyman or receptionist onto the hovered tile |
 | Shift+O | Open the hospital before the opening watch runs down |
