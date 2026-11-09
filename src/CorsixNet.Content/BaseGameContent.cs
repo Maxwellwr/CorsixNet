@@ -240,6 +240,9 @@ public static class BaseGameContent
         },
         MultiUsage: TrolleyMultiUsage());
 
+    /// <summary>The extra objects the GP's office, the pharmacy and general diagnosis take (their <c>objects_additional</c>).</summary>
+    private static readonly string[] AdditionalRoomObjects = ["extinguisher", "radiator", "plant", "bin"];
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -248,7 +251,8 @@ public static class BaseGameContent
         FloorSprite: 18,
         WhiteWalls,
         NeededObjects: new Dictionary<string, int> { ["desk"] = 1, ["cabinet"] = 1, ["chair"] = 1 },
-        LevelConfigId: 7);
+        LevelConfigId: 7,
+        AdditionalObjects: AdditionalRoomObjects);
 
     /// <summary>The pharmacy (rooms/pharmacy.lua).</summary>
     public static readonly RoomDefinition Pharmacy = new(
@@ -258,7 +262,8 @@ public static class BaseGameContent
         FloorSprite: 19,
         WhiteWalls,
         NeededObjects: new Dictionary<string, int> { ["pharmacy_cabinet"] = 1 },
-        LevelConfigId: 11);
+        LevelConfigId: 11,
+        AdditionalObjects: AdditionalRoomObjects);
 
     /// <summary>General diagnosis (rooms/general_diag.lua).</summary>
     public static readonly RoomDefinition GeneralDiagnosis = new(
@@ -268,7 +273,8 @@ public static class BaseGameContent
         FloorSprite: 21,
         GreenWalls,
         NeededObjects: new Dictionary<string, int> { ["screen"] = 1, ["crash_trolley"] = 1 },
-        LevelConfigId: 27);
+        LevelConfigId: 27,
+        AdditionalObjects: AdditionalRoomObjects);
 
     /// <summary>Sprites of the hospital's outer walls (walls/external.lua).</summary>
     private static readonly ushort[] ExternalWalls =

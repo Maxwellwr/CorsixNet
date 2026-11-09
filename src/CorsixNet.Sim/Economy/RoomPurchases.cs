@@ -5,6 +5,8 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Rooms;
 
 namespace CorsixNet.Sim.Economy;
 
@@ -82,6 +84,56 @@ public static class RoomPurchases
             }
         }
     }
+
+    /// <summary>
+    /// Whether one more object of this type in the room is beyond what the room needs, so that it is bought on its own
+    /// as in CorsixTH's buy items window (<c>UIPlaceObjects:addObjects</c>); every corridor object is.
+    /// </summary>
+    internal static bool IsExtra(Simulation simulation, int roomId, string objectId)
+    {
+        if (roomId == 0)
+        {
+            return true;
+        }
+
+        var needed = simulation.FindEntity(roomId) is Room room && simulation.Content.FindRoom(room.RoomType)?.NeededObjects is { } objects
+            ? objects.GetValueOrDefault(objectId)
+            : 0;
+        return CountIn(simulation, roomId, objectId) >= needed;
+    }
+
+    /// <summary>Sells back an extra object picked up again (<c>UIPlaceObjects:removeObject</c>'s sale, at full price).</summary>
+    internal static void SellObject(Simulation simulation, string objectId, int player)
+    {
+        HospitalOf(simulation, player)?.Receive(simulation.Hours, simulation.Rules.ObjectCost(objectId), TransactionKind.SellObject, objectId);
+    }
+
+    /// <summary>
+    /// Sells back the extra objects standing in an unfinished room that is taken down (CorsixTH leaves this as a TODO in
+    /// <c>UIEditRoom:abortRoom</c>, but sells the needed ones back here too).
+    /// </summary>
+    internal static void SellExtraObjects(Simulation simulation, Room room, RoomDefinition definition, int player)
+    {
+        var counts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+        foreach (var obj in simulation.Entities.OfType<RoomObject>())
+        {
+            if (obj.RoomId == room.Id)
+            {
+                counts[obj.ObjectType] = counts.GetValueOrDefault(obj.ObjectType) + 1;
+            }
+        }
+
+        foreach (var (objectId, count) in counts)
+        {
+            for (var i = definition.NeededObjects?.GetValueOrDefault(objectId) ?? 0; i < count; i++)
+            {
+                SellObject(simulation, objectId, player);
+            }
+        }
+    }
+
+    private static int CountIn(Simulation simulation, int roomId, string objectId) =>
+        simulation.Entities.OfType<RoomObject>().Count(o => o.RoomId == roomId && string.Equals(o.ObjectType, objectId, StringComparison.Ordinal));
 
     private static Hospital? HospitalOf(Simulation simulation, int player)
     {

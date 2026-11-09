@@ -98,6 +98,46 @@ public class EconomyTests
     }
 
     [Fact]
+    public void AnObjectBeyondWhatTheRoomNeedsIsBoughtWhenPlacedAndSoldWhenPickedUp()
+    {
+        var simulation = NewSimulation(Rules);
+        var hospital = simulation.Hospitals[0];
+        Run(simulation, new BuildRoomCommand(Plan));
+        Run(simulation, new PlaceObjectCommand("cabinet", new(2, 2), Direction.North));
+        Run(simulation, new PlaceObjectCommand("cabinet", new(4, 2), Direction.North));
+        Assert.Equal(2400, hospital.Balance);
+
+        // A third cabinet is an extra (UIPlaceObjects:addObjects buys it), picking it up sells it back.
+        Run(simulation, new PlaceObjectCommand("cabinet", new(5, 2), Direction.North));
+        Assert.Equal(2100, hospital.Balance);
+        Assert.Equal(new Transaction(3, TransactionKind.BuyObject, "cabinet", -300, 2100), hospital.Transactions[0]);
+        var third = simulation.Entities.OfType<RoomObject>().Single(o => o.Tile == new TilePosition(5, 2));
+        Run(simulation, new PickUpObjectCommand(third.Id));
+        Assert.Equal(2400, hospital.Balance);
+        Assert.Equal(TransactionKind.SellObject, hospital.Transactions[0].Kind);
+
+        // Picking up one of the two needed cabinets is free, as before.
+        Run(simulation, new PickUpObjectCommand(simulation.Entities.OfType<RoomObject>().First().Id));
+        Assert.Equal(2400, hospital.Balance);
+    }
+
+    [Fact]
+    public void TakingDownAnUnfinishedRoomSellsItsExtraObjectsBackToo()
+    {
+        var simulation = NewSimulation(Rules);
+        Run(simulation, new BuildRoomCommand(Plan));
+        foreach (var x in new[] { 2, 4, 5 })
+        {
+            Run(simulation, new PlaceObjectCommand("cabinet", new(x, 2), Direction.North));
+        }
+
+        Assert.Equal(2100, simulation.Hospitals[0].Balance);
+        Run(simulation, new CancelRoomCommand(simulation.Entities.OfType<Room>().Single().Id));
+
+        Assert.Equal(3000, simulation.Hospitals[0].Balance);
+    }
+
+    [Fact]
     public void TheLogKeepsTheLatestTransactions()
     {
         var simulation = NewSimulation(Rules);

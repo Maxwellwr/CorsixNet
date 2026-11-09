@@ -321,15 +321,16 @@ public sealed record PlaceObjectCommand(string ObjectType, TilePosition Tile, Di
             return;
         }
 
-        // Objects in rooms were bought with the room; corridor objects are bought as they are placed.
-        var corridor = simulation.Map[Tile.X, Tile.Y].RoomId == 0;
-        if (corridor && !RoomPurchases.CanAffordObject(simulation, ObjectType, player))
+        // The objects a room needs were bought with the room; corridor objects and a room's extra objects are bought
+        // as they are placed.
+        var extra = RoomPurchases.IsExtra(simulation, simulation.Map[Tile.X, Tile.Y].RoomId, ObjectType);
+        if (extra && !RoomPurchases.CanAffordObject(simulation, ObjectType, player))
         {
             return;
         }
 
         ObjectPlacer.Place(simulation, simulation.Content.FindObject(ObjectType)!, Tile, Orientation);
-        if (corridor)
+        if (extra)
         {
             RoomPurchases.BuyObject(simulation, ObjectType, player);
         }
@@ -353,7 +354,14 @@ public sealed record PickUpObjectCommand(int ObjectId) : Command
     {
         if (ObjectPlacer.CanPickUp(simulation, ObjectId, player))
         {
-            ObjectPlacer.PickUp(simulation, (RoomObject)simulation.FindEntity(ObjectId)!);
+            var obj = (RoomObject)simulation.FindEntity(ObjectId)!;
+            ObjectPlacer.PickUp(simulation, obj);
+
+            // An extra object is sold back; placing it again buys it again.
+            if (RoomPurchases.IsExtra(simulation, obj.RoomId, obj.ObjectType))
+            {
+                RoomPurchases.SellObject(simulation, obj.ObjectType, player);
+            }
         }
     }
 
@@ -398,8 +406,14 @@ public sealed record CancelRoomCommand(int RoomId) : Command
     {
         if (simulation.FindEntity(RoomId) is Room { IsActive: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
         {
+            var definition = simulation.Content.FindRoom(room.RoomType);
+            if (definition is not null)
+            {
+                RoomPurchases.SellExtraObjects(simulation, room, definition, player);
+            }
+
             RoomBuilder.Remove(simulation, room);
-            if (simulation.Content.FindRoom(room.RoomType) is { } definition)
+            if (definition is not null)
             {
                 RoomPurchases.SellNeededObjects(simulation, definition, player);
             }
