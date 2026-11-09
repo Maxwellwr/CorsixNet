@@ -181,7 +181,7 @@ MMPX smoothing; everything else is debug keys.
   so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor),
   disease texts and VIP names (`OriginalTexts`, in the status line).
 - Subtitles for the announcer (`dialogs/subtitles.lua`).
-- Hotkeys and their assignment dialog (`resizables/hotkey_assign.lua`).
+- The hotkey assignment dialog (`resizables/hotkey_assign.lua`); the keys themselves come from `hotkeys.txt` (`Hotkeys`).
 
 ## 7. Levels, goals, campaign
 
@@ -258,8 +258,11 @@ join.
   window, screen shake, autosave frequency, game folder, player name, sound effects and scrolling
   (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`) is done
   (`GameConfig`).
-- Hotkeys file (`hotkeys.txt`). The camera's hotkeys (zoom in and out, original size, remembering and recalling
-  views) are done with CorsixTH's default keys.
+- Hotkeys file (`hotkeys.txt`): read, and written with the defaults when missing, for the dialogs (F1–F9, Shift+F3,
+  Ctrl+H, Y, C, F11), pause, speed up, quick save/load and the adviser toggle (`Hotkeys`, `HotkeyInput`). Still on
+  fixed keys: the camera (zoom, original size, remembering and recalling views, CorsixTH's default keys), scrolling,
+  the speeds, Esc, and this game's stand-in keys; CorsixTH's other actions (sound, music, announcements toggles,
+  screenshots, logs) are not read.
 - Update check (`resizables/update.lua`).
 
 ## 12. Map editor and tools
