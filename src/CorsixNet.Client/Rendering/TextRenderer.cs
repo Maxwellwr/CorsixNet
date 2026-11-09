@@ -20,13 +20,13 @@ internal sealed class TextRenderer : IDisposable
 
     public (int Width, int Height) Measure(string text) => _font.MeasureLine(text);
 
-    public void Draw(SpriteBatch batch, string text, Vector2 position, int scale = 1)
+    public void Draw(SpriteBatch batch, string text, Vector2 position, int scale = 1, Color? tint = null)
     {
         foreach (var (sprite, x) in _font.Layout(text))
         {
             if (_glyphs[sprite] is { } glyph)
             {
-                batch.Draw(glyph, position + new Vector2(x * scale, 0), null, Color.White, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
+                batch.Draw(glyph, position + new Vector2(x * scale, 0), null, tint ?? Color.White, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
             }
         }
     }
