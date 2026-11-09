@@ -57,6 +57,9 @@ public sealed record GameConfig
     /// <summary>Whether earthquakes shake the screen.</summary>
     public bool EnableScreenShake { get; init; } = true;
 
+    /// <summary>Whether the adviser keeps quiet (CorsixTH's <c>adviser_disabled</c>).</summary>
+    public bool AdviserDisabled { get; init; }
+
     /// <summary>How often the game saves itself: 0 never, 1 monthly, 2 weekly, 3 daily.</summary>
     public int AutosaveFrequency { get; init; } = 1;
 
@@ -161,6 +164,7 @@ public sealed record GameConfig
             Height = Int("height", defaults.Height),
             Language = Text("language", defaults.Language),
             EnableScreenShake = Bool("enable_screen_shake", defaults.EnableScreenShake),
+            AdviserDisabled = Bool("adviser_disabled", defaults.AdviserDisabled),
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
@@ -239,6 +243,14 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"enable_screen_shake = {Lua(EnableScreenShake)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Adviser. If set to true, the adviser does not give any advice.
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"adviser_disabled = {Lua(AdviserDisabled)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------

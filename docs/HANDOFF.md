@@ -158,6 +158,12 @@ Done and committed:
   Apply saves config.txt and uses them at once), the levels list, the charts and cheats.
   F8 draws the graphs (graphs.lua): a coloured line per statistic, each scaled to its own range,
   buttons to hide lines, months/years/4-year steps, and Figures for the table.
+  The adviser (adviser.lua, player_hospital.lua) speaks over the bottom panel: a queue said in turn
+  (OK/Next, Quiet), the history of the last 20 (Messages button), the adviser_disabled option, and
+  advice on set days from month 5 (money, staff room, radiators, toilets, heating, plants, thirst),
+  the reception at month ends of year 1, the first cure/death, the first raise request, the boiler,
+  earthquakes, new machines and VIPs walking in. Texts come from the game's strings (S[11], S[28],
+  S[21], S[62]) with English stand-ins. Not yet: benches, queues, litter, machines, level progress.
 
 Not done yet:
 
