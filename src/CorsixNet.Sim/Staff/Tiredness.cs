@@ -63,7 +63,7 @@ internal static class Tiredness
         if (IsVeryTired(simulation, fatigue) || !IsResting(simulation, humanoid))
         {
             // Working when you should be taking a break makes you unhappy.
-            if (fatigue >= GoToStaffRoom(simulation))
+            if (fatigue >= GoToStaffRoom(simulation, humanoid))
             {
                 Feelings.ChangeHappiness(simulation, humanoid, -0.02m);
             }
@@ -104,8 +104,11 @@ internal static class Tiredness
         }
     }
 
-    /// <summary>The hospital's <c>goto_staffroom</c> policy, which CorsixTH sets from <c>gbv.Tired</c>.</summary>
-    private static decimal GoToStaffRoom(Simulation simulation) => simulation.Rules.Tiredness.Tired / 1000m;
+    /// <summary>The employer's <c>goto_staffroom</c> policy, which starts at the level's <c>gbv.Tired</c>.</summary>
+    private static decimal GoToStaffRoom(Simulation simulation, Humanoid humanoid) =>
+        humanoid.Employer >= 0 && humanoid.Employer < simulation.Hospitals.Count
+            ? simulation.Hospitals[humanoid.Employer].Policies.GoToStaffRoom / 1000m
+            : simulation.Rules.Tiredness.Tired / 1000m;
 
     /// <summary>
     /// <c>Staff:checkIfNeedRest</c>: very tired staff lose happiness; tired staff outside a staff room want one, and
@@ -118,7 +121,7 @@ internal static class Tiredness
             Feelings.ChangeHappiness(simulation, humanoid, -0.0002m);
         }
 
-        if (humanoid.Fatigue < GoToStaffRoom(simulation) || RoomOf(simulation, humanoid) is { RoomType: StaffRoomType })
+        if (humanoid.Fatigue < GoToStaffRoom(simulation, humanoid) || RoomOf(simulation, humanoid) is { RoomType: StaffRoomType })
         {
             return;
         }

@@ -26,18 +26,6 @@ public static class PatientCare
     /// <summary>Diagnosis progress in thousandths that stands for a complete diagnosis.</summary>
     public const int FullDiagnosis = 1000;
 
-    /// <summary>
-    /// Policy: a patient whose diagnosis is below this when no diagnosis room is left goes home (CorsixTH's default
-    /// <c>send_home</c>, 0.1).
-    /// </summary>
-    public const int SendHome = 100;
-
-    /// <summary>Policy: at least this far diagnosed, a known disease is guessed (default <c>guess_cure</c>, 0.9).</summary>
-    public const int GuessCure = 900;
-
-    /// <summary>Policy: diagnosis stops at this (default <c>stop_procedure</c>, 1.0).</summary>
-    public const int StopProcedure = 1000;
-
     /// <summary>Days a patient waits for a missing room or the player's decision before going home.</summary>
     public const int WaitingDays = 60;
 
@@ -117,7 +105,7 @@ public static class PatientCare
 
         if (!patient.IsDiagnosed)
         {
-            CompleteDiagnosticStep(simulation, room, patient, disease);
+            CompleteDiagnosticStep(simulation, room, humanoid, patient, disease);
             ReceiveMoneyForTreatment(simulation, humanoid, patient, room.RoomType);
             if (DiseaseCatalog.Find(DiseaseCatalog.GpDiagnosis) is { } consultation && !AgreesToPay(simulation, humanoid, patient, consultation))
             {
@@ -209,7 +197,8 @@ public static class PatientCare
         }
 
         ReceiveMoneyForTreatment(simulation, humanoid, patient, room.RoomType);
-        CompleteDiagnosticStep(simulation, room, patient, disease); if (patient.DiagnosisProgress >= StopProcedure || (patient.DiagnosisProgress >= FullDiagnosis && patient.AvailableDiagnosisRooms.Count == 0))
+        CompleteDiagnosticStep(simulation, room, humanoid, patient, disease);
+        if (patient.DiagnosisProgress >= Policies(simulation, humanoid).StopProcedure || (patient.DiagnosisProgress >= FullDiagnosis && patient.AvailableDiagnosisRooms.Count == 0))
         {
             SetDiagnosed(simulation, humanoid, patient, disease);
             if (AgreesToPay(simulation, humanoid, patient, disease))
@@ -263,6 +252,9 @@ public static class PatientCare
         hospital.DeathsThisYear++;
         hospital.ChangeReputation(simulation.Random, ReputationChange.Death, entry);
     }
+
+    /// <summary>The policies of the patient's hospital.</summary>
+    internal static HospitalPolicies Policies(Simulation simulation, Humanoid humanoid) => simulation.Hospitals[humanoid.HospitalPlayer].Policies;
 
     internal static void NotCured(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, ReputationChange reason)
     {
@@ -319,7 +311,7 @@ public static class PatientCare
     /// plus a bonus from the doctor's skill and attention to detail, both divided by a random 1 to 3; very skilled
     /// doctors may get up to five times the bonus.
     /// </summary>
-    private static void CompleteDiagnosticStep(Simulation simulation, Room room, PatientBehaviour patient, DiseaseDefinition disease)
+    private static void CompleteDiagnosticStep(Simulation simulation, Room room, Humanoid humanoid, PatientBehaviour patient, DiseaseDefinition disease)
     {
         var difficulty = simulation.Rules.Diseases.MaxDiagDiff(disease.ExpertiseId) / 1000m;
         var diagnosisBase = 0.4m * (1 - difficulty);
@@ -338,7 +330,8 @@ public static class PatientCare
         }
 
         var progress = (patient.DiagnosisProgress / 1000m) + diagnosisBase + (bonus * multiplier);
-        progress = Math.Clamp(progress, 0, StopProcedure / 1000m);
+        // Patient:modifyDiagnosisProgress: no further than the stop_procedure policy.
+        progress = Math.Clamp(progress, 0, Policies(simulation, humanoid).StopProcedure / 1000m);
         patient.DiagnosisProgress = (int)decimal.Floor(progress * 1000);
     }
 }

@@ -356,11 +356,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
 - **Diagnosis** (`PatientCare`, from `patient.lua` and `rooms/gp.lua`). Progress is in thousandths, worked
   out with decimals: each GP visit adds `0.4 * (1 - MaxDiagDiff)` plus `(attention / d + 0.4) * skill / d`
   times `1.5 − fatigue`, `d` a random 1 to 3, very skilled doctors up to five times as much.
-  At 1.0 (the default `stop_procedure` policy) the patient is diagnosed, the hospital knows the disease, and
+  At the hospital's `stop_procedure` policy (1.0 by default; progress goes no further) the patient is diagnosed, the hospital knows the disease, and
   they look for its treatment rooms; otherwise the GP sends them to one of the disease's diagnosis rooms.
   Only the GP's office, general diagnosis and the pharmacy work so far (`RoomVisits.IsSupported`), so other diagnosis rooms are never
-  found: as in CorsixTH's `seek_room.lua` with the default policies, a patient below 0.1 goes home, one below
-  0.9 or with a disease the hospital does not know waits, and one above has the disease guessed. Waiting
+  found: as in CorsixTH's `seek_room.lua`, a patient below the `send_home` policy (0.1) goes home, one below
+  `guess_cure` (0.9) or with a disease the hospital does not know waits, and one above has the disease guessed. Waiting
   patients step off to a free spot and give up after 60 days; when a room of the kind they wait for starts
   working, they go to it (`RoomVisits.OnRoomActivated`). CorsixTH's faxes asking the player what to do are not
   there yet. A doctor of middling skill and little attention to detail gets level one's patients only about
@@ -438,6 +438,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   becomes 0, and the next day at 0 the patient is set to die: once out of rooms and doorways they die, count as a
   death of their disease and vanish. Outside rooms, patients also like an extinguisher within two tiles (0.0002),
   a plant by how healthy it is (−0.0003 + 0.0001 × state), and lose 0.00002 a day for standing (no benches yet).
+- **Policies** (`Hospital.Policies`, from `hospital.lua` and `hospital_policy.lua`). Each hospital has CorsixTH's
+  policy window settings: `send_home` 0.1, `guess_cure` 0.9, `stop_procedure` 1.0 (up to 2.0), `goto_staffroom`
+  from the level's `gbv.Tired`, staff allowed to move and granting raises. `SetPolicyCommand` sets one, in
+  thousandths for the sliders, kept in the sliders' ranges (sending home never above guessing). The window itself
+  is not there yet; staff moving and raises have nothing to act on yet.
 - **Tiredness** (`Humanoid.Fatigue`, `Tiredness`, from `staff.lua`). Every hour a member of staff in a room
   (other than a staff room), or a handyman anywhere, gains 0.00009 fatigue and loses 0.00002 happiness, so a doctor
   who never leaves their office reaches the level's `gbv.Tired` (600 thousandths, the hospital's `goto_staffroom`

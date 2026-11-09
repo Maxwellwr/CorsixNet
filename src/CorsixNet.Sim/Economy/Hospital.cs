@@ -448,6 +448,9 @@ public sealed class Hospital
     /// <summary>How hot the radiators are, in tenths (CorsixTH's <c>heating.radiator_heat</c>): 0 or 10 while the boiler is broken.</summary>
     public int RadiatorHeat { get; private set; } = DefaultRadiatorHeat;
 
+    /// <summary>The hospital policy window's settings.</summary>
+    public HospitalPolicies Policies { get; internal set; } = new();
+
     /// <summary>Whether the boiler is broken, so that the radiators are stuck at full or no heat (CorsixTH's <c>heating_broke</c>).</summary>
     public bool IsHeatingBroken { get; private set; }
 
@@ -1191,6 +1194,7 @@ public sealed class Hospital
         writer.WriteBool(IsOpen);
         writer.WriteInt32(OpenTimer);
         writer.WriteInt32(OpenTickTimer);
+        Policies.Write(writer);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)
@@ -1300,6 +1304,7 @@ public sealed class Hospital
         hospital.IsOpen = reader.ReadBool();
         hospital.OpenTimer = reader.ReadInt32();
         hospital.OpenTickTimer = reader.ReadInt32();
+        hospital.Policies = HospitalPolicies.Read(reader);
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)

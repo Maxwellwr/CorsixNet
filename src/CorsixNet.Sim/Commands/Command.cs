@@ -31,6 +31,7 @@ public enum CommandKind : ushort
     SetTreatmentPrice = 16,
     SetRadiatorHeat = 17,
     Cheat = 18,
+    SetPolicy = 19,
 }
 
 /// <summary>
@@ -72,6 +73,7 @@ public abstract record Command
             CommandKind.PurchaseParcel => new PurchaseParcelCommand(reader.ReadInt32()),
             CommandKind.Cheat => new CheatCommand(ReadCheat(reader)),
             CommandKind.SetRadiatorHeat => new SetRadiatorHeatCommand(reader.ReadInt32()),
+            CommandKind.SetPolicy => new SetPolicyCommand(ReadPolicy(reader), reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -83,6 +85,12 @@ public abstract record Command
     {
         var cheat = reader.ReadByte();
         return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleEarthquakes ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+    }
+
+    private static PolicyKind ReadPolicy(SimReader reader)
+    {
+        var policy = reader.ReadByte();
+        return policy is >= (byte)PolicyKind.SendHome and <= (byte)PolicyKind.GrantWageIncrease ? (PolicyKind)policy : throw new InvalidDataException($"Unknown policy {policy}.");
     }
 
     private static StaffClass ReadStaffClass(SimReader reader)
@@ -505,6 +513,29 @@ public sealed record SetRadiatorHeatCommand(int Tenths) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Tenths);
+}
+
+/// <summary>
+/// Sets one of the issuing player's hospital policies, as moving a slider or a switch in CorsixTH's policy window
+/// (<c>UIPolicy</c>); sliders are in thousandths.
+/// </summary>
+public sealed record SetPolicyCommand(PolicyKind Policy, int Value) : Command
+{
+    public override CommandKind Kind => CommandKind.SetPolicy;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[player].Policies.Set(Policy, Value);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteByte((byte)Policy);
+        writer.WriteInt32(Value);
+    }
 }
 
 /// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>

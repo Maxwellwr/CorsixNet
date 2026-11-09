@@ -553,17 +553,18 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     }
 
     /// <summary>
-    /// <c>action_seek_room_no_diagnosis_room_found</c> with CorsixTH's default policies: a patient hardly diagnosed
+    /// <c>action_seek_room_no_diagnosis_room_found</c> with the hospital's policies: a patient hardly diagnosed
     /// goes home; one fairly far, or with a disease the hospital does not know, waits for the player's decision;
     /// one nearly diagnosed has the disease guessed and goes on to treatment.
     /// </summary>
     private void NoDiagnosisRoomFound(Simulation simulation, Humanoid humanoid)
     {
-        if (Disease is not { } disease || DiagnosisProgress < PatientCare.SendHome)
+        var policies = PatientCare.Policies(simulation, humanoid);
+        if (Disease is not { } disease || DiagnosisProgress < policies.SendHome)
         {
             GoHome(simulation, humanoid, ReputationChange.Kicked);
         }
-        else if (DiagnosisProgress < PatientCare.GuessCure || !PatientCare.IsDiscovered(simulation, humanoid, disease))
+        else if (DiagnosisProgress < policies.GuessCure || !PatientCare.IsDiscovered(simulation, humanoid, disease))
         {
             StartWaiting(simulation, humanoid);
         }
