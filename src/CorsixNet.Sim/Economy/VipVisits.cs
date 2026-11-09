@@ -80,8 +80,8 @@ public sealed class VipVisits
         var peak = (c - a) / range;
         var u = random.Next(1_000_000) / 1_000_000m;
         return u <= peak
-            ? a + (Sqrt(peak * u) * range)
-            : a + ((1 - Sqrt((1 - peak) * (1 - u))) * range);
+            ? a + (DecimalMath.Sqrt(peak * u) * range)
+            : a + ((1 - DecimalMath.Sqrt((1 - peak) * (1 - u))) * range);
     }
 
     /// <summary>
@@ -264,27 +264,4 @@ public sealed class VipVisits
     }
 
     private static bool HasRoom(Simulation simulation, int player) => RoomsOf(simulation, player).Any();
-
-    /// <summary>A square root by Newton's method, in decimals to keep the simulation deterministic.</summary>
-    private static decimal Sqrt(decimal value)
-    {
-        if (value <= 0)
-        {
-            return 0;
-        }
-
-        var guess = value >= 1 ? value : 1;
-        for (var i = 0; i < 100; i++)
-        {
-            var next = (guess + (value / guess)) / 2;
-            if (next == guess)
-            {
-                break;
-            }
-
-            guess = next;
-        }
-
-        return guess;
-    }
 }

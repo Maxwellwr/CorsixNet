@@ -1,5 +1,5 @@
 // Emergencies, ported from CorsixTH CorsixTH/Lua/world.lua (World:onEndDay's emergency check, nextEmergency,
-// computeNextEmergencyDates, wasEmergencySkipped), hospital.lua (createEmergency, resolveEmergency, checkEmergencyOver,
+// scheduleRandomEmergency, computeNextEmergencyDates, wasEmergencySkipped), hospital.lua (createEmergency, resolveEmergency, checkEmergencyOver,
 // getHeliportPosition, getHeliportSpawnPosition, reputation_changes), objects/helicopter.lua, dialogs/watch.lua
 // (UIWatch for "emergency"), hospitals/player_hospital.lua (makeEmergencyStartFax's timeout) and
 // dialogs/fullscreen/fax.lua (accept_emergency, refuse_emergency).
@@ -37,6 +37,21 @@ public readonly record struct PlannedEmergency(int Index, int StartMonth, int En
 
     internal static PlannedEmergency Read(SimReader reader) =>
         new(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+}
+
+/// <summary>
+/// A level's random emergencies (<c>emergency_control[0].Random</c> or <c>Mean</c> set, whatever the value): instead of
+/// the planned ones, each comes about <see cref="Mean"/> days after the last, give or take <see cref="Variance"/>.
+/// </summary>
+/// <param name="Mean">Days on average between emergencies (<c>Mean</c>, by default 180).</param>
+/// <param name="Variance">Their standard deviation in days (<c>Variance</c>, by default 30).</param>
+public readonly record struct RandomEmergencies(int Mean, int Variance)
+{
+    /// <summary><c>World:scheduleRandomEmergency</c>'s mean when the level gives none.</summary>
+    public const int DefaultMean = 180;
+
+    /// <summary>Likewise for the variance.</summary>
+    public const int DefaultVariance = 30;
 }
 
 /// <summary>An emergency offered by fax, or under way once accepted (CorsixTH's <c>hospital.emergency</c>).</summary>
@@ -134,8 +149,7 @@ public sealed class Emergency
 /// </summary>
 /// <remarks>
 /// CorsixTH keeps the schedule in the world and has emergencies at the local player's hospital only; here each
-/// hospital has its own. Levels with random emergencies (<c>emergency_control[0].Mean</c> or <c>Random</c>) are not
-/// supported: no original level has them.
+/// hospital has its own.
 /// </remarks>
 public sealed class HospitalEmergencies
 {
@@ -250,6 +264,12 @@ public static class Emergencies
     internal static void NextEmergency(Simulation simulation, Hospital hospital)
     {
         var state = hospital.Emergencies;
+        if (simulation.Rules.RandomEmergencies is { } random)
+        {
+            ScheduleRandom(simulation, state, random);
+            return;
+        }
+
         var planned = simulation.Rules.Emergencies;
         while (true)
         {
@@ -274,6 +294,19 @@ public static class Emergencies
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// <c>World:scheduleRandomEmergency</c>: a level with random emergencies has the next one a normally distributed
+    /// number of days from now (rounded, at least one), of a random disease.
+    /// </summary>
+    private static void ScheduleRandom(Simulation simulation, HospitalEmergencies state, RandomEmergencies random)
+    {
+        var days = Math.Max(DecimalMath.Round(DecimalMath.NormalRandom(simulation.Random, random.Mean, random.Variance)), 1);
+        var date = GameDate.FromHours(simulation.Hours + (days * GameDate.HoursPerDay));
+        state.NextIndex = -1;
+        state.NextMonth = date.MonthOfGame;
+        state.NextDay = date.Day;
     }
 
     /// <summary>

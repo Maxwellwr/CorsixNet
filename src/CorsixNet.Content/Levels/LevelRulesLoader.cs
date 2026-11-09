@@ -108,7 +108,8 @@ public static partial class LevelRulesLoader
             EpidemicsFromConfig(config),
             CompetitorsFromConfig(config),
             config.GetInt("gbv.ScoreMaxInc") ?? LevelRules.DefaultScoreMaxIncrease,
-            levelNumber);
+            levelNumber,
+            RandomEmergenciesFromConfig(config));
     }
 
     /// <summary>
@@ -174,6 +175,19 @@ public static partial class LevelRulesLoader
 
             yield return new PlannedEarthquake(startMonth ?? 0, endMonth ?? 0, severity ?? 0);
         }
+    }
+
+    /// <summary>
+    /// <c>World:nextEmergency</c>'s test <c>control[0].Random or control[0].Mean</c>: either setting, whatever its value
+    /// (0 is true in Lua), makes the level's emergencies random, <c>Mean</c> (180) days apart give or take
+    /// <c>Variance</c> (30).
+    /// </summary>
+    public static RandomEmergencies? RandomEmergenciesFromConfig(LevelConfig config)
+    {
+        var mean = config.GetInt("emergency_control[0].Mean");
+        return config.GetInt("emergency_control[0].Random") is null && mean is null
+            ? null
+            : new RandomEmergencies(mean ?? RandomEmergencies.DefaultMean, config.GetInt("emergency_control[0].Variance") ?? RandomEmergencies.DefaultVariance);
     }
 
     /// <summary>

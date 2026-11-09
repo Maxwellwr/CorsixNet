@@ -512,7 +512,10 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   (refused by itself after 16 days). An accepted emergency brings a helicopter that drops its patients, diagnosed,
   at the heliport; they go ahead of others in queues. A watch of 52 days runs; when it ends, or every patient is
   cured or dead, the remaining ones die unless cured, and enough cures bring the bonus and 15 reputation, too few
-  cost 20 reputation. Each hospital has its own schedule.
+  cost 20 reputation. Each hospital has its own schedule. A level that sets `emergency_control[0].Random` or `Mean`
+  (any value, as in Lua) has random emergencies instead: each comes a normally distributed number of days after the
+  last (`Mean` 180, `Variance` 30 by default; `scheduleRandomEmergency`), of a random disease. `DecimalMath` has
+  the Box-Muller transform in decimals.
 - **Epidemics** (`Disasters/Epidemics.cs`, `People/InspectorBehaviour.cs`, from `epidemic.lua`, `hospital.lua`'s
   `determineIfContagious` and `addToEpidemic`, and `entities/humanoids/inspector.lua`). A patient who comes with a
   contagious disease is contagious one time in the level's `ContRate` for it, once the game is past
