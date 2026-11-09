@@ -142,6 +142,9 @@ entities and pending commands.
   `UI:playSound` (heard alike everywhere) and `Entity:playSound` (quieter away from the view's centre and not heard
   off it, `SoundChoice.VolumeAt`). It is driven by the client's own actions only, never by the simulation, and is
   silent without the archive, with `play_sounds = false` or without a sound device.
+- **Scrolling.** `MapScrolling` (CorsixNet.Content, so that it can be tested) is CorsixTH's `GameUI` scrolling, run in
+  18 ms interface ticks whatever the frame rate: keys and screen edges with the speed settings and the growing
+  multiplier, dragging by whole map pixels, and the wheel's zoom momentum through `World:adjustZoom`.
 
 Presentation details are derived in the client, not stored in the simulation. Examples are
 pixel offsets during a step and which tile a walking humanoid is drawn with. Animation timing

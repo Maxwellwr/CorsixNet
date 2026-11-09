@@ -4,6 +4,7 @@
 
 using System.Globalization;
 using System.Text;
+using CorsixNet.Content.Interface;
 using CorsixNet.Formats;
 
 namespace CorsixNet.Content.Settings;
@@ -73,6 +74,21 @@ public sealed record GameConfig
     /// <summary>The volume of sound effects, from 0 to 1 (<c>sound_volume</c>).</summary>
     public decimal SoundVolume { get; init; } = 0.5m;
 
+    /// <summary>Whether the mouse at the screen's edge does not scroll the map (<c>prevent_edge_scrolling</c>).</summary>
+    public bool PreventEdgeScrolling { get; init; }
+
+    /// <summary>How much of a zoom carries on each tick, from 0 to 1 (<c>scrolling_momentum</c>).</summary>
+    public decimal ScrollingMomentum { get; init; } = 0.8m;
+
+    /// <summary>How fast the mouse wheel zooms (<c>zoom_speed</c>).</summary>
+    public decimal ZoomSpeed { get; init; } = 80;
+
+    /// <summary>How fast the arrow keys and the screen's edges scroll the map (<c>scroll_speed</c>).</summary>
+    public decimal ScrollSpeed { get; init; } = 2;
+
+    /// <summary>The same with Shift held (<c>shift_scroll_speed</c>).</summary>
+    public decimal ShiftScrollSpeed { get; init; } = 4;
+
     /// <summary>The player's name in network games; empty for the default.</summary>
     public string PlayerName { get; init; } = string.Empty;
 
@@ -136,6 +152,7 @@ public sealed record GameConfig
         var defaults = new GameConfig();
         bool Bool(string name, bool fallback) => values.GetValueOrDefault(name) is bool value ? value : fallback;
         int Int(string name, int fallback) => values.GetValueOrDefault(name) is decimal value && value == decimal.Truncate(value) && value is >= int.MinValue and <= int.MaxValue ? (int)value : fallback;
+        decimal Number(string name, decimal fallback) => values.GetValueOrDefault(name) is decimal value ? value : fallback;
         string Text(string name, string fallback) => values.GetValueOrDefault(name) as string ?? fallback;
         return new GameConfig
         {
@@ -148,7 +165,12 @@ public sealed record GameConfig
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
             PlaySounds = Bool("play_sounds", defaults.PlaySounds),
-            SoundVolume = values.GetValueOrDefault("sound_volume") is decimal volume ? volume : defaults.SoundVolume,
+            SoundVolume = Number("sound_volume", defaults.SoundVolume),
+            PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
+            ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
+            ZoomSpeed = Number("zoom_speed", defaults.ZoomSpeed),
+            ScrollSpeed = Number("scroll_speed", defaults.ScrollSpeed),
+            ShiftScrollSpeed = Number("shift_scroll_speed", defaults.ShiftScrollSpeed),
             PlayerName = Text("player_name", defaults.PlayerName),
         };
     }
@@ -252,7 +274,43 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"play_sounds = {Lua(PlaySounds)}\n");
-        text.Append(CultureInfo.InvariantCulture, $"sound_volume = {SoundVolume.ToString(CultureInfo.InvariantCulture)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"sound_volume = {Number(SoundVolume)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Edge scrolling: By default enabled (prevent_edge_scrolling = false).
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"prevent_edge_scrolling = {Lua(PreventEdgeScrolling)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Scrolling Momentum.
+            -- Determines the amount of momentum when scrolling the map with the mouse.
+            -- This should be a value between 0 and 1 where 0 is no momentum
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"scrolling_momentum = {Number(ScrollingMomentum)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Zoom Speed: By default this is set at 80
+            -- Any number value between 10 and 1000, 10 is very slow and 1000 is very fast!
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"zoom_speed = {Number(ZoomSpeed)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Scroll Speeds: The speed of scrolling with and without shift being held.
+            -- Any number value between 1 and 10, 1 is very slow and 10 is fast!
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"scroll_speed = {Number(ScrollSpeed)}\nshift_scroll_speed = {Number(ShiftScrollSpeed)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------
@@ -263,6 +321,14 @@ public sealed record GameConfig
         text.Append(CultureInfo.InvariantCulture, $"player_name = {Quote(PlayerName)}\n");
         return text.ToString();
     }
+
+    /// <summary>The scrolling settings for <see cref="MapScrolling"/>.</summary>
+    public ScrollSettings ScrollSettings() => new(
+        (double)ScrollSpeed,
+        (double)ShiftScrollSpeed,
+        (double)ZoomSpeed,
+        (double)ScrollingMomentum,
+        PreventEdgeScrolling);
 
     /// <summary>
     /// The number of the original's string file for <see cref="Language"/>, or null for a language that does not use
@@ -282,6 +348,8 @@ public sealed record GameConfig
     }
 
     private static string Lua(bool value) => value ? "true" : "false";
+
+    private static string Number(decimal value) => value.ToString(CultureInfo.InvariantCulture);
 
     /// <summary>A Lua long string, with enough '=' signs that the text can't close it.</summary>
     private static string Quote(string value)

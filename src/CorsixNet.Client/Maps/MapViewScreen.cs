@@ -3,6 +3,7 @@ using CorsixNet.Client.Audio;
 using CorsixNet.Client.Rendering;
 using CorsixNet.Client.Sessions;
 using CorsixNet.Content;
+using CorsixNet.Content.Interface;
 using CorsixNet.Content.Levels;
 using CorsixNet.Content.Saves;
 using CorsixNet.Content.Settings;
@@ -43,11 +44,11 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// </remarks>
 internal sealed class MapViewScreen : IScreen
 {
-    private const float PanSpeed = 900f;
+    /// <summary>The most interface ticks of scrolling (18 ms each) one frame catches up on.</summary>
+    private const int MaxScrollTicksPerFrame = 10;
 
     /// <summary>How far an earthquake at full strength moves the view, in map pixels (CorsixTH's <c>shake_screen_max_movement</c>).</summary>
     private const float ShakeMaxMovement = 50f;
-    private const float ZoomStep = 1.25f;
     private const int StatusHeight = 36;
 
     private static readonly Color Background = Color.Black;
@@ -161,6 +162,12 @@ internal sealed class MapViewScreen : IScreen
     /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
     private readonly SoundEffects _sounds;
 
+    /// <summary>Scrolling and zooming the view as CorsixTH does, with the player's speeds.</summary>
+    private readonly MapScrolling _scrolling;
+
+    /// <summary>Time not yet scrolled for, less than an interface tick.</summary>
+    private double _scrollMilliseconds;
+
     /// <summary>Creates the view for a local game on <paramref name="levels"/>, or for <paramref name="networkSession"/> if given.</summary>
     public MapViewScreen(
         ThemeHospitalInstall install,
@@ -194,6 +201,7 @@ internal sealed class MapViewScreen : IScreen
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
         _texts = LoadTexts(install, _config);
         _sounds = SoundEffects.Load(install, _config);
+        _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = _sounds.Play;
         _furnishTool.PlaySound = _sounds.Play;
         _diamond = CreateDiamond(device);
@@ -317,42 +325,44 @@ internal sealed class MapViewScreen : IScreen
             _floatingDollars.SetScale(scale);
         }
 
-        var pan = Vector2.Zero;
-        if (keys.IsKeyDown(Keys.Left) || keys.IsKeyDown(Keys.A))
-        {
-            pan.X -= 1;
-        }
-
-        if (keys.IsKeyDown(Keys.Right) || keys.IsKeyDown(Keys.D))
-        {
-            pan.X += 1;
-        }
-
-        if (keys.IsKeyDown(Keys.Up) || keys.IsKeyDown(Keys.W))
-        {
-            pan.Y -= 1;
-        }
-
-        if (keys.IsKeyDown(Keys.Down) || keys.IsKeyDown(Keys.S))
-        {
-            pan.Y += 1;
-        }
-
-        var seconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-        _camera.Center += pan * PanSpeed * seconds / _camera.Zoom;
-
+        // CorsixTH's GameUI scrolling: the arrow keys (and WASD) and the screen's edges scroll, faster with Shift and the
+        // longer they do; the right or middle button drags; the wheel zooms with momentum, towards the cursor.
+        var keyX = (keys.IsKeyDown(Keys.Right) || keys.IsKeyDown(Keys.D) ? 1 : 0) - (keys.IsKeyDown(Keys.Left) || keys.IsKeyDown(Keys.A) ? 1 : 0);
+        var keyY = (keys.IsKeyDown(Keys.Down) || keys.IsKeyDown(Keys.S) ? 1 : 0) - (keys.IsKeyDown(Keys.Up) || keys.IsKeyDown(Keys.W) ? 1 : 0);
+        var shiftHeld = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         var dragging = mouse.RightButton == ButtonState.Pressed || mouse.MiddleButton == ButtonState.Pressed;
         var wasDragging = _previousMouse.RightButton == ButtonState.Pressed || _previousMouse.MiddleButton == ButtonState.Pressed;
         if (dragging && wasDragging)
         {
-            _camera.Center -= new Vector2(mouse.X - _previousMouse.X, mouse.Y - _previousMouse.Y) / _camera.Zoom;
+            var (dragX, dragY) = _scrolling.Drag(mouse.X - _previousMouse.X, mouse.Y - _previousMouse.Y, _camera.Zoom);
+            _camera.Center += new Vector2(dragX, dragY);
         }
 
         var wheel = mouse.ScrollWheelValue - _previousMouse.ScrollWheelValue;
         if (wheel != 0)
         {
-            var factor = wheel > 0 ? ZoomStep : 1 / ZoomStep;
-            _camera.ZoomAt(_camera.Zoom * factor, new Point(mouse.X, mouse.Y - StatusHeight), viewSize);
+            _scrolling.Wheel(wheel / 120.0);
+        }
+
+        var (edgeX, edgeY) = _scrolling.EdgePull(mouse.X, mouse.Y, _device.Viewport.Width, _device.Viewport.Height, _config.Fullscreen);
+        var zoomAnchor = new Point(mouse.X, mouse.Y - StatusHeight);
+        _scrollMilliseconds += gameTime.ElapsedGameTime.TotalMilliseconds;
+        for (var tick = 0; _scrollMilliseconds >= MapScrolling.TickMilliseconds; tick++)
+        {
+            if (tick == MaxScrollTicksPerFrame)
+            {
+                // After a long pause (a level loading, the window dragged), don't scroll for all of it at once.
+                _scrollMilliseconds = 0;
+                break;
+            }
+
+            _scrollMilliseconds -= MapScrolling.TickMilliseconds;
+            var step = _scrolling.Tick(new ScrollInput(keyX, keyY, shiftHeld, edgeX, edgeY, dragging));
+            _camera.Center += new Vector2((float)step.X, (float)step.Y);
+            if (step.Zoom != 0 && _scrolling.Zoomed(_camera.Zoom, step.Zoom, _device.Viewport.Width) is { } zoomed)
+            {
+                _camera.ZoomAt((float)zoomed, zoomAnchor, viewSize);
+            }
         }
 
         ClampCamera();

@@ -247,10 +247,12 @@ join.
 
 - Options dialog: resolution, fullscreen, language, audio, scroll speed, edge scrolling, zoom, mouse
   capture, adviser on/off, ... (`resizables/options.lua`, `graphics_settings.lua`, `customise.lua`).
-- The rest of the config file (`config_finder.lua`): announcements, music, movies, scrolling and zoom speeds, edge
-  scrolling, the options dialog's game rules, `config.path.txt`; game data folder selection
-  (`resizables/folder_settings.lua`, `directory_browser.lua`). `config.txt` with the language, window, screen shake,
-  autosave frequency, game folder, player name and sound effects is done (`GameConfig`).
+- The rest of the config file (`config_finder.lua`): announcements, music, movies, `right_mouse_scrolling` (the
+  right and middle buttons both drag), `capture_mouse`, the options dialog's game rules, `config.path.txt`; game
+  data folder selection (`resizables/folder_settings.lua`, `directory_browser.lua`). `config.txt` with the language,
+  window, screen shake, autosave frequency, game folder, player name, sound effects and scrolling
+  (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`) is done
+  (`GameConfig`).
 - Hotkeys file.
 - Update check (`resizables/update.lua`).
 

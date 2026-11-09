@@ -120,8 +120,13 @@ Done and committed:
   other rooms' queues (PR #153), the settings file `config.txt` in CorsixTH's format (PR #154), free
   build mode (PR #155), the sound archive reader (PR #156), the music list and XMI to MIDI conversion
   (PR #157), moving staff: M picks up the member of staff at the cursor, M again puts them down (PR
-  #158). No game data in the cloud: real-data tests were skipped there and the client was not run, so
-  these want a look on MSI. Save format version 49.
+  #158). Sound effects in the client: SoundEffects plays SOUND-n.DAT through MonoGame for the client's
+  own actions (building, placing objects, hiring and moving staff, parcels, rats, sending patients
+  home), with play_sounds and sound_volume in config.txt; sounds the simulation causes are not played
+  yet (PR #159). Scrolling as CorsixTH: keys and screen edges in 18 ms ticks with scroll_speed,
+  shift_scroll_speed and the growing multiplier, the wheel zooming with momentum through zoom_speed, and
+  prevent_edge_scrolling (PR #160). No game data in the cloud: real-data tests were skipped there and
+  the client was not run, so these want a look on MSI. Save format version 49.
 
 Not done yet:
 
