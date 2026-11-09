@@ -156,7 +156,7 @@ public sealed class PatientArrivals
         var behaviour = new PatientBehaviour { Health = health };
         if (disease is not null)
         {
-            behaviour.SetDisease(disease, PatientCare.ChooseInsuranceCompany(simulation.Random));
+            behaviour.SetDisease(disease, PatientCare.ChooseInsuranceCompany(simulation.Random), simulation.Random);
         }
 
         patient.Behaviour = behaviour;

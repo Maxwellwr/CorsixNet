@@ -141,6 +141,7 @@ internal static class Feelings
         }
 
         patient.Health = Math.Max(patient.Health - PatientBehaviour.DailyHealthLoss, 0m);
+        Needs.OnEndDay(simulation, humanoid, patient);
     }
 
     /// <summary><c>getRandomEntryFromArray</c>, which draws only when there is more than one.</summary>

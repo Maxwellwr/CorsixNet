@@ -70,7 +70,7 @@ public class EpidemicContagionTests
     {
         var humanoid = simulation.AddEntity(id => Humanoid.CreatePatient(id, new TilePosition(1, 1), simulation.Random, PatientLook.Standard, 0));
         var patient = new PatientBehaviour();
-        patient.SetDisease(DiseaseCatalog.Find(diseaseId)!, 0);
+        patient.SetDisease(DiseaseCatalog.Find(diseaseId)!, 0, simulation.Random);
         humanoid.Behaviour = patient;
         return (humanoid, patient);
     }

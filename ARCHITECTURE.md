@@ -457,6 +457,12 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   a plant by how healthy it is (−0.0003 + 0.0001 × state), and lose 0.00002 a day for standing (no benches yet).
   Patients outside rooms and staff lose 0.0002 a day for each piece of rubbish within two tiles in the same room,
   0.0004 for other litter.
+- **Thirst and the toilet** (`Needs`, from `patient.lua`). Patients come with thirst and need for the toilet each up
+  to 0.2 (none with alien DNA). After the day's health, except for emergency patients, thirst grows by 0.004 to
+  0.008 plus a fiftieth of warmth, and the need for the toilet by 0.002 to 0.008 (0.008 to 0.026 with gut rot or the
+  squits). Above 0.7 thirst costs 0.002 happiness a day and shows the thirsty mood; in a corridor the patient looks
+  for a drinks machine within 8 steps and, without one or three times in ten, looks again in two to four days.
+  Buying the drink, peeing and the toilets are not there yet.
 - **Policies** (`Hospital.Policies`, from `hospital.lua` and `hospital_policy.lua`). Each hospital has CorsixTH's
   policy window settings: `send_home` 0.1, `guess_cure` 0.9, `stop_procedure` 1.0 (up to 2.0), `goto_staffroom`
   from the level's `gbv.Tired`, staff allowed to move and granting raises. `SetPolicyCommand` sets one, in
