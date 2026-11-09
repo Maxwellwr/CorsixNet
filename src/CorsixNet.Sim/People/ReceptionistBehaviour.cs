@@ -35,6 +35,9 @@ public sealed class ReceptionistBehaviour : HumanoidBehaviour
     /// <summary>The desk the receptionist staffs or is going to, or 0.</summary>
     public int DeskId { get; private set; }
 
+    /// <summary>Wandering about while without a desk.</summary>
+    private Meandering Meander { get; init; } = new();
+
     internal void GoToDesk(Simulation simulation, Humanoid humanoid, RoomObject desk)
     {
         DeskId = desk.Id;
@@ -46,8 +49,11 @@ public sealed class ReceptionistBehaviour : HumanoidBehaviour
     {
         if (Phase == ReceptionistPhase.Idle)
         {
+            Meander.Update(simulation, humanoid);
             return;
         }
+
+        Meander.Reset();
 
         if (simulation.FindEntity(DeskId) is not RoomObject { Desk: { } state } desk)
         {
@@ -88,10 +94,11 @@ public sealed class ReceptionistBehaviour : HumanoidBehaviour
     {
         writer.WriteByte((byte)Phase);
         writer.WriteInt32(DeskId);
+        Meander.Write(writer);
     }
 
     internal static ReceptionistBehaviour ReadState(SimReader reader)
     {
-        return new ReceptionistBehaviour { Phase = (ReceptionistPhase)reader.ReadByte(), DeskId = reader.ReadInt32() };
+        return new ReceptionistBehaviour { Phase = (ReceptionistPhase)reader.ReadByte(), DeskId = reader.ReadInt32(), Meander = Meandering.Read(reader) };
     }
 }

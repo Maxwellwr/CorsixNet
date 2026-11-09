@@ -52,6 +52,9 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary>The doctor's use of the cabinet or desk, while it lasts.</summary>
     public ObjectUse? Use { get; private set; }
 
+    /// <summary>Wandering about while without a room.</summary>
+    private Meandering Meander { get; init; } = new();
+
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         RoomId = room.Id;
@@ -63,8 +66,11 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     {
         if (Phase == DoctorPhase.Idle)
         {
+            Meander.Update(simulation, humanoid);
             return;
         }
+
+        Meander.Reset();
 
         if (simulation.FindEntity(RoomId) is not Room room)
         {
@@ -233,6 +239,7 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteInt32(RoomId);
         writer.WriteInt32(DeskUseTime);
         ObjectUse.WriteOptional(writer, Use);
+        Meander.Write(writer);
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
@@ -243,6 +250,7 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             RoomId = reader.ReadInt32(),
             DeskUseTime = reader.ReadInt32(),
             Use = ObjectUse.ReadOptional(reader),
+            Meander = Meandering.Read(reader),
         };
     }
 }

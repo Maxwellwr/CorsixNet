@@ -55,6 +55,9 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary>The patient she is going to vaccinate or vaccinating, or 0.</summary>
     public int VaccinatePatientId { get; private set; }
 
+    /// <summary>Wandering about while without a room.</summary>
+    private Meandering Meander { get; init; } = new();
+
     /// <summary>Hours left of vaccinating (the 5 of CorsixTH's idle before <c>perform_vaccination</c>).</summary>
     private int VaccinateTimer { get; set; }
 
@@ -72,8 +75,11 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     {
         if (Phase == NursePhase.Idle)
         {
+            Meander.Update(simulation, humanoid);
             return;
         }
+
+        Meander.Reset();
 
         if (Phase is NursePhase.WalkingToVaccinate or NursePhase.Vaccinating)
         {
@@ -244,6 +250,7 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
         MultiObjectUse.WriteOptional(writer, Use);
         writer.WriteInt32(VaccinatePatientId);
         writer.WriteInt32(VaccinateTimer);
+        Meander.Write(writer);
     }
 
     internal static NurseBehaviour ReadState(SimReader reader)
@@ -255,6 +262,7 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             Use = MultiObjectUse.ReadOptional(reader),
             VaccinatePatientId = reader.ReadInt32(),
             VaccinateTimer = reader.ReadInt32(),
+            Meander = Meandering.Read(reader),
         };
     }
 }
