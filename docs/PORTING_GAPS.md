@@ -172,7 +172,8 @@ MMPX smoothing; everything else is debug keys.
   humanoid highlighting on hover; hover info.
 - Strings and languages: CorsixTH's language files and their mapping of the original strings, translations, and
   showing them in windows (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`), and
-  so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor).
+  so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor),
+  disease texts and VIP names (`OriginalTexts`, in the status line).
 - Subtitles for the announcer (`dialogs/subtitles.lua`).
 - Hotkeys and their assignment dialog (`resizables/hotkey_assign.lua`).
 

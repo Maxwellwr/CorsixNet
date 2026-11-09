@@ -147,8 +147,8 @@ internal sealed class MapViewScreen : IScreen
     private LevelMap? _preparedMap;
     private string? _capturePath;
 
-    /// <summary>Names and descriptions of staff in the installed language, or null if no string file loads.</summary>
-    private readonly StaffTexts? _staffTexts;
+    /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
+    private readonly OriginalTexts? _texts;
 
     /// <summary>Creates the view for a local game on <paramref name="levels"/>, or for <paramref name="networkSession"/> if given.</summary>
     public MapViewScreen(
@@ -179,7 +179,7 @@ internal sealed class MapViewScreen : IScreen
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
-        _staffTexts = LoadStaffTexts(install);
+        _texts = LoadTexts(install);
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
         _pixel = new Texture2D(device, 1, 1);
@@ -1586,22 +1586,22 @@ internal sealed class MapViewScreen : IScreen
                 $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{EpidemicText(simulation, simulation.Hospitals[_session.Player])}{QuestionText(simulation, _session.Player)}{OutcomeText(simulation.Hospitals[_session.Player])}")
             : string.Empty;
 
-        static string EmergencyText(Hospital hospital) => hospital.Emergencies.Current switch
+        string EmergencyText(Hospital hospital) => hospital.Emergencies.Current switch
         {
-            { IsAccepted: false } offer => $"   EMERGENCY: {offer.Victims} with {offer.DiseaseId}, {offer.Percentage} % to cure (E accept, Shift+E refuse)",
+            { IsAccepted: false } offer => $"   EMERGENCY: {offer.Victims} with {DiseaseName(offer.DiseaseId)}, {offer.Percentage} % to cure (E accept, Shift+E refuse)",
             { } emergency => $"   EMERGENCY: cured {emergency.Cured}, lost {emergency.Killed} of {emergency.Victims}, {emergency.WatchTimer + 1}/13 left",
             null => string.Empty,
         };
 
-        static string EpidemicText(Simulation simulation, Hospital hospital) => hospital.Epidemics.Current switch
+        string EpidemicText(Simulation simulation, Hospital hospital) => hospital.Epidemics.Current switch
         {
-            { FaxExpires: > 0 } fax => $"   EPIDEMIC of {fax.DiseaseId}: declare for {MoneyText.Format(fax.DeclareFine)} (Shift+I) or cover up (I)",
+            { FaxExpires: > 0 } fax => $"   EPIDEMIC of {DiseaseName(fax.DiseaseId)}: declare for {MoneyText.Format(fax.DeclareFine)} (Shift+I) or cover up (I)",
             { IsWatchRunning: true } epidemic => $"   EPIDEMIC: {Epidemics.CountInfectedPatients(simulation, epidemic)} infected, {epidemic.WatchTimer + 1}/13 left (J vaccinate)",
             { } => "   EPIDEMIC: the health inspector is coming",
             null => string.Empty,
         };
 
-        static string QuestionText(Simulation simulation, int player)
+        string QuestionText(Simulation simulation, int player)
         {
             if (FirstQuestion(simulation, player) is not { Behaviour: PatientBehaviour patient })
             {
@@ -1610,11 +1610,13 @@ internal sealed class MapViewScreen : IScreen
 
             var count = simulation.Entities.Count(entity => entity is Humanoid { Behaviour: PatientBehaviour { Question: not PatientQuestion.None } } other && other.HospitalPlayer == player);
             return patient.Question == PatientQuestion.NoDiagnosisRoom
-                ? $"   {count} ASKING: no diagnosis room for {patient.DiseaseId} ({patient.DiagnosisProgress / 10} %) (K wait, Shift+K send home, Ctrl+K guess cure)"
-                : $"   {count} ASKING: no room to treat {patient.DiseaseId} (K wait, Shift+K send home)";
+                ? $"   {count} ASKING: no diagnosis room for {DiseaseName(patient.DiseaseId)} ({patient.DiagnosisProgress / 10} %) (K wait, Shift+K send home, Ctrl+K guess cure)"
+                : $"   {count} ASKING: no room to treat {DiseaseName(patient.DiseaseId)} (K wait, Shift+K send home)";
         }
 
-        static string VipText(Hospital hospital) => hospital.Vips.IsInvitationPending ? $"   VIP {hospital.Vips.InvitedName} asks to visit (V invite, Shift+V refuse)" : string.Empty;
+        string DiseaseName(string diseaseId) => _texts?.DiseaseName(diseaseId) ?? diseaseId;
+
+        string VipText(Hospital hospital) => hospital.Vips.IsInvitationPending ? $"   VIP {_texts?.VipName(hospital.Vips.InvitedName) ?? hospital.Vips.InvitedName.ToString(CultureInfo.InvariantCulture)} asks to visit (V invite, Shift+V refuse)" : string.Empty;
 
         static string LoanText(Hospital hospital) => hospital.Loan > 0 ? $"   loan {MoneyText.Format(hospital.Loan)}" : string.Empty;
 
@@ -1723,19 +1725,19 @@ internal sealed class MapViewScreen : IScreen
     /// </summary>
     private string StaffText(Point position)
     {
-        if (_staffTexts is null || Simulation is not { } simulation)
+        if (_texts is null || Simulation is not { } simulation)
         {
             return string.Empty;
         }
 
         var staff = simulation.Entities.OfType<Humanoid>().FirstOrDefault(humanoid => humanoid.Profile is not null && humanoid.Tile.X == position.X && humanoid.Tile.Y == position.Y);
         return staff?.Profile is { } profile
-            ? $"   {_staffTexts.FullName(profile)}, {_staffTexts.Profession(profile.Class)}: {_staffTexts.Description(profile)}"
+            ? $"   {_texts.Staff.FullName(profile)}, {_texts.Staff.Profession(profile.Class)}: {_texts.Staff.Description(profile)}"
             : string.Empty;
     }
 
-    /// <summary>The staff texts in English, or in the first installed language if English is missing.</summary>
-    private static StaffTexts? LoadStaffTexts(ThemeHospitalInstall install)
+    /// <summary>The texts in English, or in the first installed language if English is missing.</summary>
+    private static OriginalTexts? LoadTexts(ThemeHospitalInstall install)
     {
         var languages = install.InstalledLanguages();
         if (languages.Count == 0)
@@ -1745,7 +1747,7 @@ internal sealed class MapViewScreen : IScreen
 
         try
         {
-            return new StaffTexts(install.LoadStrings(languages.Contains(StringTable.English) ? StringTable.English : languages[0]));
+            return new OriginalTexts(install.LoadStrings(languages.Contains(StringTable.English) ? StringTable.English : languages[0]));
         }
         catch (InvalidDataException)
         {
