@@ -130,6 +130,11 @@ Done and committed:
   The patient window's data: the health graph's last 20 days, the treatment history (rooms, diagnosis,
   cure) and the sad mood (PR #162). No game data in the cloud: real-data tests were skipped there and
   the client was not run, so these want a look on MSI. Save format version 50.
+- Second overnight cloud batch, 2026-11-09/10 (no game data in the cloud: nothing was run live, so every
+  window wants a look on MSI). Windows over the map (`Client/Ui`, see ARCHITECTURE.md, "Windows"): text
+  stand-ins for CorsixTH's dialogs with clickable buttons that send commands. F1 bank manager (loans,
+  insurance owed), F2 bank statement, F5 casebook (prices, research concentration), F6 research shares,
+  F8 graph figures, F9 hospital policy.
 
 Not done yet:
 

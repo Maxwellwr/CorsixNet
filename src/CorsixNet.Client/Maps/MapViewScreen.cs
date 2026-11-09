@@ -2,6 +2,8 @@ using System.Globalization;
 using CorsixNet.Client.Audio;
 using CorsixNet.Client.Rendering;
 using CorsixNet.Client.Sessions;
+using CorsixNet.Client.Ui;
+using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Content;
 using CorsixNet.Content.Interface;
 using CorsixNet.Content.Levels;
@@ -35,7 +37,8 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// <remarks>
 /// Keys: arrows/WASD, screen edges or right/middle-drag pan, wheel or =/− zoom, 0 original size, Alt+digit remember
 /// the view and Ctrl+digit go back to it, Home reset camera,
-/// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc quit.
+/// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or quit.
+/// F1 bank manager, F2 bank statement, F5 casebook, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
@@ -43,7 +46,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// the quick save and Alt+Shift+L loads it; the game also saves itself each month. In a network game, commands go
 /// through the server.
 /// </remarks>
-internal sealed class MapViewScreen : IScreen
+internal sealed class MapViewScreen : IScreen, IWindowHost
 {
     /// <summary>The most interface ticks of scrolling (18 ms each) one frame catches up on.</summary>
     private const int MaxScrollTicksPerFrame = 10;
@@ -145,8 +148,8 @@ internal sealed class MapViewScreen : IScreen
     private Point _rightPressedAt;
     private bool _buildBack;
 
-    /// <summary>The money panel shown over the map: none, the bank statement (F2) or the graphs' figures (F8).</summary>
-    private MoneyPanel _moneyPanel;
+    /// <summary>The windows open over the map (bank, casebook, research, policy, ...).</summary>
+    private readonly WindowLayer _windows;
 
     /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
     private bool _levelList;
@@ -222,6 +225,7 @@ internal sealed class MapViewScreen : IScreen
         _blocks = new SpriteAtlas(device, install.LoadSpriteSheet("DATA", "VBLK-0", complex: false), palette, upscale, sprite => sprite.Width == 64 && sprite.Height == 32);
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
+        _windows = new WindowLayer(text => _text.Measure(text).Width, _text.LineHeight) { Origin = new Point(8, StatusHeight + 8) };
         var sprites = install.LoadSpriteSheet("DATA", "VSPR-0", complex: false);
         _animations = new AnimationRenderer(device, AnimationSet.Load(install), sprites, palette, upscale);
         _blueprints = new BlueprintDrawing(device, install, _blocks, _animations, sprites, palette);
@@ -316,7 +320,11 @@ internal sealed class MapViewScreen : IScreen
 
         if (Pressed(Keys.Escape))
         {
-            if (_levelList)
+            if (_windows.Any)
+            {
+                _windows.CloseTop();
+            }
+            else if (_levelList)
             {
                 _levelList = false;
             }
@@ -356,6 +364,15 @@ internal sealed class MapViewScreen : IScreen
             _previousKeys = keys;
             _previousMouse = mouse;
             return;
+        }
+
+        // Windows over the map take the mouse while it is over them: the map sees no clicks and no wheel then.
+        var realMouse = mouse;
+        var overWindow = IsWindowHostReady
+            && _windows.Update(this, mouse, _previousMouse, new Rectangle(0, StatusHeight, _device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight)));
+        if (overWindow)
+        {
+            mouse = new MouseState(mouse.X, mouse.Y, _previousMouse.ScrollWheelValue, _previousMouse.LeftButton, _previousMouse.MiddleButton, _previousMouse.RightButton, _previousMouse.XButton1, _previousMouse.XButton2);
         }
 
         if (Pressed(Keys.Home))
@@ -423,7 +440,7 @@ internal sealed class MapViewScreen : IScreen
 
         ClampCamera();
 
-        var inView = mouse.Y >= StatusHeight && mouse.X >= 0 && mouse.X < viewSize.X && mouse.Y < StatusHeight + viewSize.Y;
+        var inView = !overWindow && mouse.Y >= StatusHeight && mouse.X >= 0 && mouse.X < viewSize.X && mouse.Y < StatusHeight + viewSize.Y;
         var world = _camera.ScreenToWorld(new Point(mouse.X, mouse.Y - StatusHeight), viewSize);
         var tile = Camera.WorldToTile(world);
         _hoveredTile = inView && Map is { } map && map.Contains(tile.X, tile.Y) ? tile : null;
@@ -432,7 +449,7 @@ internal sealed class MapViewScreen : IScreen
         UpdateSimulation(gameTime, mouse, keys, Pressed);
 
         _previousKeys = keys;
-        _previousMouse = mouse;
+        _previousMouse = realMouse;
     }
 
     /// <summary>
@@ -544,8 +561,13 @@ internal sealed class MapViewScreen : IScreen
         _text.Draw(batch, StatusLine(), new Vector2(8, 4));
         _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
         DrawDatePanel(batch, viewport);
-        DrawMoneyPanel(batch);
         DrawRoomList(batch);
+        if (IsWindowHostReady)
+        {
+            var pointer = Mouse.GetState();
+            _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
+        }
+
         DrawLevelList(batch);
         batch.End();
     }
@@ -1347,17 +1369,9 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(new AnswerVipCommand(!shift));
         }
 
-        // Until the town map exists, T and Shift+T turn the heating up and down.
-        // F2 and F8 open the bank statement and the graphs in CorsixTH; here they toggle their figures as text.
-        if (pressed(Keys.F2))
-        {
-            _moneyPanel = _moneyPanel == MoneyPanel.Statement ? MoneyPanel.None : MoneyPanel.Statement;
-        }
+        UpdateWindowKeys(pressed);
 
-        if (pressed(Keys.F8))
-        {
-            _moneyPanel = _moneyPanel == MoneyPanel.Graphs ? MoneyPanel.None : MoneyPanel.Graphs;
-        }
+        // Until the town map exists, T and Shift+T turn the heating up and down.
 
         if (pressed(Keys.T))
         {
@@ -1880,6 +1894,51 @@ internal sealed class MapViewScreen : IScreen
         return new Color(r, g, b);
     }
 
+    /// <summary>
+    /// CorsixTH's fullscreen dialogs' hotkeys (its default <c>hotkeys</c> in config_finder.lua): F1 bank manager, F2 bank
+    /// statement, F5 casebook, F6 research, F8 graphs, F9 policy, each opening its window or closing it again. F3 (staff
+    /// management) stays the level list for now.
+    /// </summary>
+    private void UpdateWindowKeys(Func<Keys, bool> pressed)
+    {
+        (Keys Key, Func<UiWindow> Window)[] dialogs =
+        [
+            (Keys.F1, () => new BankManagerWindow()),
+            (Keys.F2, () => new BankStatementWindow()),
+            (Keys.F5, () => new CasebookWindow()),
+            (Keys.F6, () => new ResearchWindow()),
+            (Keys.F8, () => new GraphFiguresWindow()),
+            (Keys.F9, () => new PolicyWindow()),
+        ];
+        foreach (var (key, window) in dialogs)
+        {
+            if (pressed(key))
+            {
+                _windows.Toggle(window());
+                _sounds.Play("selectx.wav");
+            }
+        }
+    }
+
+    /// <summary>Whether there is a game with a hospital of the local player for windows to show.</summary>
+    private bool IsWindowHostReady => _session is { Simulation: { } simulation, Player: var player } && player < simulation.Hospitals.Count;
+
+    Simulation IWindowHost.Simulation => Simulation!;
+
+    int IWindowHost.Player => _session!.Player;
+
+    OriginalTexts? IWindowHost.Texts => _texts;
+
+    void IWindowHost.Submit(Command command) => _session?.Submit(command);
+
+    void IWindowHost.Open(UiWindow window) => _windows.Open(window);
+
+    void IWindowHost.Close(UiWindow window) => _windows.Close(window);
+
+    void IWindowHost.Notice(string text) => ShowNotice(text);
+
+    void IWindowHost.PlaySound(string name) => _sounds.Play(name);
+
     private void ShowNotice(string text)
     {
         _notice = text;
@@ -2123,25 +2182,6 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
-    private void DrawMoneyPanel(SpriteBatch batch)
-    {
-        if (_moneyPanel == MoneyPanel.None || _session is not { Simulation: { } simulation } session || session.Player >= simulation.Hospitals.Count)
-        {
-            return;
-        }
-
-        var hospital = simulation.Hospitals[session.Player];
-        var lines = (_moneyPanel == MoneyPanel.Statement ? MoneyPanels.Statement(hospital) : MoneyPanels.Graphs(hospital)).ToList();
-        var lineHeight = _text.LineHeight + 2;
-        var width = lines.Max(line => _text.Measure(line).Width) + 16;
-        var box = new Rectangle(8, StatusHeight + 8, width, (lines.Count * lineHeight) + 12);
-        batch.Draw(_pixel, box, MoneyPanelColor);
-        for (var i = 0; i < lines.Count; i++)
-        {
-            _text.Draw(batch, lines[i], new Vector2(box.X + 8, box.Y + 6 + (i * lineHeight)));
-        }
-    }
-
     /// <summary>The date as the original's bottom panel shows it (day and month), with the year.</summary>
     private static string DateText(GameDate date)
     {
@@ -2289,12 +2329,4 @@ internal enum MapOverlay
     Hospital,
     Parcels,
     Temperature,
-}
-
-/// <summary>Which money panel <see cref="MapViewScreen"/> shows.</summary>
-internal enum MoneyPanel
-{
-    None,
-    Statement,
-    Graphs,
 }
