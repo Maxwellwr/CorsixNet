@@ -113,7 +113,7 @@ internal enum AfterRoom : byte
 /// then goes home; a patient hardly diagnosed goes home at once, one diagnosed far enough has their disease
 /// guessed. A waiting patient goes to a room of the kind they wait for as soon as one is built.
 /// </remarks>
-public sealed class PatientBehaviour : HumanoidBehaviour
+public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 {
     /// <summary>The room type a patient goes to after reception.</summary>
     public const string FirstRoom = "gp";
@@ -406,7 +406,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour
     }
 
     /// <summary>Goes to a place in a queue, then turns to face <paramref name="face"/>.</summary>
-    internal void TakeQueuePlace(Simulation simulation, Humanoid humanoid, TilePosition tile, TilePosition face)
+    public void TakeQueuePlace(Simulation simulation, Humanoid humanoid, TilePosition tile, TilePosition face)
     {
         QueueFace = face;
         if (QueueTile == tile && (humanoid.Tile == tile || humanoid.Destination == tile))

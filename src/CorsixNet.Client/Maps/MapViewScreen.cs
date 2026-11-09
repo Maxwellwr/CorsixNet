@@ -989,6 +989,12 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(shift ? new RepayCommand(ctrl) : new BorrowCommand(ctrl));
         }
 
+        // Until faxes exist, V invites the VIP who asks to visit and Shift+V refuses them.
+        if (pressed(Keys.V) && simulation.Hospitals[_session.Player].Vips.IsInvitationPending)
+        {
+            _session.Submit(new AnswerVipCommand(!shift));
+        }
+
         // Until the town map exists, T and Shift+T turn the heating up and down.
         // F2 and F8 open the bank statement and the graphs in CorsixTH; here they toggle their figures as text.
         if (pressed(Keys.F2))
@@ -1355,8 +1361,10 @@ internal sealed class MapViewScreen : IScreen
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
             ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
+                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
             : string.Empty;
+
+        static string VipText(Hospital hospital) => hospital.Vips.IsInvitationPending ? $"   VIP {hospital.Vips.InvitedName} asks to visit (V invite, Shift+V refuse)" : string.Empty;
 
         static string LoanText(Hospital hospital) => hospital.Loan > 0 ? $"   loan {MoneyText.Format(hospital.Loan)}" : string.Empty;
 

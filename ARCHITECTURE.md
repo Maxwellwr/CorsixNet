@@ -458,6 +458,17 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   chance (the larger of 10 % and half-way to the fair wage, up to the maximum salary); unanswered for 750–800 hours,
   they get it if the hospital's policy grants raises and quit otherwise. `AnswerRaiseCommand` grants (happiness up
   0.99) or refuses (they are fired). The raise dialog is not ported.
+- **VIPs** (`VipVisits`, `VipBehaviour`, from `world.lua`, `vip.lua` and the VIP faxes). Each hospital's next
+  VIP comes some 120–180 days on (a triangular draw around the level's `gbv.MayorLaunch`, 150), if the hospital
+  has a room and a staffed desk; otherwise the visit is put off. The VIP then asks to visit: `AnswerVipCommand`
+  invites or refuses them, and after 20 days the fax invites them by itself. A VIP refused more than twice may come
+  anyway, one time in two. The VIP walks at half speed, goes ahead of patients at reception, stands there for the
+  rest of the day, then looks in from the door at the first room and, after it, at each with a chance of one in
+  two (always at a ward or research department), 100 hours each. On leaving they rate the hospital from 12 less up
+  to 5 by litter (none yet), staff tiredness, the patients' health, warmth, happiness, deaths, cures, standing and
+  queues, the doctors' grades and the rooms' extinguishers, bins and plants. Off the map a rating of 7 or better
+  brings a grant of 200–4,000 and 20–50 reputation; a worse one 15 down to −25 reputation. When every VIP of the
+  year left pleased, the year end gives a trophy in reputation.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
   quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike

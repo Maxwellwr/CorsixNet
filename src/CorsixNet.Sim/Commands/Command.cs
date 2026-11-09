@@ -34,6 +34,7 @@ public enum CommandKind : ushort
     SetPolicy = 19,
     FireStaff = 20,
     AnswerRaise = 21,
+    AnswerVip = 22,
 }
 
 /// <summary>
@@ -78,6 +79,7 @@ public abstract record Command
             CommandKind.SetPolicy => new SetPolicyCommand(ReadPolicy(reader), reader.ReadInt32()),
             CommandKind.FireStaff => new FireStaffCommand(reader.ReadInt32()),
             CommandKind.AnswerRaise => new AnswerRaiseCommand(reader.ReadInt32(), reader.ReadBool()),
+            CommandKind.AnswerVip => new AnswerVipCommand(reader.ReadBool()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -88,7 +90,7 @@ public abstract record Command
     private static CheatKind ReadCheat(SimReader reader)
     {
         var cheat = reader.ReadByte();
-        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleEarthquakes ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.Vip ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
     }
 
     private static PolicyKind ReadPolicy(SimReader reader)
@@ -579,6 +581,19 @@ public sealed record AnswerRaiseCommand(int StaffId, bool Grant) : Command
         writer.WriteInt32(StaffId);
         writer.WriteBool(Grant);
     }
+}
+
+/// <summary>
+/// Answers the fax in which a VIP asks to visit the issuing player's hospital (CorsixTH's <c>accept_vip</c> and
+/// <c>refuse_vip</c> choices); a VIP refused too often may come anyway.
+/// </summary>
+public sealed record AnswerVipCommand(bool Accept) : Command
+{
+    public override CommandKind Kind => CommandKind.AnswerVip;
+
+    public override void Execute(Simulation simulation, int player) => VipVisits.Answer(simulation, player, Accept);
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteBool(Accept);
 }
 
 /// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>

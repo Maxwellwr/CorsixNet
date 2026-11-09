@@ -95,7 +95,8 @@ public static partial class LevelRulesLoader
             new TirednessRules(
                 config.GetInt("gbv.Tired") ?? TirednessRules.Default.Tired,
                 config.GetInt("gbv.VeryTired") ?? TirednessRules.Default.VeryTired,
-                config.GetInt("gbv.CrackUpTired") ?? TirednessRules.Default.CrackUpTired));
+                config.GetInt("gbv.CrackUpTired") ?? TirednessRules.Default.CrackUpTired),
+            config.GetInt("gbv.MayorLaunch") ?? LevelRules.DefaultMayorLaunch);
     }
 
     /// <summary>

@@ -159,6 +159,15 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsHowOftenVipsCome()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("#gbv.MayorLaunch 90"));
+
+        Assert.Equal(90, LevelRulesLoader.FromConfig(config, null, BaseGameContent.Create()).MayorLaunch);
+        Assert.Equal(LevelRules.DefaultMayorLaunch, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), null, BaseGameContent.Create()).MayorLaunch);
+    }
+
+    [Fact]
     public void TheOriginalLevelsPlanEarthquakesWithTheirMonthsInOrder()
     {
         var install = RealGameData.Require();

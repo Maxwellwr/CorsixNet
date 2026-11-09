@@ -98,8 +98,9 @@ Done and committed:
   #117), staff tiring at work (PR #118), patients' health running down until they give up or die (PR
   #119), the quick save (Alt+Shift+S / Alt+Shift+L), monthly autosaves, `--load` and `--continue` (PR
   #120), hospital policies by command (PR #121), firing staff and their raise requests by command (PR
-  #122). No game data in the cloud: real-data tests were skipped there and the client was not run, so
-  these want a look on MSI. Save format version 29.
+  #122), VIP visits (V / Shift+V answer the invitation, PR #123). No game data in the cloud: real-data
+  tests were skipped there and the client was not run, so these want a look on MSI. Save format version
+  30.
 
 Not done yet:
 
