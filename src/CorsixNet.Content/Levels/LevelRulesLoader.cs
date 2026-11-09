@@ -96,7 +96,8 @@ public static partial class LevelRulesLoader
                 config.GetInt("gbv.Tired") ?? TirednessRules.Default.Tired,
                 config.GetInt("gbv.VeryTired") ?? TirednessRules.Default.VeryTired,
                 config.GetInt("gbv.CrackUpTired") ?? TirednessRules.Default.CrackUpTired),
-            config.GetInt("gbv.MayorLaunch") ?? LevelRules.DefaultMayorLaunch);
+            config.GetInt("gbv.MayorLaunch") ?? LevelRules.DefaultMayorLaunch,
+            EmergenciesFromConfig(config));
     }
 
     /// <summary>
@@ -116,6 +117,29 @@ public static partial class LevelRulesLoader
             }
 
             yield return new PlannedEarthquake(startMonth ?? 0, endMonth ?? 0, severity ?? 0);
+        }
+    }
+
+    /// <summary>
+    /// The <c>emergency_control[n]</c> entries (<c>StartMonth</c>, <c>EndMonth</c>, <c>Min</c>, <c>Max</c>, <c>Illness</c>,
+    /// <c>PercWin</c>, <c>Bonus</c>) up to the first two numbers in a row that the files leave out, as CorsixTH steps over
+    /// one missing entry (level 3 has no fifth). CorsixTH's base_config.lua has an empty first one, which never comes.
+    /// </summary>
+    public static IEnumerable<PlannedEmergency> EmergenciesFromConfig(LevelConfig config)
+    {
+        var missing = 0;
+        for (var i = 0; missing < 2; i++)
+        {
+            int? Get(string field) => config.GetInt($"emergency_control[{i}].{field}");
+            var fields = new[] { Get("StartMonth"), Get("EndMonth"), Get("Min"), Get("Max"), Get("Illness"), Get("PercWin"), Get("Bonus") };
+            if (fields.All(field => field is null))
+            {
+                missing++;
+                continue;
+            }
+
+            missing = 0;
+            yield return new PlannedEmergency(i, fields[0] ?? 0, fields[1] ?? 0, fields[2] ?? 0, fields[3] ?? 0, fields[4] ?? 0, fields[5] ?? 0, fields[6] ?? 0);
         }
     }
 

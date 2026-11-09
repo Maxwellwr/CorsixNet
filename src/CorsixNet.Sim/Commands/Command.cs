@@ -35,6 +35,7 @@ public enum CommandKind : ushort
     FireStaff = 20,
     AnswerRaise = 21,
     AnswerVip = 22,
+    AnswerEmergency = 23,
 }
 
 /// <summary>
@@ -80,6 +81,7 @@ public abstract record Command
             CommandKind.FireStaff => new FireStaffCommand(reader.ReadInt32()),
             CommandKind.AnswerRaise => new AnswerRaiseCommand(reader.ReadInt32(), reader.ReadBool()),
             CommandKind.AnswerVip => new AnswerVipCommand(reader.ReadBool()),
+            CommandKind.AnswerEmergency => new AnswerEmergencyCommand(reader.ReadBool()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -90,7 +92,7 @@ public abstract record Command
     private static CheatKind ReadCheat(SimReader reader)
     {
         var cheat = reader.ReadByte();
-        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.Vip ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.Emergency ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
     }
 
     private static PolicyKind ReadPolicy(SimReader reader)
@@ -592,6 +594,19 @@ public sealed record AnswerVipCommand(bool Accept) : Command
     public override CommandKind Kind => CommandKind.AnswerVip;
 
     public override void Execute(Simulation simulation, int player) => VipVisits.Answer(simulation, player, Accept);
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteBool(Accept);
+}
+
+/// <summary>
+/// Answers the fax offering the issuing player's hospital an emergency (CorsixTH's <c>accept_emergency</c> and
+/// <c>refuse_emergency</c> choices).
+/// </summary>
+public sealed record AnswerEmergencyCommand(bool Accept) : Command
+{
+    public override CommandKind Kind => CommandKind.AnswerEmergency;
+
+    public override void Execute(Simulation simulation, int player) => Disasters.Emergencies.Answer(simulation, player, Accept);
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteBool(Accept);
 }

@@ -469,6 +469,13 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   queues, the doctors' grades and the rooms' extinguishers, bins and plants. Off the map a rating of 7 or better
   brings a grant of 200–4,000 and 20–50 reputation; a worse one 15 down to −25 reputation. When every VIP of the
   year left pleased, the year end gives a trophy in reputation.
+- **Emergencies** (`Disasters/Emergencies.cs`, from `world.lua`'s `nextEmergency` and `createEmergency`,
+  `objects/helicopter.lua` and `fax.lua`). The level's `#emergency_control` plans emergencies by month; on the day
+  one comes, if the hospital is open and has a heliport, a staffed desk and the disease discovered, a fax offers it
+  (refused by itself after 16 days). An accepted emergency brings a helicopter that drops its patients, diagnosed,
+  at the heliport; they go ahead of others in queues. A watch of 52 days runs; when it ends, or every patient is
+  cured or dead, the remaining ones die unless cured, and enough cures bring the bonus and 15 reputation, too few
+  cost 20 reputation. Each hospital has its own schedule.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
   quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike

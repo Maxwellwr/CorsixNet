@@ -24,7 +24,7 @@ internal interface IQueueMember
 /// </summary>
 /// <remarks>
 /// Of CorsixTH's priorities (people leaving, staff, guests, emergencies, then the other patients) only guests
-/// (VIPs) come before patients yet, as only they queue with them. Benches come later.
+/// (VIPs) and emergencies come before other patients yet, as only they queue with them. Benches come later.
 /// </remarks>
 public sealed class HumanoidQueue
 {
@@ -80,8 +80,16 @@ public sealed class HumanoidQueue
         Arrange(simulation);
     }
 
-    /// <summary><c>_getHumanoidQueuePriority</c>: a smaller number goes first; VIPs (3) before patients (6).</summary>
-    private static int Priority(Humanoid? humanoid) => humanoid?.Behaviour is VipBehaviour ? 3 : 6;
+    /// <summary>
+    /// <c>_getHumanoidQueuePriority</c>: a smaller number goes first; VIPs (3), then emergency patients (4), then the
+    /// other patients (6).
+    /// </summary>
+    private static int Priority(Humanoid? humanoid) => humanoid?.Behaviour switch
+    {
+        VipBehaviour => 3,
+        PatientBehaviour { EmergencyIndex: > 0 } => 4,
+        _ => 6,
+    };
 
     /// <summary>Takes the first in line out; everyone moves up.</summary>
     internal int Pop(Simulation simulation)

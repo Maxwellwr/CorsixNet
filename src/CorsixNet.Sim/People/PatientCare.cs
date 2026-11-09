@@ -6,6 +6,7 @@
 // (Staff:getServiceQuality) and CorsixTH/Lua/world.lua (World:getNewPatientDisease).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
@@ -159,6 +160,10 @@ public static class PatientCare
         }
 
         hospital.PayForDrug(simulation.Tick, entry, simulation.Random.NextInclusive(1, 5));
+        if (patient.EmergencyIndex > 0)
+        {
+            Emergencies.PatientDone(simulation, hospital, patient.IsCured);
+        }
     }
 
     /// <summary>
@@ -265,6 +270,12 @@ public static class PatientCare
 
         var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
         hospital.UpdateNotCuredCounts(simulation.Random, reason, hospital.CaseOf(disease, simulation.Rules.Diseases));
+
+        // Though not killed, this lets the emergency's watch end early.
+        if (patient.EmergencyIndex > 0)
+        {
+            Emergencies.PatientDone(simulation, hospital, cured: false);
+        }
     }
 
     /// <summary>Marks the patient diagnosed; the hospital now knows the disease (<c>Patient:setDiagnosed</c>, <c>discoverDisease</c>).</summary>

@@ -90,15 +90,16 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   happiness, prices changing happiness, health dropping and patients giving up are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
-- Queue features: priorities (emergencies; VIPs go first already), benches, queue window to reorder or send home,
+- Queue features: benches (priorities for VIPs and emergency patients are done), queue window to reorder or send home,
   patients rerouting to shorter queues (`queue.lua`, `dialogs/queue_dialog.lua`).
 - Patient window: health, happiness, thirst, warmth, diagnosis progress, send home, guess cure
   (`dialogs/patient.lua`).
 - Faxes asking what to do with a patient (guess cure, send home, wait) and the policy window
   (`fullscreen/hospital_policy.lua`, `fax.lua`). The policies themselves are done (`HospitalPolicies`,
   `SetPolicyCommand`).
-- Emergencies: helicopter, timed group of patients with one disease, bonus or penalty
-  (`world.lua` `nextEmergency`, `objects/helicopter.lua`).
+- Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting, levels with
+  random emergencies (`emergency_control[0].Mean`) (`world.lua`, `objects/helicopter.lua`). The planned
+  emergencies, the fax offer, helicopter, watch, bonus and reputation are done (`Emergencies`).
 - Epidemics: contagious diseases spreading between patients, inspector, vaccination by nurses, cover-up
   fax and fine (`epidemic.lua`, `humanoid_actions/vaccinate.lua`, `entities/humanoids/inspector.lua`).
 - VIP visits: the faxes asking and reporting, the arrival announcement, the VIP counting litter and vomit and
@@ -122,7 +123,7 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 - Bank statement window showing the transaction log; F2 shows it as text for now.
 - Casebook window: per-disease prices, concentrate research, drug ratings (`fullscreen/drug_casebook.lua`).
   Partial: prices can be set by command (`SetTreatmentPriceCommand`), but there is no window to set them.
-- Reputation: changes from emergencies, autopsies, room explosions, the year-end award and staff kicked out;
+- Reputation: changes from autopsies, room explosions, the year-end award and staff kicked out;
   the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
   price, prices far from what patients expect, and the price rise above 500 are done.
 - Annual report screen (statistics, rankings, trophy and award plaques); trophies and awards for drinks sold,
@@ -166,7 +167,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 
 - Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
   (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`).
-- Remaining level settings: emergencies (`#emergency_control`), epidemics,
+- Remaining level settings: epidemics,
   `computer[n]` AI players, research settings, `#gbv`
   values beyond the ones read now.
 - Original campaign (12 levels in order, difficulty choice), CorsixTH campaigns (`.campaign`),
@@ -221,9 +222,9 @@ join.
 
 - Map editor: painting floor, walls, parcels, spawn points (`resizables/map_editor.lua`).
 - Cheats dialog (`resizables/cheats_dialog.lua`) and the fax code that opens it; the cheats for research,
-  emergencies, epidemics, machines and jumping to the month's or year's end, and the epidemics toggle
-  (`cheats.lua`). Money, a patient, winning, losing, prices, the death count, the reputation, the earthquake and
-  the VIP cheats are done (`CheatCommand`), with no key in the client.
+  epidemics, machines and jumping to the month's or year's end, and the epidemics toggle
+  (`cheats.lua`). Money, a patient, winning, losing, prices, the death count, the reputation, the earthquake,
+  the VIP and the emergency cheats are done (`CheatCommand`), with no key in the client.
 - Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
   (Partial: debug keys H, Ctrl+1-4).
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.
