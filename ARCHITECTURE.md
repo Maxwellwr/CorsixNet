@@ -410,8 +410,8 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   the diagnosis. Without the doctor they dress, leave and look for the room again. CorsixTH draws the trolley split
   over two tiles; here it is drawn from its own tile, so during the examination its top can show over the wall.
 - **The pharmacy** (`NurseBehaviour`, from `rooms/pharmacy.lua`). The room sends for the nearest free nurse
-  (each supported room type names the kind of staff it needs and the object a patient is seen at). She waits
-  at the cabinet's use position (CorsixTH's nurse meanders about the room meanwhile). The patient walks to the
+  (each supported room type names the kind of staff it needs and the object a patient is seen at). She meanders
+  about the room (`Meandering`); when a patient comes in she walks to the cabinet's use position. The patient walks to the
   cabinet's secondary use position and faces her; she then uses the cabinet with them (see "Using objects")
   with a random flask colour on layer 3, and the room is done with the patient.
 - **Treatment** (`PatientCare.DealtWith`, `TreatDisease`, from `room.lua` and `patient.lua`). After a treatment

@@ -33,13 +33,10 @@ public enum NursePhase : byte
 }
 
 /// <summary>
-/// A nurse working in the pharmacy: she waits at the cabinet; when a patient stands at its other side, she hands them a
-/// drink (the cabinet's multi-use animations), and the room is done with the patient.
+/// A nurse working in the pharmacy: she meanders about the room (<c>Room:commandEnteringStaff</c>); when a patient comes
+/// in she walks to the cabinet, and once they stand at its other side she hands them a drink (the cabinet's multi-use
+/// animations), the room is done with the patient and she meanders again (<c>after_use_pharmacy</c>).
 /// </summary>
-/// <remarks>
-/// CorsixTH's nurse meanders about the room between patients; meandering is not ported yet, so she waits at the
-/// cabinet instead.
-/// </remarks>
 public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
 {
     public override BehaviourKind Kind => BehaviourKind.Nurse;
@@ -66,6 +63,7 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
 
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
+        Meander.Reset();
         RoomId = room.Id;
         Phase = NursePhase.WalkingToRoom;
         humanoid.WalkTo(simulation, inside);
@@ -78,8 +76,6 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             Meander.Update(simulation, humanoid);
             return;
         }
-
-        Meander.Reset();
 
         if (Phase is NursePhase.WalkingToVaccinate or NursePhase.Vaccinating)
         {
@@ -108,20 +104,28 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
                 }
 
                 room.StaffPresent = true;
-                WalkToObject(simulation, humanoid, room);
+                Wait();
                 break;
             case NursePhase.WalkingToObject:
                 Phase = NursePhase.Waiting;
                 break;
             case NursePhase.Waiting:
-                TryTreat(simulation, humanoid, room);
+                if (room.PatientId == 0)
+                {
+                    Meander.Update(simulation, humanoid);
+                }
+                else
+                {
+                    TryTreat(simulation, humanoid, room);
+                }
+
                 break;
             case NursePhase.Treating:
                 if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
                 {
                     // after_use_pharmacy: the room is done with the patient.
                     Use = null;
-                    Phase = NursePhase.Waiting;
+                    Wait();
                     RoomVisits.DealtWithPatient(simulation, room);
                 }
 
@@ -166,11 +170,31 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     }
 
     /// <summary>
+    /// <c>PharmacyRoom:commandEnteringPatient</c>: a patient has come in, so the nurse leaves off meandering and walks to
+    /// the cabinet.
+    /// </summary>
+    internal void OnPatientEntered(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (Phase == NursePhase.Waiting && RoomId == room.Id)
+        {
+            WalkToObject(simulation, humanoid, room);
+        }
+    }
+
+    /// <summary>Waits for a patient, meandering about the room, starting with a walk.</summary>
+    private void Wait()
+    {
+        Phase = NursePhase.Waiting;
+        Meander.Reset();
+    }
+
+    /// <summary>
     /// <c>Epidemic:createVaccinationActions</c>: the nurse walks to the tile chosen next to the patient, who stays reserved
     /// for her.
     /// </summary>
     internal void StartVaccination(Simulation simulation, Humanoid humanoid, Humanoid patient, TilePosition tile)
     {
+        Meander.Reset();
         VaccinatePatientId = patient.Id;
         Phase = NursePhase.WalkingToVaccinate;
         humanoid.WalkTo(simulation, tile);
@@ -232,6 +256,7 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
         VaccinatePatientId = 0;
         VaccinateTimer = 0;
         Phase = NursePhase.Idle;
+        Meander.Reset();
     }
 
     private void WalkToObject(Simulation simulation, Humanoid humanoid, Room room)

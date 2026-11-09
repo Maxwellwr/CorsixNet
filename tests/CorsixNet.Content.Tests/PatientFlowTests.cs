@@ -262,6 +262,27 @@ public class PatientFlowTests
     }
 
     [Fact]
+    public void TheNurseMeandersAboutThePharmacyBetweenPatients()
+    {
+        var simulation = NewStaffedHospital();
+        BuildPharmacy(simulation);
+        var pharmacy = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "pharmacy");
+        var nurse = simulation.Entities.OfType<Humanoid>().Single(h => h.Behaviour is NurseBehaviour);
+        var tiles = new HashSet<TilePosition>();
+        for (var tick = 0; tick < 30 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            if (nurse.Behaviour is NurseBehaviour { Phase: NursePhase.Waiting } && pharmacy.PatientId == 0)
+            {
+                Assert.True(PharmacyArea.Contains(nurse.Tile), $"The nurse left the pharmacy for {nurse.Tile}.");
+                tiles.Add(nurse.Tile);
+            }
+        }
+
+        Assert.True(tiles.Count > 1, "The nurse stood still.");
+    }
+
+    [Fact]
     public void ASavedGameWithATreatmentGoingOnContinuesIdentically()
     {
         var install = RealGameData.Require();

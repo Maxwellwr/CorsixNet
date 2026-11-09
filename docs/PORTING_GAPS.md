@@ -69,7 +69,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
   for working and waiting for a staff room (`Tiredness`); resting, being on call, the no-rest cheat and the mood
   icons are not.
-- Staff meandering in a room between patients (staff waiting in a room stand still), staff room idle actions
+- Doctors meandering in general diagnosis between patients (they wait at the trolley; the pharmacy's nurse meanders),
+  staff room idle actions
   (`meander.lua`, `use_staffroom.lua`, `seek_staffroom.lua`). Doctors, nurses, receptionists and handymen without a
   job meander (`Meandering`), handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).
 - Training: training room, consultant teaching, skill growth, gaining abilities (`rooms/training.lua`).
