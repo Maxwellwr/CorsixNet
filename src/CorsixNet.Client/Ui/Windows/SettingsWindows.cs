@@ -176,7 +176,7 @@ internal sealed class MenuWindow(Action<string> action) : UiWindow
         yield return WindowRow.Of(
             string.Empty,
             WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())),
-            WindowCell.Button("Graphs", () => host.Open(new GraphFiguresWindow())),
+            WindowCell.Button("Graphs", () => host.Open(new GraphWindow())),
             WindowCell.Button("Policy", () => host.Open(new PolicyWindow())),
             WindowCell.Button("Annual report", () => host.Open(new AnnualReportWindow())));
         yield return WindowRow.Of("Debug", WindowCell.Button("Cheats", () => host.Open(new CheatsWindow())));

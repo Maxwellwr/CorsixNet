@@ -1,8 +1,11 @@
+using CorsixNet.Client.Rendering;
 using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Staff;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client.Ui;
 
@@ -126,4 +129,12 @@ internal abstract class UiWindow
 
     /// <summary>The window's table, built afresh each frame from the game's state.</summary>
     public abstract IEnumerable<WindowRow> Rows(IWindowHost host);
+
+    /// <summary>The size of a drawing area below the table, such as a chart, or null for none.</summary>
+    public virtual Point? CanvasSize => null;
+
+    /// <summary>Draws the window's drawing area (see <see cref="CanvasSize"/>) in screen coordinates.</summary>
+    public virtual void DrawCanvas(SpriteBatch batch, Rectangle area, Texture2D pixel, TextRenderer text)
+    {
+    }
 }

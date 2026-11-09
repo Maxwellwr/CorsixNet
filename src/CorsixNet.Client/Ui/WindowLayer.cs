@@ -195,6 +195,11 @@ internal sealed class WindowLayer
                 text.Draw(batch, cell.Text, new Vector2(x, area.Y + 3), tint: tint);
             }
 
+            if (layout.Canvas != Rectangle.Empty)
+            {
+                open.Window.DrawCanvas(batch, layout.Canvas, pixel, text);
+            }
+
             if (layout.MaxScroll > 0)
             {
                 // How far down the table the window shows, as a thin bar on the right.
@@ -240,10 +245,12 @@ internal sealed class WindowLayer
         var titleHeight = pinned ? 0 : _lineHeight;
         var title = open.Window.Hotkey is { } key ? $"{open.Window.Title}  ({key})" : open.Window.Title;
         var tableWidth = columns.Count == 0 ? 0 : columns.Sum() + (ColumnGap * (columns.Count - 1));
-        var width = Math.Max(Math.Max(tableWidth, spanWidth), pinned ? 0 : _measure(title) + _lineHeight + Padding) + (2 * Padding);
+        var canvas = open.Window.CanvasSize ?? Point.Zero;
+        var width = Math.Max(Math.Max(Math.Max(tableWidth, spanWidth), canvas.X), pinned ? 0 : _measure(title) + _lineHeight + Padding) + (2 * Padding);
         width = pinned ? screen.Width : Math.Min(width, screen.Width);
-        var visibleRows = Math.Max(1, Math.Min(rows.Count, ((screen.Height - titleHeight - (2 * Padding)) / _lineHeight) - 1));
-        var height = titleHeight + (visibleRows * _lineHeight) + (2 * Padding);
+        var canvasHeight = canvas.Y > 0 ? canvas.Y + Padding : 0;
+        var visibleRows = Math.Max(1, Math.Min(rows.Count, ((screen.Height - titleHeight - canvasHeight - (2 * Padding)) / _lineHeight) - 1));
+        var height = titleHeight + (visibleRows * _lineHeight) + canvasHeight + (2 * Padding);
         if (pinned)
         {
             open.Position = new Point(screen.X, screen.Bottom - height);
@@ -277,7 +284,8 @@ internal sealed class WindowLayer
             }
         }
 
-        return new WindowLayout(bounds, titleBar, close, title, cells, visibleRows, maxScroll);
+        var canvasArea = canvas.Y > 0 ? new Rectangle(x + Padding, bounds.Bottom - Padding - canvas.Y, canvas.X, canvas.Y) : Rectangle.Empty;
+        return new WindowLayout(bounds, titleBar, close, title, cells, visibleRows, maxScroll, canvasArea);
     }
 
     private int CellWidth(WindowCell cell) => _measure(cell.Text) + (cell.IsButton ? 12 : 0);
@@ -300,5 +308,6 @@ internal sealed class WindowLayer
         string TitleText,
         IReadOnlyList<(Rectangle Area, WindowCell Cell)> Cells,
         int VisibleRows,
-        int MaxScroll);
+        int MaxScroll,
+        Rectangle Canvas);
 }

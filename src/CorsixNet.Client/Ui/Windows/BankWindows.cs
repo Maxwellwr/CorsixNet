@@ -76,12 +76,10 @@ internal sealed class BankStatementWindow : UiWindow
     }
 }
 
-/// <summary>The graphs' figures (CorsixTH's <c>dialogs/fullscreen/graphs.lua</c>, F8) as a table, latest month first.</summary>
+/// <summary>The graphs' figures (CorsixTH's <c>dialogs/fullscreen/graphs.lua</c>) as a table, latest month first.</summary>
 internal sealed class GraphFiguresWindow : UiWindow
 {
-    public override string Title => "Graphs";
-
-    public override string? Hotkey => "F8";
+    public override string Title => "Graph figures";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
