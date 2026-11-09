@@ -355,7 +355,7 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   three insurance companies one time in four.
 - **Diagnosis** (`PatientCare`, from `patient.lua` and `rooms/gp.lua`). Progress is in thousandths, worked
   out with decimals: each GP visit adds `0.4 * (1 - MaxDiagDiff)` plus `(attention / d + 0.4) * skill / d`
-  times 1.5 (fatigue is always 0), `d` a random 1 to 3, very skilled doctors up to five times as much.
+  times `1.5 − fatigue`, `d` a random 1 to 3, very skilled doctors up to five times as much.
   At 1.0 (the default `stop_procedure` policy) the patient is diagnosed, the hospital knows the disease, and
   they look for its treatment rooms; otherwise the GP sends them to one of the disease's diagnosis rooms.
   Only the GP's office, general diagnosis and the pharmacy work so far (`RoomVisits.IsSupported`), so other diagnosis rooms are never
@@ -383,7 +383,7 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   room the patient goes on to the disease's next treatment room, or after the last one is treated: they pay what
   they agreed to at the GP, and the cure works if `effectiveness × diagnosis progress`, moved by up to a tenth of
   what is left to 100 (at least 20) by the staff's service quality (`0.7 × skill + 0.2 × (1 − fatigue) + 0.1 ×
-  happiness`, fatigue 0 for now), reaches a random 1 to 100. A cured patient goes home and counts
+  happiness`), reaches a random 1 to 100. A cured patient goes home and counts
   in the hospital's `Cured` and the disease's `Recoveries`; otherwise the patient dies (`Deaths`, `Fatalities`) and,
   as dying is not animated yet, vanishes outside the room. Either way the hospital pays for the drug.
 - **Payment** (`Hospital`, from `hospital.lua`). Before each room the patient agrees to pay its current price
@@ -431,6 +431,14 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   room; only the external wall's windows count, as in CorsixTH) and of `round(ln area / smallest area)`.
   Receptionists and staff on `payroll.MaxSalary` (2000) are always happy. A patient paying
   loses half the price distortion. Happiness feeds the treatment's service quality and the happiness goals.
+- **Tiredness** (`Humanoid.Fatigue`, `Tiredness`, from `staff.lua`). Every hour a member of staff in a room
+  (other than a staff room), or a handyman anywhere, gains 0.00009 fatigue and loses 0.00002 happiness, so a doctor
+  who never leaves their office reaches the level's `gbv.Tired` (600 thousandths, the hospital's `goto_staffroom`
+  policy) in about 133 days. From then on, with no staff room in the hospital, they wait for one and lose 0.001
+  happiness an hour; very tired (`gbv.VeryTired`, 700) costs 0.0002 an hour more. At the day's end tired staff
+  who are not resting lose 0.02, and 0.01 more from fatigue 0.5; resting in a staff room brings 0.006. Fatigue
+  lowers the treatment's service quality and the GP's diagnosis bonus, and a consultant stays at the desk only
+  while a random draw is at least their fatigue. Going to the staff room and resting there are not ported yet.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
   quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike

@@ -61,9 +61,10 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   partial: today a room just sends for the nearest free member of staff (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Handyman: sweeping litter and vomit, watering plants, repairing machines, task priorities
   (`entities/humanoids/staff/handyman.lua`, `humanoid_actions/sweep_floor.lua`).
-- Fatigue, going to the staff room, wage demands and raises (`staff_rise.lua`), quitting. Happiness is done for
-  warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`); tiredness,
-  resting and the mood icons are not. Service quality uses fatigue 0.
+- Going to the staff room and resting there, wage demands and raises (`staff_rise.lua`), quitting. Happiness is
+  done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
+  for working and waiting for a staff room (`Tiredness`); resting, being on call, the no-rest cheat and the mood
+  icons are not.
 - Staff meandering when idle (Partial: wanderers in `--demo` use `MeanderCommand`; staff waiting in a
   room stand still), staff room idle actions (`use_staffroom.lua`, `seek_staffroom.lua`).
 - Training: training room, consultant teaching, skill growth, gaining abilities (`rooms/training.lua`).

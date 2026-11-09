@@ -17,7 +17,7 @@ namespace CorsixNet.Sim.People;
 /// them.
 /// </summary>
 /// <remarks>
-/// Not yet: tiredness (staff working while tired or resting), resting on the staff room's sofa or games, the cold and
+/// Not yet: resting on the staff room's sofa or games, the cold and
 /// hot mood icons, and patients' own daily effects (waiting, health, vomit, thirst).
 /// </remarks>
 internal static class Feelings
@@ -120,6 +120,9 @@ internal static class Feelings
         // Paid too little makes unhappy, too much happy.
         var fairWage = profile.FairWage(simulation.Rules.Staff);
         ChangeHappiness(simulation, humanoid, 0.05m * (profile.Wage - fairWage) / (fairWage != 0 ? fairWage : 1));
+
+        // Working while tired makes unhappy, resting happier.
+        Tiredness.OnEndDay(simulation, humanoid);
 
         // It is nice to see plants, but dead plants make unhappy; a random one of those nearby counts.
         var plants = ObjectsInSight(simulation, humanoid, "plant");

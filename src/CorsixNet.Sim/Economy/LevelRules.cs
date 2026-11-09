@@ -61,6 +61,7 @@ public sealed class LevelRules
     /// <param name="objectAvailability">Which object types the level has and from when; an object it does not name is there from the start.</param>
     /// <param name="earthquakes">The level's planned earthquakes in order (<c>quake_control</c>); by default none.</param>
     /// <param name="maxSalary">The highest salary (<c>payroll.MaxSalary</c>); staff earning it are always happy.</param>
+    /// <param name="tiredness">When staff count as tired; by default <see cref="TirednessRules.Default"/>.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -76,8 +77,10 @@ public sealed class LevelRules
         int overdraftDifferential = Hospital.DefaultOverdraftDifferential,
         IEnumerable<KeyValuePair<string, ObjectAvailability>>? objectAvailability = null,
         IEnumerable<PlannedEarthquake>? earthquakes = null,
-        int maxSalary = DefaultMaxSalary)
+        int maxSalary = DefaultMaxSalary,
+        TirednessRules? tiredness = null)
     {
+        Tiredness = tiredness ?? TirednessRules.Default;
         MaxSalary = maxSalary;
         Earthquakes = [.. earthquakes ?? []];
         InterestRate = interestRate;
@@ -135,6 +138,9 @@ public sealed class LevelRules
 
     /// <summary>The level's planned earthquakes, in the order they come.</summary>
     public IReadOnlyList<PlannedEarthquake> Earthquakes { get; }
+
+    /// <summary>When staff count as tired, very tired and crack-up tired.</summary>
+    public TirednessRules Tiredness { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -220,6 +226,7 @@ public sealed class LevelRules
         }
 
         writer.WriteInt32(MaxSalary);
+        Tiredness.Write(writer);
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -253,7 +260,7 @@ public sealed class LevelRules
             earthquakes[i] = new PlannedEarthquake(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
         }
 
-        return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32());
+        return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32(), TirednessRules.Read(reader));
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)

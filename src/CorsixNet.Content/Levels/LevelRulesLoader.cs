@@ -91,7 +91,11 @@ public static partial class LevelRulesLoader
             TownInt(config, levelNumber, "OverdraftDiff") ?? Hospital.DefaultOverdraftDifferential,
             ObjectAvailabilityFromConfig(config, content),
             EarthquakesFromConfig(config),
-            config.GetInt("payroll.MaxSalary") ?? LevelRules.DefaultMaxSalary);
+            config.GetInt("payroll.MaxSalary") ?? LevelRules.DefaultMaxSalary,
+            new TirednessRules(
+                config.GetInt("gbv.Tired") ?? TirednessRules.Default.Tired,
+                config.GetInt("gbv.VeryTired") ?? TirednessRules.Default.VeryTired,
+                config.GetInt("gbv.CrackUpTired") ?? TirednessRules.Default.CrackUpTired));
     }
 
     /// <summary>

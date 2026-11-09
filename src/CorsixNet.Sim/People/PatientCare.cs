@@ -19,8 +19,7 @@ namespace CorsixNet.Sim.People;
 /// </summary>
 /// <remarks>
 /// Diagnosis progress is kept in thousandths (1000 stands for CorsixTH's 1.0) and worked out with decimals,
-/// so that the simulation stays free of floating point. Fatigue is not modelled yet, so it is always 0, as
-/// for a rested member of staff in CorsixTH.
+/// so that the simulation stays free of floating point.
 /// </remarks>
 public static class PatientCare
 {
@@ -179,7 +178,7 @@ public static class PatientCare
     /// <summary>
     /// <c>Patient:isTreatmentEffective</c>: the chance in percent is the cure's effectiveness times the diagnosis progress,
     /// moved by up to a tenth of what is left to 100 (at least 20) by the staff's service quality, which is
-    /// <c>0.7 × skill + 0.2 × (1 − fatigue) + 0.1 × happiness</c> (fatigue 0 while it is not modelled).
+    /// <c>0.7 × skill + 0.2 × (1 − fatigue) + 0.1 × happiness</c>.
     /// </summary>
     private static bool IsTreatmentEffective(Simulation simulation, Room room, PatientBehaviour patient, DiseaseCase entry)
     {
@@ -187,7 +186,7 @@ public static class PatientCare
         var quality = 0.5m;
         if (simulation.FindEntity(room.StaffId) is Humanoid { Profile: { } profile } staff)
         {
-            quality = (0.7m * profile.Skill / StaffProfile.MaxSkill) + 0.2m + (0.1m * staff.Happiness);
+            quality = (0.7m * profile.Skill / StaffProfile.MaxSkill) + (0.2m * (1 - staff.Fatigue)) + (0.1m * staff.Happiness);
         }
 
         const int minImpact = 20;
@@ -316,10 +315,10 @@ public static class PatientCare
         var bonus = 0.4m;
         var multiplier = 1m;
 
-        if (room.StaffPresent && simulation.FindEntity(room.StaffId) is Humanoid { Profile: { } profile })
+        if (room.StaffPresent && simulation.FindEntity(room.StaffId) is Humanoid { Profile: { } profile } staff)
         {
-            // multiplier = (skilled ? random(1, 5) : 1) * (1 - (fatigue - 0.5)), with fatigue 0.
-            const decimal fatigueFactor = 1.5m;
+            // multiplier = (skilled ? random(1, 5) : 1) * (1 - (fatigue - 0.5)).
+            var fatigueFactor = 1 - (staff.Fatigue - 0.5m);
             multiplier = profile.Skill >= 900 ? simulation.Random.NextInclusive(1, 5) * fatigueFactor : fatigueFactor;
             var divisor = simulation.Random.NextInclusive(1, 3);
             var attention = profile.AttentionToDetail / (decimal)StaffProfile.MaxSkill / divisor;
