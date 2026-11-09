@@ -37,6 +37,7 @@ public enum CommandKind : ushort
     AnswerVip = 22,
     AnswerEmergency = 23,
     AnswerEpidemic = 24,
+    Vaccinate = 25,
 }
 
 /// <summary>
@@ -84,6 +85,7 @@ public abstract record Command
             CommandKind.AnswerVip => new AnswerVipCommand(reader.ReadBool()),
             CommandKind.AnswerEmergency => new AnswerEmergencyCommand(reader.ReadBool()),
             CommandKind.AnswerEpidemic => new AnswerEpidemicCommand(reader.ReadBool()),
+            CommandKind.Vaccinate => new VaccinateCommand(reader.ReadInt32()),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -624,6 +626,19 @@ public sealed record AnswerEpidemicCommand(bool CoverUp) : Command
     public override void Execute(Simulation simulation, int player) => Disasters.Epidemics.Answer(simulation, player, CoverUp);
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteBool(CoverUp);
+}
+
+/// <summary>
+/// Picks an infected patient of the issuing player's hospital to be vaccinated during an epidemic's cover-up (CorsixTH's
+/// click on a patient); a free nurse nearby comes when the patient stands still.
+/// </summary>
+public sealed record VaccinateCommand(int PatientId) : Command
+{
+    public override CommandKind Kind => CommandKind.Vaccinate;
+
+    public override void Execute(Simulation simulation, int player) => Disasters.Epidemics.MarkForVaccination(simulation, player, PatientId);
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(PatientId);
 }
 
 /// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>

@@ -24,6 +24,12 @@ public enum NursePhase : byte
 
     /// <summary>Using the object with the patient.</summary>
     Treating,
+
+    /// <summary>Walking to a tile next to a patient to vaccinate them, during an epidemic's cover-up.</summary>
+    WalkingToVaccinate,
+
+    /// <summary>Standing next to the patient, vaccinating them.</summary>
+    Vaccinating,
 }
 
 /// <summary>
@@ -46,6 +52,15 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary>The nurse's use of the cabinet with a patient, while it lasts.</summary>
     public MultiObjectUse? Use { get; private set; }
 
+    /// <summary>The patient she is going to vaccinate or vaccinating, or 0.</summary>
+    public int VaccinatePatientId { get; private set; }
+
+    /// <summary>Hours left of vaccinating (the 5 of CorsixTH's idle before <c>perform_vaccination</c>).</summary>
+    private int VaccinateTimer { get; set; }
+
+    /// <summary>Whether she is free for a room or a vaccination: without a room and not vaccinating.</summary>
+    internal bool IsFree => Phase == NursePhase.Idle && RoomId == 0;
+
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         RoomId = room.Id;
@@ -57,6 +72,12 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     {
         if (Phase == NursePhase.Idle)
         {
+            return;
+        }
+
+        if (Phase is NursePhase.WalkingToVaccinate or NursePhase.Vaccinating)
+        {
+            Vaccinate(simulation, humanoid);
             return;
         }
 
@@ -138,6 +159,75 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
         Phase = NursePhase.Treating;
     }
 
+    /// <summary>
+    /// <c>Epidemic:createVaccinationActions</c>: the nurse walks to the tile chosen next to the patient, who stays reserved
+    /// for her.
+    /// </summary>
+    internal void StartVaccination(Simulation simulation, Humanoid humanoid, Humanoid patient, TilePosition tile)
+    {
+        VaccinatePatientId = patient.Id;
+        Phase = NursePhase.WalkingToVaccinate;
+        humanoid.WalkTo(simulation, tile);
+    }
+
+    /// <summary>
+    /// <c>VaccinateAction</c>: next to the patient, both out of rooms, the nurse faces them for 5 hours; if they are still
+    /// next to each other the patient is vaccinated and the hospital pays the fee. Otherwise, or if she could not get
+    /// there, the patient is free to call again.
+    /// </summary>
+    private void Vaccinate(Simulation simulation, Humanoid humanoid)
+    {
+        if (humanoid.IsMoving)
+        {
+            return;
+        }
+
+        if (simulation.FindEntity(VaccinatePatientId) is not Humanoid { Behaviour: PatientBehaviour patient } target || patient.IsVaccinated)
+        {
+            // The patient is gone, or the epidemic ended and everyone counts as vaccinated: nothing to do or pay.
+            EndVaccination(humanoid, null);
+            return;
+        }
+
+        if (!Disasters.Epidemics.AreNextToEachOtherOutside(simulation, humanoid, target))
+        {
+            EndVaccination(humanoid, patient);
+            return;
+        }
+
+        if (Phase == NursePhase.WalkingToVaccinate)
+        {
+            Phase = NursePhase.Vaccinating;
+            VaccinateTimer = 5;
+            humanoid.FaceTowards(target.Tile);
+            return;
+        }
+
+        if (--VaccinateTimer > 0)
+        {
+            return;
+        }
+
+        if (target.HospitalPlayer >= 0 && target.HospitalPlayer < simulation.Hospitals.Count)
+        {
+            Disasters.Epidemics.Vaccinated(simulation, simulation.Hospitals[target.HospitalPlayer], patient);
+        }
+
+        EndVaccination(humanoid, patient);
+    }
+
+    private void EndVaccination(Humanoid humanoid, PatientBehaviour? patient)
+    {
+        if (patient is not null && patient.VaccinatingNurseId == humanoid.Id)
+        {
+            patient.VaccinatingNurseId = 0;
+        }
+
+        VaccinatePatientId = 0;
+        VaccinateTimer = 0;
+        Phase = NursePhase.Idle;
+    }
+
     private void WalkToObject(Simulation simulation, Humanoid humanoid, Room room)
     {
         Phase = NursePhase.WalkingToObject;
@@ -152,6 +242,8 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteByte((byte)Phase);
         writer.WriteInt32(RoomId);
         MultiObjectUse.WriteOptional(writer, Use);
+        writer.WriteInt32(VaccinatePatientId);
+        writer.WriteInt32(VaccinateTimer);
     }
 
     internal static NurseBehaviour ReadState(SimReader reader)
@@ -161,6 +253,8 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             Phase = (NursePhase)reader.ReadByte(),
             RoomId = reader.ReadInt32(),
             Use = MultiObjectUse.ReadOptional(reader),
+            VaccinatePatientId = reader.ReadInt32(),
+            VaccinateTimer = reader.ReadInt32(),
         };
     }
 }

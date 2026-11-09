@@ -575,6 +575,8 @@ public static class Epidemics
             return;
         }
 
+        MarkedPatientsCallForVaccination(simulation, hospital, epidemic);
+
         CheckInfectedLeftHospital(simulation, hospital, epidemic);
         CheckNoInfectedPatients(simulation, hospital, epidemic);
         CheckPatientsForRemoval(simulation, epidemic);
@@ -614,6 +616,136 @@ public static class Epidemics
         {
             epidemic.WatchTickTimer--;
         }
+    }
+
+    /// <summary>
+    /// <c>Patient</c>'s click during a cover-up and <c>Epidemic:markForVaccination</c>: an infected patient not vaccinated
+    /// yet is picked for vaccination, while the watch runs.
+    /// </summary>
+    internal static void MarkForVaccination(Simulation simulation, int player, int patientId)
+    {
+        if (player < 0 || player >= simulation.Hospitals.Count
+            || simulation.Hospitals[player].Epidemics.Current is not { IsCoverUp: true, IsWatchRunning: true }
+            || simulation.FindEntity(patientId) is not Humanoid { Behaviour: PatientBehaviour { IsInfected: true, IsVaccinated: false, IsMarkedForVaccination: false } patient } humanoid
+            || humanoid.HospitalPlayer != player)
+        {
+            return;
+        }
+
+        patient.IsMarkedForVaccination = true;
+    }
+
+    /// <summary>
+    /// <c>perform_vaccination</c>: the patient is vaccinated (<c>setVaccinatedStatus</c>) and the hospital pays the fee
+    /// (<c>gbv.VacCost</c>).
+    /// </summary>
+    internal static void Vaccinated(Simulation simulation, Hospital hospital, PatientBehaviour patient)
+    {
+        patient.IsMarkedForVaccination = false;
+        patient.IsVaccinated = true;
+        hospital.Spend(simulation.Tick, simulation.Rules.Epidemics.VaccinationCost, TransactionKind.Vaccination, patient.DiseaseId);
+    }
+
+    /// <summary><c>is_in_adjacent_square</c>: on tiles next to each other, neither in a room.</summary>
+    internal static bool AreNextToEachOtherOutside(Simulation simulation, Humanoid nurse, Humanoid patient)
+    {
+        var map = simulation.Map;
+        return Math.Abs(nurse.Tile.X - patient.Tile.X) + Math.Abs(nurse.Tile.Y - patient.Tile.Y) == 1
+            && map[nurse.Tile.X, nurse.Tile.Y].RoomId == 0 && map[patient.Tile.X, patient.Tile.Y].RoomId == 0;
+    }
+
+    /// <summary>
+    /// <c>Epidemic:markedPatientsCallForVaccination</c> and the calls dispatcher's vaccination call: each marked patient
+    /// standing still and not waiting for a nurse calls for one. A free nurse out of rooms within 5 tiles, the nearest by
+    /// path (one who cannot reach them counts 10,000 more), answers (<c>verifyStaffForVaccination</c>,
+    /// <c>getPriorityForVaccination</c>) and walks to the free tile next to the patient she reaches soonest
+    /// (<c>getBestVaccinationTile</c>); with none, the patient calls again later.
+    /// </summary>
+    private static void MarkedPatientsCallForVaccination(Simulation simulation, Hospital hospital, Epidemic epidemic)
+    {
+        foreach (var id in epidemic.InfectedIds)
+        {
+            if (simulation.FindEntity(id) is not Humanoid { Behaviour: PatientBehaviour { IsMarkedForVaccination: true } patient, IsDespawning: false } humanoid)
+            {
+                continue;
+            }
+
+            if (patient.VaccinatingNurseId != 0
+                && simulation.FindEntity(patient.VaccinatingNurseId) is Humanoid { Behaviour: NurseBehaviour reserved } && reserved.VaccinatePatientId == id)
+            {
+                continue;
+            }
+
+            patient.VaccinatingNurseId = 0;
+            if (!patient.IsStatic(humanoid) || simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId != 0)
+            {
+                continue;
+            }
+
+            if (FindNurseForVaccination(simulation, hospital, humanoid) is not var (nurse, nurseBehaviour))
+            {
+                continue;
+            }
+
+            if (BestVaccinationTile(simulation, nurse, humanoid) is { } tile)
+            {
+                patient.VaccinatingNurseId = nurse.Id;
+                nurseBehaviour.StartVaccination(simulation, nurse, humanoid, tile);
+            }
+        }
+    }
+
+    private static (Humanoid Nurse, NurseBehaviour Behaviour)? FindNurseForVaccination(Simulation simulation, Hospital hospital, Humanoid patient)
+    {
+        const int Radius = 5;
+        const int UnreachablePenalty = 10_000;
+        (Humanoid, NurseBehaviour)? best = null;
+        var bestScore = 0;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is not Humanoid { Behaviour: NurseBehaviour { IsFree: true } behaviour, IsDespawning: false } nurse || nurse.Employer != hospital.Player
+                || nurse.IsMoving || simulation.Map[nurse.Tile.X, nurse.Tile.Y].RoomId != 0
+                || Math.Abs(nurse.Tile.X - patient.Tile.X) > Radius || Math.Abs(nurse.Tile.Y - patient.Tile.Y) > Radius)
+            {
+                continue;
+            }
+
+            var score = simulation.Pathfinder.FindDistance(simulation.Map, nurse.Tile, patient.Tile) ?? UnreachablePenalty;
+            if (best is null || score < bestScore)
+            {
+                best = (nurse, behaviour);
+                bestScore = score;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary><c>getBestVaccinationTile</c>: of the tiles next to the patient with nobody and nothing on them, the nearest the nurse can reach.</summary>
+    private static TilePosition? BestVaccinationTile(Simulation simulation, Humanoid nurse, Humanoid patient)
+    {
+        var map = simulation.Map;
+        var x = patient.Tile.X;
+        var y = patient.Tile.Y;
+        ReadOnlySpan<TilePosition> squares = [new(x - 1, y), new(x + 1, y), new(x, y - 1), new(x, y + 1)];
+        TilePosition? best = null;
+        var shortest = 0;
+        foreach (var square in squares)
+        {
+            if (!map.Contains(square.X, square.Y) || map[square.X, square.Y].ObjectId != 0
+                || simulation.Entities.Any(entity => entity is Humanoid { IsDespawning: false } other && other.Tile == square))
+            {
+                continue;
+            }
+
+            if (simulation.Pathfinder.FindDistance(map, nurse.Tile, square) is { } distance && (best is null || distance < shortest))
+            {
+                best = square;
+                shortest = distance;
+            }
+        }
+
+        return best;
     }
 
     /// <summary><c>Epidemic:addContagiousPatient</c>.</summary>
@@ -854,6 +986,7 @@ public static class Epidemics
             if (simulation.FindEntity(id) is Humanoid { Behaviour: PatientBehaviour patient })
             {
                 patient.IsVaccinated = true;
+                patient.VaccinatingNurseId = 0;
             }
         }
     }

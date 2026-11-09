@@ -487,7 +487,10 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   hours). A cover-up runs a 100-day watch; when it ends, an uncured patient leaves the grounds or nobody is
   infected, the health inspector comes and reports at reception (or at once without a desk): nobody infected
   brings compensation, otherwise a fine and reputation, and from `EpidemicEvacMinimum` still infected an evacuation
-  and a third of the reputation. Vaccinated patients pass nothing on but still count as infected.
+  and a third of the reputation. During the cover-up the player picks infected patients to vaccinate
+  (`VaccinateCommand`): one standing still out of rooms calls a free nurse out of rooms within 5 tiles, the nearest
+  by path, who walks to a free tile next to them, faces them for 5 hours and vaccinates them for `VacCost`.
+  Vaccinated patients pass nothing on but still count as infected.
 - **Tile temperatures** (`Simulation.Temperatures`, from `th_map.cpp`'s `update_temperatures`). Each tile has a
   temperature from 0 to 65535 for 0–50 °C, 8192 at the start. Every hour after the entities, each tile moves a
   quarter towards its neighbours' average (a neighbour across a wall counts a quarter, unless both tiles are alike

@@ -230,6 +230,23 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>Whether the patient got past reception, so an evacuation sends them home (<c>has_passed_reception</c>).</summary>
     public bool HasPassedReception { get; internal set; }
 
+    /// <summary>Whether the player picked the patient to be vaccinated during a cover-up (<c>marked_for_vaccination</c>).</summary>
+    public bool IsMarkedForVaccination { get; internal set; }
+
+    /// <summary>The nurse coming to vaccinate the patient, or 0 (<c>reserved_for</c>).</summary>
+    public int VaccinatingNurseId { get; internal set; }
+
+    /// <summary>
+    /// Whether the patient stands still, so that a nurse may vaccinate them: in a queue, waiting, or looking for a room
+    /// (Epidemic's <c>is_static</c>; benches are not there yet).
+    /// </summary>
+    internal bool IsStatic(Humanoid humanoid) => Phase switch
+    {
+        PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue => IsStandingInQueue(humanoid),
+        PatientPhase.Waiting or PatientPhase.SeekRoom => !humanoid.IsMoving,
+        _ => false,
+    };
+
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
         // Patient:tick: out of rooms and doorways, a patient whose health ran out dies.
@@ -1114,6 +1131,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteBool(IsVaccinated);
         writer.WriteBool(IsUnderInfectionAttempt);
         writer.WriteBool(HasPassedReception);
+        writer.WriteBool(IsMarkedForVaccination);
+        writer.WriteInt32(VaccinatingNurseId);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -1164,6 +1183,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.IsVaccinated = reader.ReadBool();
         patient.IsUnderInfectionAttempt = reader.ReadBool();
         patient.HasPassedReception = reader.ReadBool();
+        patient.IsMarkedForVaccination = reader.ReadBool();
+        patient.VaccinatingNurseId = reader.ReadInt32();
         return patient;
     }
 }

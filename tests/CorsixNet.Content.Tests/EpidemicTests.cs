@@ -146,6 +146,47 @@ public class EpidemicTests
     }
 
     [Fact]
+    public void ANurseNearbyVaccinatesAPickedPatientForTheFee()
+    {
+        // Without a pharmacy the diagnosed patient waits for one, standing still.
+        var simulation = NewStaffedHospital(Rules(25));
+        Run(simulation, new SetPolicyCommand(PolicyKind.GuessCure, 500));
+        var hospital = simulation.Hospitals[0];
+        var epidemic = RevealEpidemic(simulation);
+        var infected = (Humanoid)simulation.FindEntity(epidemic.InfectedIds[0])!;
+        var patient = (PatientBehaviour)infected.Behaviour!;
+
+        // Vaccination needs a cover-up.
+        Run(simulation, new VaccinateCommand(infected.Id));
+        Assert.False(patient.IsMarkedForVaccination);
+        Run(simulation, new AnswerEpidemicCommand(CoverUp: true));
+        for (var tick = 0; tick < 5 * GameDate.HoursPerDay && !(patient.Phase == PatientPhase.Waiting && !infected.IsMoving); tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.Equal(PatientPhase.Waiting, patient.Phase);
+        HireNurseNear(simulation, infected.Tile);
+        Run(simulation, new VaccinateCommand(infected.Id));
+        Assert.True(patient.IsMarkedForVaccination);
+
+        for (var tick = 0; tick < 200 && !patient.IsVaccinated; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(patient.IsVaccinated, "The nurse did not vaccinate the patient.");
+        Assert.False(patient.IsMarkedForVaccination);
+        Assert.Contains(hospital.Transactions, t => t.Kind == TransactionKind.Vaccination && t.Amount == -50);
+
+        // Vaccinated patients still count until they are cured.
+        Assert.True(patient.IsInfected);
+        Assert.Equal(1, Epidemics.CountInfectedPatients(simulation, epidemic));
+        var nurse = simulation.Entities.OfType<Humanoid>().Single(humanoid => humanoid.Behaviour is NurseBehaviour);
+        Assert.Equal(NursePhase.Idle, ((NurseBehaviour)nurse.Behaviour!).Phase);
+    }
+
+    [Fact]
     public void AnEpidemicSurvivesASave()
     {
         var simulation = NewEpidemicHospital(spreadFactor: 200);
@@ -166,6 +207,24 @@ public class EpidemicTests
         }
 
         Assert.Equal(simulation.ComputeStateHash(), restored.ComputeStateHash());
+    }
+
+    private static void HireNurseNear(Simulation simulation, Sim.Maps.TilePosition tile)
+    {
+        for (var distance = 2; distance <= 4; distance++)
+        {
+            foreach (var (dx, dy) in new[] { (distance, 0), (-distance, 0), (0, distance), (0, -distance) })
+            {
+                var target = new Sim.Maps.TilePosition(tile.X + dx, tile.Y + dy);
+                Run(simulation, new HireStaffCommand(Sim.Staff.StaffClass.Nurse, 0, target));
+                if (simulation.Entities.OfType<Humanoid>().Any(humanoid => humanoid.Behaviour is NurseBehaviour))
+                {
+                    return;
+                }
+            }
+        }
+
+        Assert.Fail("Found no place for the nurse.");
     }
 
     /// <summary>Brings a contagious patient by the cheat and steps until they are diagnosed and the fax asks.</summary>
