@@ -147,6 +147,9 @@ internal sealed class MapViewScreen : IScreen
     private LevelMap? _preparedMap;
     private string? _capturePath;
 
+    /// <summary>Names and descriptions of staff in the installed language, or null if no string file loads.</summary>
+    private readonly StaffTexts? _staffTexts;
+
     /// <summary>Creates the view for a local game on <paramref name="levels"/>, or for <paramref name="networkSession"/> if given.</summary>
     public MapViewScreen(
         ThemeHospitalInstall install,
@@ -176,6 +179,7 @@ internal sealed class MapViewScreen : IScreen
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
+        _staffTexts = LoadStaffTexts(install);
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
         _pixel = new Texture2D(device, 1, 1);
@@ -1710,7 +1714,43 @@ internal sealed class MapViewScreen : IScreen
         var tile = map[position.X, position.Y];
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"Tile {position.X} {position.Y}   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}{(tile.RoomId != 0 ? $"   room {tile.RoomId}" : string.Empty)}   {DescribeFlags(tile)}{(_selected is { } id ? $"   selected {id}" : string.Empty)}");
+            $"Tile {position.X} {position.Y}   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}{(tile.RoomId != 0 ? $"   room {tile.RoomId}" : string.Empty)}   {DescribeFlags(tile)}{(_selected is { } id ? $"   selected {id}" : string.Empty)}{StaffText(position)}");
+    }
+
+    /// <summary>
+    /// The name, profession and description of a member of staff on the tile, standing in for the staff window and
+    /// the bottom panel's information until they exist.
+    /// </summary>
+    private string StaffText(Point position)
+    {
+        if (_staffTexts is null || Simulation is not { } simulation)
+        {
+            return string.Empty;
+        }
+
+        var staff = simulation.Entities.OfType<Humanoid>().FirstOrDefault(humanoid => humanoid.Profile is not null && humanoid.Tile.X == position.X && humanoid.Tile.Y == position.Y);
+        return staff?.Profile is { } profile
+            ? $"   {_staffTexts.FullName(profile)}, {_staffTexts.Profession(profile.Class)}: {_staffTexts.Description(profile)}"
+            : string.Empty;
+    }
+
+    /// <summary>The staff texts in English, or in the first installed language if English is missing.</summary>
+    private static StaffTexts? LoadStaffTexts(ThemeHospitalInstall install)
+    {
+        var languages = install.InstalledLanguages();
+        if (languages.Count == 0)
+        {
+            return null;
+        }
+
+        try
+        {
+            return new StaffTexts(install.LoadStrings(languages.Contains(StringTable.English) ? StringTable.English : languages[0]));
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
     }
 
     private static string DescribeFlags(MapTile tile)

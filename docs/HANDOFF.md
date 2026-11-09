@@ -115,13 +115,13 @@ Done and committed:
   over paying patients (PR #146), the level's starting staff and CorsixTH's extra settings for campaign
   levels 5, 7, 8, 11 and 12 (PR #147), CorsixTH custom levels with `--map file.level` (PR #148), reading
   CorsixTH campaign files with `--campaign` (PR #149), reading the original's strings, `LANG-n.DAT` (PR
-  #150). No game data in the cloud: real-data tests were skipped there and the client was not run, so
+  #150), staff names and descriptions from them, shown for the member of staff under the cursor (PR
+  #151). No game data in the cloud: real-data tests were skipped there and the client was not run, so
   these want a look on MSI. Save format version 48.
 
 Not done yet:
 
-- M5: hire window (the original's staff list with faces), staff names and descriptions from the
-  language files, staff meandering, benches, queue
+- M5: hire window (the original's staff list with faces), staff meandering, benches, queue
   priorities, staff called through a dispatcher.
 - Patients: diagnosis rooms other than general diagnosis, the crash trolley split over two tiles as
   CorsixTH draws it, treatment rooms other than the pharmacy (inflation for bloaty heads,
