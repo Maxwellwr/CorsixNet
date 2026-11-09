@@ -95,7 +95,8 @@ Done and committed:
   straight onto a desk (PR #111), the menu cheats as a command (PR #112), earthquakes from the level's
   `quake_control` with screen shake (PR #113), tile temperatures (PR #114), warmth and happiness of people
   (PR #115), plants drooping (PR #116), rooms' windows and space cheering staff (PR #117), staff tiring at
-  work (PR #118), patients' health running down until they give up or die (PR #119). No game data in the
+  work (PR #118), patients' health running down until they give up or die (PR #119), the quick save
+  (Alt+Shift+S / Alt+Shift+L), monthly autosaves, `--load` and `--continue` (PR #120). No game data in the
   cloud: real-data tests were skipped there and the client was not run, so these want a look on MSI. Save
   format version 27.
 

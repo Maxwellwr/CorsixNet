@@ -6,6 +6,7 @@ using CorsixNet.Client.Sessions;
 using CorsixNet.Client.SpriteViewer;
 using CorsixNet.Content;
 using CorsixNet.Content.Levels;
+using CorsixNet.Content.Saves;
 using CorsixNet.Formats;
 using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Transport;
@@ -20,6 +21,8 @@ const string Usage = """
       --demo            Build and furnish a GP's office and a pharmacy and add twenty patients wandering around
       --speed NAME      Start a local game at a speed: Pause, Slowest, Slower, Normal, MaxSpeed or AndThenSomeMore
       --upscale N       Smooth sprites with the MMPX pixel art filter: 1 (original), 2 or 4 (key U)
+      --load FILE       Load a saved game, e.g. the quick save or an autosave
+      --continue        Load the newest autosave
       --capture FILE    After a few seconds, save the map view to a PNG file and quit
       --sprite-viewer   Browse sprite sheets instead of maps
       --sheet NAME      Open the sprite viewer on a sheet, e.g. DATA/VBLK-0
@@ -46,6 +49,8 @@ var demo = false;
 var upscale = 1;
 var speed = GameSpeed.Normal;
 string? capturePath = null;
+string? loadPath = null;
+var continueGame = false;
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -99,6 +104,12 @@ for (var i = 0; i < args.Length; i++)
         case "--sheet" when i + 1 < args.Length:
             initialSheet = args[++i];
             spriteViewer = true;
+            break;
+        case "--load" when i + 1 < args.Length:
+            loadPath = Path.GetFullPath(args[++i]);
+            break;
+        case "--continue":
+            continueGame = true;
             break;
         case "--capture" when i + 1 < args.Length:
             capturePath = Path.GetFullPath(args[++i]);
@@ -207,7 +218,12 @@ else
 
     createScreen = device =>
     {
-        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale, speed);
+        if (continueGame)
+        {
+            loadPath = new SaveGameStore(SaveGameStore.DefaultDirectory()).MostRecentAutosave();
+        }
+
+        var screen = new MapViewScreen(install, device, levels, zoom, overlay, demo, networkSession, upscale, speed, loadPath);
         if (capturePath is not null)
         {
             // Give the demo time to build and furnish its room before capturing.

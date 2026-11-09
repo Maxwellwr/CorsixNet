@@ -176,8 +176,9 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 **Has:** explicit versioned save format (version 9) of the whole simulation, used for network joins
 and state hashing; tests for save/load round trips.
 
-- Save and load from the UI, save slots, autosave (monthly), quicksave/quickload, file browser
-  (`resizables/file_browser.lua`, `file_browsers/`, `app.lua`).
+- Save and load windows, save slots, the file browser, the autosave frequency setting (daily, weekly, monthly,
+  off) (`resizables/file_browser.lua`, `file_browsers/`). The quick save, monthly autosaves, `--load` and
+  `--continue` are done (`SaveGameStore`).
 - Loading CorsixTH saves (likely never: CorsixTH persists the Lua heap) and original `SAVE*.SAV`.
 - Replays (initial save plus command log) as a feature in the client.
 
