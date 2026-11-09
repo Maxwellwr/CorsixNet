@@ -253,6 +253,13 @@ tile of the building they get a countdown of 20 to 100 tiles, each step at the h
 free floor tile of their hospital outside rooms, they drop a can, banana, paper or bottle (one time in 20 if a bin is
 within 8 steps by CorsixTH's object search) and start again at 30 to 150. Placing an object or building a room clears
 the cleanable litter from its tiles. Nobody sweeps it up yet.
+Rats (`Rats`, `Rat`, from `hospital.lua` and `entities/rat.lua`) come with litter. Each day a hospital wants a rat
+hole (`Hospital.Ratholes`) for each half percent of its corridor tiles with litter and tries up to 12 random tiles for
+one more in a corridor wall; then, unless it has a rat per 200 tiles, a rat comes with a chance of 5 % plus half the
+littered fraction (a clean hospital first gets the two holes a run needs). The rat comes out of a random hole (north
+holes play a leaving animation), runs a tile every 4 ticks along the corridors to another hole and goes in.
+`ShootRatCommand` shoots it (X in the client, for the rat by the cursor) and leaves a dead rat. Building over a hole
+closes it. Only holes in north and west walls are drawn.
 
 ## Money
 

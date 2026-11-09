@@ -17,6 +17,7 @@ using System.Globalization;
 using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
 
@@ -264,6 +265,9 @@ public sealed class Hospital
 
     private const int MaxCases = 256;
 
+    /// <summary>The most rat holes read back from a save.</summary>
+    private const int MaxRatholes = 1 << 16;
+
     /// <summary>Months of statistics a save may hold: over 5,000 years.</summary>
     private const int MaxStatisticsMonths = 1 << 16;
 
@@ -484,6 +488,23 @@ public sealed class Hospital
 
     /// <summary>The epidemic the player knows of, the hidden ones, and the last one's outcome (<see cref="Disasters.Epidemics"/>).</summary>
     public HospitalEpidemics Epidemics { get; internal set; } = new();
+
+    private readonly List<Rathole> _ratholes = [];
+
+    /// <summary>The rat holes in the hospital's corridor walls, in the order they appeared (<see cref="Disasters.Rats"/>).</summary>
+    public IReadOnlyList<Rathole> Ratholes => _ratholes;
+
+    /// <summary><c>Hospital:addRathole</c>: a hole, unless that wall of the tile has one.</summary>
+    internal void AddRathole(Rathole hole)
+    {
+        if (!_ratholes.Any(other => other.Tile == hole.Tile && other.Wall == hole.Wall))
+        {
+            _ratholes.Add(hole);
+        }
+    }
+
+    /// <summary><c>Hospital:removeRatholeXY</c>: the holes of a tile close.</summary>
+    internal void RemoveRatholesAt(TilePosition tile) => _ratholes.RemoveAll(hole => hole.Tile == tile);
 
     /// <summary>Whether the boiler is broken, so that the radiators are stuck at full or no heat (CorsixTH's <c>heating_broke</c>).</summary>
     public bool IsHeatingBroken { get; private set; }
@@ -1245,6 +1266,11 @@ public sealed class Hospital
         Vips.Write(writer);
         Emergencies.Write(writer);
         Epidemics.Write(writer);
+        writer.WriteInt32(_ratholes.Count);
+        foreach (var hole in _ratholes)
+        {
+            Rat.WriteRathole(writer, hole);
+        }
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)
@@ -1358,6 +1384,11 @@ public sealed class Hospital
         hospital.Vips = VipVisits.Read(reader);
         hospital.Emergencies = HospitalEmergencies.Read(reader);
         hospital.Epidemics = HospitalEpidemics.Read(reader);
+        var holes = reader.ReadCount(MaxRatholes);
+        for (var i = 0; i < holes; i++)
+        {
+            hospital._ratholes.Add(Rat.ReadRathole(reader));
+        }
         for (var company = 0; company < InsuranceCompanies; company++)
         {
             for (var month = 0; month < InsuranceMonths; month++)

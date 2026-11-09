@@ -72,6 +72,18 @@ internal sealed class MapViewScreen : IScreen
 
     /// <summary>Room door animations from CorsixTH's <c>objects/door.lua</c>.</summary>
     private const int RoomDoorNorth = 104;
+
+    /// <summary>The rat hole in a north wall (objects/rathole.lua).</summary>
+    private const int RatholeAnimation = 1904;
+
+    /// <summary>The rat's animations (entities/rat.lua).</summary>
+    private const int RatWalkNorth = 1908;
+    private const int RatWalkEast = 1912;
+    private const int RatWalkSouth = 1916;
+    private const int RatWalkWest = 1920;
+    private const int RatEnterNorthHole = 1924;
+    private const int RatEnterWestHole = 1926;
+    private const int RatLeaveHole = 1928;
     private const int RoomDoorWest = 106;
 
     private readonly GraphicsDevice _device;
@@ -1022,6 +1034,22 @@ internal sealed class MapViewScreen : IScreen
             }
         }
 
+        // Until rats can be clicked, X shoots the player's rat nearest the tile under the cursor, if it is within a tile.
+        if (pressed(Keys.X) && _hoveredTile is { } aim)
+        {
+            var shot = simulation.Entities.OfType<Rat>()
+                .Where(rat => !rat.IsGone && rat.Player == _session.Player)
+                .Select(rat => (rat, RatDrawing(rat).Tile))
+                .Where(entry => Math.Abs(entry.Tile.X - aim.X) <= 1 && Math.Abs(entry.Tile.Y - aim.Y) <= 1)
+                .OrderBy(entry => Math.Abs(entry.Tile.X - aim.X) + Math.Abs(entry.Tile.Y - aim.Y))
+                .Select(entry => entry.rat)
+                .FirstOrDefault();
+            if (shot is not null)
+            {
+                _session.Submit(new ShootRatCommand(shot.Id));
+            }
+        }
+
         // Until faxes exist, V invites the VIP who asks to visit and Shift+V refuses them.
         if (pressed(Keys.V) && simulation.Hospitals[_session.Player].Vips.IsInvitationPending)
         {
@@ -1241,6 +1269,7 @@ internal sealed class MapViewScreen : IScreen
                 RoomDoor door => door.Tile,
                 RoomObject placed => ObjectDrawing.DrawTile(simulation.Content, placed.ObjectType, placed.Tile, placed.Orientation),
                 Litter { IsRemoved: false } litter => litter.Tile,
+                Rat { IsGone: false } rat => RatDrawing(rat).Tile,
                 _ => null,
             };
             if (tile is not { } position)
@@ -1287,6 +1316,44 @@ internal sealed class MapViewScreen : IScreen
     /// The emergency helicopter (CorsixTH's objects/helicopter.lua, animation 2456) on the tile south of the heliport:
     /// hidden on its way, then 600 pixels up coming down 10 a tick, landed, and going up again.
     /// </summary>
+    /// <summary>
+    /// Where and how a rat is drawn (CorsixTH's <c>Rat:_walkToNextTile</c>): running east or south it is drawn from the
+    /// tile it runs to, west or north from the one it runs from, slid 32 by 16 pixels a tile; coming out of or going into
+    /// a hole it plays that animation at the hole.
+    /// </summary>
+    private static (TilePosition Tile, int Animation, int OffsetX, int OffsetY) RatDrawing(Rat rat)
+    {
+        switch (rat.Phase)
+        {
+            case RatPhase.Emerging:
+                return (rat.Origin.Tile, RatLeaveHole, 0, 0);
+            case RatPhase.Entering:
+                return (rat.Target.Tile, rat.Target.Wall == Direction.West ? RatEnterWestHole : RatEnterNorthHole, 0, 0);
+        }
+
+        var from = rat.From;
+        var to = rat.To;
+        var done = Rat.TicksPerTile - Math.Clamp(rat.Timer, 0, Rat.TicksPerTile);
+        var slide32 = 32 * done / Rat.TicksPerTile;
+        var slide16 = 16 * done / Rat.TicksPerTile;
+        if (to.X > from.X)
+        {
+            return (to, RatWalkEast, -32 + slide32, -16 + slide16);
+        }
+
+        if (to.X < from.X)
+        {
+            return (from, RatWalkWest, -slide32, -slide16);
+        }
+
+        if (to.Y > from.Y)
+        {
+            return (to, RatWalkSouth, 32 - slide32, -16 + slide16);
+        }
+
+        return (from, RatWalkNorth, slide32, -slide16);
+    }
+
     private void DrawHelicopter(SpriteBatch batch, Simulation simulation, TilePosition tile, int anchorX, int anchorY)
     {
         if (_session is not { } session || simulation.Hospitals[session.Player].Emergencies.HelicopterPhase is not { } phase || phase < 0)
@@ -1319,6 +1386,21 @@ internal sealed class MapViewScreen : IScreen
             DrawHelicopter(batch, helicopterSimulation, tile, anchorX, anchorY);
         }
 
+        if (Simulation is { } holeSimulation)
+        {
+            // Rat holes, in north and west walls only; a west one is the north one mirrored.
+            foreach (var hospital in holeSimulation.Hospitals)
+            {
+                foreach (var hole in hospital.Ratholes)
+                {
+                    if (hole.IsVisible && hole.Tile == tile)
+                    {
+                        _animations.DrawFrame(batch, _animations.Animations.FirstFrame(RatholeAnimation), anchorX, anchorY, NoLayers, flipHorizontally: hole.Wall == Direction.West);
+                    }
+                }
+            }
+        }
+
         if (Simulation is not { } simulation || !_entitiesByTile.TryGetValue(tile, out var list))
         {
             return;
@@ -1337,6 +1419,12 @@ internal sealed class MapViewScreen : IScreen
                 case RoomObject placed:
                     var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
                     _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
+                    break;
+                case Rat rat:
+                    var (_, ratAnimation, offsetX, offsetY) = RatDrawing(rat);
+                    var ratFirst = _animations.Animations.FirstFrame(ratAnimation);
+                    var ratFrame = _animations.Animations.Advance(ratFirst, (int)(simulation.Tick % _animations.Animations.Length(ratFirst)));
+                    _animations.DrawFrame(batch, ratFrame, anchorX + offsetX, anchorY + offsetY, NoLayers, flipHorizontally: false);
                     break;
                 case Litter litter:
                     _animations.DrawFrame(batch, _animations.Animations.FirstFrame(litter.Animation), anchorX, anchorY, NoLayers, flipHorizontally: litter.IsMirrored);
