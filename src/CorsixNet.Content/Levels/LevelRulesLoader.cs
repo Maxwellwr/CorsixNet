@@ -35,6 +35,13 @@ public static partial class LevelRulesLoader
     /// <summary>base_config.lua's <c>gbv.HoldVisualPeepCount</c>.</summary>
     private const int BaseHoldVisualPeepCount = 6;
 
+    /// <summary>CorsixTH's base_config.lua: the names of the computer opponents 0 to 14.</summary>
+    private static readonly string[] BaseCompetitorNames =
+    [
+        "ORAC", "COLOSSUS", "HAL", "MULTIVAC", "HOLLY", "DEEP THOUGHT", "ZEN", "SKYNET", "MARVIN", "CEREBRO", "MOTHER",
+        "JAYNE", "CORSIX", "ROUJIN", "EDVIN",
+    ];
+
     /// <summary>base_config.lua's <c>visuals_available</c>; its <c>visuals</c>, <c>non_visuals</c> and <c>non_visuals_available</c> are all 0.</summary>
     private static readonly int[] BaseVisualsAvailable = [0, 12, 3, 12, 18, 6, 0, 6, 12, 0, 18, 0, 0, 6];
 
@@ -98,7 +105,24 @@ public static partial class LevelRulesLoader
                 config.GetInt("gbv.CrackUpTired") ?? TirednessRules.Default.CrackUpTired),
             config.GetInt("gbv.MayorLaunch") ?? LevelRules.DefaultMayorLaunch,
             EmergenciesFromConfig(config),
-            EpidemicsFromConfig(config));
+            EpidemicsFromConfig(config),
+            CompetitorsFromConfig(config));
+    }
+
+    /// <summary>
+    /// The computer opponents that play (<c>computer[n].Playing</c> 1), with their names (<c>computer[n].Name</c>, by
+    /// default CorsixTH's base_config.lua's), in the order World:World's <c>pairs</c> visits base_config.lua's table:
+    /// 1 to 14, then 0.
+    /// </summary>
+    public static IEnumerable<PlannedCompetitor> CompetitorsFromConfig(LevelConfig config)
+    {
+        foreach (var index in Enumerable.Range(1, BaseCompetitorNames.Length - 1).Append(0))
+        {
+            if (config.GetInt($"computer[{index}].Playing") == 1)
+            {
+                yield return new PlannedCompetitor(index + 1, config[$"computer[{index}].Name"] ?? BaseCompetitorNames[index]);
+            }
+        }
     }
 
     /// <summary>

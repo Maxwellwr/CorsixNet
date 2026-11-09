@@ -19,8 +19,9 @@ namespace CorsixNet.Sim.People;
 /// </summary>
 /// <remarks>
 /// As in CorsixTH, patients come once the first hospital has opened (the countdown at the start of a level), and go
-/// to the hospitals in turn (<c>World:chooseHospitalForPatient</c>). Unlike CorsixTH, whose other hospitals are
-/// computer players, a hospital that has not opened yet gets none: its turn passes as if it had no desk.
+/// to the hospitals in turn (<c>World:chooseHospitalForPatient</c>): the players' hospitals, then the computer
+/// opponents' (<see cref="Simulation.Competitors"/>), which only count theirs. Unlike CorsixTH, whose other hospitals
+/// are computer players, a player's hospital that has not opened yet gets none: its turn passes as if it had no desk.
 /// </remarks>
 public sealed class PatientArrivals
 {
@@ -93,6 +94,7 @@ public sealed class PatientArrivals
     /// <c>World:chooseHospitalForPatient</c>, which CorsixTH has round-robin only: the hospitals take turns, by the
     /// patients each was sent so far, whether they came or not.
     /// </summary>
+    /// <returns>A player's hospital, or past the players' a computer opponent's, counting from the first opponent.</returns>
     internal static int ChooseHospital(Simulation simulation)
     {
         long attempts = 0;
@@ -101,7 +103,12 @@ public sealed class PatientArrivals
             attempts += hospital.SpawnAttempts;
         }
 
-        return (int)(attempts % simulation.Hospitals.Count);
+        foreach (var competitor in simulation.Competitors)
+        {
+            attempts += competitor.SpawnAttempts;
+        }
+
+        return (int)(attempts % (simulation.Hospitals.Count + simulation.Competitors.Count));
     }
 
     /// <summary>
@@ -111,8 +118,17 @@ public sealed class PatientArrivals
     internal Humanoid? SpawnPatient(Simulation simulation, int player)
     {
         SpawnPointsOf(simulation.Map);
-        if (player >= simulation.Hospitals.Count || _spawnPoints!.Count == 0)
+        if (player >= simulation.Hospitals.Count + simulation.Competitors.Count || _spawnPoints!.Count == 0)
         {
+            return null;
+        }
+
+        if (player >= simulation.Hospitals.Count)
+        {
+            // An AIHospital has no reception desk, so World:spawnPatient only counts the patient. The disease is still
+            // chosen first, by the local player's hospital as World:getNewPatientDisease does.
+            _ = PatientCare.NewPatientDisease(simulation, simulation.Hospitals[0]);
+            simulation.Competitors[player - simulation.Hospitals.Count].CountNewPatient();
             return null;
         }
 

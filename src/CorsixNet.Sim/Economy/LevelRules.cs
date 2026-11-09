@@ -68,6 +68,7 @@ public sealed class LevelRules
     /// <param name="mayorLaunch">Days on average between VIP visits (<c>gbv.MayorLaunch</c>).</param>
     /// <param name="emergencies">The level's planned emergencies (<c>emergency_control</c>); by default none.</param>
     /// <param name="epidemics">How contagious diseases are and the epidemics' fines; by default <see cref="EpidemicRules.Default"/>.</param>
+    /// <param name="competitors">The computer opponents that play, in the order CorsixTH adds them; by default none.</param>
     public LevelRules(
         int startCash,
         IEnumerable<KeyValuePair<string, int>> roomCosts,
@@ -87,8 +88,10 @@ public sealed class LevelRules
         TirednessRules? tiredness = null,
         int mayorLaunch = DefaultMayorLaunch,
         IEnumerable<PlannedEmergency>? emergencies = null,
-        EpidemicRules? epidemics = null)
+        EpidemicRules? epidemics = null,
+        IEnumerable<PlannedCompetitor>? competitors = null)
     {
+        Competitors = [.. competitors ?? []];
         Epidemics = epidemics ?? EpidemicRules.Default;
         Emergencies = [.. (emergencies ?? []).OrderBy(emergency => emergency.Index)];
         MayorLaunch = mayorLaunch;
@@ -162,6 +165,9 @@ public sealed class LevelRules
 
     /// <summary>How contagious each disease is and the epidemics' settings.</summary>
     public EpidemicRules Epidemics { get; }
+
+    /// <summary>The computer opponents that play (CorsixTH's <c>AIHospital</c>s), in the order they take turns for patients.</summary>
+    public IReadOnlyList<PlannedCompetitor> Competitors { get; }
 
     /// <summary>What a room of this type costs, without its objects; 0 if the level does not say.</summary>
     public int RoomCost(string roomId) => _roomLookup.GetValueOrDefault(roomId);
@@ -256,6 +262,12 @@ public sealed class LevelRules
         }
 
         Epidemics.Write(writer);
+        writer.WriteInt32(Competitors.Count);
+        foreach (var competitor in Competitors)
+        {
+            writer.WriteInt32(competitor.Number);
+            writer.WriteString(competitor.Name);
+        }
     }
 
     internal static LevelRules Read(SimReader reader)
@@ -290,7 +302,8 @@ public sealed class LevelRules
         }
 
         return new LevelRules(startCash, rooms, objects, staff, population, diseases, startReputation, awards, landCostPerTile, endConditions, interestRate, overdraftDifferential, availability, earthquakes, reader.ReadInt32(), TirednessRules.Read(reader), reader.ReadInt32(),
-            Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => PlannedEmergency.Read(reader)).ToList(), EpidemicRules.Read(reader));
+            Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => PlannedEmergency.Read(reader)).ToList(), EpidemicRules.Read(reader),
+            Enumerable.Range(0, reader.ReadCount(MaxEntries)).Select(_ => new PlannedCompetitor(reader.ReadInt32(), reader.ReadString())).ToList());
     }
 
     private static (string Id, int Cost)[] Sorted(IEnumerable<KeyValuePair<string, int>> costs)
