@@ -104,7 +104,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private const int RoomDoorWest = 106;
 
     private readonly GraphicsDevice _device;
-    private readonly IReadOnlyList<LevelSource> _levels;
+    private IReadOnlyList<LevelSource> _levels;
     private readonly SpriteAtlas _blocks;
     private readonly BlueprintDrawing _blueprints;
     private readonly MapRenderer _renderer;
@@ -345,6 +345,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             .ThenBy(level => level.Name, StringComparer.Ordinal)
             .Select(level => new LevelSource(level.Name, () => LevelMapLoader.LoadOriginal(install, level.Name, difficulty)))
             .ToList();
+    }
+
+    /// <summary>
+    /// The difficulties whose level files are installed (<c>UINewGame</c>: medium always, easy and hard when their
+    /// first level's settings file is there).
+    /// </summary>
+    public static IReadOnlyList<Difficulty> AvailableDifficulties(ThemeHospitalInstall install)
+    {
+        var folder = install.FindDirectory("LEVELS");
+        var files = folder is null
+            ? []
+            : Directory.EnumerateFiles(folder).Select(Path.GetFileName).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return [.. new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard }
+            .Where(difficulty => difficulty == Difficulty.Medium || files.Contains($"{LevelRulesLoader.FilePrefix(difficulty)}01.SAM"))];
     }
 
     public void Update(GameTime gameTime, bool hasFocus)
@@ -2192,6 +2206,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             case "replays":
                 _windows.Open(new ReplayListWindow(Path.Combine(_saves.Directory, Replay.Folder), WatchReplay));
                 break;
+            case "newgame":
+                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, StartCampaign));
+                break;
             case "levels" when _levels.Count > 0:
                 _levelList = true;
                 break;
@@ -2318,6 +2335,30 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             Console.Error.WriteLine($"Cannot read {Hotkeys.FileName}: {e.Message}; using the default keys.");
             return new Hotkeys();
         }
+    }
+
+    /// <summary>
+    /// The new game dialog's Start (<c>UINewGame:startGame</c>): the original campaign at the difficulty, from its first
+    /// level; Page Up/Down, F3 and the next level go through the campaign's levels from then on.
+    /// </summary>
+    private void StartCampaign(Difficulty difficulty)
+    {
+        if (_session is not null and not LocalSession)
+        {
+            ShowNotice("A new game can only be started outside a network game");
+            return;
+        }
+
+        var levels = OriginalLevels(_install, difficulty);
+        if (levels.Count == 0)
+        {
+            ShowNotice("The original levels are not installed");
+            return;
+        }
+
+        _levels = levels;
+        _levelList = false;
+        SelectLevel(0);
     }
 
     /// <summary>The options window's Apply: the new settings are saved to <c>config.txt</c> and used at once.</summary>

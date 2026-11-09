@@ -160,6 +160,7 @@ internal sealed class MenuWindow(Action<string> action) : UiWindow
     {
         yield return WindowRow.Of(
             "File",
+            Item("New game", "newgame"),
             Item("Save", "save"),
             Item("Load", "load"),
             Item("Quick save", "quicksave"),
