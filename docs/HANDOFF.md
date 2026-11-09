@@ -93,7 +93,7 @@ Done and committed:
   patients sent to the hospitals in turn; then the monthly statistics for the graphs (PR #109) and the bank
   statement and graphs figures as text on F2 and F8 (PR #110), hiring a receptionist straight onto a desk
   (PR #111). No game data in the cloud: real-data tests were skipped there and the client was not run, so
-  these want a look on MSI. Save format version 20.
+  these want a look on MSI. Save format version 21.
 
 Not done yet:
 

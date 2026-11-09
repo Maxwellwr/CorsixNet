@@ -63,6 +63,9 @@ public enum TransactionKind : byte
 
     /// <summary>The month's heating bill (<c>heating</c>).</summary>
     Heating = 15,
+
+    /// <summary>Money from the money cheat (<c>cheat</c>).</summary>
+    Cheat = 16,
 }
 
 /// <summary>
@@ -425,6 +428,9 @@ public sealed class Hospital
     /// <summary>Lets the hospital build rooms of this type: at the start, or when research discovers it.</summary>
     internal void DiscoverRoom(string roomId) => _discoveredRooms.Add(roomId);
 
+    /// <summary>Whether the player has used a cheat (CorsixTH's <c>cheated</c>).</summary>
+    public bool Cheated { get; internal set; }
+
     /// <summary>Patients sent to the hospital so far, whether they came or not (CorsixTH's <c>spawn_attempts</c>).</summary>
     public long SpawnAttempts { get; internal set; }
 
@@ -662,10 +668,15 @@ public sealed class Hospital
     {
         if (IsReputationChangeAllowed(random, amount))
         {
-            // Hospital:unconditionalChangeReputation.
-            Reputation = Math.Clamp(Reputation + amount, MinReputation, MaxReputation);
-            LowestReputationThisYear = Math.Min(LowestReputationThisYear, Reputation);
+            UnconditionalChangeReputation(amount);
         }
+    }
+
+    /// <summary><c>Hospital:unconditionalChangeReputation</c>: the reputation changes, held to 0–1000.</summary>
+    internal void UnconditionalChangeReputation(int amount)
+    {
+        Reputation = Math.Clamp(Reputation + amount, MinReputation, MaxReputation);
+        LowestReputationThisYear = Math.Min(LowestReputationThisYear, Reputation);
     }
 
     /// <summary>
@@ -1166,6 +1177,7 @@ public sealed class Hospital
             writer.WriteInt32(month.Reputation);
         }
 
+        writer.WriteBool(Cheated);
         writer.WriteInt64(SpawnAttempts);
         writer.WriteInt32(RadiatorHeat);
         writer.WriteBool(IsHeatingBroken);
@@ -1209,7 +1221,7 @@ public sealed class Hospital
         {
             var tick = reader.ReadInt64();
             var kind = reader.ReadByte();
-            if (kind > (byte)TransactionKind.Heating)
+            if (kind > (byte)TransactionKind.Cheat)
             {
                 throw new InvalidDataException($"Unknown transaction kind {kind}.");
             }
@@ -1274,6 +1286,7 @@ public sealed class Hospital
                 reader.ReadInt64(), reader.ReadInt64(), reader.ReadInt32(), reader.ReadInt64(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()));
         }
 
+        hospital.Cheated = reader.ReadBool();
         hospital.SpawnAttempts = reader.ReadInt64();
         hospital.RadiatorHeat = reader.ReadInt32();
         hospital.IsHeatingBroken = reader.ReadBool();
