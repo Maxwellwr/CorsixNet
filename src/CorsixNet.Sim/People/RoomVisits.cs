@@ -581,7 +581,11 @@ public static class RoomVisits
         return best;
     }
 
-    /// <summary>Sends the nearest member of staff of the kind the room needs, without a room, of the room's hospital, to the room.</summary>
+    /// <summary>
+    /// <c>CallsDispatcher:callForStaff</c> and <c>answerCall</c>: of the free staff of the kind the room needs, the one
+    /// with the best score for it (<see cref="CallScore"/>) goes, unless another room waiting for staff scores better
+    /// for them; that room takes them when it calls, as CorsixTH's free staff answer the most urgent call.
+    /// </summary>
     private static void CallStaff(Simulation simulation, Room room)
     {
         if (!Rules.TryGetValue(room.RoomType, out var rules) || simulation.FindEntity(room.DoorId) is not RoomDoor door)
@@ -591,29 +595,87 @@ public static class RoomVisits
 
         var owner = Owner(simulation, room);
         var target = door.InsideTile(room.Area);
-        Humanoid? nearest = null;
-        var nearestDistance = 0;
+        Humanoid? best = null;
+        var bestScore = 0m;
         foreach (var entity in simulation.Entities)
         {
-            if (entity is not Humanoid { Behaviour: { } behaviour } staff || behaviour is not IRoomStaff { RoomId: 0 } || behaviour is NurseBehaviour { IsFree: false } || behaviour.Kind != rules.Staff
-                || staff.Employer != owner)
+            if (entity is not Humanoid { Behaviour: { } behaviour } staff || !IsFreeFor(staff, rules.Staff, owner))
             {
                 continue;
             }
 
-            if (simulation.Pathfinder.FindDistance(simulation.Map, staff.StepTarget, target) is { } distance
-                && (nearest is null || distance < nearestDistance))
+            if (CallScore(simulation, room, target, staff) is { } score && (best is null || score < bestScore))
             {
-                nearest = staff;
-                nearestDistance = distance;
+                best = staff;
+                bestScore = score;
             }
         }
 
-        if (nearest is not null)
+        if (best is null || PrefersAnotherRoom(simulation, room, rules.Staff, owner, best, bestScore))
         {
-            room.StaffId = nearest.Id;
-            ((IRoomStaff)nearest.Behaviour!).GoToRoom(simulation, nearest, room, target);
+            return;
         }
+
+        room.StaffId = best.Id;
+        ((IRoomStaff)best.Behaviour!).GoToRoom(simulation, best, room, target);
+    }
+
+    /// <summary><c>CallsDispatcher.verifyStaffForRoom</c>: idle staff of the kind, of the room's hospital, not in a room.</summary>
+    private static bool IsFreeFor(Humanoid staff, BehaviourKind kind, int owner) =>
+        staff.Behaviour is IRoomStaff { RoomId: 0 } and not NurseBehaviour { IsFree: false }
+        && staff.Behaviour.Kind == kind && staff.Employer == owner;
+
+    /// <summary>
+    /// <c>CallsDispatcher.getPriorityForRoom</c>, smaller is more urgent: the path to the room, less five for each patient
+    /// waiting and a great deal for an emergency patient among them, less forty times the staff's fatigue (the tired go
+    /// first, so that they do not all rest at once) and fifty for staff not in a room; null if they cannot get there.
+    /// The specialists' bonus is left out until rooms need them.
+    /// </summary>
+    internal static decimal? CallScore(Simulation simulation, Room room, TilePosition entrance, Humanoid staff)
+    {
+        if (simulation.Pathfinder.FindDistance(simulation.Map, staff.StepTarget, entrance) is not { } distance)
+        {
+            return null;
+        }
+
+        decimal score = distance;
+        if (room.DoorQueue is { } queue)
+        {
+            score -= queue.Count * 5;
+            if (queue.Members.Any(id => simulation.FindEntity(id) is Humanoid { Behaviour: PatientBehaviour { EmergencyIndex: > 0 } }))
+            {
+                score -= 200_000;
+            }
+        }
+
+        score -= staff.Fatigue * 40;
+        if (staff.Behaviour is IRoomStaff { RoomId: 0 })
+        {
+            score -= 50;
+        }
+
+        return score;
+    }
+
+    /// <summary>Whether another active room of the hospital, still without staff, has a better score for <paramref name="staff"/>.</summary>
+    private static bool PrefersAnotherRoom(Simulation simulation, Room room, BehaviourKind kind, int owner, Humanoid staff, decimal score)
+    {
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is not Room { IsActive: true, StaffId: 0 } other || other.Id == room.Id
+                || !Rules.TryGetValue(other.RoomType, out var rules) || rules.Staff != kind || Owner(simulation, other) != owner
+                || simulation.FindEntity(other.DoorId) is not RoomDoor door)
+            {
+                continue;
+            }
+
+            if (CallScore(simulation, other, door.InsideTile(other.Area), staff) is { } otherScore && otherScore < score)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

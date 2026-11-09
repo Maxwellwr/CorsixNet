@@ -62,7 +62,10 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
-  partial: today a room just sends for the nearest free member of staff (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
+  partial: a room without staff calls the free member of staff with the best `getPriorityForRoom` score (path,
+  waiting patients, emergencies, fatigue), unless another waiting room scores better for them; there is no call
+  queue object, specialists' bonus, calling staff out of other rooms (`staff_allowed_to_move`) or dispatching of
+  handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Handyman: sweeping litter and vomit, watering plants, repairing machines, task priorities
   (`entities/humanoids/staff/handyman.lua`, `humanoid_actions/sweep_floor.lua`).
 - Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
