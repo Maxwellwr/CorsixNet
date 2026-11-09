@@ -67,7 +67,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   room stand still), staff room idle actions (`use_staffroom.lua`, `seek_staffroom.lua`).
 - Training: training room, consultant teaching, skill growth, gaining abilities (`rooms/training.lua`).
 - Surgeons, psychiatrists, researchers actually being required by rooms.
-- Receptionist hired straight onto a desk; multiple desks per receptionist logic.
+- Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
 - Staff speed, tiredness animations (yawn, check watch, tap foot) (`humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`).
 - Picking staff up with the hand cursor and dropping them in another room.
 

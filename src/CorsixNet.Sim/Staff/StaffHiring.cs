@@ -60,12 +60,9 @@ public static class StaffHiring
     /// Whether a member of staff of <paramref name="staffClass"/> may be placed on <paramref name="tile"/>
     /// for <paramref name="player"/> (0-based), as CorsixTH's <c>_isValidStaffPlacement</c> decides:
     /// a passable tile inside the player's hospital, and in a room only if the room's door can be
-    /// reached from it. Receptionists have no door animations and never go into rooms.
+    /// reached from it. Receptionists have no door animations and never go into rooms, but may be put
+    /// straight onto a reception desk without a receptionist, which they then staff.
     /// </summary>
-    /// <remarks>
-    /// CorsixTH also lets a receptionist be placed on an unstaffed reception desk; that comes with the
-    /// reception desk.
-    /// </remarks>
     public static StaffHireProblem CheckPlacement(Simulation simulation, StaffClass staffClass, TilePosition tile, int player)
     {
         var map = simulation.Map;
@@ -78,6 +75,11 @@ public static class StaffHiring
         if (map.GetParcelOwner(cell.Parcel) != player + 1 || !cell.Has(TileFlags.Hospital))
         {
             return StaffHireProblem.NotInHospital;
+        }
+
+        if (staffClass == StaffClass.Receptionist && UnstaffedDeskAt(simulation, tile) is not null)
+        {
+            return StaffHireProblem.None;
         }
 
         if (!cell.Has(TileFlags.Passable))
@@ -102,6 +104,33 @@ public static class StaffHiring
         }
 
         return StaffHireProblem.None;
+    }
+
+    /// <summary>
+    /// A reception desk covering <paramref name="tile"/> without a receptionist at it (CorsixTH's
+    /// <c>getObject(x, y, "reception_desk", true)</c> and <c>not desk.receptionist</c>), or null.
+    /// </summary>
+    public static RoomObject? UnstaffedDeskAt(Simulation simulation, TilePosition tile)
+    {
+        foreach (var desk in simulation.Entities.OfType<RoomObject>())
+        {
+            if (desk.Desk is not { ReceptionistId: 0 }
+                || simulation.Content.FindObject(desk.ObjectType) is not { } definition
+                || !definition.Orientations.TryGetValue(desk.Orientation, out var layout))
+            {
+                continue;
+            }
+
+            foreach (var part in layout.Footprint)
+            {
+                if (!part.IsUsePosition && !part.IsSide && desk.Tile.X + part.X == tile.X && desk.Tile.Y + part.Y == tile.Y)
+                {
+                    return desk;
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

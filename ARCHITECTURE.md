@@ -297,7 +297,8 @@ CorsixTH's free build mode.
   wage to pay.
 - `HireStaffCommand(class, index, tile)` hires a candidate if the hospital has a month's salary in
   the bank and `StaffHiring.CheckPlacement` accepts the tile: a passable tile in the player's
-  hospital, in a room only if its door can be reached, and never in a room for receptionists. Hiring
+  hospital, in a room only if its door can be reached, and never in a room for receptionists, who may
+  instead be put straight onto a reception desk without a receptionist, which they then staff. Hiring
   pays the first month's salary (`TransactionKind.HireStaff`). The new member of staff is a
   `Humanoid` with the profile and the employing player. In CorsixTH choosing and placing are two
   steps and cancelling puts the candidate back at the end of the list; here they are one command.
