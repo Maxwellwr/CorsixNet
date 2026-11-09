@@ -2,6 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace CorsixNet.Formats;
 
+/// <summary>A piece of the game's background music: its <c>.XMI</c> file and title.</summary>
+public sealed record MusicTrack(string Path, string Title);
+
 /// <summary>
 /// A folder containing the data files of the original Theme Hospital.
 /// </summary>
@@ -239,6 +242,54 @@ public sealed class ThemeHospitalInstall
     {
         var file = FindFile("SOUND", "DATA", $"SOUND-{language}.DAT") ?? FindFile("SOUND", "DATA", $"SOUND-{StringTable.English}.DAT");
         return file is null ? null : SoundArchive.Parse(Rnc.DecompressIfNeeded(File.ReadAllBytes(file)));
+    }
+
+    /// <summary>
+    /// The game's background music, the <c>.XMI</c> files in <c>SOUND/MIDI</c> (CorsixTH's <c>Audio:init</c>): titled and
+    /// ordered by the list file (<c>MIDI*.TXT</c> or <c>NAMES*.TXT</c>, file names and titles on alternate lines) when
+    /// there is one, the others after them by name with the file name as title.
+    /// </summary>
+    public IReadOnlyList<MusicTrack> MusicTracks()
+    {
+        if (FindDirectory("SOUND", "MIDI") is not { } folder)
+        {
+            return [];
+        }
+
+        var files = new SortedDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        string? list = null;
+        foreach (var file in Directory.EnumerateFiles(folder).Order(StringComparer.Ordinal))
+        {
+            var name = Path.GetFileName(file);
+            if (string.Equals(Path.GetExtension(name), ".XMI", StringComparison.OrdinalIgnoreCase))
+            {
+                files.TryAdd(Path.GetFileNameWithoutExtension(name), file);
+            }
+            else if (string.Equals(Path.GetExtension(name), ".TXT", StringComparison.OrdinalIgnoreCase)
+                && (name.StartsWith("MIDI", StringComparison.OrdinalIgnoreCase) || name.StartsWith("NAMES", StringComparison.OrdinalIgnoreCase)))
+            {
+                list = file;
+            }
+        }
+
+        var tracks = new List<MusicTrack>();
+        if (list is not null)
+        {
+            var lines = System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(list)).Split(['\r', '\n', '\x1A'], StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i + 1 < lines.Length; i += 2)
+            {
+                // CorsixTH matches the list's file name without its extension, in any case of letters.
+                var dot = lines[i].LastIndexOf('.');
+                var key = dot < 0 ? lines[i] : lines[i][..dot];
+                if (files.Remove(key, out var path))
+                {
+                    tracks.Add(new MusicTrack(path, lines[i + 1]));
+                }
+            }
+        }
+
+        tracks.AddRange(files.Select(pair => new MusicTrack(pair.Value, pair.Key)));
+        return tracks;
     }
 
     /// <summary>The language numbers of the installed string files, in order.</summary>

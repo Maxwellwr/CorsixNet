@@ -83,6 +83,38 @@ public sealed class ThemeHospitalInstallTests : IDisposable
         Assert.Throws<ArgumentException>(() => install.FindFile("DATA", "*.TAB"));
     }
 
+    [Fact]
+    public void ListsTheMusicInTheOrderAndWithTheTitlesOfTheListFile()
+    {
+        CreateGameFiles(_root);
+        var midi = Path.Combine(_root, "SOUND", "MIDI");
+        foreach (var name in (string[])["ATLANTIS.XMI", "beachy.xmi", "Zombie.XMI", "NOTES.DOC"])
+        {
+            WriteFile(Path.Combine(midi, name));
+        }
+
+        WriteFile(Path.Combine(midi, "MIDI.TXT"), System.Text.Encoding.ASCII.GetBytes("BEACHY.XMI\r\nBeachy Head\r\n\r\natlantis.xmi\r\nAtlantis\r\nMISSING.XMI\r\nGone\r\n\x1A"));
+        Assert.True(ThemeHospitalInstall.TryOpen(_root, out var install, out var error), error);
+
+        var tracks = install.MusicTracks();
+
+        Assert.Equal(["Beachy Head", "Atlantis", "Zombie"], tracks.Select(track => track.Title));
+        Assert.Equal(["beachy.xmi", "ATLANTIS.XMI", "Zombie.XMI"], tracks.Select(track => Path.GetFileName(track.Path)));
+    }
+
+    [Fact]
+    public void WithoutAListFileTheMusicIsTitledAndOrderedByName()
+    {
+        CreateGameFiles(_root);
+        WriteFile(Path.Combine(_root, "SOUND", "MIDI", "B.XMI"));
+        WriteFile(Path.Combine(_root, "SOUND", "MIDI", "a.xmi"));
+        Assert.True(ThemeHospitalInstall.TryOpen(_root, out var install, out var error), error);
+
+        Assert.Equal(["a", "B"], install.MusicTracks().Select(track => track.Title));
+        Directory.Delete(Path.Combine(_root, "SOUND"), recursive: true);
+        Assert.Empty(install.MusicTracks());
+    }
+
     private static void CreateGameFiles(string root, bool upperCase = true)
     {
         string Name(string name) => upperCase ? name : name.ToLowerInvariant();
