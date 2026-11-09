@@ -94,7 +94,8 @@ public sealed class CustomLevelTests : IDisposable
         var (campaign, paths) = LevelMapLoader.LoadCampaign(campaignPath);
 
         Assert.Equal("Test", campaign.Name);
-        Assert.Equal(["One.level", "two.level"], paths.Select(Path.GetFileName));
+        // On a file system that ignores case (Windows, macOS) the path may keep the campaign's spelling.
+        Assert.Equal(["One.level", "two.level"], paths.Select(Path.GetFileName), StringComparer.OrdinalIgnoreCase);
         Assert.Equal(1234, LevelMapLoader.LoadFile(paths[0]).Rules!.StartCash);
         Assert.Throws<FileNotFoundException>(() => LevelMapLoader.LoadCampaign(Write("lost.campaign", "levels = { \"three.level\" }")));
         Assert.Throws<InvalidDataException>(() => LevelMapLoader.LoadCampaign(Write("empty.campaign", "name = \"Empty\"")));
