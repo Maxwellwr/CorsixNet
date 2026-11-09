@@ -952,6 +952,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (string.Equals(room.RoomType, RoomVisits.PharmacyRoom, StringComparison.Ordinal))
         {
             humanoid.WalkTo(simulation, RoomVisits.SecondaryUseTile(simulation, placed));
+            if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: NurseBehaviour nurse } staff)
+            {
+                nurse.OnPatientEntered(simulation, staff, room);
+            }
+
             return;
         }
 
