@@ -52,6 +52,7 @@ internal sealed class MapViewScreen : IScreen
 
     /// <summary>Background of the date and speed box.</summary>
     private static readonly Color DatePanelColor = new(40, 40, 40);
+    private static readonly Color MoneyPanelColor = new(0, 0, 0, 200);
 
     /// <summary>Width of the frame drawn around the map while building.</summary>
     private const int BuildFrameWidth = 3;
@@ -101,6 +102,9 @@ internal sealed class MapViewScreen : IScreen
     private (int X, int Y) _hoveredFraction;
     private Point _rightPressedAt;
     private bool _buildBack;
+
+    /// <summary>The money panel shown over the map: none, the bank statement (F2) or the graphs' figures (F8).</summary>
+    private MoneyPanel _moneyPanel;
     private string? _notice;
     private long _noticeUntil;
 
@@ -398,6 +402,7 @@ internal sealed class MapViewScreen : IScreen
         _text.Draw(batch, StatusLine(), new Vector2(8, 4));
         _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
         DrawDatePanel(batch, viewport);
+        DrawMoneyPanel(batch);
         batch.End();
     }
 
@@ -863,6 +868,17 @@ internal sealed class MapViewScreen : IScreen
         }
 
         // Until the town map exists, T and Shift+T turn the heating up and down.
+        // F2 and F8 open the bank statement and the graphs in CorsixTH; here they toggle their figures as text.
+        if (pressed(Keys.F2))
+        {
+            _moneyPanel = _moneyPanel == MoneyPanel.Statement ? MoneyPanel.None : MoneyPanel.Statement;
+        }
+
+        if (pressed(Keys.F8))
+        {
+            _moneyPanel = _moneyPanel == MoneyPanel.Graphs ? MoneyPanel.None : MoneyPanel.Graphs;
+        }
+
         if (pressed(Keys.T))
         {
             var hospital = simulation.Hospitals[_session.Player];
@@ -1242,6 +1258,25 @@ internal sealed class MapViewScreen : IScreen
         _text.Draw(batch, speed, new Vector2(box.X + 8, 4 + _text.LineHeight + 2));
     }
 
+    private void DrawMoneyPanel(SpriteBatch batch)
+    {
+        if (_moneyPanel == MoneyPanel.None || _session is not { Simulation: { } simulation } session || session.Player >= simulation.Hospitals.Count)
+        {
+            return;
+        }
+
+        var hospital = simulation.Hospitals[session.Player];
+        var lines = (_moneyPanel == MoneyPanel.Statement ? MoneyPanels.Statement(hospital) : MoneyPanels.Graphs(hospital)).ToList();
+        var lineHeight = _text.LineHeight + 2;
+        var width = lines.Max(line => _text.Measure(line).Width) + 16;
+        var box = new Rectangle(8, StatusHeight + 8, width, (lines.Count * lineHeight) + 12);
+        batch.Draw(_pixel, box, MoneyPanelColor);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            _text.Draw(batch, lines[i], new Vector2(box.X + 8, box.Y + 6 + (i * lineHeight)));
+        }
+    }
+
     /// <summary>The date as the original's bottom panel shows it (day and month), with the year.</summary>
     private static string DateText(GameDate date)
     {
@@ -1347,4 +1382,12 @@ internal enum MapOverlay
     Passable,
     Hospital,
     Parcels,
+}
+
+/// <summary>Which money panel <see cref="MapViewScreen"/> shows.</summary>
+internal enum MoneyPanel
+{
+    None,
+    Statement,
+    Graphs,
 }
