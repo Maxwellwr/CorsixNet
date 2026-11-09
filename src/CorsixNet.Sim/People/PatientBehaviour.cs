@@ -525,6 +525,53 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>UIPatient:goHome</c>: the player sends the patient home, counted as kicked out (<c>goHome("kicked")</c>);
+    /// they leave any queue and any question they asked. Not while in a room (see remarks).
+    /// </summary>
+    internal void SendHome(Simulation simulation, Humanoid humanoid)
+    {
+        // CorsixTH makes a patient in a room leave it at once; rooms here cannot be left midway yet.
+        if (Phase == PatientPhase.GoingHome || IsInRoom || simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId != 0)
+        {
+            return;
+        }
+
+        LeaveQueue(simulation, humanoid);
+        _question = PatientQuestion.None;
+        Waiting = -1;
+        GoHome(simulation, humanoid, ReputationChange.Kicked);
+    }
+
+    /// <summary>
+    /// <c>UIPatient:guessDisease</c>: once the diagnosis has begun, and unless the patient is diagnosed, leaving, dying,
+    /// in a room, or has a disease the hospital does not know yet, the player guesses: the patient is diagnosed and, if
+    /// they agree to pay, leaves what they were doing for the first treatment room; otherwise they go home.
+    /// </summary>
+    internal void GuessCure(Simulation simulation, Humanoid humanoid)
+    {
+        if (DiagnosisProgress == 0 || IsDiagnosed || Phase == PatientPhase.GoingHome || IsSetToDie || Next == AfterRoom.Die
+            || IsInRoom || simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId != 0
+            || Disease is not { } disease || !PatientCare.IsDiscovered(simulation, humanoid, disease))
+        {
+            return;
+        }
+
+        PatientCare.SetDiagnosed(simulation, humanoid, this, disease);
+        LeaveQueue(simulation, humanoid);
+        _question = PatientQuestion.None;
+        if (PatientCare.AgreesToPay(simulation, humanoid, this, disease))
+        {
+            // setNextAction(SeekRoomAction(treatment_rooms[1])): the first treatment room.
+            Seeking = RoomSeek.Treatment;
+            SeekTreatmentRoom(simulation, humanoid);
+        }
+        else
+        {
+            GoHome(simulation, humanoid, ReputationChange.OverPriced);
+        }
+    }
+
+    /// <summary>
     /// <c>Patient:setToDying</c> from <c>Hospital:resolveEmergency</c>: an emergency patient not cured, dead or going home
     /// when time is up will die.
     /// </summary>

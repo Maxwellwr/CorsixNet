@@ -105,8 +105,9 @@ Done and committed:
   people minding it (PR #129), rat holes and rats coming with litter, shot with X (PR #130), the
   player's salary and the salary offered on winning (PR #131), the VIP rating counting the litter they
   see (PR #132), patients' thirst and need for the toilet growing (PR #133), the end of the month and
-  year cheats (PR #134), the fax code cheats (PR #135). No game data in the cloud: real-data tests were
-  skipped there and the client was not run, so these want a look on MSI. Save format version 42.
+  year cheats (PR #134), the fax code cheats (PR #135), the patient window's send home and guess cure as
+  commands, Q and Shift+Q (PR #136). No game data in the cloud: real-data tests were skipped there and
+  the client was not run, so these want a look on MSI. Save format version 42.
 
 Not done yet:
 
