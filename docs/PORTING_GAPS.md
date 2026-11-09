@@ -37,8 +37,8 @@ objects from the level file.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
 - Machines: strength, wear per use, breakdown, smoking, explosion (room crash), repair by handymen,
   replacement and upgrade (`entities/machine.lua`, `dialogs/machine_dialog.lua`, `resizables/machine_menu.lua`).
-- Object state: plants wilting and being watered, bins filling, radiators heating tiles, litter
-  (`objects/litter.lua`, `plant.lua`, `bin.lua`).
+- Object state: plants being watered, bins filling, litter (`objects/litter.lua`, `plant.lua`, `bin.lua`).
+  Plants drooping (`PlantState`) and radiators heating tiles are done.
 - Optional room objects: buying extra items in the furniture step and later (room's "Choose Items"
   list with counts and prices), selling objects.
 - Object-specific use: benches (sitting while queueing), drinks machine (thirst), toilets, staff-room
@@ -125,7 +125,7 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 - Town map screen (`fullscreen/town_map.lua`), the grass and divider walls of parcels nobody owns; buying parcels
   (N in the client), their prices, the heating level (T in the client), the heating bill and the boiler breaking
   down are done, and so is the temperature of tiles (`th_map.cpp`'s `updateTemperatures`, `TileTemperatures`, the
-  O overlay). Patients, staff and plants feeling it are not; nor is the adviser's warning when the boiler breaks.
+  O overlay), and people and plants feel it. The adviser's warning when the boiler breaks is not.
 - Research spending and its effect on drug ratings and new equipment (`research_department.lua`, `fullscreen/research_policy.lua`).
 - Graphs window of money, visitors, cures, deaths, reputation over time (`fullscreen/graphs.lua`); the monthly
   figures it draws are recorded (`Hospital.Statistics`) and F8 shows them as text.

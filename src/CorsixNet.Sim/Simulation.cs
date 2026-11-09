@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 24;
+    private const int FormatVersion = 25;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -660,12 +660,16 @@ public sealed class Simulation
             hospital.OnEndDayHeating(Random, radiators[hospital.Player], handymen[hospital.Player], date.DaysInMonth);
         }
 
-        // Then each person's day, as World:onEndDay's entity:tickDay().
+        // Then each person's and plant's day, as World:onEndDay's entity:tickDay().
         foreach (var entity in _entities)
         {
             if (entity is Humanoid humanoid)
             {
                 Feelings.OnEndDay(this, humanoid);
+            }
+            else if (entity is RoomObject { Plant: { } plant } placed)
+            {
+                plant.OnEndDay(Temperatures[placed.Tile.X, placed.Tile.Y] / (decimal)TileTemperatures.Max);
             }
         }
 

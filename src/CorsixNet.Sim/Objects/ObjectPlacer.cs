@@ -31,6 +31,9 @@ public enum ObjectPlacementProblem
 /// </summary>
 public static class ObjectPlacer
 {
+    /// <summary>The plant's object id: placed plants get a <see cref="PlantState"/>.</summary>
+    private const string PlantType = "plant";
+
     private static readonly (Direction Side, int Dx, int Dy, TileFlags Buildable, FootprintFlags Needed)[] Sides =
     [
         (Direction.North, 0, -1, TileFlags.BuildableNorth, FootprintFlags.NeedNorthSide),
@@ -327,6 +330,11 @@ public static class ObjectPlacer
         var map = simulation.Map;
         var roomId = map[tile.X, tile.Y].RoomId;
         var placed = simulation.AddEntity(id => new RoomObject(id, definition.Id, tile, orientation, roomId));
+        if (definition.Id == PlantType)
+        {
+            placed.Plant = new PlantState();
+        }
+
         if (definition.Orientations[orientation].Footprint.Any(part => part.IsSide))
         {
             OccupySide(map, tile, SideOf(definition, orientation), placed.Id);

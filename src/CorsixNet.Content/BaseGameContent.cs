@@ -160,7 +160,7 @@ public static class BaseGameContent
     /// <summary>The bin (objects/bin.lua), a side object that only faces north or east (which stands against the west side).</summary>
     public static readonly ObjectDefinition Bin = new("bin", "Bin", ObjectType: 50, SideOrientations(Direction.North, Direction.East), CorridorObject: true);
 
-    /// <summary>The plant (objects/plant.lua). Wilting and watering are not ported yet.</summary>
+    /// <summary>The plant (objects/plant.lua). It droops over time (<c>PlantState</c>); watering is not ported yet.</summary>
     public static readonly ObjectDefinition Plant = new(
         "plant",
         "Plant",

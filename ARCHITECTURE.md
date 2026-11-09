@@ -243,7 +243,9 @@ saved originals and the remaining objects. The client previews with the same che
 objects with their idle animations; a facing without its own animation mirrors its mirror facing
 (north and west, east and south), as CorsixTH's `orient_mirror`. The corridor objects are the
 reception desk, bench, drinks machine, fire extinguisher, radiator, bin and plant; using them
-(benches, drinks, watering plants, heating) is not ported yet.
+(benches, drinks, watering plants) is not ported yet. A plant (`RoomObject.Plant`, `PlantState`, from
+`plant.lua`) droops a state every 64 days, sooner where it is warm (each day counts 1 plus the tile's temperature),
+from healthy to dead in five states; the client draws the idle frame plus the state. Nobody waters it yet.
 
 ## Money
 

@@ -1,4 +1,5 @@
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Serialization;
@@ -170,6 +171,9 @@ public sealed class RoomObject : Entity
     /// </summary>
     public byte? HangingClothes { get; internal set; }
 
+    /// <summary>For a plant, how thirsty it is; null for other objects.</summary>
+    public PlantState? Plant { get; internal set; }
+
     public override void Update(Simulation simulation)
     {
         if (Desk is not null)
@@ -184,6 +188,7 @@ public sealed class RoomObject : Entity
         {
             Desk = reader.ReadBool() ? ReceptionDeskState.Read(reader) : null,
             HangingClothes = reader.ReadBool() ? reader.ReadByte() : null,
+            Plant = reader.ReadBool() ? PlantState.Read(reader) : null,
         };
     }
 
@@ -200,6 +205,9 @@ public sealed class RoomObject : Entity
         {
             writer.WriteByte(clothes);
         }
+
+        writer.WriteBool(Plant is not null);
+        Plant?.Write(writer);
     }
 }
 

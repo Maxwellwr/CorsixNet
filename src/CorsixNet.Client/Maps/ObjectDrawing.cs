@@ -63,7 +63,11 @@ internal sealed class ObjectDrawing
 
     /// <summary>Draws an object placed on <paramref name="tile"/>.</summary>
     /// <param name="hangingClothes">For a screen, the clothes (layer 1) hanging on it, or null.</param>
-    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint, byte? hangingClothes = null)
+    /// <param name="frameOffset">
+    /// For a plant, its state: CorsixTH draws it still, as the idle animation's first frame plus the state
+    /// (<c>Plant:setNextState</c>). Null animates the object as usual.
+    /// </param>
+    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint, byte? hangingClothes = null, int? frameOffset = null)
     {
         var anchorX = 32 * (tile.X - tile.Y);
         var anchorY = 16 * (tile.X + tile.Y);
@@ -100,7 +104,7 @@ internal sealed class ObjectDrawing
 
         var set = _renderer.Animations;
         var first = set.FirstFrame(animation);
-        var frame = set.Advance(first, (int)(tick % set.Length(first)));
+        var frame = frameOffset is { } offset ? first + offset : set.Advance(first, (int)(tick % set.Length(first)));
         _renderer.DrawFrame(batch, frame, anchorX, anchorY, layers, flip, tint);
     }
 }

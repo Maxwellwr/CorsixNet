@@ -1154,7 +1154,7 @@ internal sealed class MapViewScreen : IScreen
                     break;
                 case RoomObject placed:
                     var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
-                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes);
+                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
                     break;
                 case RoomDoor roomDoor:
                     var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
