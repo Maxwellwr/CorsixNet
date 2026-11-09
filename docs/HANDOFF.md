@@ -173,6 +173,9 @@ Done and committed:
   other rooms, its staff leave once no patient is inside, then its objects can be moved, bought or
   sold; Confirm costs nothing again, Take down asks and gives half its cost back (Room.IsPaid,
   IsClosing; save format 59). Not yet: going back to the blueprint to resize or move the door.
+  Replays: a local game records its start and every command (LocalSession.Recording); Menu, Save
+  replay writes Replays/*.cnreplay in the saves folder, Watch replay plays one back (ReplaySession,
+  the player's commands ignored) and the status line says whether it matched the recorded hash.
 
 Not done yet:
 

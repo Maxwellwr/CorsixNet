@@ -217,7 +217,8 @@ and state hashing; tests for save/load round trips.
 - Save and load windows, save slots, the file browser (the autosave frequency setting is done, `autosave_frequency`) (`resizables/file_browser.lua`, `file_browsers/`). The quick save, monthly autosaves, `--load` and
   `--continue` are done (`SaveGameStore`).
 - Loading CorsixTH saves (likely never: CorsixTH persists the Lua heap) and original `SAVE*.SAV`.
-- Replays (initial save plus command log) as a feature in the client.
+- Replays: local games are recorded (initial save plus command log) and can be saved and watched from the menu,
+  checked against the recorded state hash; not yet for network games, nor seeking or rewinding.
 
 ## 9. Sound and music
 

@@ -166,6 +166,7 @@ internal sealed class MenuWindow(Action<string> action) : UiWindow
             Item("Quick load", "quickload"),
             Item("Restart", "restart"),
             Item("Quit", "quit"));
+        yield return WindowRow.Of("Replays", Item("Save replay", "savereplay"), Item("Watch replay", "replays"));
         yield return WindowRow.Of("Options", Item("Settings", "options"), Item("Levels", "levels"));
         yield return WindowRow.Of(
             "Charts",
@@ -188,5 +189,38 @@ internal sealed class MenuWindow(Action<string> action) : UiWindow
             host.Close(this);
             action(name);
         });
+    }
+}
+
+/// <summary>The replays in the saves folder, newest first, to watch one.</summary>
+internal sealed class ReplayListWindow(string folder, Action<string> watch) : UiWindow
+{
+    public override string Title => "Replays";
+
+    /// <summary>The replay files in the folder, newest first.</summary>
+    public static IReadOnlyList<string> Files(string folder) =>
+        Directory.Exists(folder)
+            ? [.. Directory.EnumerateFiles(folder, "*" + Content.Saves.Replay.Extension).OrderByDescending(File.GetLastWriteTimeUtc)]
+            : [];
+
+    public override IEnumerable<WindowRow> Rows(IWindowHost host)
+    {
+        var files = Files(folder);
+        if (files.Count == 0)
+        {
+            yield return WindowCell.Line("No replays yet: Save replay in the menu keeps the game played so far.", dim: true);
+            yield break;
+        }
+
+        foreach (var path in files)
+        {
+            yield return WindowRow.Of(
+                Path.GetFileNameWithoutExtension(path),
+                WindowCell.Button("Watch", () =>
+                {
+                    host.Close(this);
+                    watch(path);
+                }));
+        }
     }
 }
