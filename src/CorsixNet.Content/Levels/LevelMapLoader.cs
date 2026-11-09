@@ -175,12 +175,71 @@ public static class LevelMapLoader
 
     /// <summary>
     /// Loads a map file from any path, such as a CorsixTH <c>.map</c> file. With the game at hand, the
-    /// money settings are the medium difficulty's general ones; without it, everything is free.
+    /// money settings are the medium difficulty's general ones; without it, everything is free. A CorsixTH
+    /// <c>.level</c> file is loaded as a custom level (<see cref="LoadCustom"/>).
     /// </summary>
     public static LoadedLevelMap LoadFile(string path, ThemeHospitalInstall? install = null)
     {
+        if (string.Equals(Path.GetExtension(path), ".level", StringComparison.OrdinalIgnoreCase))
+        {
+            return LoadCustom(path, install).Level;
+        }
+
         var level = Load(MapFile.Parse(Rnc.DecompressIfNeeded(File.ReadAllBytes(path))));
         return install is null ? level : level with { Rules = LevelRulesLoader.LoadOriginal(install, path, BaseGameContent.Create()) };
+    }
+
+    /// <summary>
+    /// Loads a CorsixTH custom level (<c>App:readLevelFile</c> and <c>Map:load</c>): the map its <c>%MapFile</c> names,
+    /// looked for beside the level file (in any case of letters), or an original map such as <c>LEVEL.L5</c> from the
+    /// game, with the money settings of the level file (<see cref="LevelRulesLoader.LoadCustom"/>).
+    /// </summary>
+    /// <exception cref="InvalidDataException">The level file names no map file, or its settings are wrong.</exception>
+    /// <exception cref="FileNotFoundException">The map file is not there.</exception>
+    public static (LoadedLevelMap Level, CustomLevelInfo Info) LoadCustom(string levelPath, ThemeHospitalInstall? install = null)
+    {
+        var data = File.ReadAllBytes(levelPath);
+        var info = CustomLevelInfo.Parse(System.Text.Encoding.Latin1.GetString(data));
+        if (info.MapFile is not { } mapFile)
+        {
+            throw new InvalidDataException($"The level {levelPath} names no map file.");
+        }
+
+        byte[] mapData;
+        if (LevelRulesLoader.LevelNumber(mapFile) is not null)
+        {
+            mapData = (install ?? throw new InvalidOperationException($"The level's map {mapFile} is the original game's."))
+                .ReadDataFile("LEVELS", mapFile);
+        }
+        else
+        {
+            mapData = Rnc.DecompressIfNeeded(File.ReadAllBytes(FindBeside(levelPath, mapFile)));
+        }
+
+        var level = Load(MapFile.Parse(mapData));
+        var rules = LevelRulesLoader.LoadCustom(LevelConfig.Parse(data), install, BaseGameContent.Create());
+        return (level with { Rules = rules }, info);
+    }
+
+    /// <summary>
+    /// A file named by a level file (CorsixTH's <c>App:_checkOrFind</c>, reduced to the level's own folder): the path as
+    /// given if it exists, else the file of that name beside the level file, in any case of letters.
+    /// </summary>
+    private static string FindBeside(string levelPath, string fileName)
+    {
+        var folder = Path.GetDirectoryName(Path.GetFullPath(levelPath)) ?? ".";
+        var name = fileName.Replace('\\', '/');
+        var direct = Path.Combine(folder, name);
+        if (File.Exists(direct))
+        {
+            return direct;
+        }
+
+        var bare = name[(name.LastIndexOf('/') + 1)..];
+        return Directory.EnumerateFiles(folder)
+            .Order(StringComparer.Ordinal)
+            .FirstOrDefault(file => string.Equals(Path.GetFileName(file), bare, StringComparison.OrdinalIgnoreCase))
+            ?? throw new FileNotFoundException($"The level's map file {fileName} is not beside it.", direct);
     }
 
     private static bool IsDividerWall(byte blockCode) => blockCode >> 1 == 70;

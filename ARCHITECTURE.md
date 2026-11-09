@@ -281,6 +281,12 @@ find a price low or too high (−0.3/0.4, −0.4/0.3, −0.5/0.2) and the days b
 `LevelConfig`. Rooms find their price through their number in those files (`LevelConfigId`, 7
 for the GP's office), objects through their object type. Without level files everything is free.
 
+A CorsixTH custom level (`--map island.level` in the client and server) is a `.level` file whose `%Name`,
+`%MapFile` and briefings `CustomLevelInfo` reads and whose `#` settings are read on CorsixTH's defaults
+(`LevelMapLoader.LoadCustom`, `LevelRulesLoader.LoadCustom`). Its map lies beside it, or is an original map such as
+`LEVEL.L5` from the game; an `overlay.difficulty` and `overlay.level_number` read that campaign level's files on top,
+at that difficulty. Campaigns (`.campaign`) are not read yet.
+
 `RoomPurchases` charges for rooms as the original does:
 
 - a room can only be started with its whole cost (room plus needed objects) in the bank;

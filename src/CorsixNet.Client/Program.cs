@@ -16,7 +16,7 @@ const int DefaultPort = 7777;
 const string Usage = """
     Usage: CorsixNet [game folder] [options]
       --level NAME      Start on an original level, e.g. LEVEL.L3
-      --map PATH        Show a map file from disk, e.g. a CorsixTH .map file
+      --map PATH        Show a map file from disk, e.g. a CorsixTH .map or .level file
       --difficulty NAME Difficulty of the original levels: Easy, Medium (default) or Hard
       --zoom FACTOR     Initial map zoom, 0.5 to 4
       --overlay NAME    Initial map overlay: None, Passable, Hospital or Parcels

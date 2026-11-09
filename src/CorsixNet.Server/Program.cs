@@ -9,7 +9,7 @@ using CorsixNet.Sim.Economy;
 const string Usage = """
     Usage: CorsixNet.Server [game folder] [options]
       --level NAME   Original level to play (default LEVEL.L20, a two-player map)
-      --map PATH     Map file to play instead, e.g. a CorsixTH .map file
+      --map PATH     Map file to play instead, e.g. a CorsixTH .map or .level file
       --difficulty NAME  Difficulty of an original level: Easy, Medium (default) or Hard
       --port PORT    TCP port (default 7777)
       --public       Accept connections from other machines, not only this one
