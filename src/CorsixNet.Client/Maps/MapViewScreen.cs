@@ -1,7 +1,9 @@
 using System.Globalization;
 using CorsixNet.Client.Rendering;
 using CorsixNet.Client.Sessions;
+using CorsixNet.Content;
 using CorsixNet.Content.Levels;
+using CorsixNet.Content.Saves;
 using CorsixNet.Formats;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
@@ -33,8 +35,9 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
-/// (right click turns an object, P picks one up, Enter confirms, Esc steps back). In a network
-/// game, commands go through the server.
+/// (right click turns an object, P picks one up, Enter confirms, Esc steps back). Alt+Shift+S saves a local game to
+/// the quick save and Alt+Shift+L loads it; the game also saves itself each month. In a network game, commands go
+/// through the server.
 /// </remarks>
 internal sealed class MapViewScreen : IScreen
 {
@@ -96,6 +99,9 @@ internal sealed class MapViewScreen : IScreen
     private readonly Random _random = new();
 
     private IGameSession? _session;
+
+    /// <summary>The saves folder: the quick save and the monthly autosaves.</summary>
+    private readonly SaveGameStore _saves = new(SaveGameStore.DefaultDirectory());
     private int _levelIndex;
     private string? _error;
     private MapOverlay _overlay;
@@ -135,7 +141,8 @@ internal sealed class MapViewScreen : IScreen
         bool demo = false,
         IGameSession? networkSession = null,
         int upscale = 1,
-        GameSpeed speed = GameSpeed.Normal)
+        GameSpeed speed = GameSpeed.Normal,
+        string? loadPath = null)
     {
         _device = device;
         _initialSpeed = speed;
@@ -175,6 +182,10 @@ internal sealed class MapViewScreen : IScreen
         else
         {
             SelectLevel(0);
+            if (loadPath is not null)
+            {
+                LoadGame(loadPath);
+            }
         }
 
         PrepareMapIfReady();
@@ -461,7 +472,7 @@ internal sealed class MapViewScreen : IScreen
         try
         {
             var level = _levels[index].Load();
-            var local = new LocalSession(_levels[index].Name, level.StartSimulation(seed: 1));
+            var local = new LocalSession(_levels[index].Name, level.StartSimulation(seed: 1), _saves);
             local.SetSpeed(_initialSpeed);
             _session = local;
             _error = null;
@@ -472,6 +483,84 @@ internal sealed class MapViewScreen : IScreen
         }
 
         PrepareMapIfReady();
+    }
+
+    /// <summary>
+    /// <c>App:quickSave</c> and <c>App:quickLoad</c> (Alt+Shift+S and Alt+Shift+L): only for local games, and not while
+    /// building. Loading without a quick save makes one, as CorsixTH does.
+    /// </summary>
+    /// <returns>Whether another game was loaded.</returns>
+    private bool UpdateQuickSave(Func<Keys, bool> pressed)
+    {
+        if (_session is not LocalSession local)
+        {
+            return false;
+        }
+
+        var save = pressed(Keys.S);
+        var load = pressed(Keys.L);
+        if (!save && !load)
+        {
+            return false;
+        }
+
+        if (_buildTool.IsActive || _furnishTool.IsActive)
+        {
+            ShowNotice("Finish building before saving or loading");
+            return false;
+        }
+
+        if (load && File.Exists(_saves.QuickSavePath))
+        {
+            return LoadGame(_saves.QuickSavePath);
+        }
+
+        try
+        {
+            SaveGameStore.Save(_saves.QuickSavePath, local.Name, local.Simulation);
+            ShowNotice(load ? "There was no quick save to load, so one has been made" : "Quick saved");
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowNotice($"Cannot save: {e.Message}");
+        }
+
+        return false;
+    }
+
+    /// <summary>Replaces the local game with a saved one, keeping the game speed.</summary>
+    /// <returns>Whether the game was loaded.</returns>
+    private bool LoadGame(string path)
+    {
+        SavedGame saved;
+        try
+        {
+            saved = SaveGameStore.Load(path, BaseGameContent.Create());
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
+        {
+            ShowNotice($"Cannot load {Path.GetFileName(path)}: {e.Message}");
+            return false;
+        }
+
+        var speed = _session is { CanChangeSpeed: true } previous ? previous.Speed : _initialSpeed;
+        _session?.Dispose();
+        var local = new LocalSession(saved.LevelName, saved.Simulation, _saves);
+        local.SetSpeed(speed == GameSpeed.SpeedUp ? GameSpeed.Normal : speed);
+        _session = local;
+        _error = null;
+        var index = _levels.ToList().FindIndex(level => string.Equals(level.Name, saved.LevelName, StringComparison.Ordinal));
+        if (index >= 0)
+        {
+            _levelIndex = index;
+        }
+
+        // The demo's steps belong to the game it was started on.
+        _demoPending = _demoDeskPending = _demoDiagnosisPending = false;
+        _demoFurniture.Clear();
+        PrepareMapIfReady();
+        ShowNotice($"Loaded {Path.GetFileName(path)}");
+        return true;
     }
 
     /// <summary>
@@ -887,8 +976,15 @@ internal sealed class MapViewScreen : IScreen
         var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         var ctrl = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
 
+        var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
+        if (alt && shift && UpdateQuickSave(pressed))
+        {
+            // Another game now: this frame's input was meant for the old one.
+            return;
+        }
+
         // Until the bank manager exists: L borrows 5,000, Shift+L pays 5,000 back; with Ctrl as much as allowed.
-        if (pressed(Keys.L))
+        if (pressed(Keys.L) && !alt)
         {
             _session.Submit(shift ? new RepayCommand(ctrl) : new BorrowCommand(ctrl));
         }
@@ -1274,9 +1370,10 @@ internal sealed class MapViewScreen : IScreen
         var levels = _levels.Count > 0 ? $"   ({_levelIndex + 1} of {_levels.Count})" : string.Empty;
         var people = Simulation?.Entities.OfType<Humanoid>().Count() ?? 0;
         var levelKeys = _levels.Count > 0 ? "   PgUp PgDn: level" : string.Empty;
+        var autosave = _session is LocalSession { AutosaveError: { } failed } ? $"   AUTOSAVE FAILED: {failed}" : string.Empty;
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"{_session.Name}{levels}{money}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
+            $"{_session.Name}{levels}{money}{autosave}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
     }
 
     /// <summary>

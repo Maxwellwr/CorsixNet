@@ -73,6 +73,11 @@ initial view. `--upscale 2` (or 4) starts with smoothed sprites. `--capture shot
 the map view to a PNG after a few seconds and quits, which works even when the screen is locked. `--demo` builds and furnishes a GP's office near the start and adds twenty patients, half of them outside,
 wandering into and around the hospital.
 
+Alt+Shift+S quick saves a local game and Alt+Shift+L loads the quick save. The game also saves
+itself as each month's last day begins, in `Autosaves`. Saves go to `%AppData%/CorsixNet/Saves`
+(or the folder in `CORSIXNET_SAVES`). `--load FILE` starts on a saved game and `--continue`
+on the newest autosave.
+
 ### Multiplayer
 
 Host a game on the two-player map `LEVEL.L20` and join it yourself:

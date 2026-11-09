@@ -507,6 +507,13 @@ The same serializer feeds network joins and state hashing.
 `ComputeStateHash` streams the same bytes into a 64-bit FNV-1a hash without buffering them.
 Tests check that a saved and reloaded simulation continues to produce identical hashes.
 
+Save files (`SaveGameStore` in `CorsixNet.Content`, after CorsixTH's `app.lua` and `world.lua`) add a short header
+(`CNETSAVE`, a header version and the level's name) before the simulation's own save, and are written to a
+temporary file first. They live in `%AppData%/CorsixNet/Saves` (or `CORSIXNET_SAVES`): the quick save
+`quicksave.qs` (Alt+Shift+S, Alt+Shift+L; loading without one makes one) and, for local games, an autosave as each
+month's last day begins, `Autosaves/Autosave-mm-dd.sav`, so a year keeps one per month. `--load FILE` and
+`--continue` (the newest autosave) start the client on a saved game. Network games are not saved.
+
 ## Content and mods
 
 1. **Data.** Rooms, objects, diseases, staff and balance values are definitions loaded

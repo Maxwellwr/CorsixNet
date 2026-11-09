@@ -1,10 +1,14 @@
 using System.Globalization;
+using CorsixNet.Content.Saves;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 
 namespace CorsixNet.Client.Sessions;
 
-/// <summary>A single-player game: the client runs the simulation by the clock.</summary>
+/// <summary>
+/// A single-player game: the client runs the simulation by the clock, and saves it at the start of each month's last
+/// day when given a saves folder (CorsixTH's default monthly autosave).
+/// </summary>
 internal sealed class LocalSession : IGameSession
 {
     /// <summary>Real time per tick at CorsixTH's "Normal" speed (3 frames of 18 ms).</summary>
@@ -12,11 +16,17 @@ internal sealed class LocalSession : IGameSession
 
     private readonly GameClock _clock = new();
 
-    public LocalSession(string name, Simulation simulation)
+    private readonly SaveGameStore? _autosaves;
+
+    public LocalSession(string name, Simulation simulation, SaveGameStore? autosaves = null)
     {
         Name = name;
         Simulation = simulation;
+        _autosaves = autosaves;
     }
+
+    /// <summary>Why the last autosave failed, or null.</summary>
+    public string? AutosaveError { get; private set; }
 
     public string Name { get; }
 
@@ -43,7 +53,26 @@ internal sealed class LocalSession : IGameSession
         var ticks = _clock.Advance(elapsed);
         for (var i = 0; i < ticks; i++)
         {
+            var before = Simulation.Date;
             Simulation.Step();
+            if (_autosaves is not null && SaveGameStore.IsAutosaveDue(before, Simulation.Date))
+            {
+                Autosave(_autosaves);
+            }
+        }
+    }
+
+    private void Autosave(SaveGameStore store)
+    {
+        try
+        {
+            SaveGameStore.Save(store.AutosavePath(Simulation.Date), Name, Simulation);
+            AutosaveError = null;
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // As CorsixTH, a failed autosave does not stop the game.
+            AutosaveError = e.Message;
         }
     }
 
