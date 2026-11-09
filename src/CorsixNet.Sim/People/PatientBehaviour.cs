@@ -77,6 +77,31 @@ public enum PatientPhase : byte
     Waiting,
 }
 
+/// <summary>What a waiting patient's fax asks the player (CorsixTH's patient faxes).</summary>
+public enum PatientQuestion : byte
+{
+    None,
+
+    /// <summary>No diagnosis room left to go to (<c>makeNoDiagnosisRoomFax</c>): send home, guess the cure or wait.</summary>
+    NoDiagnosisRoom,
+
+    /// <summary>A room of the treatment is missing (<c>makeNoTreatmentRoomFax</c>): send home, wait or research.</summary>
+    NoTreatmentRoom,
+}
+
+/// <summary>The player's answer to a waiting patient's fax (CorsixTH's <c>UIFax:choice</c>).</summary>
+public enum PatientAnswer : byte
+{
+    /// <summary><c>send_home</c>: the patient goes home, not cured.</summary>
+    SendHome = 1,
+
+    /// <summary><c>wait</c>: the patient waits another 60 days.</summary>
+    Wait = 2,
+
+    /// <summary><c>guess_cure</c>: the disease counts as diagnosed and the patient goes on to treatment; only for a known disease.</summary>
+    GuessCure = 3,
+}
+
 /// <summary>What kind of room a patient is looking for.</summary>
 public enum RoomSeek : byte
 {
@@ -110,7 +135,7 @@ internal enum AfterRoom : byte
 /// </summary>
 /// <remarks>
 /// Only the GP's office and the pharmacy work so far. A patient sent to any other room finds none and, as in
-/// CorsixTH when the room is missing, waits for it or for the player's decision (the faxes are not there yet),
+/// CorsixTH when the room is missing, waits for it or for the player's answer to their fax (<see cref="Question"/>),
 /// then goes home; a patient hardly diagnosed goes home at once, one diagnosed far enough has their disease
 /// guessed. A waiting patient goes to a room of the kind they wait for as soon as one is built.
 /// </remarks>
@@ -229,6 +254,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>Whether the patient got past reception, so an evacuation sends them home (<c>has_passed_reception</c>).</summary>
     public bool HasPassedReception { get; internal set; }
+
+    /// <summary>What the patient's fax asks the player while they wait, or <see cref="PatientQuestion.None"/>.</summary>
+    public PatientQuestion Question => Phase == PatientPhase.Waiting ? _question : PatientQuestion.None;
+
+    private PatientQuestion _question;
 
     /// <summary>Whether the player picked the patient to be vaccinated during a cover-up (<c>marked_for_vaccination</c>).</summary>
     public bool IsMarkedForVaccination { get; internal set; }
@@ -426,6 +456,46 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         LeaveQueue(simulation, humanoid);
         Waiting = -1;
         GoHome(simulation, humanoid);
+    }
+
+    /// <summary>
+    /// <c>UIFax:choice</c> for a patient's fax: sent home (counted as kicked out), waiting another 60 days, or, when the
+    /// diagnosis ran out of rooms and the disease is known, the cure guessed and on to treatment if they agree to pay.
+    /// </summary>
+    internal void Answer(Simulation simulation, Humanoid humanoid, PatientAnswer answer)
+    {
+        var question = Question;
+        if (question == PatientQuestion.None)
+        {
+            return;
+        }
+
+        switch (answer)
+        {
+            case PatientAnswer.SendHome:
+                _question = PatientQuestion.None;
+                GoHome(simulation, humanoid, ReputationChange.Kicked);
+                break;
+            case PatientAnswer.Wait:
+                _question = PatientQuestion.None;
+                Waiting = PatientCare.WaitingDays * GameDate.HoursPerDay;
+                break;
+            case PatientAnswer.GuessCure when question == PatientQuestion.NoDiagnosisRoom && Disease is { } disease
+                && PatientCare.IsDiscovered(simulation, humanoid, disease):
+                _question = PatientQuestion.None;
+                PatientCare.SetDiagnosed(simulation, humanoid, this, disease);
+                if (PatientCare.AgreesToPay(simulation, humanoid, this, disease))
+                {
+                    Seeking = RoomSeek.Treatment;
+                    SeekTreatmentRoom(simulation, humanoid);
+                }
+                else
+                {
+                    GoHome(simulation, humanoid, ReputationChange.OverPriced);
+                }
+
+                break;
+        }
     }
 
     /// <summary>
@@ -681,7 +751,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
         else if (DiagnosisProgress < policies.GuessCure || !PatientCare.IsDiscovered(simulation, humanoid, disease))
         {
-            StartWaiting(simulation, humanoid);
+            StartWaiting(simulation, humanoid, PatientQuestion.NoDiagnosisRoom);
         }
         else
         {
@@ -708,7 +778,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             || (CureRoomsVisited == 0 && disease.TreatmentRooms.Any(roomType => FindRoom(simulation, humanoid, roomType) is null))
             || !GoToBestRoom(simulation, humanoid, disease.TreatmentRooms[CureRoomsVisited]))
         {
-            StartWaiting(simulation, humanoid);
+            // Emergency patients do not ask; they wait for the room to be built.
+            StartWaiting(simulation, humanoid, EmergencyIndex > 0 ? PatientQuestion.None : PatientQuestion.NoTreatmentRoom);
         }
     }
 
@@ -737,8 +808,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// Waits <see cref="PatientCare.WaitingDays"/> days, then goes home. The patient first steps off to a free spot
     /// nearby, as CorsixTH's patients meander off before they idle.
     /// </summary>
-    private void StartWaiting(Simulation simulation, Humanoid humanoid)
+    private void StartWaiting(Simulation simulation, Humanoid humanoid, PatientQuestion question)
     {
+        _question = question;
         Phase = PatientPhase.Waiting;
         TargetId = 0;
         Waiting = PatientCare.WaitingDays * GameDate.HoursPerDay;
@@ -1133,6 +1205,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteBool(HasPassedReception);
         writer.WriteBool(IsMarkedForVaccination);
         writer.WriteInt32(VaccinatingNurseId);
+        writer.WriteByte((byte)_question);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -1185,6 +1258,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.HasPassedReception = reader.ReadBool();
         patient.IsMarkedForVaccination = reader.ReadBool();
         patient.VaccinatingNurseId = reader.ReadInt32();
+        var question = reader.ReadByte();
+        patient._question = question <= (byte)PatientQuestion.NoTreatmentRoom ? (PatientQuestion)question : throw new InvalidDataException($"Unknown patient question {question}.");
         return patient;
     }
 }
