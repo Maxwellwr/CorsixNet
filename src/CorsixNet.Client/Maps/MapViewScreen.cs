@@ -1004,6 +1004,12 @@ internal sealed class MapViewScreen : IScreen
             _session.Submit(new AnswerEpidemicCommand(!shift));
         }
 
+        // Until faxes exist, K answers the first waiting patient's fax: wait; Shift+K sends them home, Ctrl+K guesses the cure.
+        if (pressed(Keys.K) && FirstQuestion(simulation, _session.Player) is { } asking)
+        {
+            _session.Submit(new AnswerPatientCommand(asking.Id, ctrl ? PatientAnswer.GuessCure : shift ? PatientAnswer.SendHome : PatientAnswer.Wait));
+        }
+
         // Until patients can be clicked, J picks every infected patient for vaccination during a cover-up.
         if (pressed(Keys.J) && simulation.Hospitals[_session.Player].Epidemics.Current is { IsCoverUp: true, IsWatchRunning: true } coverUp)
         {
@@ -1264,6 +1270,10 @@ internal sealed class MapViewScreen : IScreen
         }
     }
 
+    /// <summary>The first patient of the player's hospital waiting for an answer to their fax, in entity order.</summary>
+    private static Humanoid? FirstQuestion(Simulation simulation, int player) =>
+        simulation.Entities.OfType<Humanoid>().FirstOrDefault(humanoid => humanoid is { Behaviour: PatientBehaviour { Question: not PatientQuestion.None }, IsDespawning: false } && humanoid.HospitalPlayer == player);
+
     /// <summary>
     /// The emergency helicopter (CorsixTH's objects/helicopter.lua, animation 2456) on the tile south of the heliport:
     /// hidden on its way, then 600 pixels up coming down 10 a tick, landed, and going up again.
@@ -1422,7 +1432,7 @@ internal sealed class MapViewScreen : IScreen
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
             ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{EpidemicText(simulation, simulation.Hospitals[_session.Player])}{OutcomeText(simulation.Hospitals[_session.Player])}")
+                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{EpidemicText(simulation, simulation.Hospitals[_session.Player])}{QuestionText(simulation, _session.Player)}{OutcomeText(simulation.Hospitals[_session.Player])}")
             : string.Empty;
 
         static string EmergencyText(Hospital hospital) => hospital.Emergencies.Current switch
@@ -1439,6 +1449,19 @@ internal sealed class MapViewScreen : IScreen
             { } => "   EPIDEMIC: the health inspector is coming",
             null => string.Empty,
         };
+
+        static string QuestionText(Simulation simulation, int player)
+        {
+            if (FirstQuestion(simulation, player) is not { Behaviour: PatientBehaviour patient })
+            {
+                return string.Empty;
+            }
+
+            var count = simulation.Entities.Count(entity => entity is Humanoid { Behaviour: PatientBehaviour { Question: not PatientQuestion.None } } other && other.HospitalPlayer == player);
+            return patient.Question == PatientQuestion.NoDiagnosisRoom
+                ? $"   {count} ASKING: no diagnosis room for {patient.DiseaseId} ({patient.DiagnosisProgress / 10} %) (K wait, Shift+K send home, Ctrl+K guess cure)"
+                : $"   {count} ASKING: no room to treat {patient.DiseaseId} (K wait, Shift+K send home)";
+        }
 
         static string VipText(Hospital hospital) => hospital.Vips.IsInvitationPending ? $"   VIP {hospital.Vips.InvitedName} asks to visit (V invite, Shift+V refuse)" : string.Empty;
 

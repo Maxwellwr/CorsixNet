@@ -94,9 +94,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   patients rerouting to shorter queues (`queue.lua`, `dialogs/queue_dialog.lua`).
 - Patient window: health, happiness, thirst, warmth, diagnosis progress, send home, guess cure
   (`dialogs/patient.lua`).
-- Faxes asking what to do with a patient (guess cure, send home, wait) and the policy window
-  (`fullscreen/hospital_policy.lua`, `fax.lua`). The policies themselves are done (`HospitalPolicies`,
-  `SetPolicyCommand`).
+- The fax window for patients asking what to do, its texts (what to build or hire) and the research choice, and the
+  policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
+  (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers
+  (`PatientBehaviour.Question`, `AnswerPatientCommand`; K, Shift+K and Ctrl+K in the client) are done.
 - Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting, levels with
   random emergencies (`emergency_control[0].Mean`) (`world.lua`, `objects/helicopter.lua`). The planned
   emergencies, the fax offer, helicopter, watch, bonus and reputation are done (`Emergencies`).

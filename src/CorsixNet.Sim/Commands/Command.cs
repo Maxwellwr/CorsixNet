@@ -38,6 +38,7 @@ public enum CommandKind : ushort
     AnswerEmergency = 23,
     AnswerEpidemic = 24,
     Vaccinate = 25,
+    AnswerPatient = 26,
 }
 
 /// <summary>
@@ -86,6 +87,7 @@ public abstract record Command
             CommandKind.AnswerEmergency => new AnswerEmergencyCommand(reader.ReadBool()),
             CommandKind.AnswerEpidemic => new AnswerEpidemicCommand(reader.ReadBool()),
             CommandKind.Vaccinate => new VaccinateCommand(reader.ReadInt32()),
+            CommandKind.AnswerPatient => new AnswerPatientCommand(reader.ReadInt32(), ReadPatientAnswer(reader)),
             CommandKind.SetTreatmentPrice => new SetTreatmentPriceCommand(reader.ReadString(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
@@ -97,6 +99,12 @@ public abstract record Command
     {
         var cheat = reader.ReadByte();
         return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleEpidemics ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+    }
+
+    private static PatientAnswer ReadPatientAnswer(SimReader reader)
+    {
+        var answer = reader.ReadByte();
+        return answer is >= (byte)PatientAnswer.SendHome and <= (byte)PatientAnswer.GuessCure ? (PatientAnswer)answer : throw new InvalidDataException($"Unknown patient answer {answer}.");
     }
 
     private static PolicyKind ReadPolicy(SimReader reader)
@@ -639,6 +647,29 @@ public sealed record VaccinateCommand(int PatientId) : Command
     public override void Execute(Simulation simulation, int player) => Disasters.Epidemics.MarkForVaccination(simulation, player, PatientId);
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(PatientId);
+}
+
+/// <summary>
+/// Answers the fax a waiting patient of the issuing player's hospital sent (CorsixTH's <c>send_home</c>, <c>wait</c>
+/// and <c>guess_cure</c> choices).
+/// </summary>
+public sealed record AnswerPatientCommand(int PatientId, PatientAnswer Answer) : Command
+{
+    public override CommandKind Kind => CommandKind.AnswerPatient;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(PatientId) is Humanoid { Behaviour: PatientBehaviour patient, IsDespawning: false } humanoid && humanoid.HospitalPlayer == player)
+        {
+            patient.Answer(simulation, humanoid, Answer);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(PatientId);
+        writer.WriteByte((byte)Answer);
+    }
 }
 
 /// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>
