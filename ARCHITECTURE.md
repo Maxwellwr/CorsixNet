@@ -531,7 +531,11 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   for: money (10,000, `TransactionKind.Cheat`), a patient, winning or losing the level, prices up or down by 50
   points, forgetting the deaths and the reputation to 1,000, an earthquake now and earthquakes off or on, and
   ending the month or year (the calendar jumps to its last hour, and a planned emergency in the skipped days is
-  replanned). Each that works marks `Hospital.Cheated`, except losing.
+  replanned). The fax code cheats go on and off the same way (`Hospital.ActiveCheats`): Roujin's challenge (40 more
+  patients a month, by the first hospital's cheat; off, the month's remaining patients are called off), no rest
+  (staff do not tire and are rested at once; moving fast is not there yet), queue jump (patients below 0.10 health
+  go ahead of other patients) and super doctors (the doctors for hire are consultants with every ability, by the
+  first hospital's cheat). Each that works marks `Hospital.Cheated`, except losing.
 - **Earthquakes** (`Simulation.Earthquakes`, from `earthquake.lua`). The level's `quake_control` entries are
   planned in turn: a random day of a random month of the game between their months. On that day a 25-hour
   warning quake comes, 600 hours later the main one, which does a round of damage every 16 hours until its

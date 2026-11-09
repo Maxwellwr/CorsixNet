@@ -87,16 +87,17 @@ public sealed class StaffProfile
 
     /// <summary>
     /// Makes a random candidate for hire in month <paramref name="month"/> of the game, as CorsixTH's
-    /// <c>StaffProfile</c> constructor and <c>randomise</c> do.
+    /// <c>StaffProfile</c> constructor and <c>randomise</c> do; with <paramref name="superDoctor"/> (the super doctor
+    /// cheat) a doctor is a consultant with every ability.
     /// </summary>
-    public static StaffProfile CreateRandom(StaffClass staffClass, int month, StaffRules rules, SimRandom random)
+    public static StaffProfile CreateRandom(StaffClass staffClass, int month, StaffRules rules, SimRandom random, bool superDoctor = false)
     {
         var profile = new StaffProfile(staffClass)
         {
             NameSeed = random.NextInclusive(1, 1009),
             AttentionToDetail = random.Next(MaxSkill),
         };
-        profile.Randomise(month, rules, random);
+        profile.Randomise(month, rules, random, superDoctor);
         return profile;
     }
 
@@ -202,11 +203,23 @@ public sealed class StaffProfile
         };
     }
 
-    private void Randomise(int month, StaffRules rules, SimRandom random)
+    private void Randomise(int month, StaffRules rules, SimRandom random, bool superDoctor)
     {
         // CorsixTH: self.skill = math.random(), a number in [0, 1).
         Skill = random.Next(MaxSkill);
-        if (Class == StaffClass.Doctor)
+        if (Class == StaffClass.Doctor && superDoctor)
+        {
+            // initDoctor(1, 1, 1, false, true, math.random(cons_limit * 1000, 1000) / 1000), which works out the
+            // wage and the looks, before randomise does both again below.
+            IsPsychiatrist = true;
+            IsSurgeon = true;
+            IsResearcher = true;
+            Skill = random.NextInclusive(rules.ConsultantThreshold, MaxSkill);
+            ParseSkillLevel(rules);
+            Wage = FairWage(rules);
+            RandomiseLooks(random);
+        }
+        else if (Class == StaffClass.Doctor)
         {
             // "One in x" for each ability; CorsixTH tests math.random() < 1 / x.
             IsPsychiatrist = OneIn(rules.LevelValue(month, level => level.ShrkRate), random);

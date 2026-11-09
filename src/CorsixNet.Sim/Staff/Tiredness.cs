@@ -2,6 +2,7 @@
 // tire, checkIfNeedRest, isVeryTired, isCrackUpTired) and base_config.lua (gbv.Tired, VeryTired, CrackUpTired).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Serialization;
@@ -50,7 +51,12 @@ internal static class Tiredness
     {
         if (IsTiring(simulation, humanoid))
         {
-            humanoid.Fatigue = Math.Min(humanoid.Fatigue + TirePerHour, 1m);
+            // Staff:tire: the no rest cheat keeps the hospital's staff fresh, but not happy.
+            if (!HasNoRestCheat(simulation, humanoid))
+            {
+                humanoid.Fatigue = Math.Min(humanoid.Fatigue + TirePerHour, 1m);
+            }
+
             Feelings.ChangeHappiness(simulation, humanoid, -0.00002m);
         }
     }
@@ -79,6 +85,11 @@ internal static class Tiredness
             Feelings.ChangeHappiness(simulation, humanoid, 0.006m);
         }
     }
+
+    private static bool HasNoRestCheat(Simulation simulation, Humanoid humanoid) =>
+        humanoid.Employer >= 0
+        && humanoid.Employer < simulation.Hospitals.Count
+        && (simulation.Hospitals[humanoid.Employer].ActiveCheats & ToggleCheats.NoRest) != 0;
 
     /// <summary><c>Staff:isVeryTired</c>.</summary>
     internal static bool IsVeryTired(Simulation simulation, decimal fatigue) => fatigue * 1000 >= simulation.Rules.Tiredness.VeryTired;

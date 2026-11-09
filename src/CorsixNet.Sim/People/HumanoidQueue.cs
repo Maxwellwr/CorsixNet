@@ -1,6 +1,7 @@
 // Ported from CorsixTH CorsixTH/Lua/queue.lua and CorsixTH/Lua/humanoid_actions/queue.lua.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Serialization;
@@ -69,9 +70,9 @@ public sealed class HumanoidQueue
     /// </summary>
     internal void Push(Simulation simulation, Humanoid humanoid)
     {
-        var priority = Priority(humanoid);
+        var priority = Priority(simulation, humanoid);
         var index = _members.Count;
-        while (index > 0 && Priority(simulation.FindEntity(_members[index - 1]) as Humanoid) > priority)
+        while (index > 0 && Priority(simulation, simulation.FindEntity(_members[index - 1]) as Humanoid) > priority)
         {
             index--;
         }
@@ -81,13 +82,16 @@ public sealed class HumanoidQueue
     }
 
     /// <summary>
-    /// <c>_getHumanoidQueuePriority</c>: a smaller number goes first; VIPs and the inspector (3), then emergency patients (4), then the
-    /// other patients (6).
+    /// <c>_getHumanoidQueuePriority</c>: a smaller number goes first; VIPs and the inspector (3), then emergency patients (4), then,
+    /// with the queue jump cheat on, patients with less than 0.10 health (5), then the other patients (6).
     /// </summary>
-    private static int Priority(Humanoid? humanoid) => humanoid?.Behaviour switch
+    private static int Priority(Simulation simulation, Humanoid? humanoid) => humanoid?.Behaviour switch
     {
         VipBehaviour or InspectorBehaviour => 3,
         PatientBehaviour { EmergencyIndex: > 0 } => 4,
+        PatientBehaviour { Health: < 0.10m } when humanoid.HospitalPlayer >= 0
+            && humanoid.HospitalPlayer < simulation.Hospitals.Count
+            && (simulation.Hospitals[humanoid.HospitalPlayer].ActiveCheats & ToggleCheats.QueueJump) != 0 => 5,
         _ => 6,
     };
 

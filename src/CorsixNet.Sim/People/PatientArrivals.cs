@@ -5,6 +5,7 @@
 
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Diseases;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Serialization;
@@ -27,6 +28,9 @@ public sealed class PatientArrivals
 {
     /// <summary>Days of a month are numbered 1 to 31.</summary>
     private const int MaxDays = 32;
+
+    /// <summary>Roujin's challenge's extra patients a month (<c>roujin_bonus</c>).</summary>
+    private const int RoujinBonus = 40;
 
     private readonly int[] _spawnDates = new int[MaxDays];
     private readonly int[] _spawnHours = new int[GameDate.HoursPerDay];
@@ -202,11 +206,20 @@ public sealed class PatientArrivals
         PrepareSpawnDates(simulation, firstMonth: false);
     }
 
+    /// <summary>Cheats:roujinOff: the month's patients still to come are called off.</summary>
+    internal void ClearSpawnDates() => Array.Clear(_spawnDates);
+
     /// <summary><c>World:_prepareSpawnDates</c>: spreads the month's patients over its days.</summary>
     private void PrepareSpawnDates(Simulation simulation, bool firstMonth)
     {
         Array.Clear(_spawnDates);
         var count = SpawnRate;
+
+        // Roujin's challenge: the first (local) hospital's cheat brings 40 more patients.
+        if (simulation.Hospitals.Count > 0 && (simulation.Hospitals[0].ActiveCheats & ToggleCheats.SpawnRate) != 0)
+        {
+            count += RoujinBonus;
+        }
         if (count <= 0)
         {
             return;
