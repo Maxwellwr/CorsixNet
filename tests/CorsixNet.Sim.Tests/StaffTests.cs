@@ -301,7 +301,7 @@ public class StaffTests
         StepUntil(simulation, 31 * GameDate.HoursPerDay);
 
         Assert.Empty(simulation.Hospitals[0].Transactions);
-        Assert.Equal(1000, simulation.Hospitals[0].Balance);
+        Assert.Equal(1000L, simulation.Hospitals[0].Balance);
     }
 
     [Fact]
@@ -338,6 +338,42 @@ public class StaffTests
         stream.Position = 0;
 
         Assert.Equal(command, Command.Read(new Serialization.SimReader(stream)));
+    }
+
+    [Fact]
+    public void TheLevelsStartingStaffJoinTheHospitalForNothing()
+    {
+        var staffRules = new StaffRules(
+            [60, 75, 25, 20],
+            [-30, 30, 40, 30, 100, 20],
+            10,
+            250,
+            750,
+            StaffRules.Default.Levels,
+            [new StartingStaff(StaffClass.Doctor, 1000, Psychiatrist: true), new StartingStaff(StaffClass.Nurse, 300), new StartingStaff(StaffClass.Doctor, 100, Surgeon: true)]);
+        var simulation = NewSimulation(new LevelRules(1000, [], [], staffRules));
+
+        var staff = simulation.Entities.OfType<Humanoid>().ToList();
+        Assert.Equal(3, staff.Count);
+        Assert.All(staff, member => Assert.Equal(0, member.Employer));
+        Assert.All(staff, member => Assert.True(simulation.Map.Contains(member.Tile.X, member.Tile.Y) && simulation.Map[member.Tile.X, member.Tile.Y].Has(TileFlags.Hospital)));
+        Assert.Equal(1000L, simulation.Hospitals[0].Balance);
+
+        var consultant = staff[0].Profile!;
+        Assert.Equal((StaffClass.Doctor, 1000, true, false, true), (consultant.Class, consultant.Skill, consultant.IsPsychiatrist, consultant.IsSurgeon, consultant.IsConsultant));
+        Assert.Equal(StaffClass.Nurse, staff[1].Profile!.Class);
+        Assert.Equal(300, staff[1].Profile!.Skill);
+        var junior = staff[2].Profile!;
+        Assert.True(junior is { IsJunior: true, IsSurgeon: true, IsPsychiatrist: false });
+        Assert.Equal(junior.FairWage(staffRules), junior.Wage);
+
+        // The starting staff are part of the level's saved settings.
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var loaded = Simulation.Load(stream, Content);
+        Assert.Equal(staffRules.StartStaff, loaded.Rules.Staff.StartStaff);
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
     }
 
     private static void Run(Simulation simulation, Command command, int player = 0)

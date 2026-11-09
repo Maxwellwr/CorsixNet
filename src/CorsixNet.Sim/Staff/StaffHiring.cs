@@ -1,6 +1,7 @@
 // Where new staff may be placed and what hiring costs, ported from CorsixTH
 // CorsixTH/Lua/dialogs/place_staff.lua (UIPlaceStaff:_isValidStaffPlacement, UIPlaceStaff:onMouseUp),
-// CorsixTH/Lua/dialogs/hire_staff.lua (UIHireStaff:hire) and CorsixTH/Lua/hospital.lua (Hospital:addStaff).
+// CorsixTH/Lua/dialogs/hire_staff.lua (UIHireStaff:hire) and CorsixTH/Lua/hospital.lua (Hospital:addStaff,
+// Hospital:initStaff).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Economy;
@@ -140,8 +141,49 @@ public static class StaffHiring
     internal static Humanoid Hire(Simulation simulation, StaffClass staffClass, int index, TilePosition tile, int player)
     {
         var profile = simulation.TakeAvailableStaff(staffClass, index);
+        var staff = Place(simulation, profile, tile, player);
+        simulation.Hospitals[player].Spend(simulation.Hours, profile.Wage, TransactionKind.HireStaff, staffClass.ToString());
+        return staff;
+    }
+
+    /// <summary>
+    /// <c>Hospital:initStaff</c>: the level's starting staff join the player's hospital for nothing, each on a random
+    /// hospital tile up to 10 tiles from the player's camera tile (kept 10 tiles inside the map's edges), else on the
+    /// camera tile if it is in the hospital, else in the middle of the map.
+    /// </summary>
+    internal static void HireStartStaff(Simulation simulation, int player)
+    {
+        const int offset = 10;
+        const int attempts = 100;
+        var map = simulation.Map;
+        foreach (var start in simulation.Rules.Staff.StartStaff)
+        {
+            var profile = StaffProfile.Create(start.Class, start.Skill, simulation.Rules.Staff, simulation.Random, start.Psychiatrist, start.Surgeon, start.Researcher);
+            var camera = map.GetCameraTile(player);
+            var safeX = Math.Max(offset + 1, Math.Min(camera.X, map.Width - offset));
+            var safeY = Math.Max(offset + 1, Math.Min(camera.Y, map.Height - offset));
+            TilePosition? found = null;
+            for (var attempt = 0; attempt < attempts && found is null; attempt++)
+            {
+                var x = safeX + simulation.Random.NextInclusive(-offset, offset);
+                var y = safeY + simulation.Random.NextInclusive(-offset, offset);
+                if (Disasters.Epidemics.IsInHospital(simulation, player, new TilePosition(x, y)))
+                {
+                    found = new TilePosition(x, y);
+                }
+            }
+
+            var tile = found
+                ?? (Disasters.Epidemics.IsInHospital(simulation, player, camera) ? camera : new TilePosition(map.Width / 2, map.Height / 2));
+            Place(simulation, profile, tile, player);
+        }
+    }
+
+    /// <summary>Puts a new member of staff of the player's hospital on a tile (<c>Staff:onPlaceInCorridor</c>).</summary>
+    private static Humanoid Place(Simulation simulation, StaffProfile profile, TilePosition tile, int player)
+    {
         var staff = simulation.AddEntity(id => Humanoid.CreateStaff(id, tile, profile, player));
-        staff.Behaviour = staffClass switch
+        staff.Behaviour = profile.Class switch
         {
             StaffClass.Doctor => new DoctorBehaviour(),
             StaffClass.Nurse => new NurseBehaviour(),
@@ -152,7 +194,6 @@ public static class StaffHiring
 
         // Staff:onPlaceInCorridor.
         Tiredness.UpdateSpeed(simulation, staff);
-        simulation.Hospitals[player].Spend(simulation.Hours, profile.Wage, TransactionKind.HireStaff, staffClass.ToString());
         return staff;
     }
 }

@@ -24,6 +24,77 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsTheStartingStaffAsHospitalInitStaffDoes()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #start_staff[1].Doctor.Shrink.Consultant.Skill 1 1 1 100
+            #start_staff[2].Nurse.Doctor.Surgeon.Skill 1 1 1 40
+            #start_staff[3].Skill 50
+            #start_staff[4].Handyman.Skill 1 150
+            #start_staff[5].Receptionist 1
+            #start_staff[7].Doctor 1
+            """));
+
+        var staff = LevelRulesLoader.StartStaffFromConfig(config);
+
+        Assert.Equal(
+            [
+                new StartingStaff(StaffClass.Doctor, 1000, Psychiatrist: true),
+                new StartingStaff(StaffClass.Nurse, 400),
+                new StartingStaff(StaffClass.Handyman, 1000),
+                new StartingStaff(StaffClass.Receptionist, 0),
+            ],
+            staff);
+        Assert.Empty(LevelRulesLoader.StartStaffFromConfig(LevelConfig.Parse([])));
+    }
+
+    [Fact]
+    public void CampaignLevelFiveGetsCorsixThsThreeSpecialistConsultants()
+    {
+        var config = LevelConfig.Parse([]);
+
+        LevelRulesLoader.ApplyCorsixThAdditions(config, 5);
+        var staff = LevelRulesLoader.StaffFromConfig(config).StartStaff;
+
+        Assert.Equal(
+            [
+                new StartingStaff(StaffClass.Doctor, 1000, Psychiatrist: true),
+                new StartingStaff(StaffClass.Doctor, 1000, Surgeon: true),
+                new StartingStaff(StaffClass.Doctor, 1000, Researcher: true),
+            ],
+            staff);
+    }
+
+    [Theory]
+    [InlineData(7, "emergency_control[9].Illness", "4")]
+    [InlineData(8, "win_criteria[3].Value", "180000")]
+    [InlineData(8, "lose_criteria[2].Bound", "20")]
+    [InlineData(11, "visuals[6].Value", "10")]
+    [InlineData(12, "visuals[6].Value", "10")]
+    public void CorsixThsExtraSettingsGoOnTopOfSomeCampaignLevels(int level, string key, string value)
+    {
+        var config = LevelConfig.Parse([]);
+
+        LevelRulesLoader.ApplyCorsixThAdditions(config, level);
+
+        Assert.Equal(value, config[key]);
+    }
+
+    [Fact]
+    public void OnLevelFiveTheThreeConsultantsStartInTheHospital()
+    {
+        var install = RealGameData.Require();
+
+        var level = LevelMapLoader.LoadOriginal(install, "LEVEL.L5");
+        var simulation = level.StartSimulation(seed: 1);
+
+        var doctors = simulation.Entities.OfType<Sim.Entities.Humanoid>().Where(h => h.Profile is { Class: StaffClass.Doctor }).ToList();
+        Assert.Equal(3, doctors.Count);
+        Assert.All(doctors, doctor => Assert.True(doctor.Profile!.IsConsultant));
+        Assert.All(doctors, doctor => Assert.True(simulation.Map[doctor.Tile.X, doctor.Tile.Y].Has(Sim.Maps.TileFlags.Hospital)));
+    }
+
+    [Fact]
     public void TakesCostsByConfigNumberAndTheLevelsOwnTownFirst()
     {
         var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""

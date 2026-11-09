@@ -36,8 +36,34 @@ public sealed record StaffLevel(
     int? ConsRate = null);
 
 /// <summary>
+/// A member of staff the hospital has from the start (an entry of CorsixTH's <c>start_staff</c>, which only CorsixTH's
+/// level files give): their class, their skill in thousandths and, for a doctor, their abilities. Whether a doctor is a
+/// junior or a consultant follows from the skill.
+/// </summary>
+public sealed record StartingStaff(StaffClass Class, int Skill, bool Psychiatrist = false, bool Surgeon = false, bool Researcher = false)
+{
+    internal void Write(SimWriter writer)
+    {
+        writer.WriteByte((byte)Class);
+        writer.WriteInt32(Skill);
+        writer.WriteBool(Psychiatrist);
+        writer.WriteBool(Surgeon);
+        writer.WriteBool(Researcher);
+    }
+
+    internal static StartingStaff Read(SimReader reader)
+    {
+        var staff = new StartingStaff((StaffClass)reader.ReadByte(), reader.ReadInt32(), reader.ReadBool(), reader.ReadBool(), reader.ReadBool());
+        return Enum.IsDefined(staff.Class) && staff.Skill is >= 0 and <= StaffProfile.MaxSkill
+            ? staff
+            : throw new InvalidDataException($"Bad starting staff {staff}.");
+    }
+}
+
+/// <summary>
 /// The staff settings of a level: minimum salaries, salary additions per ability, the skill
-/// thresholds for juniors and consultants, and who is available for hire when.
+/// thresholds for juniors and consultants, who is available for hire when, and who works in the hospital from the
+/// start.
 /// </summary>
 /// <remarks>Skill thresholds are in thousandths, as in the level files.</remarks>
 public sealed class StaffRules
@@ -61,6 +87,7 @@ public sealed class StaffRules
     private readonly int[] _minSalaries;
     private readonly int[] _salaryAdds;
     private readonly StaffLevel[] _levels;
+    private readonly StartingStaff[] _startStaff;
 
     /// <param name="minSalaries">Minimum salary per <see cref="StaffClass"/>, in class order (<c>staff[n].MinSalary</c>).</param>
     /// <param name="salaryAdds">Salary additions <c>gbv.SalaryAdd[3]</c> to <c>gbv.SalaryAdd[8]</c>.</param>
@@ -68,13 +95,15 @@ public sealed class StaffRules
     /// <param name="doctorThreshold">Doctors with at most this skill are juniors.</param>
     /// <param name="consultantThreshold">Doctors with at least this skill are consultants.</param>
     /// <param name="levels">The <c>staff_levels</c> entries; the first must give every value.</param>
+    /// <param name="startStaff">The <c>start_staff</c> entries, in order; none by default.</param>
     public StaffRules(
         IReadOnlyList<int> minSalaries,
         IReadOnlyList<int> salaryAdds,
         int salaryAbilityDivisor,
         int doctorThreshold,
         int consultantThreshold,
-        IReadOnlyList<StaffLevel> levels)
+        IReadOnlyList<StaffLevel> levels,
+        IReadOnlyList<StartingStaff>? startStaff = null)
     {
         if (minSalaries.Count != StaffClasses.Count)
         {
@@ -107,6 +136,11 @@ public sealed class StaffRules
         DoctorThreshold = doctorThreshold;
         ConsultantThreshold = consultantThreshold;
         _levels = [.. levels];
+        _startStaff = [.. startStaff ?? []];
+        if (_startStaff.Length > MaxLevels || _startStaff.Any(staff => staff.Skill is < 0 or > StaffProfile.MaxSkill))
+        {
+            throw new ArgumentException($"There must be at most {MaxLevels} starting staff, with skills from 0 to {StaffProfile.MaxSkill}.", nameof(startStaff));
+        }
     }
 
     /// <summary>The original game's settings, as CorsixTH's base_config.lua gives them.</summary>
@@ -138,6 +172,9 @@ public sealed class StaffRules
 
     /// <summary>The <c>staff_levels</c> entries in file order.</summary>
     public IReadOnlyList<StaffLevel> Levels => _levels;
+
+    /// <summary>Who works in each player's hospital from the start (<c>start_staff</c>).</summary>
+    public IReadOnlyList<StartingStaff> StartStaff => _startStaff;
 
     /// <summary>The minimum salary of a class (<c>staff[n].MinSalary</c>).</summary>
     public int MinSalary(StaffClass staffClass) => _minSalaries[(int)staffClass];
@@ -212,6 +249,12 @@ public sealed class StaffRules
             WriteOptional(writer, level.JrRate);
             WriteOptional(writer, level.ConsRate);
         }
+
+        writer.WriteInt32(_startStaff.Length);
+        foreach (var staff in _startStaff)
+        {
+            staff.Write(writer);
+        }
     }
 
     internal static StaffRules Read(SimReader reader)
@@ -247,9 +290,15 @@ public sealed class StaffRules
                 ReadOptional(reader));
         }
 
+        var startStaff = new StartingStaff[reader.ReadCount(MaxLevels)];
+        for (var i = 0; i < startStaff.Length; i++)
+        {
+            startStaff[i] = StartingStaff.Read(reader);
+        }
+
         try
         {
-            return new StaffRules(minSalaries, salaryAdds, divisor, doctorThreshold, consultantThreshold, levels);
+            return new StaffRules(minSalaries, salaryAdds, divisor, doctorThreshold, consultantThreshold, levels, startStaff);
         }
         catch (ArgumentException exception)
         {
