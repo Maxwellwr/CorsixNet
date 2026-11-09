@@ -82,10 +82,10 @@ public static class Cheats
                 simulation.Arrivals.SpawnPatient(simulation, player);
                 break;
             case CheatKind.LoseLevel:
-                hospital.End(EndOutcome.Lost, null);
+                hospital.End(EndOutcome.Lost, null, simulation.Random);
                 return;
             case CheatKind.WinLevel:
-                hospital.End(EndOutcome.Won, null);
+                hospital.End(EndOutcome.Won, null, simulation.Random);
                 break;
             case CheatKind.IncreasePrices:
             case CheatKind.DecreasePrices:

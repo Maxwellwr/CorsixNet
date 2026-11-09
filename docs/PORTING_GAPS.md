@@ -136,7 +136,8 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   price, prices far from what patients expect, and the price rise above 500 are done.
 - Annual report screen (statistics, rankings, trophy and award plaques); trophies and awards for drinks sold,
   rats, plants, staff and patient happiness, cleanliness, emergencies, waiting times, machines and research; the
-  level 3 salary rise. The hospital's value, the year's counts and the other trophies and awards are done.
+  salary ranking. The hospital's value, the year's counts, the player's salary (`Hospital.PlayerSalary`, with the
+  level 3 rise and the offer on winning) and the other trophies and awards are done.
 - Town map screen (`fullscreen/town_map.lua`), the grass and divider walls of parcels nobody owns; buying parcels
   (N in the client), their prices, the heating level (T in the client), the heating bill and the boiler breaking
   down are done, and so is the temperature of tiles (`th_map.cpp`'s `updateTemperatures`, `TileTemperatures`, the

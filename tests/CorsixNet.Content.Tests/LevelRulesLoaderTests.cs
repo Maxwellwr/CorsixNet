@@ -350,6 +350,18 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsTheSalaryScoreAndKeepsTheLevelNumber()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("#gbv.ScoreMaxInc 250\n"));
+
+        var rules = LevelRulesLoader.FromConfig(config, 3, BaseGameContent.Create());
+
+        Assert.Equal(250, rules.ScoreMaxIncrease);
+        Assert.Equal(3, rules.LevelNumber);
+        Assert.Equal(LevelRules.DefaultScoreMaxIncrease, LevelRulesLoader.FromConfig(LevelConfig.Parse([]), null, BaseGameContent.Create()).ScoreMaxIncrease);
+    }
+
+    [Fact]
     public void ReadsTheOriginalLevelOneDiseases()
     {
         var install = RealGameData.Require();

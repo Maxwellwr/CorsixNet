@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 37;
+    private const int FormatVersion = 38;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -750,11 +750,18 @@ public sealed class Simulation
             hospital.PayWages(Tick, wages[hospital.Player]);
             hospital.PayHeating(Tick);
             hospital.PayInterest(Tick);
+            hospital.RaiseSalary(Rules.ScoreMaxIncrease);
             hospital.PayInsurance(Tick);
             hospital.RecordMonth(wages[hospital.Player]);
             if (date.IsLastDayOfYear)
             {
                 hospital.OnEndYear(Tick, Random, Rules.Awards);
+
+                // Hospital:onEndYear: at the end of the third year of level 3 the salary rises a lot, as in the original.
+                if (date.Year == 3 && Rules.LevelNumber == 3)
+                {
+                    hospital.PlayerSalary += Random.NextInclusive(8000, 20000);
+                }
 
                 // World:onEndYear looks for a loss, and the annual report on closing for a win. CorsixTH means the
                 // loss to come after the trophies and awards but pays them only when the report closes; here both
@@ -789,7 +796,7 @@ public sealed class Simulation
         var (outcome, lostTo) = Rules.EndConditions.Check(this, hospital);
         if (outcome == EndOutcome.Won || (mayLose && outcome == EndOutcome.Lost))
         {
-            hospital.End(outcome, lostTo);
+            hospital.End(outcome, lostTo, Random);
         }
     }
 
