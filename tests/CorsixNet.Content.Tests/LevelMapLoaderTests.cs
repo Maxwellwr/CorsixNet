@@ -1,10 +1,13 @@
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
+using CorsixNet.Sim;
+using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
+using CorsixNet.Sim.Rooms;
 
 namespace CorsixNet.Content.Tests;
 
@@ -184,6 +187,107 @@ public class LevelMapLoaderTests
 
         var campaign = loaded with { Rules = new LevelRules(40_000, [], [], levelNumber: 3) };
         Assert.Same(campaign, campaign.WithFreeBuild());
+    }
+
+    [Fact]
+    public void ParcelWithoutOwnerShowsAsGrassUntilBought()
+    {
+        var builder = new MapFileBuilder();
+        for (var y = 0; y < 20; y++)
+        {
+            for (var x = 0; x < 20; x++)
+            {
+                builder.Tile(x, y, floor: 16, parcel: (ushort)(x < 10 ? 1 : 2));
+            }
+        }
+
+        var loaded = Load(builder.Tile(12, 5, floor: 16, northWall: BrickWallCode, westWall: BrickWallCode, parcel: 2));
+        var map = loaded.Map;
+
+        // Parcel 2 is for sale: mown grass, a bush where x and y are both multiples of 8, no walls and no flags.
+        Assert.Equal(1, map[12, 5].Floor);
+        Assert.Equal(3, map[13, 5].Floor);
+        Assert.Equal(0, map[12, 5].NorthWall);
+        Assert.Equal(0, map[12, 5].WestWall);
+        Assert.False(map[12, 5].Has(TileFlags.Passable));
+        Assert.False(map[12, 5].Has(TileFlags.Hospital));
+        Assert.Equal(192 + ((16 ^ 8) % 9), map[16, 8].NorthWall);
+        Assert.Equal(17, map[5, 5].Floor);
+
+        // A saved game keeps the original tiles, to give them back when the parcel is bought.
+        using var stream = new MemoryStream();
+        loaded.StartSimulation(seed: 1).Save(stream);
+        stream.Position = 0;
+        var simulation = Simulation.Load(stream);
+        map = simulation.Map;
+        Assert.Equal(1, map[12, 5].Floor);
+        Assert.True(simulation.IsParcelPurchasable(2, 0));
+        simulation.SetParcelOwner(2, 1);
+
+        Assert.Equal(17, map[12, 5].Floor);
+        Assert.Equal(115, map[12, 5].NorthWall);
+        Assert.Equal(115, map[12, 5].WestWall);
+        Assert.True(map[12, 5].Has(TileFlags.Passable | TileFlags.Hospital | TileFlags.Buildable));
+        Assert.False(map[12, 5].Has(TileFlags.CanTravelNorth));
+        Assert.Equal(0, map[16, 8].NorthWall);
+    }
+
+    [Fact]
+    public void DividerWallsStandBetweenIndoorParcelsOfDifferentOwners()
+    {
+        var builder = new MapFileBuilder();
+        for (var y = 0; y < 20; y++)
+        {
+            for (var x = 0; x < 20; x++)
+            {
+                builder.Tile(x, y, floor: 16, westWall: x == 10 ? DividerWallCode : (byte)0, parcel: (ushort)(x < 10 ? 1 : 2));
+            }
+        }
+
+        var simulation = Load(builder).StartSimulation(seed: 1);
+        var map = simulation.Map;
+
+        // Seen from the owned side the divider is sprite 145, from the side for sale 143.
+        Assert.Equal(143, map[10, 3].WestWall);
+        Assert.False(map[9, 3].Has(TileFlags.CanTravelEast));
+
+        simulation.SetParcelOwner(2, 1);
+
+        Assert.Equal(0, map[10, 3].WestWall);
+        Assert.True(map[9, 3].Has(TileFlags.CanTravelEast));
+    }
+
+    [Fact]
+    public void RoomAgainstADividerWallKeepsItsWallWhenTheParcelIsBought()
+    {
+        var builder = new MapFileBuilder();
+        for (var y = 0; y < 20; y++)
+        {
+            for (var x = 0; x < 20; x++)
+            {
+                builder.Tile(x, y, floor: 16, westWall: x == 10 ? DividerWallCode : (byte)0, parcel: (ushort)(x < 10 ? 1 : 2));
+            }
+        }
+
+        var simulation = Load(builder).StartSimulation(seed: 1);
+        var plan = new RoomPlan("gp", new TileRect(6, 2, 4, 4), new DoorPlacement(new(7, 6), EdgeOrientation.North));
+        Assert.Equal(RoomPlanProblem.None, RoomBuilder.Check(simulation.Map, simulation.Content, plan, player: 0));
+        simulation.Schedule(0, new BuildRoomCommand(plan));
+        simulation.Step();
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+
+        simulation.SetParcelOwner(2, 1);
+
+        var walls = simulation.Content.FindRoom("gp")!.Walls;
+        var map = simulation.Map;
+        for (var y = 2; y <= 5; y++)
+        {
+            Assert.Equal(room.Id, map[9, y].RoomId);
+            Assert.Equal(walls.OutsideWest, map[10, y].WestWall);
+            Assert.False(map[9, y].Has(TileFlags.CanTravelEast));
+        }
+
+        Assert.Equal(0, map[10, 6].WestWall);
     }
 
     private static LoadedLevelMap Load(MapFileBuilder builder) => LevelMapLoader.Load(MapFile.Parse(builder.Build()));

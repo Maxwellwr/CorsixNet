@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 56;
+    private const int FormatVersion = 57;
 
     private const uint Magic = 0x56534E43; // "CNSV" little-endian
     private const int MaxEntities = 1 << 20;
@@ -360,7 +360,7 @@ public sealed class Simulation
     /// <summary>Gives a parcel to a player (1-based; 0 for nobody) and places objects that were waiting for it.</summary>
     public void SetParcelOwner(int parcel, int owner)
     {
-        Map.SetParcelOwner(parcel, owner);
+        CloseRoomsAtSplitTiles(Map.SetParcelOwner(parcel, owner));
         if (owner == 0)
         {
             return;
@@ -721,12 +721,12 @@ public sealed class Simulation
             {
                 if (x > 0)
                 {
-                    TestAdjacent(map, adjacency, map[x, y], map[x - 1, y]);
+                    TestAdjacent(map, adjacency, map.OriginalTile(x, y), map.OriginalTile(x - 1, y));
                 }
 
                 if (y > 0)
                 {
-                    TestAdjacent(map, adjacency, map[x, y], map[x, y - 1]);
+                    TestAdjacent(map, adjacency, map.OriginalTile(x, y), map.OriginalTile(x, y - 1));
                 }
             }
         }
@@ -911,6 +911,56 @@ public sealed class Simulation
         var orientation = placement.Direction % 2 == 0 ? EdgeOrientation.North : EdgeOrientation.West;
         var door = AddEntity(id => new EntranceDoor(id, placement.Tile, orientation, placement.ObjectType == EntranceDoor.RightObjectType));
         door.Place(Map);
+    }
+
+    /// <summary>
+    /// CorsixTH's <c>Map:setPlotOwner</c>: where a divider wall came down beside a room, the room gets its own wall
+    /// there, seen from inside or outside.
+    /// </summary>
+    private void CloseRoomsAtSplitTiles(IReadOnlyList<TilePosition> splitTiles)
+    {
+        if (splitTiles.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var (x, y) in splitTiles)
+        {
+            ref var tile = ref Map[x, y];
+            var north = y > 0 ? Map[x, y - 1] : tile;
+            var west = x > 0 ? Map[x - 1, y] : tile;
+            if (tile.NorthWall == 0)
+            {
+                if (RoomWalls(tile, north) is { } inside)
+                {
+                    tile.NorthWall = inside.InsideNorth;
+                }
+                else if (RoomWalls(north, tile) is { } outside)
+                {
+                    tile.NorthWall = outside.OutsideNorth;
+                }
+            }
+
+            if (tile.WestWall == 0)
+            {
+                if (RoomWalls(tile, west) is { } inside)
+                {
+                    tile.WestWall = inside.InsideWest;
+                }
+                else if (RoomWalls(west, tile) is { } outside)
+                {
+                    tile.WestWall = outside.OutsideWest;
+                }
+            }
+        }
+
+        Map.UpdatePathfinding();
+        Map.UpdateShadows();
+
+        WallSet? RoomWalls(MapTile roomTile, MapTile neighbour) =>
+            roomTile.RoomId != 0 && roomTile.Parcel != neighbour.Parcel && FindEntity(roomTile.RoomId) is Room room
+                ? Content.FindRoom(room.RoomType)?.Walls
+                : null;
     }
 
     /// <summary>Pairs each unpaired left door half with the right half east or south of it.</summary>
