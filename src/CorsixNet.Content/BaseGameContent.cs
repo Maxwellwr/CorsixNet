@@ -93,6 +93,7 @@ public static class BaseGameContent
             [HumanoidType.StandardMalePatient] = new(new(678, 2), [new(702, 1)], new(694, 2)),
             [HumanoidType.StandardFemalePatient] = new(new(2824, 2), [new(2814, 1)], new(2832, 2)),
             [HumanoidType.SlackMalePatient] = new(new(4580, 2), [new(4588, 1)], new(4596, 2)),
+            [HumanoidType.ChewbaccaPatient] = new(new(3792, 2), [new(3784, 1)], new(3776, 2)),
         },
         UsageEast: new Dictionary<HumanoidType, UseAnimations>
         {
@@ -102,6 +103,7 @@ public static class BaseGameContent
 
             // make_list(1544, nil, 4606): quiet and talking, no nodding.
             [HumanoidType.SlackMalePatient] = new(new(1540, 2), [.. Enumerable.Repeat(new AnimationRef(1544, 1), 16), new(4606, 42)], new(1552, 2)),
+            [HumanoidType.ChewbaccaPatient] = new(new(3794, 2), [.. Enumerable.Repeat(new AnimationRef(3786, 1), 16), new(4144, 40)], new(3778, 2)),
         },
         WalkInToUse: true);
 
@@ -165,9 +167,9 @@ public static class BaseGameContent
             [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
         },
         CorridorObject: true,
-        UsageEast: WithSlackMale(DrinksMachineUse(196, 14, 256, 11), new(null, [new(1538, 14)], null)),
-        UsageSouth: WithSlackMale(DrinksMachineUse(190, 14, 250, 11), new(null, [new(1532, 14)], null)),
-        UsageWest: WithSlackMale(DrinksMachineUse(192, 11, 252, 10), new(null, [new(1534, 11)], null)));
+        UsageEast: WithChewbacca(WithSlackMale(DrinksMachineUse(196, 14, 256, 11), new(null, [new(1538, 14)], null)), new(null, [new(3774, 14)], null)),
+        UsageSouth: WithChewbacca(WithSlackMale(DrinksMachineUse(190, 14, 250, 11), new(null, [new(1532, 14)], null)), new(null, [new(3768, 14)], null)),
+        UsageWest: WithChewbacca(WithSlackMale(DrinksMachineUse(192, 11, 252, 10), new(null, [new(1534, 11)], null)), new(null, [new(3770, 11)], null)));
 
     /// <summary>The fire extinguisher (objects/fire_extinguisher.lua), a side object.</summary>
     public static readonly ObjectDefinition FireExtinguisher = new("extinguisher", "Fire Extinguisher", ObjectType: 43, SideOrientations(Direction.North, Direction.East, Direction.South, Direction.West), CorridorObject: true);
@@ -1012,6 +1014,44 @@ public static class BaseGameContent
         LevelConfigId: 19,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>The electrolyser (objects/machines/electrolyser.lua): the hairy patient is electrocuted until the hair falls off.</summary>
+    public static readonly ObjectDefinition Electrolyser = new(
+        "electrolyser",
+        "Electrolyser",
+        ObjectType: 46,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-2, -2, NeedWestSide), new(-1, -2), new(0, -2, NeedEastSide),
+                    new(-2, -1, CompleteCell), new(-1, -1), new(0, -1, CompleteCell),
+                    new(-2, 0, CompleteCell), new(-1, 0), new(0, 0, CompleteCell),
+                    new(-1, 1, UsePosition | NeedSouthSide),
+                ],
+                RenderAttach: (-1, -1)),
+            [Direction.East] = new(
+                [
+                    new(-2, -2, NeedNorthSide), new(-1, -2), new(0, -2, CompleteCell),
+                    new(-2, -1), new(-1, -1), new(0, -1, CompleteCell),
+                    new(-2, 0, NeedSouthSide), new(-1, 0), new(0, 0, CompleteCell),
+                    new(1, -1, UsePosition | NeedEastSide),
+                ],
+                RenderAttach: (-1, -1)),
+        },
+        UsageNorth: ElectrolyserUse(),
+        UsageSouth: ElectrolyserUse());
+
+    /// <summary>The electrolysis room (rooms/electrolysis.lua): a treatment room for hairyitis with a doctor.</summary>
+    public static readonly RoomDefinition Electrolysis = new(
+        "electrolysis",
+        "Electrolysis",
+        MinimumSize: 5,
+        FloorSprite: 17,
+        BlueWalls,
+        NeededObjects: new Dictionary<string, int> { ["electrolyser"] = 1, ["console"] = 1 },
+        LevelConfigId: 23,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -1062,16 +1102,17 @@ public static class BaseGameContent
         [HumanoidType.StandardFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9)),
         [HumanoidType.SlackFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9)),
         [HumanoidType.SlackMalePatient] = new(Entering: new(1526, 10), Leaving: new(1524, 12)),
+        [HumanoidType.ChewbaccaPatient] = new(Entering: new(3528, 10), Leaving: new(3526, 12)),
         [HumanoidType.Doctor] = new(Entering: new(672, 10), Leaving: new(670, 12), EnteringSwing: new(4752, 6), LeavingSwing: new(4750, 5)),
         [HumanoidType.Nurse] = new(Entering: new(3266, 10), Leaving: new(3264, 12), EnteringSwing: new(3274, 6), LeavingSwing: new(3272, 7)),
         [HumanoidType.Handyman] = new(Entering: new(3288, 10), Leaving: new(3286, 12), EnteringSwing: new(3520, 6), LeavingSwing: new(3518, 9)),
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration, Electrolysis],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer, Electrolyser],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1086,6 +1127,7 @@ public static class BaseGameContent
         [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
         [HumanoidType.SlackFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
         [HumanoidType.SlackMalePatient] = new(Vomit: new(4324, 9), Pee: new(4328, 8)),
+        [HumanoidType.ChewbaccaPatient] = new(Vomit: new(4138, 15), Pee: new(4178, 9)),
     };
 
     /// <summary>
@@ -1235,6 +1277,10 @@ public static class BaseGameContent
         {
             More = new(Begin3: new(4978, 5), Begin4: new(4986, 1), Begin5: new(4982, 5), Finish3: new(4986, 1), Finish4: new(4982, 5), Finish5: new(4974, 1)),
         },
+        [HumanoidType.ChewbaccaPatient] = new(new(1176, 1), [], new(1176, 1), Begin2: new(1176, 1), Finish2: new(1180, 5))
+        {
+            More = new(Begin3: new(1180, 5), Begin4: new(1188, 1), Begin5: new(1184, 5), Finish3: new(1188, 1), Finish4: new(1184, 5), Finish5: new(1176, 1)),
+        },
         [HumanoidType.SlackFemalePatient] = new(new(5158, 1), [], new(5158, 1), Begin2: new(5158, 1), Finish2: new(5162, 5))
         {
             More = new(Begin3: new(5162, 5), Begin4: new(5166, 1), Begin5: new(5170, 5), Finish3: new(5166, 1), Finish4: new(5170, 5), Finish5: new(5158, 1)),
@@ -1317,10 +1363,21 @@ public static class BaseGameContent
         [HumanoidType.SlackMalePatient] = new(new(2074, 14), [new(2082, 4)], new(2086, 10), Begin2: new(2078, 11)),
     };
 
+    /// <summary>
+    /// electrolyser.lua's standard patients (the hairy one becomes one as the use starts): on the machine, electrocuted
+    /// (looped), sparking, the hair falling off, off the machine.
+    /// </summary>
+    private static Dictionary<HumanoidType, UseAnimations> ElectrolyserUse() => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(new(1266, 24), [new(1274, 3)], new(1278, 10), Finish2: new(1286, 13)) { More = new(Finish3: new(1294, 16)) },
+        [HumanoidType.StandardFemalePatient] = new(new(1266, 24), [new(1274, 3)], new(1278, 10), Finish2: new(2940, 13)) { More = new(Finish3: new(2944, 16)) },
+    };
+
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()
     {
         [HumanoidType.SlackMalePatient] = new(new(5178, 27), [new(5174, 2)], new(5182, 16)),
+        [HumanoidType.ChewbaccaPatient] = new(new(5132, 27), [new(610, 2)], new(5136, 16)),
         [HumanoidType.StandardMalePatient] = new(new(1964, 27), [new(1960, 2)], new(1992, 16)),
         [HumanoidType.StandardFemalePatient] = new(new(2948, 27), [new(2952, 2)], new(2956, 16)),
     };
@@ -1338,10 +1395,18 @@ public static class BaseGameContent
         return table;
     }
 
+    /// <summary>A usage table with a hairy patient's animations added.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> WithChewbacca(Dictionary<HumanoidType, UseAnimations> table, UseAnimations chewbacca)
+    {
+        table[HumanoidType.ChewbaccaPatient] = chewbacca;
+        return table;
+    }
+
     /// <summary>loo.lua's animations for the standard patients: men pick one of two in-use animations.</summary>
     private static Dictionary<HumanoidType, UseAnimations> LooUse() => new()
     {
         [HumanoidType.SlackMalePatient] = new(new(4292, 15), [new(4308, 32)], new(4316, 27), Begin2: new(4296, 25), Finish2: new(4320, 18)),
+        [HumanoidType.ChewbaccaPatient] = new(new(4158, 15), [new(4170, 39)], new(4174, 27), Begin2: new(4162, 25), Finish2: new(4740, 18)),
         [HumanoidType.StandardMalePatient] = new(new(1712, 15), [new(1728, 45), new(1732, 32)], new(1740, 27), Begin2: new(1716, 25), Finish2: new(1744, 18)),
         [HumanoidType.StandardFemalePatient] = new(new(3132, 18), [new(3144, 48)], new(3152, 26), Begin2: new(3136, 25), Finish2: new(3156, 18)),
     };
