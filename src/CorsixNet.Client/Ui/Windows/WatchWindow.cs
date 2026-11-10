@@ -3,6 +3,7 @@ using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Disasters;
+using Microsoft.Xna.Framework;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -14,6 +15,9 @@ namespace CorsixNet.Client.Ui.Windows;
 internal sealed class WatchWindow : UiWindow
 {
     public override string Title => "Watch";
+
+    /// <summary>At the left, a little above the bottom, as CorsixTH's <c>UIWatch</c>.</summary>
+    public override Vector2? DefaultPosition => new(20, -100);
 
     /// <summary>Whether a countdown runs for the player.</summary>
     public static bool IsRunning(Simulation simulation, int player)

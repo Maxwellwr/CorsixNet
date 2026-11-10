@@ -158,6 +158,22 @@ public class WindowTests
         Assert.Equal("Build rooms (B)", cells.Single(cell => cell.Text == "Build").Tooltip);
     }
 
+    [Fact]
+    public void DialogsOpenWhereCorsixThPutsThem()
+    {
+        var host = new WindowTestHost();
+        var layer = new WindowLayer(text => text.Length * 6, 10) { Origin = new Point(8, 48) };
+        layer.Open(new ConfirmWindow("Sure?", () => { }));
+        layer.Open(new TipOfTheDayWindow(0));
+        MouseState At(int x, int y) => new(x, y, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
+
+        // The tip at the bottom right, the confirmation in the middle; the cascade corner stays free.
+        Assert.True(layer.Update(host, At(Screen.Right - 25, Screen.Bottom - 25), At(0, 0), Screen));
+        Assert.False(layer.Update(host, At(Screen.Right - 15, Screen.Bottom - 15), At(0, 0), Screen));
+        Assert.True(layer.Update(host, At(Screen.Center.X, Screen.Center.Y), At(0, 0), Screen));
+        Assert.False(layer.Update(host, At(20, 60), At(0, 0), Screen));
+    }
+
     private sealed class TestWindow(Action onClick) : UiWindow
     {
         public override string Title => "Test";

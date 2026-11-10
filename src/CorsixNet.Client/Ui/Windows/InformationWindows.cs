@@ -3,6 +3,8 @@
 // (languages/english.lua, totd_window.tips), the ones about this game's play.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using Microsoft.Xna.Framework;
+
 namespace CorsixNet.Client.Ui.Windows;
 
 /// <summary>
@@ -12,6 +14,9 @@ namespace CorsixNet.Client.Ui.Windows;
 internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string title = "Information") : UiWindow
 {
     public override string Title => title;
+
+    /// <summary>Centred, as CorsixTH's <c>UIInformation</c>.</summary>
+    public override Vector2? DefaultPosition => new(0.5f, 0.5f);
 
     /// <summary>Each information window stands alone; opening another does not replace this one.</summary>
     public override bool IsSameAs(UiWindow other) => ReferenceEquals(other, this);
@@ -48,6 +53,9 @@ internal sealed class ConfirmWindow(string question, Action ok) : UiWindow
 {
     public override string Title => "Confirm";
 
+    /// <summary>Centred, as CorsixTH's <c>UIConfirmDialog</c>.</summary>
+    public override Vector2? DefaultPosition => new(0.5f, 0.5f);
+
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         foreach (var line in BottomPanel.Wrap(question, 60))
@@ -69,6 +77,9 @@ internal sealed class ConfirmWindow(string question, Action ok) : UiWindow
 /// <summary><c>UITipOfTheDay</c>: a random tip to start with, and the buttons to go through them all.</summary>
 internal sealed class TipOfTheDayWindow(int first) : UiWindow
 {
+    /// <summary>At the bottom right, as CorsixTH's <c>UITipOfTheDay</c>.</summary>
+    public override Vector2? DefaultPosition => new(-20, -20);
+
     /// <summary>CorsixTH's tips about playing (the ones about its website, translations and bug reports are left out).</summary>
     public static readonly IReadOnlyList<string> Tips =
     [
