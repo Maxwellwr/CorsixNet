@@ -18,10 +18,12 @@ public class BaseGameContentTests
             .Distinct()
             .ToList();
 
+        // operating_table.lua shortens its in-use animations to one frame (anim_mgr:setAnimLength).
+        var shortened = new HashSet<int> { 2348, 2938 };
         Assert.NotEmpty(animations);
         foreach (var animation in animations)
         {
-            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+            Assert.Equal(shortened.Contains(animation.Id) ? 1 : set.Length(set.FirstFrame(animation.Id)), animation.Length);
         }
     }
 
@@ -32,10 +34,12 @@ public class BaseGameContentTests
 
         var animations = BaseGameContent.DoorAnimations.Values.SelectMany(door => new[] { door.Entering, door.Leaving }).ToList();
 
+        // operating_table.lua shortens its in-use animations to one frame (anim_mgr:setAnimLength).
+        var shortened = new HashSet<int> { 2348, 2938 };
         Assert.NotEmpty(animations);
         foreach (var animation in animations)
         {
-            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+            Assert.Equal(shortened.Contains(animation.Id) ? 1 : set.Length(set.FirstFrame(animation.Id)), animation.Length);
         }
     }
 
@@ -68,10 +72,12 @@ public class BaseGameContentTests
             .Distinct()
             .ToList();
 
+        // operating_table.lua shortens its in-use animations to one frame (anim_mgr:setAnimLength).
+        var shortened = new HashSet<int> { 2348, 2938 };
         Assert.NotEmpty(animations);
         foreach (var animation in animations)
         {
-            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+            Assert.Equal(shortened.Contains(animation.Id) ? 1 : set.Length(set.FirstFrame(animation.Id)), animation.Length);
         }
     }
 }

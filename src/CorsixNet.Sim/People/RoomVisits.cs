@@ -41,7 +41,7 @@ public static class RoomVisits
 
     /// <summary>Whether patients undress behind the room's screen before they are examined: general diagnosis, the cardiogram, the scanner.</summary>
     internal static bool UndressesFirst(string roomType) =>
-        roomType is GeneralDiagnosisRoom or CardiogramRoom or ScannerRoom;
+        roomType is GeneralDiagnosisRoom or CardiogramRoom or ScannerRoom or OperatingTheatreRoom;
 
     /// <summary>The toilets' room type: no staff, as many patients at once as there are toilets.</summary>
     internal const string ToiletsRoom = "toilets";
@@ -67,6 +67,7 @@ public static class RoomVisits
         [GeneralDiagnosisRoom] = TrolleyType,
         [CardiogramRoom] = "cardio",
         [ScannerRoom] = "scanner",
+        [OperatingTheatreRoom] = "operating_table",
         [UltrascanRoom] = "ultrascanner",
         [XRayRoom] = "x_ray",
         [InflationRoom] = "inflator",
@@ -93,6 +94,73 @@ public static class RoomVisits
     /// the patient waits at its other end, the reverse of the other machines.
     /// </summary>
     internal const string BloodMachineRoom = "blood_machine";
+
+
+    /// <summary>The operating theatre's room type (rooms/operating_theatre.lua): two surgeons operate on one patient.</summary>
+    internal const string OperatingTheatreRoom = "operating_theatre";
+
+    /// <summary>The tile of the operating table's far side (operating_table_b's <c>slave_position</c>), where the second surgeon stands.</summary>
+    internal static TilePosition OperatingTableSlaveTile(Simulation simulation, RoomObject table) =>
+        table.Orientation is Direction.North or Direction.South
+            ? new TilePosition(table.Tile.X + 1, table.Tile.Y - 1)
+            : new TilePosition(table.Tile.X - 1, table.Tile.Y + 1);
+
+    /// <summary>The tile in whose pass an object's animations are drawn (its render attach tile).</summary>
+    internal static TilePosition RenderTile(Simulation simulation, RoomObject placed)
+    {
+        var attach = simulation.Content.FindObject(placed.ObjectType)?.Orientations.GetValueOrDefault(placed.Orientation)?.RenderAttach ?? default;
+        return new TilePosition(placed.Tile.X + attach.X, placed.Tile.Y + attach.Y);
+    }
+
+    /// <summary>Whether someone other than <paramref name="except"/> is using <paramref name="placed"/> (<c>wait_for_object</c>'s <c>obj.user</c>).</summary>
+    internal static bool IsObjectBusy(Simulation simulation, RoomObject placed, Humanoid except) =>
+        simulation.Entities.Any(e => e is Humanoid { ActionAnimation: not null } other && other.Id != except.Id && other.HiddenObjectId == placed.Id);
+
+    /// <summary>The surgeons of the operating theatre already in scrubs (the screen's white outfits).</summary>
+    internal static int SurgeonsInScrubs(Simulation simulation, Room room) =>
+        simulation.Entities.Count(e => e is Humanoid { Type: HumanoidType.Surgeon, Behaviour: DoctorBehaviour doctor } && doctor.RoomId == room.Id);
+
+    /// <summary>The doctors working in the operating theatre or on their way to it.</summary>
+    internal static List<Humanoid> Surgeons(Simulation simulation, Room room) =>
+        [.. simulation.Entities.OfType<Humanoid>().Where(h => h is { Behaviour: DoctorBehaviour doctor, IsFired: false } && doctor.RoomId == room.Id)];
+
+    /// <summary>
+    /// The operating theatre's turn: call surgeons until it has two (<c>required_staff</c>), and let a patient in only
+    /// while both are in scrubs and ready (<c>OperatingTheatreRoom:canHumanoidEnter</c>).
+    /// </summary>
+    private static void UpdateOperatingTheatre(Simulation simulation, Room room)
+    {
+        var queue = EnsureQueue(simulation, room);
+        var surgeons = Surgeons(simulation, room);
+        if (room.StaffId != 0 && !surgeons.Any(surgeon => surgeon.Id == room.StaffId))
+        {
+            room.StaffId = surgeons.FirstOrDefault()?.Id ?? 0;
+        }
+
+        if (room.StaffId == 0)
+        {
+            CallStaff(simulation, room);
+        }
+        else if (surgeons.Count < 2)
+        {
+            CallExtraStaff(simulation, room, BehaviourKind.Doctor);
+        }
+
+        var ready = surgeons.Count == 2 && surgeons.All(s => s is { Type: HumanoidType.Surgeon, Behaviour: DoctorBehaviour { Phase: DoctorPhase.OtReady } });
+        room.StaffPresent = surgeons.Count == 2 && surgeons.All(s => room.Area.Contains(s.Tile) && s.Behaviour is DoctorBehaviour { Phase: not DoctorPhase.WalkingToRoom });
+        if (!ready || room.PatientId != 0 || queue is not { Count: > 0 } || simulation.FindEntity(room.DoorId) is not RoomDoor door)
+        {
+            return;
+        }
+
+        var front = queue.Pop(simulation);
+        queue.VisitorCount++;
+        if (simulation.FindEntity(front) is Humanoid { Behaviour: PatientBehaviour patient } humanoid)
+        {
+            room.PatientId = front;
+            patient.LetIn(simulation, humanoid, room, door);
+        }
+    }
 
     /// <summary>The inflation room's type (rooms/inflation.lua), the treatment of bloaty heads.</summary>
     internal const string InflationRoom = "inflation";
@@ -137,6 +205,7 @@ public static class RoomVisits
         [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),
         [WardRoom] = (BehaviourKind.Nurse, "bed"),
+        [OperatingTheatreRoom] = (BehaviourKind.Doctor, "surgeon_screen"),
     };
 
     /// <summary>The ward's room type (rooms/ward.lua): as many patients as beds and as many nurses as desks.</summary>
@@ -163,7 +232,7 @@ public static class RoomVisits
         }
         else if (nurses.Count < CountObjects(simulation, room, "desk"))
         {
-            CallExtraNurse(simulation, room);
+            CallExtraStaff(simulation, room, BehaviourKind.Nurse);
         }
 
         if (queue is not { Count: > 0 } || !room.StaffPresent || simulation.FindEntity(room.DoorId) is not RoomDoor door
@@ -189,8 +258,11 @@ public static class RoomVisits
         simulation.Entities.OfType<Humanoid>().Where(h => h.Behaviour is PatientBehaviour patient && patient.TargetId == room.Id
             && patient.Phase is >= PatientPhase.EnteringRoom and < PatientPhase.LeavingRoom);
 
-    /// <summary>A second (or later) nurse for a ward with more desks: the free nurse who scores best for it.</summary>
-    private static void CallExtraNurse(Simulation simulation, Room room)
+    /// <summary>
+    /// A second (or later) member of staff for a room that takes several (a ward with more desks, the operating
+    /// theatre): the free one of the kind, qualified for the room, who scores best for it.
+    /// </summary>
+    private static void CallExtraStaff(Simulation simulation, Room room, BehaviourKind kind)
     {
         if (simulation.FindEntity(room.DoorId) is not RoomDoor door)
         {
@@ -203,7 +275,7 @@ public static class RoomVisits
         var bestScore = 0m;
         foreach (var entity in simulation.Entities)
         {
-            if (entity is Humanoid staff && IsFreeFor(staff, BehaviourKind.Nurse, owner)
+            if (entity is Humanoid staff && IsFreeFor(staff, kind, owner) && IsQualifiedFor(room.RoomType, staff)
                 && CallScore(simulation, room, target, staff) is { } score && (best is null || score < bestScore))
             {
                 best = staff;
@@ -268,8 +340,12 @@ public static class RoomVisits
     /// Whether <paramref name="staff"/> has what the room type asks for beyond their kind (CorsixTH's
     /// <c>required_staff</c> of <c>Psychiatrist</c>): the psychiatric room takes only psychiatrists.
     /// </summary>
-    internal static bool IsQualifiedFor(string roomType, Humanoid staff) =>
-        !string.Equals(roomType, PsychRoom, StringComparison.Ordinal) || staff.Profile is { IsPsychiatrist: true };
+    internal static bool IsQualifiedFor(string roomType, Humanoid staff) => roomType switch
+    {
+        PsychRoom => staff.Profile is { IsPsychiatrist: true },
+        OperatingTheatreRoom => staff.Profile is { IsSurgeon: true },
+        _ => true,
+    };
 
     /// <summary>The object the room's patient is examined on with the doctor, or null for rooms without one.</summary>
     internal static RoomObject? ExaminingObject(Simulation simulation, Room room) =>
@@ -400,6 +476,12 @@ public static class RoomVisits
         if (string.Equals(room.RoomType, WardRoom, StringComparison.Ordinal))
         {
             UpdateWard(simulation, room);
+            return;
+        }
+
+        if (string.Equals(room.RoomType, OperatingTheatreRoom, StringComparison.Ordinal))
+        {
+            UpdateOperatingTheatre(simulation, room);
             return;
         }
 

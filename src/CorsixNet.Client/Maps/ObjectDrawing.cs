@@ -50,6 +50,10 @@ internal sealed class ObjectDrawing
         ["shower"] = new() { [N] = 2014, [S] = 2014 },
         ["cardio"] = new() { [N] = 648, [S] = 648 },
         ["scanner"] = new() { [N] = 1398, [S] = 1398 },
+        ["surgeon_screen"] = new() { [N] = 2772 },
+        ["op_sink1"] = new() { [N] = 2354, [S] = 2354 },
+        ["x_ray_viewer"] = new() { [N] = 2390, [S] = 2390 },
+        ["operating_table"] = new() { [N] = 2314, [S] = 2314 },
         ["radiation_shield"] = new() { [N] = 794, [S] = 794 },
         ["computer"] = new() { [N] = 2094, [S] = 2094 },
         ["analyser"] = new() { [N] = 2134, [S] = 2134 },
@@ -80,6 +84,10 @@ internal sealed class ObjectDrawing
     {
         // radiation_shield_b.lua: the shield's front, east (and west) 1968; north mirrors west.
         ["radiation_shield"] = new() { [N] = (1968, true, (0, 1)), [E] = (1968, false, (1, 0)) },
+
+        // op_sink2.lua (2358) and operating_table_b.lua (2310) at their masters' slave_position, mirrored facing east.
+        ["op_sink1"] = new() { [N] = (2358, false, (0, -1)), [E] = (2358, true, (-1, 0)) },
+        ["operating_table"] = new() { [N] = (2310, false, (1, -1)), [E] = (2310, true, (-1, 1)) },
     };
 
     private readonly AnimationRenderer _renderer;
