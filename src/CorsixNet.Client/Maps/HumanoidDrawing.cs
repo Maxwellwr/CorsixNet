@@ -1,8 +1,8 @@
 using CorsixNet.Client.Rendering;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
-using CorsixNet.Sim.People;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.People;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client.Maps;
