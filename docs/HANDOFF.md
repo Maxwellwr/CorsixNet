@@ -245,7 +245,11 @@ Next, in this order (2026-11-10):
    20 frames/finish) ends. Client: smoke plumes below 4 uses, the crashed animation. Not yet: the machine window
    (replace, call handyman), earthquakes wearing machines, the invulnerable machines cheat, the repair announcement,
    num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
-   floor soot on the same tiles, as in CorsixTH. Next: jelly vat, training room, autopsies, the hire window's faces.
+   floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
+   (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
+   and moved to `FinishSecondaryUsePosition` facing `FinishSecondaryFacing` at the in-use phase. Not yet: the jelly
+   wobble drawing effect (CorsixTH's AnimationEffect.Jelly, th_gfx_sdl.cpp), the patient facing the moulder while
+   waiting. Next: training room, autopsies, the hire window's faces.
    The DNA fixer (rooms/dna_fixer.lua) needs more than the other rooms: its in-use animation is a "morph" from the
    alien (3594) into the standard patient (3618 men, 1150 women, mirrored), which the client cannot draw yet; it is
    staffed by a researcher; aliens have no normal door animations and come only by emergency (CorsixTH's

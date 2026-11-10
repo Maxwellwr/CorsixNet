@@ -658,6 +658,55 @@ public static class BaseGameContent
         MultiUsage: BloodMachineMultiUsage(),
         Machine: new(new(3372, 1), new(3460, 4), new(null, [new(3498, 4), new(3484, 38)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(0, -1)], [Direction.East] = [(-1, 0)] }));
 
+    /// <summary>
+    /// The jelly moulder (objects/machines/jelly_moulder.lua): the doctor presses its button, the patient climbs in, is
+    /// moulded back onto a skeleton and steps out; the doctor's animations show the patient too.
+    /// </summary>
+    public static readonly ObjectDefinition JellyMoulder = new(
+        "jelly_moulder",
+        "Jelly Moulder",
+        ObjectType: 47,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-1, -1), new(0, -1), new(1, -1, UsePosition),
+                    new(-1, 0), new(0, 0, CompleteCell), new(1, 0, UsePosition),
+                    new(-1, 1, UsePosition | NeedEastSide),
+                ],
+                RenderAttach: (0, -1),
+                UsePosition: (-1, 1),
+                SecondaryUsePosition: (1, -1),
+                FinishUsePosition: (-1, 1),
+                FinishSecondaryUsePosition: (1, 0),
+                FinishSecondaryFacing: Direction.East),
+            [Direction.East] = new(
+                [
+                    new(-1, -1), new(0, -1), new(1, -1, UsePosition | NeedSouthSide),
+                    new(-1, 0), new(0, 0, CompleteCell),
+                    new(-1, 1, UsePosition), new(0, 1, UsePosition),
+                ],
+                RenderAttach: (-1, 0),
+                UsePosition: (1, -1),
+                SecondaryUsePosition: (-1, 1),
+                FinishUsePosition: (1, -1),
+                FinishSecondaryUsePosition: (0, 1),
+                FinishSecondaryFacing: Direction.South),
+        },
+        MultiUsage: JellyMoulderMultiUsage(),
+        Machine: new(new(3312, 1), new(3440, 4), new(null, [new(3502, 45)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(2, -1)], [Direction.East] = [(-1, 2)] }));
+
+    /// <summary>The jelly vat (rooms/jelly_vat.lua): the treatment of jellyitis, with a doctor.</summary>
+    public static readonly RoomDefinition JellyVat = new(
+        "jelly_vat",
+        "Jelly Vat",
+        MinimumSize: 4,
+        FloorSprite: 17,
+        BlueWalls,
+        NeededObjects: new Dictionary<string, int> { ["jelly_moulder"] = 1 },
+        LevelConfigId: 24,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The blood machine room (rooms/blood_machine_room.lua): a diagnosis room with a doctor.</summary>
     public static readonly RoomDefinition BloodMachineRoom = new(
         "blood_machine",
@@ -1160,10 +1209,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration, Electrolysis, FractureClinic],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration, Electrolysis, FractureClinic, JellyVat],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer, Electrolyser, CastRemover],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer, Electrolyser, CastRemover, JellyMoulder],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1285,6 +1334,27 @@ public static class BaseGameContent
             [
                 Use([new(2232, 13), new(2236, 31), new(5146, 19), new(5150, 38), new(2224, 23)], [new(2252, 17), new(5154, 19), new(622, 14), new(2204, 38), new(2274, 23)]),
             ],
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
+
+    /// <summary>
+    /// jelly_moulder.lua's <c>multi_usage_animations</c> for the doctor with the standard patients: the button, the door,
+    /// climbing the stairs, being sucked in, the floor opening; the skeleton rising; the door closing, the patient on the
+    /// skeleton, the door opening, stepping out, the door closing.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> JellyMoulderMultiUsage()
+    {
+        static MultiUseAnimations Use(AnimationRef climb, AnimationRef suck, AnimationRef onSkeleton, AnimationRef doorOpens, AnimationRef stepOut) =>
+            new(
+                [new(new(1382, 9)), new(new(1310, 18)), new(climb), new(suck), new(new(1314, 23))],
+                new(new(1322, 21)),
+                [new(new(1326, 20)), new(onSkeleton), new(doorOpens), new(stepOut), new(new(1306, 20))]);
+
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.Doctor, HumanoidType.StandardMalePatient)] = [Use(new(1334, 24), new(1342, 10), new(1346, 8), new(1354, 18), new(1358, 25))],
+            [(HumanoidType.Doctor, HumanoidType.StandardFemalePatient)] = [Use(new(3958, 25), new(3966, 10), new(3970, 9), new(3978, 18), new(3982, 25))],
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }

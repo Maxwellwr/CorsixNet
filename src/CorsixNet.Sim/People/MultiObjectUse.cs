@@ -52,6 +52,13 @@ public sealed class MultiObjectUse
     /// <summary>Which of the object's animation variants the use plays (CorsixTH's <c>random_anim</c>).</summary>
     public int Variant { get; private set; }
 
+    /// <summary>
+    /// The phases, numbered as CorsixTH does (−5 to −1 the begin phases, 0 the in-use one, 1 to 5 the finish phases), in
+    /// which the other user is hidden when the phase has no animation for them; outside them they stand visible
+    /// (<c>setInvisiblePhaseSpan</c>). Null hides them in every such phase.
+    /// </summary>
+    private (int From, int To)? InvisiblePhases { get; init; }
+
     /// <summary>The value both users' layer 3 takes during the use, or −1 to leave it (CorsixTH's <c>setLayer3</c>).</summary>
     private int UseLayer3 { get; init; } = -1;
 
@@ -63,7 +70,8 @@ public sealed class MultiObjectUse
     /// Starts using <paramref name="placed"/> with <paramref name="useWith"/> (<c>action_multi_use_object_start</c>);
     /// null when the object has no animations for the two.
     /// </summary>
-    internal static MultiObjectUse? Start(Simulation simulation, Humanoid humanoid, RoomObject placed, Humanoid useWith, int layer3 = -1, int inUseRounds = 0)
+    internal static MultiObjectUse? Start(Simulation simulation, Humanoid humanoid, RoomObject placed, Humanoid useWith, int layer3 = -1, int inUseRounds = 0,
+        (int From, int To)? invisiblePhases = null)
     {
         if (simulation.Content.FindObject(placed.ObjectType)?.MultiUse(placed.Orientation, humanoid.Type, useWith.Type) is not var (variants, _))
         {
@@ -74,6 +82,7 @@ public sealed class MultiObjectUse
         {
             UseLayer3 = layer3,
             InUseRounds = inUseRounds,
+            InvisiblePhases = invisiblePhases,
             Variant = variants.Count > 1 ? simulation.Random.Next(variants.Count) : 0,
         };
         if (humanoid.Profile is not null)
@@ -125,9 +134,13 @@ public sealed class MultiObjectUse
         var next = Phase + 1;
         if (next == animations.Begin.Count)
         {
-            // Entering the in-use phase: the other user already goes to where they end up.
-            var secondary = layout.SecondaryUsePosition ?? layout.Use;
+            // Entering the in-use phase: the other user already goes to where they end up, facing the way they end up.
+            var secondary = layout.FinishSecondaryUsePosition ?? layout.SecondaryUsePosition ?? layout.Use;
             useWith.PlaceAt(new TilePosition(placed.Tile.X + secondary.X, placed.Tile.Y + secondary.Y));
+            if (layout.FinishSecondaryFacing is { } facing)
+            {
+                useWith.Face(facing);
+            }
         }
 
         if (next >= animations.Begin.Count + 1 + animations.Finish.Count)
@@ -207,6 +220,11 @@ public sealed class MultiObjectUse
             useWith.SetActionAnimation(simulation, secondary, flip, useWith.Tile, useWith.Tile, 0);
             useWith.IsHidden = false;
         }
+        else if (InvisiblePhases is var (from, to) && (CorsixPhase(animations, phase) < from || CorsixPhase(animations, phase) > to))
+        {
+            useWith.ClearActionAnimation();
+            useWith.IsHidden = false;
+        }
         else
         {
             useWith.IsHidden = true;
@@ -214,6 +232,10 @@ public sealed class MultiObjectUse
 
         Timer = current.Length;
     }
+
+    /// <summary>CorsixTH's number of a phase: −5 for <c>begin_use</c> up to 5 for <c>finish_use_5</c>.</summary>
+    private static int CorsixPhase(MultiUseAnimations animations, int phase) =>
+        phase < animations.Begin.Count ? phase - 5 : phase - animations.Begin.Count;
 
     private (RoomObject Placed, ObjectOrientation Layout, MultiUseAnimations Animations, bool Flip, Humanoid UseWith)? Resolve(Simulation simulation, Humanoid humanoid)
     {
@@ -239,25 +261,37 @@ public sealed class MultiObjectUse
         writer.WriteByte(OldLayer3);
         writer.WriteByte(OldLayer3UseWith);
         writer.WriteInt32(InUseRounds);
+        writer.WriteBool(InvisiblePhases is not null);
+        if (InvisiblePhases is var (from, to))
+        {
+            writer.WriteInt32(from);
+            writer.WriteInt32(to);
+        }
     }
 
     internal static MultiObjectUse Read(SimReader reader)
     {
-        var use = new MultiObjectUse(reader.ReadInt32(), reader.ReadInt32())
+        var objectId = reader.ReadInt32();
+        var useWithId = reader.ReadInt32();
+        var phase = reader.ReadInt32();
+        var timer = reader.ReadInt32();
+        var variant = reader.ReadInt32();
+        var layer3 = reader.ReadInt32();
+        var oldLayer3 = reader.ReadByte();
+        var oldLayer3UseWith = reader.ReadByte();
+        var rounds = reader.Version is 0 or >= 63 ? reader.ReadInt32() : 0;
+        (int, int)? invisible = (reader.Version is 0 or >= 69) && reader.ReadBool() ? (reader.ReadInt32(), reader.ReadInt32()) : null;
+        return new MultiObjectUse(objectId, useWithId)
         {
-            Phase = reader.ReadInt32(),
-            Timer = reader.ReadInt32(),
-            Variant = reader.ReadInt32(),
-            UseLayer3 = reader.ReadInt32(),
-            OldLayer3 = reader.ReadByte(),
-            OldLayer3UseWith = reader.ReadByte(),
+            Phase = phase,
+            Timer = timer,
+            Variant = variant,
+            UseLayer3 = layer3,
+            OldLayer3 = oldLayer3,
+            OldLayer3UseWith = oldLayer3UseWith,
+            InUseRounds = rounds,
+            InvisiblePhases = invisible,
         };
-        if (reader.Version is 0 or >= 63)
-        {
-            use.InUseRounds = reader.ReadInt32();
-        }
-
-        return use;
     }
 
     internal static void WriteOptional(SimWriter writer, MultiObjectUse? use)

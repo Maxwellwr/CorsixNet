@@ -77,6 +77,7 @@ public static class RoomVisits
         [FractureClinicRoom] = "cast_remover",
         [BloodMachineRoom] = "blood_machine",
         [DecontaminationRoom] = "shower",
+        [JellyVatRoom] = "jelly_moulder",
     };
 
     /// <summary>The decontamination room's type (rooms/decontamination.lua), the treatment of serious radiation.</summary>
@@ -98,6 +99,15 @@ public static class RoomVisits
     /// the patient waits at its other end, the reverse of the other machines.
     /// </summary>
     internal const string BloodMachineRoom = "blood_machine";
+
+    /// <summary>
+    /// The jelly vat's room type (rooms/jelly_vat.lua): like the blood machine, the doctor works the jelly moulder from its
+    /// use position while the patient waits at its other end, and is in the doctor's animations most of the time.
+    /// </summary>
+    internal const string JellyVatRoom = "jelly_vat";
+
+    /// <summary>Whether the room's doctor uses its machine with the patient, rather than the patient with the doctor.</summary>
+    internal static bool DoctorUsesMachine(string roomType) => roomType is BloodMachineRoom or JellyVatRoom;
 
 
     /// <summary>The operating theatre's room type (rooms/operating_theatre.lua): two surgeons operate on one patient.</summary>
@@ -196,7 +206,7 @@ public static class RoomVisits
             return FindObject(simulation, room.Id, console) is { } shield ? UseTile(simulation, shield) : null;
         }
 
-        if (string.Equals(room.RoomType, BloodMachineRoom, StringComparison.Ordinal))
+        if (DoctorUsesMachine(room.RoomType))
         {
             return ExaminingObject(simulation, room) is { } machine ? UseTile(simulation, machine) : null;
         }
@@ -224,6 +234,7 @@ public static class RoomVisits
         [FractureClinicRoom] = (BehaviourKind.Nurse, "cast_remover"),
         [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
         [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
+        [JellyVatRoom] = (BehaviourKind.Doctor, "jelly_moulder"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),
         [WardRoom] = (BehaviourKind.Nurse, "bed"),
         [OperatingTheatreRoom] = (BehaviourKind.Doctor, "surgeon_screen"),
