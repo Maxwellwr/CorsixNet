@@ -866,6 +866,95 @@ public static class BaseGameContent
         AdditionalObjects: AdditionalRoomObjects,
         SwingDoors: true);
 
+    /// <summary>The staff room's sofa (objects/sofa.lua): doctors, nurses and handymen sit down and rest on it.</summary>
+    public static readonly ObjectDefinition Sofa = new(
+        "sofa",
+        "Sofa",
+        ObjectType: 19,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(-1, 0, CompleteCell), new(0, 0, CompleteCell), new(-1, -1, UsePosition)], RenderAttach: (-1, 0)),
+            [Direction.East] = new([new(0, -1, CompleteCell), new(0, 0, CompleteCell), new(1, -1, UsePosition)]),
+            [Direction.South] = new([new(-1, 0, CompleteCell), new(0, 0, CompleteCell), new(-1, 1, UsePosition)]),
+            [Direction.West] = new([new(0, -1, CompleteCell), new(0, 0, CompleteCell), new(-1, -1, UsePosition)]),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations>
+        {
+            [HumanoidType.Doctor] = new(new(2178, 5), [new(2208, 1)], new(2194, 7), Begin2: new(2186, 5)),
+            [HumanoidType.Nurse] = new(new(3878, 5), [new(4780, 1)], new(3894, 7), Begin2: new(3886, 5)),
+            [HumanoidType.Handyman] = new(new(3570, 5), [new(4772, 1)], new(3586, 6), Begin2: new(3578, 5)),
+        },
+        UsageEast: new Dictionary<HumanoidType, UseAnimations>
+        {
+            [HumanoidType.Doctor] = new(new(2180, 10), [new(2210, 1)], new(2196, 6), Begin2: new(2188, 15)),
+            [HumanoidType.Nurse] = new(new(3880, 5), [new(4782, 1)], new(3896, 6), Begin2: new(3888, 15)),
+            [HumanoidType.Handyman] = new(new(3572, 10), [new(4774, 1)], new(3588, 6), Begin2: new(3580, 15)),
+        });
+
+    /// <summary>The pool table (objects/pool_table.lua), which doctors and handymen play at.</summary>
+    public static readonly ObjectDefinition PoolTable = new(
+        "pool_table",
+        "Pool Table",
+        ObjectType: 10,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-1, -2, UsePosition), new(0, -2, NeedNorthSide), new(1, -2, UsePosition),
+                    new(-1, -1, UsePosition), new(0, -1), new(1, -1, UsePosition),
+                    new(-1, 0, UsePosition), new(0, 0, UsePosition | CompleteCell), new(1, 0, UsePosition),
+                ],
+                RenderAttach: (-1, 0),
+                UsePosition: (0, 0)),
+            [Direction.East] = new(
+                [
+                    new(-2, -1, UsePosition), new(-1, -1, UsePosition), new(0, -1, UsePosition),
+                    new(-2, 0, CompleteCell), new(-1, 0), new(0, 0, UsePosition | CompleteCell),
+                    new(-2, 1, UsePosition), new(-1, 1, UsePosition), new(0, 1, UsePosition),
+                ],
+                RenderAttach: (0, -1),
+                UsePosition: (0, 0)),
+        },
+        UsageNorth: PoolTableUse(),
+        UsageSouth: PoolTableUse());
+
+    /// <summary>The video game (objects/video_game.lua), which doctors and nurses play.</summary>
+    public static readonly ObjectDefinition VideoGame = new(
+        "video_game",
+        "Video Game",
+        ObjectType: 57,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: VideoGameUse(),
+        UsageSouth: VideoGameUse());
+
+    /// <summary>The television (objects/tv.lua), for the staff room's looks.</summary>
+    public static readonly ObjectDefinition Television = new(
+        "tv",
+        "TV",
+        ObjectType: 21,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, -1, UsePosition)]),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)]),
+            [Direction.South] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)]),
+            [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
+        });
+
+    /// <summary>The staff room (rooms/staff_room.lua): tired staff rest there; it needs a sofa.</summary>
+    public static readonly RoomDefinition StaffRoom = new(
+        "staff_room",
+        "Staff Room",
+        MinimumSize: 4,
+        FloorSprite: 17,
+        GreenWalls,
+        NeededObjects: new Dictionary<string, int> { ["sofa"] = 1 },
+        LevelConfigId: 25,
+        AdditionalObjects: ["extinguisher", "radiator", "plant", "sofa", "pool_table", "tv", "video_game"]);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -920,10 +1009,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1121,6 +1210,20 @@ public static class BaseGameContent
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
+
+    /// <summary>pool_table.lua's doctor and handyman: three animations to start, playing (looped), putting the cue away.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> PoolTableUse() => new()
+    {
+        [HumanoidType.Doctor] = new(new(1244, 3), [new(1234, 18)], new(1248, 3), Begin2: new(1238, 21)) { More = new(Begin3: new(1230, 8)) },
+        [HumanoidType.Handyman] = new(new(3936, 2), [new(3928, 18)], new(3940, 2), Begin2: new(3932, 21)) { More = new(Begin3: new(3924, 8)) },
+    };
+
+    /// <summary>video_game.lua's doctor and nurse playing.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> VideoGameUse() => new()
+    {
+        [HumanoidType.Doctor] = new(null, [new(3700, 40)], null),
+        [HumanoidType.Nurse] = new(null, [new(4764, 40)], null),
+    };
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()
