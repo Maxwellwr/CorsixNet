@@ -74,6 +74,7 @@ public static class RoomVisits
         [SlackTongueRoom] = "slicer",
         [HairRestorationRoom] = "hair_restorer",
         [ElectrolysisRoom] = "electrolyser",
+        [FractureClinicRoom] = "cast_remover",
         [BloodMachineRoom] = "blood_machine",
         [DecontaminationRoom] = "shower",
     };
@@ -177,6 +178,9 @@ public static class RoomVisits
     /// <summary>The electrolysis room's type (rooms/electrolysis.lua): the electrolyser, a console and a doctor.</summary>
     internal const string ElectrolysisRoom = "electrolysis";
 
+    /// <summary>The fracture clinic's type (rooms/fracture_clinic.lua): the cast remover and a nurse.</summary>
+    internal const string FractureClinicRoom = "fracture_clinic";
+
     /// <summary>The X-ray room's type.</summary>
     internal const string XRayRoom = "x_ray";
 
@@ -216,6 +220,7 @@ public static class RoomVisits
         [SlackTongueRoom] = (BehaviourKind.Doctor, "slicer"),
         [HairRestorationRoom] = (BehaviourKind.Doctor, "hair_restorer"),
         [ElectrolysisRoom] = (BehaviourKind.Doctor, "electrolyser"),
+        [FractureClinicRoom] = (BehaviourKind.Nurse, "cast_remover"),
         [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
         [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),

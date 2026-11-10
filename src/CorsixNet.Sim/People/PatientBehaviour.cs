@@ -1722,6 +1722,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             {
                 doctor.OnPatientUndressed(simulation, staff, room);
             }
+            else if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: NurseBehaviour nurse } nurseStaff)
+            {
+                nurse.OnPatientAtMachine(simulation, nurseStaff, room);
+            }
 
             return;
         }
@@ -1960,6 +1964,18 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     return;
                 }
 
+                if (string.Equals(room.RoomType, RoomVisits.FractureClinicRoom, StringComparison.Ordinal))
+                {
+                    // FractureRoom: the patient uses the cast remover with the nurse once she stands at its other side.
+                    if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: NurseBehaviour { IsAtStation: true }, IsMoving: false } nurse)
+                    {
+                        TrolleyUse = MultiObjectUse.Start(simulation, humanoid, machine, nurse);
+                        Phase = PatientPhase.OnTrolley;
+                    }
+
+                    return;
+                }
+
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley } doctorBehaviour, IsMoving: false } doctor)
                 {
                     if (string.Equals(room.RoomType, RoomVisits.ElectrolysisRoom, StringComparison.Ordinal))
@@ -2071,6 +2087,18 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
 
                 TrolleyUse = null;
+                if (string.Equals(room.RoomType, RoomVisits.FractureClinicRoom, StringComparison.Ordinal))
+                {
+                    // fracture_clinic_after_use: the casts come off.
+                    humanoid.SetLayer(2, 0);
+                    humanoid.SetLayer(3, 0);
+                    humanoid.SetLayer(4, 0);
+                    if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: NurseBehaviour nurse })
+                    {
+                        nurse.OnExamined(room);
+                    }
+                }
+
                 if (string.Equals(room.RoomType, RoomVisits.HairRestorationRoom, StringComparison.Ordinal))
                 {
                     // hair_restoration_after_use: normal hair.

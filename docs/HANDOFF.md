@@ -232,7 +232,7 @@ Next, in this order (2026-11-10):
 2. Looks of visual diseases: Slack Male/Female done (PR #212: slack tongues and bald heads, with the GP chair, drinks
    machine, loo, X-ray, scanner and blood machine; a slack woman borrows a standard woman's animations,
    `ObjectDefinition.LooksLike`). Still: pregnant patients are women only (not yet: a "pregnant" man was seen). Chewbacca done
-   with electrolysis (PR #215). Next: Alternate Male, Transparent, Invisible, Elvis, Alien
+   with electrolysis (PR #215). Alternate Male done with the fracture clinic (PR #216; women are off, CorsixTH's disable_fractured_bones_females default). Next: Transparent, Invisible, Elvis, Alien
    (walk_anims in entities/humanoid.lua) with their animations in every object they use on the way (GP chair, drinks
    machine, loo, sink, screen, bench, the diagnosis machines). Then the rooms that need them: slack tongue, hair
    restoration, electrolysis, fracture clinic, DNA fixer, jelly vat; and psychiatry's king complex change.
@@ -249,8 +249,7 @@ Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  fracture
-  clinic, DNA fixer, jelly vat, staff
+  DNA fixer, jelly vat, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and
   explosions without repairs would only do harm.

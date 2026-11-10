@@ -58,6 +58,7 @@ internal sealed class ObjectDrawing
         ["slicer"] = new() { [N] = 1386, [S] = 1386 },
         ["hair_restorer"] = new() { [N] = 2070, [S] = 2070 },
         ["electrolyser"] = new() { [N] = 1262, [S] = 1262 },
+        ["cast_remover"] = new() { [N] = 2492, [S] = 2492 },
         ["pool_table"] = new() { [N] = 2130, [S] = 2130 },
         ["video_game"] = new() { [N] = 3696, [S] = 3696 },
         ["tv"] = new() { [N] = 396, [E] = 398 },

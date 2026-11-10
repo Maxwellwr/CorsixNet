@@ -39,6 +39,12 @@ public enum NursePhase : byte
 
     /// <summary>In the ward: writing at the desk.</summary>
     UsingWardDesk,
+
+    /// <summary>In the fracture clinic: walking to the cast remover's other side.</summary>
+    WalkingToStation,
+
+    /// <summary>In the fracture clinic: standing there for the patient, shown in the machine's animations while they use it.</summary>
+    AtStation,
 }
 
 /// <summary>
@@ -153,8 +159,18 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             case NursePhase.WalkingToObject:
                 Phase = NursePhase.Waiting;
                 break;
-            case NursePhase.Waiting:
+            case NursePhase.WalkingToStation:
+                Phase = NursePhase.AtStation;
+                break;
+            case NursePhase.AtStation:
                 if (room.PatientId == 0)
+                {
+                    Wait();
+                }
+
+                break;
+            case NursePhase.Waiting:
+                if (room.PatientId == 0 || string.Equals(room.RoomType, RoomVisits.FractureClinicRoom, StringComparison.Ordinal))
                 {
                     Meander.Update(simulation, humanoid);
                 }
@@ -311,6 +327,31 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     /// </summary>
     internal static decimal ServiceQuality(Humanoid humanoid) =>
         (0.7m * (humanoid.Profile?.Skill ?? 0) / Staff.StaffProfile.MaxSkill) + (0.2m * (1 - humanoid.Fatigue)) + (0.1m * humanoid.Happiness);
+
+    /// <summary>
+    /// <c>FractureRoom:commandEnteringPatient</c>: the patient stands at the cast remover, so the nurse walks to its other
+    /// side and waits there.
+    /// </summary>
+    internal void OnPatientAtMachine(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (Phase == NursePhase.Waiting && RoomId == room.Id && RoomVisits.ExaminingObject(simulation, room) is { } machine)
+        {
+            Phase = NursePhase.WalkingToStation;
+            humanoid.WalkTo(simulation, RoomVisits.SecondaryUseTile(simulation, machine));
+        }
+    }
+
+    /// <summary>Whether the nurse stands at the machine for the patient.</summary>
+    public bool IsAtStation => Phase == NursePhase.AtStation;
+
+    /// <summary><c>fracture_clinic_after_use</c>: the nurse meanders again.</summary>
+    internal void OnExamined(Room room)
+    {
+        if (Phase == NursePhase.AtStation && RoomId == room.Id)
+        {
+            Wait();
+        }
+    }
 
     /// <summary>Waits for a patient, meandering about the room, starting with a walk.</summary>
     private void Wait()
