@@ -1890,7 +1890,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     break;
                 case RoomObject placed:
                     var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
+                    var machine = placed.Machine is null ? null : simulation.Content.FindObject(placed.ObjectType)?.Machine;
+                    if (machine is not null && simulation.FindEntity(placed.RoomId) is Room { IsCrashed: true })
+                    {
+                        _objects.DrawCrashed(batch, machine.Crashed.Id, placed.Tile, tint);
+                        break;
+                    }
+
                     _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
+                    if (machine is not null)
+                    {
+                        _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);
+                    }
+
                     break;
                 case Rat rat:
                     var (_, ratAnimation, offsetX, offsetY) = RatDrawing(rat);

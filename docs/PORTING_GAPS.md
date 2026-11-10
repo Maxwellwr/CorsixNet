@@ -35,8 +35,9 @@ objects from the level file.
   split over three tiles as CorsixTH does (drawn from its own tile for now).
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
-- Machines: strength, wear per use, breakdown, smoking, explosion (room crash), repair by handymen,
-  replacement and upgrade (`entities/machine.lua`, `dialogs/machine_dialog.lua`, `resizables/machine_menu.lua`).
+- Machines: replacement and upgrade, the machine window, the repair announcement and the invulnerable machines cheat
+  (`entities/machine.lua`, `dialogs/machine_dialog.lua`, `resizables/machine_menu.lua`). Strength, wear per use,
+  smoking, explosion (room crash) and repair by handymen are done (`Machines`, `HandymanBehaviour`).
 - Object state: plants being watered, bins filling (`plant.lua`, `bin.lua`), litter being swept and the
   "need a handyman" advice. Plants drooping (`PlantState`), radiators heating tiles, litter (`Litter`, its ranks)
   and patients dropping rubbish (`Littering`) are done.
@@ -66,8 +67,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   waiting patients, emergencies, fatigue), unless another waiting room scores better for them; there is no call
   queue object, specialists' bonus, calling staff out of other rooms (`staff_allowed_to_move`) or dispatching of
   handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
-- Handyman: sweeping litter and vomit, watering plants, repairing machines, task priorities
-  (`entities/humanoids/staff/handyman.lua`, `humanoid_actions/sweep_floor.lua`).
+- Handyman: the staff window's task priorities (`entities/humanoids/staff/handyman.lua`); sweeping, watering and
+  repairing machines are done.
 - Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
   policy's automatic raise and quitting are in `StaffEmployment`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue

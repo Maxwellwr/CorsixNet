@@ -152,7 +152,8 @@ public static class RoomVisits
 
         var ready = surgeons.Count == 2 && surgeons.All(s => s is { Type: HumanoidType.Surgeon, Behaviour: DoctorBehaviour { Phase: DoctorPhase.OtReady } });
         room.StaffPresent = surgeons.Count == 2 && surgeons.All(s => room.Area.Contains(s.Tile) && s.Behaviour is DoctorBehaviour { Phase: not DoctorPhase.WalkingToRoom });
-        if (!ready || room.PatientId != 0 || queue is not { Count: > 0 } || simulation.FindEntity(room.DoorId) is not RoomDoor door)
+        if (!ready || room.PatientId != 0 || queue is not { Count: > 0 } || HandymanBehaviour.IsRepairingIn(simulation, room)
+            || simulation.FindEntity(room.DoorId) is not RoomDoor door)
         {
             return;
         }
@@ -1020,7 +1021,7 @@ public static class RoomVisits
     private static void TryAdvanceQueue(Simulation simulation, Room room)
     {
         if (room.DoorQueue is not { Count: > 0 } queue || room.PatientId != 0 || !room.StaffPresent
-            || simulation.FindEntity(room.DoorId) is not RoomDoor door)
+            || HandymanBehaviour.IsRepairingIn(simulation, room) || simulation.FindEntity(room.DoorId) is not RoomDoor door)
         {
             return;
         }

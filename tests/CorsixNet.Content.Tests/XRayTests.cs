@@ -23,6 +23,9 @@ public class XRayTests
         // The default rules have every room from the start, as a level where the X-ray has been researched.
         var simulation = NewStaffedHospital(weakDoctor: true);
         var room = BuildXRay(simulation);
+
+        // A handyman keeps the machine repaired; without one it wears out and explodes (Machine:machineUsed).
+        Run(simulation, new HireStaffCommand(StaffClass.Handyman, 0, new(14, 15)));
         var hospital = simulation.Hospitals[0];
         var scanned = new HashSet<int>();
         var backAtGp = new HashSet<int>();

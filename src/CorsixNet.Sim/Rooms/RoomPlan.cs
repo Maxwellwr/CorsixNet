@@ -381,7 +381,7 @@ public static class RoomBuilder
     /// <summary>Whether <paramref name="player"/> may confirm the room: it is theirs, still being built and has everything it needs.</summary>
     public static bool CanConfirm(Simulation simulation, Room room, int player)
     {
-        return !room.IsActive && !room.IsClosing && IsOwnedBy(simulation.Map, room, player) && MissingObjects(simulation, room).Count == 0;
+        return !room.IsActive && !room.IsClosing && !room.IsCrashed && IsOwnedBy(simulation.Map, room, player) && MissingObjects(simulation, room).Count == 0;
     }
 
     /// <summary>
