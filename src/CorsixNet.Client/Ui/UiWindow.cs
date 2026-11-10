@@ -133,6 +133,13 @@ internal abstract class UiWindow
     /// </summary>
     public virtual bool IsPinned => false;
 
+    /// <summary>
+    /// Where the window first opens, as CorsixTH's <c>Window:setDefaultPosition</c>: for each of x and y a negative value
+    /// is pixels from the right or bottom edge, a value from 0 up to 1 a share of the free space (0.5 centres it) and
+    /// 1 or more pixels from the left or top. Null cascades it from the top left as the other windows.
+    /// </summary>
+    public virtual Vector2? DefaultPosition => null;
+
     /// <summary>Whether the window has nothing more to show, such as a patient who has gone home; it is closed then.</summary>
     public virtual bool IsDone(IWindowHost host) => false;
 

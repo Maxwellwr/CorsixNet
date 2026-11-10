@@ -58,7 +58,11 @@ internal sealed class WindowLayer
         }
 
         var step = _open.Count % 8;
-        _open.Add(new OpenWindow(window) { Position = Origin + new Point(step * CascadeStep, step * CascadeStep) });
+        _open.Add(new OpenWindow(window)
+        {
+            Position = Origin + new Point(step * CascadeStep, step * CascadeStep),
+            Placed = window.DefaultPosition is null,
+        });
     }
 
     /// <summary>Opens the window, or closes it if one of its kind is open already (the dialogs' hotkeys).</summary>
@@ -304,6 +308,18 @@ internal sealed class WindowLayer
 
         var maxScroll = Math.Max(0, rows.Count - visibleRows);
         open.Scroll = Math.Clamp(open.Scroll, 0, maxScroll);
+        if (!open.Placed)
+        {
+            // The first layout knows the window's size, which a default position from the right or bottom needs.
+            open.Placed = true;
+            var wanted = open.Window.DefaultPosition!.Value;
+            // Kept clear of the bottom panel, which CorsixTH draws over the map's bottom middle.
+            var panel = _open.Where(other => other.Window.IsPinned && other.Layout is not null).Sum(other => other.Layout!.Bounds.Height);
+            open.Position = new Point(
+                Place(wanted.X, screen.X, screen.Width, width),
+                Place(wanted.Y, screen.Y, Math.Max(height, screen.Height - panel), height));
+        }
+
         var x = Math.Clamp(open.Position.X, screen.X, Math.Max(screen.X, screen.Right - width));
         var y = Math.Clamp(open.Position.Y, screen.Y, Math.Max(screen.Y, screen.Bottom - height));
         open.Position = new Point(x, y);
@@ -334,6 +350,14 @@ internal sealed class WindowLayer
         return new WindowLayout(bounds, titleBar, close, title, cells, visibleRows, maxScroll, canvasArea);
     }
 
+    /// <summary>One coordinate of CorsixTH's <c>Window:setPosition</c> within an area from <paramref name="start"/>.</summary>
+    private static int Place(float value, int start, int area, int size) => value switch
+    {
+        < 0 => start + (int)MathF.Ceiling(area - size + value),
+        < 1 => start + (int)MathF.Floor(((area - size) * value) + 0.5f),
+        _ => start + (int)value,
+    };
+
     private int CellWidth(WindowCell cell) => _measure(cell.Text) + (cell.IsButton ? 12 : 0);
 
     private sealed class OpenWindow(UiWindow window)
@@ -341,6 +365,9 @@ internal sealed class WindowLayer
         public UiWindow Window { get; } = window;
 
         public Point Position { get; set; }
+
+        /// <summary>Whether <see cref="Position"/> is set; false until a window with a default position is laid out.</summary>
+        public bool Placed { get; set; }
 
         public int Scroll { get; set; }
 
