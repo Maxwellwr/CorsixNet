@@ -43,6 +43,19 @@ public enum HumanoidType : byte
 
     /// <summary>The health inspector, after an epidemic's cover-up (CorsixTH's "Inspector").</summary>
     Inspector = 10,
+
+    /// <summary>
+    /// CorsixTH's "Stripped Male Patient 2" and "3": they look like <see cref="StrippedMalePatient"/>, but some machines
+    /// (the scanner, the cardiogram) have animations of their own for each (<c>use_screen.lua</c> picks one of the three).
+    /// </summary>
+    StrippedMalePatient2 = 11,
+
+    StrippedMalePatient3 = 12,
+
+    /// <summary>CorsixTH's "Stripped Female Patient 2" and "3".</summary>
+    StrippedFemalePatient2 = 13,
+
+    StrippedFemalePatient3 = 14,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
