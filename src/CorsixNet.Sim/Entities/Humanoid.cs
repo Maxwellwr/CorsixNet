@@ -82,6 +82,15 @@ public enum HumanoidType : byte
 
     /// <summary>CorsixTH's "Alternate Male Patient": a man in casts and bandages (diseases/fractured_bones.lua).</summary>
     AlternateMalePatient = 21,
+
+    /// <summary>
+    /// CorsixTH's "Alien Male Patient" (diseases/alien_dna.lua): a man with alien DNA, with walking animations of his own
+    /// and a standard man's everywhere else, until the DNA fixer turns him into one.
+    /// </summary>
+    AlienMalePatient = 22,
+
+    /// <summary>CorsixTH's "Alien Female Patient": walks like the alien man, a standard woman's animations elsewhere.</summary>
+    AlienFemalePatient = 23,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -198,6 +207,19 @@ public sealed class Humanoid : Entity
 
     /// <summary>The tile whose drawing pass draws <see cref="ActionAnimation"/>.</summary>
     public TilePosition ActionDrawTile { get; private set; }
+
+    /// <summary>
+    /// The animation <see cref="ActionAnimation"/> morphs into, or null (use_object.lua's <c>{"morph", A, B}</c> and
+    /// CorsixTH's <c>setMorph</c>): drawn below a line that rises from the bottom of both over
+    /// <see cref="MorphRounds"/> times the shorter one's frames.
+    /// </summary>
+    public AnimationRef? MorphAnimation { get; private set; }
+
+    /// <summary>Whether <see cref="MorphAnimation"/> is drawn mirrored.</summary>
+    public bool MorphFlip { get; private set; }
+
+    /// <summary>How many times over the shorter animation's frames the morph takes (the animation's <c>length</c>).</summary>
+    public int MorphRounds { get; private set; }
 
     /// <summary>
     /// The object the humanoid is using, which is not drawn on its own meanwhile: the use animation
@@ -360,6 +382,15 @@ public sealed class Humanoid : Entity
         ActionAnimationTile = tile;
         ActionDrawTile = drawTile;
         HiddenObjectId = hiddenObject;
+        MorphAnimation = null;
+    }
+
+    /// <summary>Makes the current <see cref="ActionAnimation"/> morph into <paramref name="into"/> (<c>setMorph</c>).</summary>
+    internal void SetMorph(AnimationRef into, bool flip, int rounds)
+    {
+        MorphAnimation = into;
+        MorphFlip = flip;
+        MorphRounds = rounds;
     }
 
     /// <summary>Sets the variant of one animation layer (CorsixTH's <c>setLayer</c>).</summary>
@@ -370,6 +401,7 @@ public sealed class Humanoid : Entity
     {
         ActionAnimation = null;
         HiddenObjectId = 0;
+        MorphAnimation = null;
     }
 
     public override void Update(Simulation simulation)
@@ -730,6 +762,12 @@ public sealed class Humanoid : Entity
             humanoid.ActionAnimationTile = reader.ReadTile();
             humanoid.ActionDrawTile = reader.ReadTile();
             humanoid.HiddenObjectId = reader.ReadInt32();
+            if (reader.Version is 0 or >= 72 && reader.ReadBool())
+            {
+                humanoid.MorphAnimation = new AnimationRef(reader.ReadInt32(), reader.ReadInt32());
+                humanoid.MorphFlip = reader.ReadBool();
+                humanoid.MorphRounds = reader.ReadInt32();
+            }
         }
 
         humanoid.Behaviour = HumanoidBehaviour.Read(reader);
@@ -788,6 +826,14 @@ public sealed class Humanoid : Entity
             writer.WriteTile(ActionAnimationTile);
             writer.WriteTile(ActionDrawTile);
             writer.WriteInt32(HiddenObjectId);
+            writer.WriteBool(MorphAnimation is not null);
+            if (MorphAnimation is { } morph)
+            {
+                writer.WriteInt32(morph.Id);
+                writer.WriteInt32(morph.Length);
+                writer.WriteBool(MorphFlip);
+                writer.WriteInt32(MorphRounds);
+            }
         }
 
         HumanoidBehaviour.Write(writer, Behaviour);
@@ -860,6 +906,25 @@ public sealed class Humanoid : Entity
             layers[0] = 12;
             layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
             return new Humanoid(id, tile, HumanoidType.SlackMalePatient, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
+        if (look == PatientLook.Alien)
+        {
+            // alien_dna.lua: a man with 5 heads and alternate shoes, or a woman (heads 2 to 4); clothes for both.
+            if (random.NextInclusive(0, 1) == 0)
+            {
+                type = HumanoidType.AlienMalePatient;
+                layers[0] = (byte)(random.NextInclusive(1, 5) * 2);
+                layers[2] = (byte)(random.NextInclusive(0, 1) * 2);
+            }
+            else
+            {
+                type = HumanoidType.AlienFemalePatient;
+                layers[0] = (byte)(random.NextInclusive(2, 4) * 2);
+            }
+
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            return new Humanoid(id, tile, type, layers) { HospitalPlayer = hospitalPlayer };
         }
 
         if (look == PatientLook.BloatyHead)

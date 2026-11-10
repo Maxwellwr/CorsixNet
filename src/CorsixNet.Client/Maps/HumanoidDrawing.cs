@@ -38,6 +38,8 @@ internal sealed class HumanoidDrawing
         [HumanoidType.SlackFemalePatient] = (0, 2, 8, 10),
         [HumanoidType.ChewbaccaPatient] = (858, 860, 866, 868),
         [HumanoidType.AlternateMalePatient] = (2704, 2706, 2712, 2714),
+        [HumanoidType.AlienMalePatient] = (3598, 3600, 3606, 3608),
+        [HumanoidType.AlienFemalePatient] = (3598, 3600, 3606, 3608),
         [HumanoidType.GownedMalePatient] = (406, 408, 414, 416),
         [HumanoidType.GownedFemalePatient] = (2876, 2878, 2884, 2886),
         [HumanoidType.Vip] = (266, 268, 274, 276),
@@ -148,6 +150,34 @@ internal sealed class HumanoidDrawing
         }
 
         var tile = humanoid.ActionAnimationTile;
-        _renderer.DrawFrame(batch, frame, 32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y), layers, humanoid.ActionAnimationFlip);
+        int x = 32 * (tile.X - tile.Y), y = 16 * (tile.X + tile.Y);
+        if (humanoid.MorphAnimation is { } into)
+        {
+            DrawMorph(batch, humanoid, action, into, frame, elapsed, x, y, layers);
+            return;
+        }
+
+        _renderer.DrawFrame(batch, frame, x, y, layers, humanoid.ActionAnimationFlip);
+    }
+
+    /// <summary>
+    /// CorsixTH's morph (<c>animation::set_morph_target</c>, <c>tick</c> and <c>draw_morph</c>): a line starts at the
+    /// bottom of both animations and rises a little each tick, reaching their top after the shorter one's frames times the
+    /// rounds; the animation is drawn above it and the one it turns into below it.
+    /// </summary>
+    private void DrawMorph(SpriteBatch batch, Humanoid humanoid, AnimationRef action, AnimationRef into, int frame, long elapsed, int x, int y, ReadOnlySpan<byte> layers)
+    {
+        var set = _renderer.Animations;
+        var (originalFrames, originalMinY, originalMaxY) = _renderer.Extent(action.Id, layers);
+        var (morphFrames, morphMinY, morphMaxY) = _renderer.Extent(into.Id, layers);
+        var duration = Math.Max(1, Math.Min(morphFrames, originalFrames) * Math.Max(1, humanoid.MorphRounds));
+        var top = Math.Min(originalMinY, morphMinY);
+        var bottom = Math.Max(originalMaxY, morphMaxY);
+        var speed = (top - bottom - duration + 1) / duration;
+        var line = (int)Math.Max(top, bottom + (Math.Min(elapsed, duration + 1) * speed));
+
+        _renderer.DrawFrameRows(batch, frame, x, y, layers, humanoid.ActionAnimationFlip, y + top, y + line);
+        // The animation turned into is not ticked: its first frame shows throughout.
+        _renderer.DrawFrameRows(batch, set.FirstFrame(into.Id), x, y, layers, humanoid.MorphFlip, y + line, y + bottom);
     }
 }

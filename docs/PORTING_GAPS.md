@@ -15,7 +15,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Missing | CorsixTH source |
 |---|---|
 | Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); the VIP's visit to the ward; in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
-| Treatment rooms: DNA fixer; the jelly wobble effect (the jelly vat itself is done) | `rooms/dna_fixer.lua`, `th_gfx_sdl.cpp` |
+| Treatment rooms: the jelly wobble effect (the jelly vat and the DNA fixer are done); alien death animations | `th_gfx_sdl.cpp`, `entities/humanoid.lua` |
 | Facilities: (the staff room and training room are done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Editing a finished room back to the blueprint (resize, move the door), destroyed rooms after an explosion (editing objects and taking a room down for half its cost are done) | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |

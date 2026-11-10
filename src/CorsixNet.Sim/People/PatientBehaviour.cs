@@ -2030,6 +2030,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                         Use = ObjectUse.Start(simulation, humanoid, machine);
                         doctorBehaviour.StartShield(simulation, doctor, room);
                     }
+                    else if (string.Equals(room.RoomType, RoomVisits.DnaFixerRoom, StringComparison.Ordinal))
+                    {
+                        // DNAFixerRoom:commandEnteringPatient: once both idle, the alien becomes the standard patient they
+                        // turn into (setType(change_into), as the fixer's animations are the standard patients'), uses the
+                        // fixer once (setProlongedUsage(false)) and the researcher works the console meanwhile.
+                        humanoid.Type = humanoid.Type == HumanoidType.AlienFemalePatient ? HumanoidType.StandardFemalePatient : HumanoidType.StandardMalePatient;
+                        Use = ObjectUse.Start(simulation, humanoid, machine, prolonged: false);
+                        doctorBehaviour.StartShield(simulation, doctor, room);
+                    }
                     else if (string.Equals(room.RoomType, RoomVisits.HairRestorationRoom, StringComparison.Ordinal))
                     {
                         // HairRestorationRoom's loop callback ends the use at the first round: sit down, the cap comes down,
