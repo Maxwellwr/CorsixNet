@@ -20,6 +20,9 @@ public enum PatientLook : byte
 
     /// <summary>A man in casts (<c>diseases/fractured_bones.lua</c>; women are off by CorsixTH's default).</summary>
     FracturedBones,
+
+    /// <summary>An alien man or woman (<c>diseases/alien_dna.lua</c>).</summary>
+    Alien,
 }
 
 /// <summary>

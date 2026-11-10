@@ -50,6 +50,47 @@ internal sealed class AnimationRenderer : IDisposable
     /// <summary>Draws a frame tinted by <paramref name="tint"/> (premultiplied), for example semi-transparent for previews.</summary>
     public void DrawFrame(SpriteBatch batch, int frame, int x, int y, ReadOnlySpan<byte> layers, bool flipHorizontally, Color tint)
     {
+        DrawFrame(batch, frame, x, y, layers, flipHorizontally, tint, int.MinValue, int.MaxValue);
+    }
+
+    /// <summary>
+    /// Draws only the rows of a frame from <paramref name="top"/> down to before <paramref name="bottom"/> (world
+    /// coordinates), as CorsixTH's morph clips each of its two animations (<c>animation::draw_morph</c>).
+    /// </summary>
+    public void DrawFrameRows(SpriteBatch batch, int frame, int x, int y, ReadOnlySpan<byte> layers, bool flipHorizontally, int top, int bottom)
+    {
+        DrawFrame(batch, frame, x, y, layers, flipHorizontally, Color.White, top, bottom);
+    }
+
+    /// <summary>
+    /// <c>GetAnimationDurationAndExtent</c>: how many frames an animation has and the highest and lowest rows any of them
+    /// covers, relative to the anchor (the bottom one past the last row, plus one as <c>get_frame_extent</c> counts it).
+    /// </summary>
+    public (int Frames, int MinY, int MaxY) Extent(int animation, ReadOnlySpan<byte> layers)
+    {
+        var first = Animations.FirstFrame(animation);
+        var frames = Animations.Length(first);
+        int minY = int.MaxValue, maxY = int.MinValue;
+        for (var i = 0; i < frames; i++)
+        {
+            foreach (var element in Animations.Elements(Animations.Advance(first, i)))
+            {
+                var height = _sprites.HeightOf(element.Sprite);
+                if ((element.LayerId != 0 && (element.Layer >= layers.Length ? 0 : layers[element.Layer]) != element.LayerId) || height == 0)
+                {
+                    continue;
+                }
+
+                minY = Math.Min(minY, element.Y);
+                maxY = Math.Max(maxY, element.Y + height + 1);
+            }
+        }
+
+        return (frames, minY, maxY);
+    }
+
+    private void DrawFrame(SpriteBatch batch, int frame, int x, int y, ReadOnlySpan<byte> layers, bool flipHorizontally, Color tint, int top, int bottom)
+    {
         foreach (var element in Animations.Elements(frame))
         {
             if (!IsVisible(element, layers))
@@ -85,7 +126,14 @@ internal sealed class AnimationRenderer : IDisposable
             var elementTint = (flags & Alpha50) != 0 ? tint * 0.5f
                 : (flags & Alpha75) != 0 ? tint * 0.25f
                 : tint;
-            _sprites.Draw(batch, element.Sprite, new Vector2(left, y + element.Y), elementTint, effects);
+            if (top == int.MinValue && bottom == int.MaxValue)
+            {
+                _sprites.Draw(batch, element.Sprite, new Vector2(left, y + element.Y), elementTint, effects);
+            }
+            else
+            {
+                _sprites.DrawRows(batch, element.Sprite, new Vector2(left, y + element.Y), elementTint, effects, top, bottom);
+            }
         }
     }
 

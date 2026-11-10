@@ -35,7 +35,7 @@ public class BaseGameContentTests
         var machines = BaseGameContent.Create().Objects.Select(o => o.Machine).OfType<MachineDefinition>().ToList();
         var animations = machines.SelectMany(m => m.Repair.All.Append(m.Smoke).Append(m.Crashed)).Distinct().ToList();
 
-        Assert.Equal(13, machines.Count);
+        Assert.Equal(14, machines.Count);
         foreach (var animation in animations)
         {
             Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);

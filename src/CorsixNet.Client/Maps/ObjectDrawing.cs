@@ -60,6 +60,7 @@ internal sealed class ObjectDrawing
         ["slicer"] = new() { [N] = 1386, [S] = 1386 },
         ["hair_restorer"] = new() { [N] = 2070, [S] = 2070 },
         ["jelly_moulder"] = new() { [N] = 1302, [S] = 1302 },
+        ["dna_fixer"] = new() { [N] = 3840, [S] = 3840 },
         ["electrolyser"] = new() { [N] = 1262, [S] = 1262 },
         ["cast_remover"] = new() { [N] = 2492, [S] = 2492 },
         ["pool_table"] = new() { [N] = 2130, [S] = 2130 },

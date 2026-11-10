@@ -78,8 +78,15 @@ public static class RoomVisits
         [BloodMachineRoom] = "blood_machine",
         [DecontaminationRoom] = "shower",
         [JellyVatRoom] = "jelly_moulder",
+        [DnaFixerRoom] = "dna_fixer",
         [ResearchRoom] = "autopsy",
     };
+
+    /// <summary>
+    /// The DNA fixer's room type (rooms/dna_fixer.lua): the patient uses the DNA fixer alone while a researcher works the
+    /// console, as in the scanner room.
+    /// </summary>
+    internal const string DnaFixerRoom = "dna_fixer";
 
     /// <summary>The decontamination room's type (rooms/decontamination.lua), the treatment of serious radiation.</summary>
     internal const string DecontaminationRoom = "decontamination";
@@ -91,7 +98,7 @@ public static class RoomVisits
     internal static string? DoctorConsole(string roomType) => roomType switch
     {
         XRayRoom => "radiation_shield",
-        DecontaminationRoom or ScannerRoom or HairRestorationRoom or ElectrolysisRoom => "console",
+        DecontaminationRoom or ScannerRoom or HairRestorationRoom or ElectrolysisRoom or DnaFixerRoom => "console",
         _ => null,
     };
 
@@ -236,6 +243,7 @@ public static class RoomVisits
         [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
         [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
         [JellyVatRoom] = (BehaviourKind.Doctor, "jelly_moulder"),
+        [DnaFixerRoom] = (BehaviourKind.Doctor, "dna_fixer"),
         [ResearchRoom] = (BehaviourKind.Doctor, "autopsy"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),
         [WardRoom] = (BehaviourKind.Nurse, "bed"),
@@ -378,7 +386,7 @@ public static class RoomVisits
     {
         PsychRoom => staff.Profile is { IsPsychiatrist: true },
         OperatingTheatreRoom => staff.Profile is { IsSurgeon: true },
-        ResearchRoom => staff.Profile is { IsResearcher: true },
+        ResearchRoom or DnaFixerRoom => staff.Profile is { IsResearcher: true },
         _ => true,
     };
 

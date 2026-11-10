@@ -95,11 +95,27 @@ public sealed record UseAnimations(AnimationRef? Begin, IReadOnlyList<AnimationR
     /// <summary>The third to fifth begin and finish animations, which few objects have (the scanner).</summary>
     public MoreUseAnimations? More { get; init; }
 
+    /// <summary>What the in-use animation morphs into, if it is a morph (the DNA fixer's <c>{"morph", A, B}</c>).</summary>
+    public UseMorph? Morph { get; init; }
+
+    /// <summary>Whether the finish animation is mirrored once more (<c>finish_use</c>'s <c>mirror = true</c>).</summary>
+    public bool FlipFinish { get; init; }
+
     /// <summary>Every animation the use may play.</summary>
     public IEnumerable<AnimationRef> All =>
-        new[] { Begin, Begin2, More?.Begin3, More?.Begin4, More?.Begin5, Finish, Finish2, More?.Finish3, More?.Finish4, More?.Finish5 }
+        new[] { Begin, Begin2, More?.Begin3, More?.Begin4, More?.Begin5, Finish, Finish2, More?.Finish3, More?.Finish4, More?.Finish5, Morph?.Into }
             .OfType<AnimationRef>().Concat(InUse);
 }
+
+/// <summary>
+/// An in-use animation that morphs into another (use_object.lua's <c>{"morph", A, B, mirror_morph, object_visible,
+/// length}</c>): the in-use animation is A; the use lasts <paramref name="Rounds"/> times <paramref name="Into"/>'s frames.
+/// </summary>
+/// <param name="Into">The animation it turns into (B).</param>
+/// <param name="Rounds">The <c>length</c>: how many times B's frames the morph lasts.</param>
+/// <param name="FlipInto">Whether B is mirrored against A (<c>mirror_morph</c>).</param>
+/// <param name="ObjectVisible">Whether the object is drawn meanwhile (<c>object_visible</c>).</param>
+public sealed record UseMorph(AnimationRef Into, int Rounds, bool FlipInto = false, bool ObjectVisible = false);
 
 /// <summary>An object's <c>begin_use_3</c> to <c>begin_use_5</c> and <c>finish_use_3</c> to <c>finish_use_5</c>.</summary>
 public sealed record MoreUseAnimations(
@@ -168,7 +184,16 @@ public sealed record ObjectDefinition(
     /// The kind of humanoid whose animations another borrows where an object has none for it: CorsixTH's "Slack Female
     /// Patient" has a standard woman's everywhere but the scanner and the slicer.
     /// </summary>
-    public static HumanoidType? LooksLike(HumanoidType type) => type == HumanoidType.SlackFemalePatient ? HumanoidType.StandardFemalePatient : null;
+    /// <remarks>
+    /// Aliens have a standard patient's animations at every object (CorsixTH copies them as "TEMP" entries), so they
+    /// look like one while sitting or drinking, as in the original.
+    /// </remarks>
+    public static HumanoidType? LooksLike(HumanoidType type) => type switch
+    {
+        HumanoidType.SlackFemalePatient or HumanoidType.AlienFemalePatient => HumanoidType.StandardFemalePatient,
+        HumanoidType.AlienMalePatient => HumanoidType.StandardMalePatient,
+        _ => null,
+    };
 
     /// <summary>
     /// The animation variants for <paramref name="primary"/> using the object facing <paramref name="orientation"/> with

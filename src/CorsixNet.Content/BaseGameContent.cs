@@ -1115,6 +1115,50 @@ public static class BaseGameContent
         LevelConfigId: 23,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>
+    /// The DNA fixer (objects/machines/dna_fixer.lua): the patient, made a standard one first, steps in, morphs from the
+    /// alien into the standard patient, and steps out; the researcher works the console meanwhile. CorsixTH has no
+    /// handyman animations for it, so a repair is over at once.
+    /// </summary>
+    public static readonly ObjectDefinition DnaFixer = new(
+        "dna_fixer",
+        "DNA Fixer",
+        ObjectType: 23,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-2, -1, CompleteCell), new(-1, -1, CompleteCell), new(0, -1),
+                    new(-2, 0, CompleteCell), new(-1, 0), new(0, 0, NeedSouthSide),
+                    new(-1, 1, UsePosition),
+                ]),
+            [Direction.East] = new(
+                [
+                    new(-1, -2, CompleteCell), new(0, -2, CompleteCell),
+                    new(-1, -1, CompleteCell), new(0, -1, CompleteCell),
+                    new(-1, 0), new(0, 0),
+                    new(1, -1, UsePosition),
+                ]),
+        },
+        UsageNorth: DnaFixerUse(),
+        UsageSouth: DnaFixerUse(),
+        Machine: new(new(3376, 1), new(3444, 4), new(null, [], null)));
+
+    /// <summary>
+    /// The DNA fixer room (rooms/dna_fixer.lua): the treatment of alien DNA, staffed by a researcher, with swing doors
+    /// as aliens have no animations for normal ones.
+    /// </summary>
+    public static readonly RoomDefinition DnaFixerRoom = new(
+        "dna_fixer",
+        "DNA Fixer",
+        MinimumSize: 5,
+        FloorSprite: 17,
+        BlueWalls,
+        NeededObjects: new Dictionary<string, int> { ["dna_fixer"] = 1, ["console"] = 1 },
+        LevelConfigId: 23,
+        AdditionalObjects: AdditionalRoomObjects,
+        SwingDoors: true);
+
     /// <summary>The cast remover (objects/machines/cast_remover.lua): the nurse holds the bucket while it takes the casts off.</summary>
     public static readonly ObjectDefinition CastRemover = new(
         "cast_remover",
@@ -1244,16 +1288,21 @@ public static class BaseGameContent
         [HumanoidType.SlackMalePatient] = new(Entering: new(1526, 10), Leaving: new(1524, 12)),
         [HumanoidType.ChewbaccaPatient] = new(Entering: new(3528, 10), Leaving: new(3526, 12)),
         [HumanoidType.AlternateMalePatient] = new(Entering: new(2750, 10), Leaving: new(2748, 12)),
+
+        // Aliens have no door animations: a standard patient's show them going through a door, and they have swing door
+        // animations of their own (3628, 3626).
+        [HumanoidType.AlienMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12), EnteringSwing: new(3628, 6), LeavingSwing: new(3626, 9)),
+        [HumanoidType.AlienFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(3628, 6), LeavingSwing: new(3626, 9)),
         [HumanoidType.Doctor] = new(Entering: new(672, 10), Leaving: new(670, 12), EnteringSwing: new(4752, 6), LeavingSwing: new(4750, 5)),
         [HumanoidType.Nurse] = new(Entering: new(3266, 10), Leaving: new(3264, 12), EnteringSwing: new(3274, 6), LeavingSwing: new(3272, 7)),
         [HumanoidType.Handyman] = new(Entering: new(3288, 10), Leaving: new(3286, 12), EnteringSwing: new(3520, 6), LeavingSwing: new(3518, 9)),
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration, Electrolysis, FractureClinic, JellyVat, Training],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration, Electrolysis, FractureClinic, JellyVat, Training, DnaFixerRoom],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer, Electrolyser, CastRemover, JellyMoulder, LectureChair, Projector],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer, Electrolyser, CastRemover, JellyMoulder, LectureChair, Projector, DnaFixer],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1577,6 +1626,25 @@ public static class BaseGameContent
     /// electrolyser.lua's standard patients (the hairy one becomes one as the use starts): on the machine, electrocuted
     /// (looped), sparking, the hair falling off, off the machine.
     /// </summary>
+    /// <summary>
+    /// dna_fixer.lua's animations for the standard patients: stepping in (3614), the morph from the alien (3594) into the
+    /// standard patient (3618 men, 1150 women, mirrored) over 10 times its frame with the machine drawn too, and stepping
+    /// out mirrored.
+    /// </summary>
+    private static Dictionary<HumanoidType, UseAnimations> DnaFixerUse() => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(new(3614, 28), [new(3594, 1)], new(3622, 9))
+        {
+            Morph = new(new(3618, 1), Rounds: 10, FlipInto: true, ObjectVisible: true),
+            FlipFinish = true,
+        },
+        [HumanoidType.StandardFemalePatient] = new(new(3614, 28), [new(3594, 1)], new(1154, 9))
+        {
+            Morph = new(new(1150, 1), Rounds: 10, FlipInto: true, ObjectVisible: true),
+            FlipFinish = true,
+        },
+    };
+
     private static Dictionary<HumanoidType, UseAnimations> ElectrolyserUse() => new()
     {
         [HumanoidType.StandardMalePatient] = new(new(1266, 24), [new(1274, 3)], new(1278, 10), Finish2: new(1286, 13)) { More = new(Finish3: new(1294, 16)) },

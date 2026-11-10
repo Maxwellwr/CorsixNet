@@ -263,11 +263,16 @@ Next, in this order (2026-11-10):
    with unhappy staff) for AutopsyRepHitPercent of the reputation, and the patient is gone without counting as a death.
    Not yet: the advice, the patient's idea mood. Faces done: `StaffFaces` draws drawFace's hair, face and chin from
    QDATA/FACE01V (65x1350, main palette; greyscale like the original) in the hire window (click a name to pick whose
-   portrait shows) and the staff window. The list is done; the DNA fixer is for a separate thread.
-   The DNA fixer (rooms/dna_fixer.lua) needs more than the other rooms: its in-use animation is a "morph" from the
-   alien (3594) into the standard patient (3618 men, 1150 women, mirrored), which the client cannot draw yet; it is
-   staffed by a researcher; aliens have no normal door animations and come only by emergency (CorsixTH's
-   alien_dna_only_by_emergency), through swing doors (3626/3628). The jelly vat has its own morph too.
+   portrait shows) and the staff window. The list is done. DNA fixer done (save format 72): aliens
+   (`HumanoidType.AlienMalePatient`/`AlienFemalePatient`, `PatientLook.Alien`) walk with their own animations, use a
+   standard patient's at every object (`ObjectDefinition.LooksLike`) and at normal doors, and have swing door ones
+   (3628/3626); they come only by emergency (`OnlyEmergency`, already there). The room (`RoomVisits.DnaFixerRoom`)
+   takes only a researcher (`IsQualifiedFor`), who works the console while the patient, made the standard patient
+   they turn into, uses the fixer once. Morphs: `UseAnimations.Morph` (`UseMorph`: into, rounds, mirrored, object
+   visible) and `FlipFinish`; `Humanoid.MorphAnimation` is saved; the client draws CorsixTH's draw_morph (a line
+   rising from the bottom of both animations; `AnimationRenderer.Extent`, `DrawFrameRows`, `SpriteAtlas.DrawRows`).
+   Seen live with `--load` + `--script`. Not yet: the alien death animations (4882/4886), "needs a researcher"
+   advice for the room, the fixer's `early_list` draw order, the jelly vat's morph.
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to
@@ -280,8 +285,7 @@ Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  DNA fixer, jelly vat, staff
-  room, training room.
+  jelly vat, staff room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and
   explosions without repairs would only do harm.
 - Benches (sitting animations), the death animation, staff yawning and checking their watch, staff

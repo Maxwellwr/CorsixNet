@@ -27,6 +27,7 @@ public static class DiseaseCatalog
         {
             EmergencyNumber = 16,
             VisualsId = 6,
+            Look = PatientLook.Alien,
             OnlyEmergency = true,
             TreatmentRooms = ["dna_fixer"],
         },

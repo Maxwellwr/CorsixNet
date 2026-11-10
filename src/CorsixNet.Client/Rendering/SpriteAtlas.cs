@@ -114,6 +114,33 @@ internal sealed class SpriteAtlas : IDisposable
         batch.Draw(_pages[page], position, source, tint, 0, Vector2.Zero, 1f / Scale, effects, 0);
     }
 
+    /// <summary>
+    /// Draws the rows of sprite <paramref name="index"/>, placed with its top-left corner at <paramref name="position"/>,
+    /// that lie from <paramref name="top"/> down to before <paramref name="bottom"/> (world coordinates).
+    /// </summary>
+    public void DrawRows(SpriteBatch batch, int index, Vector2 position, Color tint, SpriteEffects effects, int top, int bottom)
+    {
+        if (!IsValid(index) || Sheet[index].IsEmpty)
+        {
+            return;
+        }
+
+        var height = Sheet[index].Height;
+        var y = (int)position.Y;
+        var first = Math.Max(0, top - y);
+        var last = Math.Min(height, bottom - y);
+        if (first >= last)
+        {
+            return;
+        }
+
+        // Rows of the source counted from its top; a vertically flipped sprite shows them the other way up.
+        var sourceFirst = (effects & SpriteEffects.FlipVertically) != 0 ? height - last : first;
+        var (page, source) = _entries[index];
+        var part = new Rectangle(source.X, source.Y + (sourceFirst * Scale), source.Width, (last - first) * Scale);
+        batch.Draw(_pages[page], new Vector2(position.X, y + first), part, tint, 0, Vector2.Zero, 1f / Scale, effects, 0);
+    }
+
     /// <summary>Draws the part of a sprite placed at (<paramref name="x"/>, <paramref name="y"/>) that lies inside <paramref name="clip"/> (world coordinates).</summary>
     public void DrawClipped(SpriteBatch batch, int index, int x, int y, Rectangle clip, Color tint)
     {
