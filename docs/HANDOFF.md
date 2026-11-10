@@ -237,6 +237,10 @@ Next, in this order (2026-11-10):
    machine, loo, sink, screen, bench, the diagnosis machines). Then the rooms that need them: slack tongue, hair
    restoration, electrolysis, fracture clinic, DNA fixer, jelly vat; and psychiatry's king complex change.
 3. Training room, autopsies, the hire window's faces, machine wear and repairs.
+   The DNA fixer (rooms/dna_fixer.lua) needs more than the other rooms: its in-use animation is a "morph" from the
+   alien (3594) into the standard patient (3618 men, 1150 women, mirrored), which the client cannot draw yet; it is
+   staffed by a researcher; aliens have no normal door animations and come only by emergency (CorsixTH's
+   alien_dna_only_by_emergency), through swing doors (3626/3628). The jelly vat has its own morph too.
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to
