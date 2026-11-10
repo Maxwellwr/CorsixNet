@@ -629,7 +629,8 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary><c>XRayRoom:commandEnteringPatient</c>: both are ready, so the doctor sits at the radiation shield's console.</summary>
     internal void StartShield(Simulation simulation, Humanoid humanoid, Room room)
     {
-        if (Phase == DoctorPhase.AtTrolley && RoomId == room.Id && RoomVisits.FindObject(simulation, room.Id, "radiation_shield") is { } shield)
+        if (Phase == DoctorPhase.AtTrolley && RoomId == room.Id && RoomVisits.DoctorConsole(room.RoomType) is { } console
+            && RoomVisits.FindObject(simulation, room.Id, console) is { } shield)
         {
             Phase = DoctorPhase.UsingShield;
             Use = ObjectUse.Start(simulation, humanoid, shield);

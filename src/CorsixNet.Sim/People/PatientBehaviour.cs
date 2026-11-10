@@ -1897,6 +1897,17 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                         Use = ObjectUse.Start(simulation, humanoid, machine);
                         doctorBehaviour.StartShield(simulation, doctor, room);
                     }
+                    else if (string.Equals(room.RoomType, RoomVisits.DecontaminationRoom, StringComparison.Ordinal))
+                    {
+                        // DecontaminationRoom:commandEnteringPatient: length = math.random() * 3 - skill; under 1 the shower
+                        // is a short one without loops, else each loop takes one off length - 1 until none is left. The
+                        // doctor works the console meanwhile.
+                        var skill = (doctor.Profile?.Skill ?? 0) / (decimal)Staff.StaffProfile.MaxSkill;
+                        var length = (simulation.Random.Next(1_000_000) / 1_000_000m * 3) - skill;
+                        _machineRounds = length - 2;
+                        Use = ObjectUse.Start(simulation, humanoid, machine, prolonged: length >= 1);
+                        doctorBehaviour.StartShield(simulation, doctor, room);
+                    }
                     else if (string.Equals(room.RoomType, RoomVisits.BloodMachineRoom, StringComparison.Ordinal))
                     {
                         // BloodMachineRoom:commandEnteringPatient: the doctor uses the machine with the patient, who is in

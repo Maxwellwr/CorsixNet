@@ -206,14 +206,16 @@ Done and committed:
   until it is done. Not yet: the VIP's visit to the ward.
   The blood machine (blood_machine_room.lua; save format 63): the doctor works the machine at its use position with
   the patient hidden in its animations at the other end; `MultiObjectUse.InUseRounds` plays the in-use phase again
-  as a prolonged use (2 to 4 more times here). From 2026-11-10 the user lets threads merge their own green PRs.
+  as a prolonged use (2 to 4 more times here).
+  Decontamination (decontamination.lua, shower.lua, console.lua): the X-ray's flow with the console as the doctor's
+  station (`RoomVisits.DoctorConsole`); the shower lasts math.random() * 3 - skill (short without loops under 1). From 2026-11-10 the user lets threads merge their own green PRs.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
   scanner, cardiogram, operating theatre, fracture
-  clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination, staff
+  clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and
   explosions without repairs would only do harm.
