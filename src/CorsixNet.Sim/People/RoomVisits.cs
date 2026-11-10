@@ -93,7 +93,130 @@ public static class RoomVisits
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),
+        [WardRoom] = (BehaviourKind.Nurse, "bed"),
     };
+
+    /// <summary>The ward's room type (rooms/ward.lua): as many patients as beds and as many nurses as desks.</summary>
+    internal const string WardRoom = "ward";
+
+    /// <summary>
+    /// The ward's turn: call nurses until it has one for each desk (<c>WardRoom:roomFinished</c>'s
+    /// <c>maximum_staff</c>), note whether one of them is in, and let patients in while a bed is free.
+    /// </summary>
+    private static void UpdateWard(Simulation simulation, Room room)
+    {
+        var queue = EnsureQueue(simulation, room);
+        var nurses = WardNurses(simulation, room).ToList();
+        room.StaffPresent = nurses.Any(nurse => room.Area.Contains(nurse.Tile)
+            && nurse.Behaviour is NurseBehaviour { Phase: not NursePhase.WalkingToRoom });
+        if (room.StaffId != 0 && !nurses.Any(nurse => nurse.Id == room.StaffId))
+        {
+            room.StaffId = nurses.FirstOrDefault()?.Id ?? 0;
+        }
+
+        if (room.StaffId == 0)
+        {
+            CallStaff(simulation, room);
+        }
+        else if (nurses.Count < CountObjects(simulation, room, "desk"))
+        {
+            CallExtraNurse(simulation, room);
+        }
+
+        if (queue is not { Count: > 0 } || !room.StaffPresent || simulation.FindEntity(room.DoorId) is not RoomDoor door
+            || WardPatients(simulation, room).Count() >= CountObjects(simulation, room, "bed") || FindFreeBed(simulation, room) is null)
+        {
+            return;
+        }
+
+        var front = queue.Pop(simulation);
+        queue.VisitorCount++;
+        if (simulation.FindEntity(front) is Humanoid { Behaviour: PatientBehaviour patient } humanoid)
+        {
+            patient.LetIn(simulation, humanoid, room, door);
+        }
+    }
+
+    /// <summary>The nurses who work in the ward or are on their way to it.</summary>
+    private static IEnumerable<Humanoid> WardNurses(Simulation simulation, Room room) =>
+        simulation.Entities.OfType<Humanoid>().Where(h => h is { Behaviour: NurseBehaviour nurse, IsFired: false } && nurse.RoomId == room.Id);
+
+    /// <summary>The patients let into the ward who have not left it yet.</summary>
+    internal static IEnumerable<Humanoid> WardPatients(Simulation simulation, Room room) =>
+        simulation.Entities.OfType<Humanoid>().Where(h => h.Behaviour is PatientBehaviour patient && patient.TargetId == room.Id
+            && patient.Phase is >= PatientPhase.EnteringRoom and < PatientPhase.LeavingRoom);
+
+    /// <summary>A second (or later) nurse for a ward with more desks: the free nurse who scores best for it.</summary>
+    private static void CallExtraNurse(Simulation simulation, Room room)
+    {
+        if (simulation.FindEntity(room.DoorId) is not RoomDoor door)
+        {
+            return;
+        }
+
+        var owner = Owner(simulation, room);
+        var target = door.InsideTile(room.Area);
+        Humanoid? best = null;
+        var bestScore = 0m;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Humanoid staff && IsFreeFor(staff, BehaviourKind.Nurse, owner)
+                && CallScore(simulation, room, target, staff) is { } score && (best is null || score < bestScore))
+            {
+                best = staff;
+                bestScore = score;
+            }
+        }
+
+        if (best is not null)
+        {
+            ((IRoomStaff)best.Behaviour!).GoToRoom(simulation, best, room, target);
+        }
+    }
+
+    /// <summary><c>findFreeObjectNearToUse(humanoid, "bed")</c>: a bed of the ward no patient has taken.</summary>
+    internal static RoomObject? FindFreeBed(Simulation simulation, Room room)
+    {
+        var taken = WardPatients(simulation, room).Select(h => ((PatientBehaviour)h.Behaviour!).WardBedId).ToHashSet();
+        return simulation.Entities.OfType<RoomObject>().FirstOrDefault(o => o.RoomId == room.Id && o.ObjectType == "bed" && !taken.Contains(o.Id));
+    }
+
+    /// <summary><c>findFreeObjectNearToUse(humanoid, "desk")</c>: a desk of the ward no other nurse has taken, nearest first.</summary>
+    internal static RoomObject? FindFreeWardDesk(Simulation simulation, Room room, Humanoid nurse)
+    {
+        var taken = WardNurses(simulation, room).Where(h => h.Id != nurse.Id).Select(h => ((NurseBehaviour)h.Behaviour!).WardDeskId).ToHashSet();
+        return simulation.Entities.OfType<RoomObject>()
+            .Where(o => o.RoomId == room.Id && o.ObjectType == "desk" && !taken.Contains(o.Id))
+            .OrderBy(o => Math.Abs(o.Tile.X - nurse.Tile.X) + Math.Abs(o.Tile.Y - nurse.Tile.Y))
+            .ThenBy(o => o.Id)
+            .FirstOrDefault();
+    }
+
+    /// <summary>
+    /// <c>WardRoom:updateHealingAmount</c>: how much of a patient's stay one round of lying in bed gets done. Each nurse in
+    /// the room gives a half and her service quality; it is divided by the logarithm of one more than the patients in the
+    /// room and by 0.8 plus a tenth of the difficulty (easier is faster); without a nurse in the room nothing heals.
+    /// </summary>
+    public static decimal WardHealingAmount(Simulation simulation, Room room)
+    {
+        var nurseFactor = 0m;
+        foreach (var nurse in WardNurses(simulation, room))
+        {
+            if (room.Area.Contains(nurse.Tile) && nurse.Behaviour is NurseBehaviour { Phase: not NursePhase.WalkingToRoom })
+            {
+                nurseFactor += 0.5m + NurseBehaviour.ServiceQuality(nurse);
+            }
+        }
+
+        if (nurseFactor == 0)
+        {
+            return 0;
+        }
+
+        var patients = 1 + WardPatients(simulation, room).Count(h => room.Area.Contains(h.Tile));
+        var difficulty = 0.8m + ((int)simulation.Rules.Difficulty * 0.1m);
+        return nurseFactor / DecimalMath.Ln(Math.Max(2, patients)) / difficulty;
+    }
 
     /// <summary>The psychiatric room's type (rooms/psych.lua): a diagnosis and treatment room for a psychiatrist.</summary>
     internal const string PsychRoom = "psych";
@@ -228,6 +351,12 @@ public static class RoomVisits
         if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
         {
             CallResearchers(simulation, room);
+            return;
+        }
+
+        if (string.Equals(room.RoomType, WardRoom, StringComparison.Ordinal))
+        {
+            UpdateWard(simulation, room);
             return;
         }
 

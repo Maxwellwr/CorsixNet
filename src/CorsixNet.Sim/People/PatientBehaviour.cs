@@ -491,7 +491,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 ToiletsStep(simulation, humanoid);
                 break;
             case PatientPhase.UsingObject:
-                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+                if (simulation.FindEntity(TargetId) is Room { RoomType: RoomVisits.WardRoom } ward)
+                {
+                    WardStep(simulation, humanoid, ward);
+                }
+                else if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
                 {
                     LeaveRoom(simulation, humanoid);
                 }
@@ -1609,6 +1613,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             return;
         }
 
+        if (simulation.FindEntity(TargetId) is Room { RoomType: RoomVisits.WardRoom } ward)
+        {
+            EnterWard(simulation, humanoid, ward);
+            return;
+        }
+
         if (simulation.FindEntity(TargetId) is not Room room || RoomVisits.PatientObject(simulation, room) is not { } placed)
         {
             LeaveRoom(simulation, humanoid);
@@ -1648,6 +1658,16 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     private void ArriveAtObject(Simulation simulation, Humanoid humanoid)
     {
+        if (simulation.FindEntity(TargetId) is Room { RoomType: RoomVisits.WardRoom }
+            && simulation.FindEntity(WardBedId) is RoomObject bed && humanoid.Tile == RoomVisits.UseTile(simulation, bed))
+        {
+            // The bed's prolonged use with remaining_work of 150 to 600.
+            Phase = PatientPhase.UsingObject;
+            _wardWork = simulation.Random.NextInclusive(150, 600);
+            Use = ObjectUse.Start(simulation, humanoid, bed);
+            return;
+        }
+
         if (simulation.FindEntity(TargetId) is not Room room || RoomVisits.PatientObject(simulation, room) is not { } placed)
         {
             LeaveRoom(simulation, humanoid);
@@ -1683,6 +1703,54 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Phase = PatientPhase.UsingObject;
         Use = ObjectUse.Start(simulation, humanoid, placed);
     }
+
+    /// <summary>
+    /// <c>WardRoom:commandEnteringPatient</c>: the patient takes a free bed and walks to it; without one (the room was
+    /// called in error) they leave and queue again.
+    /// </summary>
+    private void EnterWard(Simulation simulation, Humanoid humanoid, Room ward)
+    {
+        if (RoomVisits.FindFreeBed(simulation, ward) is not { } bed)
+        {
+            Next = AfterRoom.SeekRoom;
+            LeaveRoom(simulation, humanoid);
+            return;
+        }
+
+        WardBedId = bed.Id;
+        Phase = PatientPhase.WalkingToObject;
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, bed));
+    }
+
+    /// <summary>
+    /// <c>ward_loop_callback2</c> and <c>ward_after_use</c>: each round in bed takes the ward's healing amount off the
+    /// work left; when none is left the patient gets up, the room is done with them (diagnosis or treatment) and they leave.
+    /// </summary>
+    private void WardStep(Simulation simulation, Humanoid humanoid, Room ward)
+    {
+        switch (Use?.Update(simulation, humanoid) ?? ObjectUseEvent.Done)
+        {
+            case ObjectUseEvent.Loop:
+                _wardWork -= RoomVisits.WardHealingAmount(simulation, ward);
+                if (_wardWork <= 0)
+                {
+                    Use!.Interrupt();
+                }
+
+                break;
+            case ObjectUseEvent.Done:
+                Use = null;
+                DealtWith(simulation, ward, humanoid);
+                LeaveRoom(simulation, humanoid);
+                break;
+        }
+    }
+
+    /// <summary>In the ward: the bed the patient has taken (<c>reserved_for</c>), or 0.</summary>
+    public int WardBedId { get; private set; }
+
+    /// <summary>In the ward: how much of the stay is left (<c>remaining_work</c>).</summary>
+    private decimal _wardWork;
 
     /// <summary>
     /// <c>GeneralDiagRoom:commandEnteringPatient</c>: undress behind the screen; if the doctor is there, lie down on the
@@ -2145,6 +2213,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteInt32(ToiletObjectId);
         writer.WriteInt32(_looRounds);
         writer.WriteInt32(_sinkWait);
+        writer.WriteInt32(WardBedId);
+        writer.WriteDecimal(_wardWork);
         writer.WriteString(_afterToiletsRoom);
         writer.WriteBool(_afterToiletsReception);
         writer.WriteBool(IsThirsty);
@@ -2233,6 +2303,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.ToiletObjectId = reader.ReadInt32();
         patient._looRounds = reader.ReadInt32();
         patient._sinkWait = reader.ReadInt32();
+        if (reader.Version is 0 or >= 61)
+        {
+            patient.WardBedId = reader.ReadInt32();
+            patient._wardWork = reader.ReadDecimal();
+        }
         patient._afterToiletsRoom = reader.ReadString();
         patient._afterToiletsReception = reader.ReadBool();
         patient.IsThirsty = reader.ReadBool();
