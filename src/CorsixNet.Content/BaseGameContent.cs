@@ -653,6 +653,58 @@ public static class BaseGameContent
         LevelConfigId: 15,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>The console (objects/console.lua): the doctor sits at it to work the scanner or the shower.</summary>
+    public static readonly ObjectDefinition DoctorConsole = new(
+        "console",
+        "Console",
+        ObjectType: 15,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, -1, CompleteCell), new(0, 0, CompleteCell | UsePosition)], RenderAttach: (0, -1)),
+            [Direction.East] = new([new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, -1, CompleteCell), new(0, 0, CompleteCell | UsePosition)], RenderAttach: (-1, 0)),
+        },
+        UsageNorth: ShieldUse(),
+        UsageSouth: ShieldUse());
+
+    /// <summary>The decontamination shower (objects/machines/shower.lua): the patient showers alone.</summary>
+    public static readonly ObjectDefinition Shower = new(
+        "shower",
+        "Decontamination Shower",
+        ObjectType: 54,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-2, -2, CompleteCell), new(-1, -2, CompleteCell), new(0, -2),
+                    new(-2, -1, CompleteCell), new(-1, -1, CompleteCell), new(0, -1, CompleteCell),
+                    new(-2, 0, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell),
+                    new(-1, 1, UsePosition),
+                ],
+                RenderAttach: (-1, 0),
+                UsePosition: (-1, 1)),
+            [Direction.East] = new(
+                [
+                    new(-2, -2, CompleteCell), new(-1, -2, CompleteCell), new(0, -2, CompleteCell),
+                    new(-2, -1, CompleteCell), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(1, -1, UsePosition),
+                    new(-2, 0), new(-1, 0, CompleteCell), new(0, 0, CompleteCell),
+                ],
+                RenderAttach: (-1, 0),
+                UsePosition: (1, -1)),
+        },
+        UsageNorth: ShowerUse(),
+        UsageSouth: ShowerUse());
+
+    /// <summary>The decontamination room (rooms/decontamination.lua): a treatment room for serious radiation with a doctor.</summary>
+    public static readonly RoomDefinition Decontamination = new(
+        "decontamination",
+        "Decontamination",
+        MinimumSize: 5,
+        FloorSprite: 19,
+        BlueWalls,
+        NeededObjects: new Dictionary<string, int> { ["shower"] = 1, ["console"] = 1 },
+        LevelConfigId: 30,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -707,10 +759,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower],
         DoorAnimations,
         PatientAnimations)
     {
@@ -825,6 +877,13 @@ public static class BaseGameContent
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
+
+    /// <summary>shower.lua's animations for the standard patients: stepping in, showering, stepping out.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> ShowerUse() => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(new(2018, 21), [new(2150, 27)], new(2026, 14)),
+        [HumanoidType.StandardFemalePatient] = new(new(2852, 27), [new(2856, 42)], new(2860, 15)),
+    };
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()

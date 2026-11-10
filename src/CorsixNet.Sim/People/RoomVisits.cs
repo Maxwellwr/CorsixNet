@@ -59,6 +59,21 @@ public static class RoomVisits
         [XRayRoom] = "x_ray",
         [InflationRoom] = "inflator",
         [BloodMachineRoom] = "blood_machine",
+        [DecontaminationRoom] = "shower",
+    };
+
+    /// <summary>The decontamination room's type (rooms/decontamination.lua), the treatment of serious radiation.</summary>
+    internal const string DecontaminationRoom = "decontamination";
+
+    /// <summary>
+    /// What the doctor works at while the patient uses the machine alone: the X-ray's radiation shield, the
+    /// decontamination shower's console; null for rooms where they use the machine together.
+    /// </summary>
+    internal static string? DoctorConsole(string roomType) => roomType switch
+    {
+        XRayRoom => "radiation_shield",
+        DecontaminationRoom => "console",
+        _ => null,
     };
 
     /// <summary>
@@ -79,9 +94,9 @@ public static class RoomVisits
     /// </summary>
     internal static TilePosition? DoctorStation(Simulation simulation, Room room)
     {
-        if (string.Equals(room.RoomType, XRayRoom, StringComparison.Ordinal))
+        if (DoctorConsole(room.RoomType) is { } console)
         {
-            return FindObject(simulation, room.Id, "radiation_shield") is { } shield ? UseTile(simulation, shield) : null;
+            return FindObject(simulation, room.Id, console) is { } shield ? UseTile(simulation, shield) : null;
         }
 
         if (string.Equals(room.RoomType, BloodMachineRoom, StringComparison.Ordinal))
@@ -105,6 +120,7 @@ public static class RoomVisits
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),
         [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
+        [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),
         [WardRoom] = (BehaviourKind.Nurse, "bed"),
     };
