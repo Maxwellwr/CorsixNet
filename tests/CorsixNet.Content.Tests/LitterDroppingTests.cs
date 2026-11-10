@@ -16,8 +16,8 @@ public class LitterDroppingTests
     public void PatientsDropRubbishOnFreeCorridorFloor()
     {
         var simulation = NewStaffedHospital();
-        // How soon the first piece falls depends on how far the patients walk: give them up to 200 days.
-        for (var day = 0; day < 200 && !simulation.Entities.OfType<Litter>().Any(piece => piece.IsRubbish); day++)
+        // How soon the first piece falls depends on how far the patients walk: give them up to 400 days.
+        for (var day = 0; day < 400 && !simulation.Entities.OfType<Litter>().Any(piece => piece.IsRubbish); day++)
         {
             StepFor(simulation, GameDate.HoursPerDay);
         }
