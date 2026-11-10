@@ -37,6 +37,7 @@ internal sealed class HumanoidDrawing
         [HumanoidType.SlackMalePatient] = (1484, 1486, 1492, 1494),
         [HumanoidType.SlackFemalePatient] = (0, 2, 8, 10),
         [HumanoidType.ChewbaccaPatient] = (858, 860, 866, 868),
+        [HumanoidType.AlternateMalePatient] = (2704, 2706, 2712, 2714),
         [HumanoidType.GownedMalePatient] = (406, 408, 414, 416),
         [HumanoidType.GownedFemalePatient] = (2876, 2878, 2884, 2886),
         [HumanoidType.Vip] = (266, 268, 274, 276),

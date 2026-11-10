@@ -79,6 +79,9 @@ public enum HumanoidType : byte
 
     /// <summary>CorsixTH's "Chewbacca Patient": covered in hair (diseases/hairyitis.lua) until the electrolysis.</summary>
     ChewbaccaPatient = 20,
+
+    /// <summary>CorsixTH's "Alternate Male Patient": a man in casts and bandages (diseases/fractured_bones.lua).</summary>
+    AlternateMalePatient = 21,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -817,6 +820,23 @@ public sealed class Humanoid : Entity
 
             layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
             return new Humanoid(id, tile, type, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
+        if (look == PatientLook.FracturedBones)
+        {
+            // fractured_bones.lua with CorsixTH's default disable_fractured_bones_females: a man with casts in layers 2 to 4
+            // (no 6, which does not exist; at least one cast).
+            layers[0] = (byte)(random.NextInclusive(1, 5) * 2);
+            var first = random.NextInclusive(0, 2);
+            layers[2] = (byte)(first * 2);
+            var second = random.NextInclusive(0, 5);
+            second = second == 3 ? 4 : second;
+            layers[3] = (byte)(second * 2);
+            var third = random.NextInclusive(0, 5);
+            third = third == 3 ? 4 : third;
+            layers[4] = (byte)((first == 0 && second == 0 ? 1 : third) * 2);
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            return new Humanoid(id, tile, HumanoidType.AlternateMalePatient, layers) { HospitalPlayer = hospitalPlayer };
         }
 
         if (look == PatientLook.Hairyitis)

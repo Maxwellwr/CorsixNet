@@ -17,6 +17,9 @@ public enum PatientLook : byte
 
     /// <summary>A patient covered in hair (<c>diseases/hairyitis.lua</c>).</summary>
     Hairyitis,
+
+    /// <summary>A man in casts (<c>diseases/fractured_bones.lua</c>; women are off by CorsixTH's default).</summary>
+    FracturedBones,
 }
 
 /// <summary>

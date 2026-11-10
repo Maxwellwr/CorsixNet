@@ -96,6 +96,7 @@ public static class DiseaseCatalog
         },
         new("fractured_bones", 9, 450)
         {
+            Look = PatientLook.FracturedBones,
             EmergencyNumber = 16,
             VisualsId = 7,
             DiagnosisRooms = ["scanner"],
