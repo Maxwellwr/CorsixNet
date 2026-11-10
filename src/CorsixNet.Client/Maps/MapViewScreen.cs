@@ -268,6 +268,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
         _windows = new WindowLayer(text => _text.Measure(text).Width, _text.LineHeight) { Origin = new Point(8, StatusHeight + 8) };
+        InputScript.ButtonFinder = _windows.FindButton;
         _windows.Open(new BottomPanel(BottomPanelAction));
         var sprites = install.LoadSpriteSheet("DATA", "VSPR-0", complex: false);
         _animations = new AnimationRenderer(device, AnimationSet.Load(install), sprites, palette, upscale);

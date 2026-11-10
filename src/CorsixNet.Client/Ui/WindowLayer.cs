@@ -99,6 +99,30 @@ internal sealed class WindowLayer
         return hit?.Layout!.Cells.FirstOrDefault(cell => cell.Area.Contains(mouse)).Cell?.Tooltip;
     }
 
+    /// <summary>
+    /// The middle of the <paramref name="nth"/> enabled button (from 1) reading <paramref name="text"/>, ignoring case,
+    /// in the front window that has one, or null; for <c>--script</c>. A text ending in * matches the start of a label.
+    /// </summary>
+    public Point? FindButton(string text, int nth)
+    {
+        var prefix = text.EndsWith('*');
+        var wanted = prefix ? text[..^1] : text;
+        for (var i = _open.Count - 1; i >= 0; i--)
+        {
+            var matches = (_open[i].Layout?.Cells ?? [])
+                .Where(cell => cell.Cell.OnClick is not null && (prefix
+                    ? cell.Cell.Text.StartsWith(wanted, StringComparison.OrdinalIgnoreCase)
+                    : cell.Cell.Text.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            if (matches.Count >= nth)
+            {
+                return matches[nth - 1].Area.Center;
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Closes every dialog; pinned windows stay.</summary>
     public void CloseAll() => _open.RemoveAll(open => !open.Window.IsPinned);
 
