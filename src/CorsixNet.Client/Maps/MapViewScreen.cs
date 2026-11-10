@@ -103,6 +103,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private const int RatLeaveHole = 1928;
     private const int RoomDoorWest = 106;
 
+    /// <summary>Swing doors standing: the left one in a north (1996) or west (1998) wall, the right one in a north wall (2006).</summary>
+    private const int SwingDoorLeftNorth = 1996;
+    private const int SwingDoorLeftWest = 1998;
+    private const int SwingDoorRightNorth = 2006;
+
     private readonly GraphicsDevice _device;
     private IReadOnlyList<LevelSource> _levels;
     private readonly SpriteAtlas _blocks;
@@ -1720,6 +1725,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _entitiesByTile[position] = list;
             }
 
+            if (entity is RoomDoor { IsSwing: true } swingDoor)
+            {
+                // The left swing door is drawn in its own tile's pass.
+                if (!_entitiesByTile.TryGetValue(swingDoor.SlaveTile, out var slaveList))
+                {
+                    slaveList = [];
+                    _entitiesByTile[swingDoor.SlaveTile] = slaveList;
+                }
+
+                slaveList.Add(swingDoor);
+            }
+
             if (entity is RoomObject master && ObjectDrawing.SlaveDrawTile(master.ObjectType, master.Tile, master.Orientation) is { } slaveTile)
             {
                 if (!_slavePartsByTile.TryGetValue(slaveTile, out var slaves))
@@ -1884,6 +1901,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 case Litter litter:
                     _animations.DrawFrame(batch, _animations.Animations.FirstFrame(litter.Animation), anchorX, anchorY, NoLayers, flipHorizontally: litter.IsMirrored);
                     break;
+                case RoomDoor { IsSwing: true } swingDoor:
+                    DrawSwingDoor(batch, simulation, swingDoor, tile, anchorX, anchorY);
+                    break;
                 case RoomDoor roomDoor:
                     var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
                     _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
@@ -1893,6 +1913,34 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         DrawSlaveParts(batch, tile);
         DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
+    }
+
+    /// <summary>
+    /// One of a pair of swing doors (objects/doors/swing_door_left.lua, swing_door_right.lua): standing, or swinging in or
+    /// out, the left one from the start of the swing and the right one once the humanoid is through; mirrored in a west
+    /// wall, where only the left door has its own standing animation.
+    /// </summary>
+    private void DrawSwingDoor(SpriteBatch batch, Simulation simulation, RoomDoor door, TilePosition tile, int anchorX, int anchorY)
+    {
+        var west = door.Edge == EdgeOrientation.West;
+        var slave = tile == door.SlaveTile;
+        var animation = slave ? (west ? SwingDoorLeftWest : SwingDoorLeftNorth) : SwingDoorRightNorth;
+        var flip = west && !slave;
+        if (simulation.Content.SwingDoor is { } swing && door.SwingStart >= 0)
+        {
+            var swingAnimation = slave
+                ? (door.SwingIn ? swing.SlaveIn : swing.SlaveOut)
+                : (door.SwingIn ? swing.MasterIn : swing.MasterOut);
+            var elapsed = simulation.Tick - door.SwingStart - (slave ? 0 : door.SwingCrossTicks);
+            if (elapsed >= 0 && elapsed < swingAnimation.Length)
+            {
+                var first = _animations.Animations.FirstFrame(swingAnimation.Id);
+                _animations.DrawFrame(batch, _animations.Animations.Advance(first, (int)elapsed), anchorX, anchorY, NoLayers, flipHorizontally: west);
+                return;
+            }
+        }
+
+        _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: flip);
     }
 
     /// <summary>The second parts of objects drawn on <paramref name="tile"/>, such as the radiation shield's front.</summary>

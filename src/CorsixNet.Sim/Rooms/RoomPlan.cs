@@ -160,7 +160,7 @@ public static class RoomBuilder
         var problem = CheckArea(map, definition, plan.Area, player);
         if (problem == RoomPlanProblem.None)
         {
-            problem = CheckDoor(map, content, plan.Area, plan.Door);
+            problem = CheckDoor(map, content, plan.Area, plan.Door, definition?.SwingDoors ?? false);
         }
 
         if (problem != RoomPlanProblem.None)
@@ -195,7 +195,7 @@ public static class RoomBuilder
     }
 
     /// <summary>Checks a door for an area that passed <see cref="CheckArea"/>.</summary>
-    public static RoomPlanProblem CheckDoor(LevelMap map, GameContent content, TileRect area, DoorPlacement door)
+    public static RoomPlanProblem CheckDoor(LevelMap map, GameContent content, TileRect area, DoorPlacement door, bool swing = false)
     {
         if (OutsideTile(area, door) is not { } outside)
         {
@@ -219,7 +219,35 @@ public static class RoomBuilder
             return RoomPlanProblem.DoorBlocked;
         }
 
-        return RoomPlanProblem.None;
+        return swing ? CheckSwingDoor(map, content, area, door) : RoomPlanProblem.None;
+    }
+
+    /// <summary>
+    /// The left swing door's edge beside the right one must pass the same checks, and it may not be the second tile from
+    /// the top corner along a north or west wall (<c>UIEditRoom:screenToWall</c> skips it there).
+    /// </summary>
+    private static RoomPlanProblem CheckSwingDoor(LevelMap map, GameContent content, TileRect area, DoorPlacement door)
+    {
+        var slave = door.Edge == EdgeOrientation.North
+            ? door with { Tile = door.Tile with { X = door.Tile.X - 1 } }
+            : door with { Tile = door.Tile with { Y = door.Tile.Y - 1 } };
+        var beyond = door.Edge == EdgeOrientation.North
+            ? door with { Tile = door.Tile with { X = door.Tile.X + 1 } }
+            : door with { Tile = door.Tile with { Y = door.Tile.Y + 1 } };
+        if (OutsideTile(area, beyond) is null)
+        {
+            return RoomPlanProblem.DoorNotOnPerimeter;
+        }
+
+        var topWall = area.Contains(door.Tile);
+        var start = door.Edge == EdgeOrientation.North ? area.X : area.Y;
+        var index = door.Edge == EdgeOrientation.North ? slave.Tile.X : slave.Tile.Y;
+        if (IsCorner(area, slave) || (topWall && index < start + 2))
+        {
+            return RoomPlanProblem.DoorInCorner;
+        }
+
+        return CheckDoor(map, content, area, slave);
     }
 
     /// <summary>
@@ -439,8 +467,12 @@ public static class RoomBuilder
             }
         }
 
-        var door = simulation.AddEntity(id => new RoomDoor(id, plan.Door.Tile, plan.Door.Edge, room.Id));
+        var door = simulation.AddEntity(id => new RoomDoor(id, plan.Door.Tile, plan.Door.Edge, room.Id, definition.SwingDoors));
         door.Place(map);
+        if (door.IsSwing)
+        {
+            SetSwingWalls(map, walls, area, door);
+        }
         room.DoorId = door.Id;
 
         map.UpdatePathfinding();
@@ -541,6 +573,48 @@ public static class RoomBuilder
 
         var tile = map[edge.Tile.X, edge.Tile.Y];
         return edge.Edge == EdgeOrientation.North ? tile.NorthWall : tile.WestWall;
+    }
+
+    /// <summary>
+    /// <c>UIEditRoom</c>'s swing door pieces: the wall behind the left door becomes the left swing piece and the wall
+    /// beyond the right door the right one, inside pieces in the room's own walls and outside ones in its south and east.
+    /// </summary>
+    private static void SetSwingWalls(LevelMap map, WallSet walls, TileRect area, RoomDoor door)
+    {
+        if (walls.Swing is not { } swing)
+        {
+            return;
+        }
+
+        var north = door.Edge == EdgeOrientation.North;
+        var inside = area.Contains(door.Tile);
+        foreach (var (tile, left) in new[] { (door.SlaveTile, true), (door.BeyondTile, false) })
+        {
+            if (!map.Contains(tile.X, tile.Y))
+            {
+                continue;
+            }
+
+            var sprite = (inside, north, left) switch
+            {
+                (true, true, true) => swing.InsideNorthLeft,
+                (true, true, false) => swing.InsideNorthRight,
+                (true, false, true) => swing.InsideWestLeft,
+                (true, false, false) => swing.InsideWestRight,
+                (false, true, true) => swing.OutsideNorthLeft,
+                (false, true, false) => swing.OutsideNorthRight,
+                (false, false, true) => swing.OutsideWestLeft,
+                _ => swing.OutsideWestRight,
+            };
+            if (north)
+            {
+                map[tile.X, tile.Y].NorthWall = sprite;
+            }
+            else
+            {
+                map[tile.X, tile.Y].WestWall = sprite;
+            }
+        }
     }
 
     /// <summary>

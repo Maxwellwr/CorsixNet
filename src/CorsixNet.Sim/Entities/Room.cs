@@ -1,3 +1,4 @@
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.People;
@@ -231,12 +232,57 @@ public sealed class RoomObject : Entity
 /// <summary>The door of a room, standing in a gap of the room's wall.</summary>
 public sealed class RoomDoor : Entity
 {
-    public RoomDoor(int id, TilePosition tile, EdgeOrientation edge, int roomId)
+    public RoomDoor(int id, TilePosition tile, EdgeOrientation edge, int roomId, bool isSwing = false)
         : base(id)
     {
         Tile = tile;
         Edge = edge;
         RoomId = roomId;
+        IsSwing = isSwing;
+    }
+
+    /// <summary>
+    /// Whether this is a pair of swing doors (objects/doors/swing_door_right.lua): <see cref="Tile"/> is the right door,
+    /// the one people walk through, and <see cref="SlaveTile"/> the left one beside it.
+    /// </summary>
+    public bool IsSwing { get; }
+
+    /// <summary>The left swing door's tile: west of the right door in a north wall, north of it in a west wall.</summary>
+    public TilePosition SlaveTile => Edge == EdgeOrientation.North ? Tile with { X = Tile.X - 1 } : Tile with { Y = Tile.Y - 1 };
+
+    /// <summary>The tile beyond the right swing door, whose wall gets the right-hand swing piece.</summary>
+    public TilePosition BeyondTile => Edge == EdgeOrientation.North ? Tile with { X = Tile.X + 1 } : Tile with { Y = Tile.Y + 1 };
+
+    /// <summary>The tick the swing doors last started swinging, or −1.</summary>
+    public long SwingStart { get; private set; } = -1;
+
+    /// <summary>Whether they last swung in (someone walking north or west), else out.</summary>
+    public bool SwingIn { get; private set; }
+
+    /// <summary>How long the humanoid took through them, after which the right door swings (<c>swingDoors</c>' length).</summary>
+    public int SwingCrossTicks { get; private set; }
+
+    /// <summary><c>SwingDoor:swingDoors</c>: the left door swings at once, the right one once the humanoid is through.</summary>
+    internal void StartSwing(long tick, bool swingIn, int crossTicks)
+    {
+        SwingStart = tick;
+        SwingIn = swingIn;
+        SwingCrossTicks = crossTicks;
+    }
+
+    /// <summary>
+    /// Whether the swing doors are still swinging: until the right door's swing ends nobody else goes through
+    /// (<c>SwingDoor:swing</c> removes the user then).
+    /// </summary>
+    public bool IsSwingBusy(long tick, SwingDoorAnimations? animations)
+    {
+        if (!IsSwing || SwingStart < 0 || animations is null)
+        {
+            return false;
+        }
+
+        var master = SwingIn ? animations.MasterIn : animations.MasterOut;
+        return tick < SwingStart + SwingCrossTicks + master.Length;
     }
 
     public override EntityKind Kind => EntityKind.RoomDoor;
@@ -282,6 +328,30 @@ public sealed class RoomDoor : Entity
             map[OtherSide.X, OtherSide.Y].Set(TileFlags.Buildable, false);
             map[OtherSide.X, OtherSide.Y].Set(TileFlags.DoNotIdle, true);
         }
+
+        if (IsSwing)
+        {
+            // SwingDoor:getWalkableTiles: the three tiles on each side of the pair stay clear.
+            foreach (var walkable in SwingWalkableTiles())
+            {
+                if (map.Contains(walkable.X, walkable.Y))
+                {
+                    map[walkable.X, walkable.Y].Set(TileFlags.Buildable, false);
+                    map[walkable.X, walkable.Y].Set(TileFlags.DoNotIdle, true);
+                }
+            }
+        }
+    }
+
+    /// <summary>The tiles beside the swing doors on both sides of the wall (<c>SwingDoor:getWalkableTiles</c>).</summary>
+    private IEnumerable<TilePosition> SwingWalkableTiles()
+    {
+        var (x, y) = (Tile.X, Tile.Y);
+        for (var i = -1; i <= 1; i++)
+        {
+            yield return Edge == EdgeOrientation.North ? new TilePosition(x + i, y - 1) : new TilePosition(x - 1, y + i);
+            yield return Edge == EdgeOrientation.North ? new TilePosition(x + i, y) : new TilePosition(x, y + i);
+        }
     }
 
     /// <summary>Takes the door out of its edge again; the wall itself is left to whoever removes the room.</summary>
@@ -300,11 +370,34 @@ public sealed class RoomDoor : Entity
         {
             map[outside.X, outside.Y].Set(TileFlags.Buildable, outsideWasBuildable);
         }
+
+        if (IsSwing)
+        {
+            foreach (var walkable in SwingWalkableTiles())
+            {
+                if (map.Contains(walkable.X, walkable.Y))
+                {
+                    map[walkable.X, walkable.Y].Set(TileFlags.DoNotIdle, false);
+                    if (!area.Contains(walkable))
+                    {
+                        map[walkable.X, walkable.Y].Set(TileFlags.Buildable, outsideWasBuildable);
+                    }
+                }
+            }
+        }
     }
 
     internal static RoomDoor ReadState(int id, SimReader reader)
     {
-        return new RoomDoor(id, reader.ReadTile(), (EdgeOrientation)reader.ReadByte(), reader.ReadInt32());
+        var door = new RoomDoor(id, reader.ReadTile(), (EdgeOrientation)reader.ReadByte(), reader.ReadInt32(), reader.Version is 0 or >= 62 && reader.ReadBool());
+        if (door.IsSwing)
+        {
+            door.SwingStart = reader.ReadInt64();
+            door.SwingIn = reader.ReadBool();
+            door.SwingCrossTicks = reader.ReadInt32();
+        }
+
+        return door;
     }
 
     protected override void WriteState(SimWriter writer)
@@ -312,5 +405,12 @@ public sealed class RoomDoor : Entity
         writer.WriteTile(Tile);
         writer.WriteByte((byte)Edge);
         writer.WriteInt32(RoomId);
+        writer.WriteBool(IsSwing);
+        if (IsSwing)
+        {
+            writer.WriteInt64(SwingStart);
+            writer.WriteBool(SwingIn);
+            writer.WriteInt32(SwingCrossTicks);
+        }
     }
 }

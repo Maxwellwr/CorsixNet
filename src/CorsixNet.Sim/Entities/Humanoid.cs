@@ -487,7 +487,22 @@ public sealed class Humanoid : Entity
     /// </summary>
     private void CrossDoor(Simulation simulation, RoomDoor door, DoorAnimations animations, Direction direction, TilePosition exit)
     {
-        var animation = direction is Direction.North or Direction.West ? animations.Leaving : animations.Entering;
+        var inwards = direction is Direction.North or Direction.West;
+        if (door.IsSwing && (inwards ? animations.LeavingSwing : animations.EnteringSwing) is { } swing)
+        {
+            // navigateDoor with swing doors: the humanoid's own swing animation, and the doors swing by themselves
+            // (SwingDoor:swingDoors), so they stay drawn.
+            Tile = door.Tile;
+            IsStepping = false;
+            StepProgress = 0;
+            _doorExit = exit;
+            _doorTicks = swing.Length;
+            SetActionAnimation(simulation, swing, direction is Direction.West or Direction.South, door.Tile, door.Tile, 0);
+            door.StartSwing(simulation.Tick, inwards, swing.Length);
+            return;
+        }
+
+        var animation = inwards ? animations.Leaving : animations.Entering;
         Tile = door.Tile;
         IsStepping = false;
         StepProgress = 0;
@@ -593,6 +608,11 @@ public sealed class Humanoid : Entity
     /// <summary>Whether another humanoid is going through <paramref name="door"/>.</summary>
     private bool IsDoorInUse(Simulation simulation, RoomDoor door)
     {
+        if (door.IsSwingBusy(simulation.Tick, simulation.Content.SwingDoor))
+        {
+            return true;
+        }
+
         foreach (var entity in simulation.Entities)
         {
             if (entity is Humanoid { IsCrossingDoor: true } other && other.Id != Id && other.HiddenObjectId == door.Id)

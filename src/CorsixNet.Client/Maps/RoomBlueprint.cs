@@ -111,8 +111,15 @@ internal sealed class RoomBlueprint
     }
 
     /// <summary>Draws a door into the wall at <paramref name="door"/>, red if it cannot go there, and marks the floor inside it.</summary>
-    public void SetDoor(DoorPlacement door, bool valid)
+    public void SetDoor(DoorPlacement door, bool valid, bool swing = false)
     {
+        if (swing)
+        {
+            // UIEditRoom's swing door blueprint: the left door beside the right one.
+            var slave = door.Edge == EdgeOrientation.North ? door with { Tile = door.Tile with { X = door.Tile.X - 1 } } : door with { Tile = door.Tile with { Y = door.Tile.Y - 1 } };
+            SetWall(slave, DoorAnimation, valid);
+        }
+
         if (SetWall(door, DoorAnimation, valid))
         {
             var (inside, side) = InsideOf(door);

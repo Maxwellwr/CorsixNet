@@ -200,8 +200,10 @@ Done and committed:
   (`RoomVisits.UpdateWard`, kept out of the single-patient `Room.PatientId` as the toilets are). Nurses meander 4 to
   10 rounds and write at a free desk 7 to 14 rounds; patients lie in a free bed until 150 to 600 of work is done, each
   round taking off `WardHealingAmount` (nurses in the room x (0.5 + service quality) / ln(1 + patients) / (0.8 +
-  difficulty / 10)). Not yet: the swing doors (a plain door for now, to come with the operating theatre) and the
-  VIP's visit. From 2026-11-10 the user lets threads merge their own green PRs.
+  difficulty / 10)). Swing doors (swing_door_left/right.lua; `RoomDefinition.SwingDoors`, save format 62): the right door
+  is walked through with the humanoids' swing animations, the left one beside it and the wall beyond get the swing
+  wall pieces; the left door swings at once, the right one once the walker is through, and nobody else goes through
+  until it is done. Not yet: the VIP's visit to the ward. From 2026-11-10 the user lets threads merge their own green PRs.
 
 Needs MSI (game data or a live look; the cloud has neither):
 

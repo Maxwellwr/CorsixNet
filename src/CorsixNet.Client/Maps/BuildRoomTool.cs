@@ -280,13 +280,13 @@ internal sealed class BuildRoomTool
         {
             if (_door is { } hovered)
             {
-                blueprint.SetDoor(hovered, _problem == RoomPlanProblem.None);
+                blueprint.SetDoor(hovered, _problem == RoomPlanProblem.None, _room?.SwingDoors ?? false);
             }
 
             return blueprint;
         }
 
-        blueprint.SetDoor(_door!.Value, valid: true);
+        blueprint.SetDoor(_door!.Value, valid: true, swing: _room?.SwingDoors ?? false);
         foreach (var window in _windows)
         {
             blueprint.SetWindow(window, valid: true);
@@ -402,7 +402,7 @@ internal sealed class BuildRoomTool
         }
 
         _door = input.Hovered is { } tile ? RoomBuilder.WallNear(area, tile, input.FractionX, input.FractionY) : null;
-        _problem = _door is { } door ? RoomBuilder.CheckDoor(simulation.Map, simulation.Content, area, door) : RoomPlanProblem.DoorNotOnPerimeter;
+        _problem = _door is { } door ? RoomBuilder.CheckDoor(simulation.Map, simulation.Content, area, door, _room!.SwingDoors) : RoomPlanProblem.DoorNotOnPerimeter;
         if (!input.LeftPressed || _door is null || _problem != RoomPlanProblem.None)
         {
             return null;
