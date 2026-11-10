@@ -93,13 +93,17 @@ public sealed class ObjectUse
     /// False to play the in-use animation once even where the object has begin, in-use and finish animations
     /// (CorsixTH's <c>setProlongedUsage(false)</c>).
     /// </param>
-    internal static ObjectUse Start(Simulation simulation, Humanoid humanoid, RoomObject placed, bool prolonged = true)
+    /// <param name="alwaysProlonged">
+    /// True to repeat the in-use animation until interrupted even where the object has no begin and finish animations
+    /// (CorsixTH's <c>setProlongedUsage(true)</c>, the staff room's video game).
+    /// </param>
+    internal static ObjectUse Start(Simulation simulation, Humanoid humanoid, RoomObject placed, bool prolonged = true, bool alwaysProlonged = false)
     {
         var layout = Layout(simulation, placed);
         var old = layout?.FinishUsePosition is { } finish
             ? new TilePosition(placed.Tile.X + finish.X, placed.Tile.Y + finish.Y)
             : humanoid.Tile;
-        var use = new ObjectUse(placed.Id, old) { StopRequested = !prolonged };
+        var use = new ObjectUse(placed.Id, old) { StopRequested = !prolonged, AlwaysProlonged = alwaysProlonged };
         if (simulation.Content.FindObject(placed.ObjectType)?.WalkInToUse == true)
         {
             use.Phase = ObjectUsePhase.WalkIn;
@@ -235,10 +239,13 @@ public sealed class ObjectUse
         };
     }
 
+    /// <summary>Whether the in-use animation repeats however few animations the object has.</summary>
+    private bool AlwaysProlonged { get; init; }
+
     /// <summary>CorsixTH prolongs a use when the object has begin, in-use and finish animations.</summary>
     private bool IsProlonged(Simulation simulation, Humanoid humanoid)
     {
-        return simulation.FindEntity(ObjectId) is RoomObject placed
+        return AlwaysProlonged || simulation.FindEntity(ObjectId) is RoomObject placed
             && simulation.Content.FindObject(placed.ObjectType)?.Usage(placed.Orientation, humanoid.Type) is { } usage
             && usage.Animations is { Begin: not null, Finish: not null, InUse.Count: > 0 };
     }
@@ -255,6 +262,7 @@ public sealed class ObjectUse
         writer.WriteByte((byte)Phase);
         writer.WriteInt32(Timer);
         writer.WriteBool(StopRequested);
+        writer.WriteBool(AlwaysProlonged);
     }
 
     internal static ObjectUse Read(SimReader reader)
@@ -264,6 +272,7 @@ public sealed class ObjectUse
             Phase = ReadPhase(reader),
             Timer = reader.ReadInt32(),
             StopRequested = reader.ReadBool(),
+            AlwaysProlonged = reader.Version is 0 or >= 66 && reader.ReadBool(),
         };
     }
 

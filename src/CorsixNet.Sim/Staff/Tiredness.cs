@@ -35,8 +35,7 @@ public sealed record TirednessRules(int Tired, int VeryTired, int CrackUpTired)
 /// unhappy, all the more without a staff room to rest in.
 /// </summary>
 /// <remarks>
-/// Not yet: going to the staff room and resting there (the staff room is not built yet), being on call and the tired
-/// mood icon.
+/// Not yet: being on call, the tired mood icon, and researchers going back to their research room afterwards.
 /// </remarks>
 internal static class Tiredness
 {
@@ -180,9 +179,66 @@ internal static class Tiredness
         if (!HasStaffRoom(simulation, humanoid.Employer))
         {
             humanoid.WaitingForStaffRoom = true;
+            return;
         }
 
-        // With a staff room, CorsixTH sends them there (goToStaffRoom); that waits for the staff room itself.
+        if (humanoid.Behaviour is RestingBehaviour || !MayLeaveWork(simulation, humanoid) || NearestStaffRoom(simulation, humanoid) is not { } staffRoom)
+        {
+            // staffroom_needed: they go once the patient has left (or the handyman has finished the job).
+            return;
+        }
+
+        // Staff:goToStaffRoom: out of the room (Room:createLeaveAction) and to the nearest staff room.
+        var parcel = humanoid.Behaviour is HandymanBehaviour handyman ? handyman.Parcel : 0;
+        StaffEmployment.Detach(simulation, humanoid);
+        if (humanoid.Type == HumanoidType.Surgeon)
+        {
+            humanoid.Type = HumanoidType.Doctor;
+        }
+
+        humanoid.Behaviour = new RestingBehaviour(staffRoom.Id, parcel);
+    }
+
+    /// <summary>
+    /// Whether the member of staff may leave what they are doing for the staff room: nurses may leave a ward with
+    /// patients in its beds; others wait until the room's patient has gone (<c>may_leave</c>); a handyman finishes his
+    /// job, a nurse her vaccination; receptionists never go.
+    /// </summary>
+    private static bool MayLeaveWork(Simulation simulation, Humanoid humanoid)
+    {
+        var roomId = humanoid.Behaviour switch
+        {
+            DoctorBehaviour doctor => doctor.RoomId,
+            NurseBehaviour { VaccinatePatientId: 0 } nurse => nurse.RoomId,
+            HandymanBehaviour { Phase: HandymanPhase.Meandering } => 0,
+            _ => -1,
+        };
+        if (roomId < 0)
+        {
+            return false;
+        }
+
+        return simulation.FindEntity(roomId) is not Room room || room.RoomType == RoomVisits.WardRoom || room.PatientId == 0;
+    }
+
+    /// <summary><c>World:findRoomNear(self, "staff_room")</c>: the nearest working staff room of their hospital.</summary>
+    private static Room? NearestStaffRoom(Simulation simulation, Humanoid humanoid)
+    {
+        Room? best = null;
+        var bestDistance = 0;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is Room { IsActive: true, RoomType: StaffRoomType } room && RoomVisits.Owner(simulation, room) == humanoid.Employer
+                && simulation.FindEntity(room.DoorId) is RoomDoor door
+                && simulation.Pathfinder.FindDistance(simulation.Map, humanoid.StepTarget, door.InsideTile(room.Area)) is { } distance
+                && (best is null || distance < bestDistance))
+            {
+                best = room;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
     }
 
     /// <summary>

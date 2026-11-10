@@ -473,6 +473,13 @@ public static class RoomVisits
             return;
         }
 
+        if (string.Equals(room.RoomType, Staff.Tiredness.StaffRoomType, StringComparison.Ordinal))
+        {
+            // No patients and no staff of its own: tired staff come by themselves, counted at its door.
+            EnsureQueue(simulation, room);
+            return;
+        }
+
         if (string.Equals(room.RoomType, WardRoom, StringComparison.Ordinal))
         {
             UpdateWard(simulation, room);

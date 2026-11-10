@@ -226,9 +226,9 @@ Done and committed:
 
 Next, in this order (2026-11-10):
 
-1. Staff room (rooms/staff_room.lua, use_staffroom.lua, seek_staffroom.lua, sofa, video_game, pool_table): staff past
-   the GoToStaffRoom policy leave their room (if "staff leave their rooms" allows), rest until fatigue is gone and go
-   back; today fatigue only grows. Cross-cutting: every staff behaviour needs a way out of its room and back.
+1. Done (PR #211): the staff room. `RestingBehaviour` takes over a tired doctor, nurse or handyman (Tiredness.
+   CheckIfNeedRest, once their room's patient has gone; ward nurses at once) and gives them back their usual behaviour,
+   free for any room, when rested. Not yet: researchers going back to their room, being on call, the tired icon.
 2. Looks of visual diseases: Slack Male/Female, Alternate Male, Chewbacca, Transparent, Invisible, Elvis, Alien
    (walk_anims in entities/humanoid.lua) with their animations in every object they use on the way (GP chair, drinks
    machine, loo, sink, screen, bench, the diagnosis machines). Then the rooms that need them: slack tongue, hair
