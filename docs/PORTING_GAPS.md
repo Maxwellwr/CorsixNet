@@ -14,7 +14,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 
 | Missing | CorsixTH source |
 |---|---|
-| Diagnosis rooms: scanner; the cardiogram's slowed-down monitoring (its time is kept); the VIP's visit to the ward; in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `scanner_room.lua`, `cardiogram.lua`, `ward.lua`, `psych.lua` |
+| Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); the VIP's visit to the ward; in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
 | Treatment rooms: operating theatre, fracture clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat | `rooms/operating_theatre.lua`, `fracture_clinic.lua`, `hair_restoration.lua`, `slack_tongue.lua`, `dna_fixer.lua`, `electrolysis.lua`, `jelly_vat.lua` |
 | Facilities: staff room, training room | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Autopsies in the research department (the research, the room and its researchers are ported) | `rooms/research.lua`, `objects/autopsy.lua` |

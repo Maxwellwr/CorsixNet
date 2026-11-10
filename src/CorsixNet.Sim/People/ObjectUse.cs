@@ -19,11 +19,21 @@ public enum ObjectUsePhase : byte
     /// <summary>The second begin animation (<c>begin_use_2</c>).</summary>
     Begin2,
 
+    /// <summary>The third to fifth begin animations (<c>begin_use_3</c> to <c>begin_use_5</c>, the scanner's).</summary>
+    Begin3,
+    Begin4,
+    Begin5,
+
     InUse,
     Finish,
 
     /// <summary>The second finish animation (<c>finish_use_2</c>).</summary>
     Finish2,
+
+    /// <summary>The third to fifth finish animations (<c>finish_use_3</c> to <c>finish_use_5</c>).</summary>
+    Finish3,
+    Finish4,
+    Finish5,
 
     /// <summary>Stepping back off the object.</summary>
     WalkOut,
@@ -211,10 +221,16 @@ public sealed class ObjectUse
         {
             ObjectUsePhase.Begin => animations.Begin,
             ObjectUsePhase.Begin2 => animations.Begin2,
+            ObjectUsePhase.Begin3 => animations.More?.Begin3,
+            ObjectUsePhase.Begin4 => animations.More?.Begin4,
+            ObjectUsePhase.Begin5 => animations.More?.Begin5,
             ObjectUsePhase.InUse when animations.InUse.Count == 1 => animations.InUse[0],
             ObjectUsePhase.InUse when animations.InUse.Count > 1 => animations.InUse[simulation.Random.Next(animations.InUse.Count)],
             ObjectUsePhase.Finish => animations.Finish,
             ObjectUsePhase.Finish2 => animations.Finish2,
+            ObjectUsePhase.Finish3 => animations.More?.Finish3,
+            ObjectUsePhase.Finish4 => animations.More?.Finish4,
+            ObjectUsePhase.Finish5 => animations.More?.Finish5,
             _ => null,
         };
     }
@@ -245,10 +261,30 @@ public sealed class ObjectUse
     {
         return new ObjectUse(reader.ReadInt32(), reader.ReadTile())
         {
-            Phase = (ObjectUsePhase)reader.ReadByte(),
+            Phase = ReadPhase(reader),
             Timer = reader.ReadInt32(),
             StopRequested = reader.ReadBool(),
         };
+    }
+
+    /// <summary>A phase, from saves before version 64 too, which had no third to fifth begin and finish phases.</summary>
+    private static ObjectUsePhase ReadPhase(SimReader reader)
+    {
+        var value = reader.ReadByte();
+        if (reader.Version is not 0 and < 64)
+        {
+            value = value switch
+            {
+                3 => (byte)ObjectUsePhase.InUse,
+                4 => (byte)ObjectUsePhase.Finish,
+                5 => (byte)ObjectUsePhase.Finish2,
+                6 => (byte)ObjectUsePhase.WalkOut,
+                7 => (byte)ObjectUsePhase.Done,
+                _ => value,
+            };
+        }
+
+        return value <= (byte)ObjectUsePhase.Done ? (ObjectUsePhase)value : throw new InvalidDataException($"Unknown use phase {value}.");
     }
 
     internal static void WriteOptional(SimWriter writer, ObjectUse? use)

@@ -743,6 +743,39 @@ public static class BaseGameContent
         LevelConfigId: 12,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>
+    /// The scanner (objects/machines/scanner.lua): the stripped patient stands in it and it tips back and forth over its
+    /// five begin and five finish animations; it has no in-use one.
+    /// </summary>
+    public static readonly ObjectDefinition Scanner = new(
+        "scanner",
+        "Scanner",
+        ObjectType: 14,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(-2, -1), new(-1, -1), new(0, -1), new(-2, 0), new(-1, 0, NeedSouthSide), new(0, 0, CompleteCell | UsePosition)],
+                RenderAttach: (0, -1),
+                UsePosition: (0, 0)),
+            [Direction.East] = new(
+                [new(-1, -2), new(0, -2), new(-1, -1), new(0, -1, NeedEastSide), new(-1, 0), new(0, 0, CompleteCell | UsePosition)],
+                RenderAttach: (-1, 0),
+                UsePosition: (0, 0)),
+        },
+        UsageNorth: ScannerUse(),
+        UsageSouth: ScannerUse());
+
+    /// <summary>The scanner room (rooms/scanner_room.lua): a diagnosis room with the scanner, a console, a screen and a doctor.</summary>
+    public static readonly RoomDefinition ScannerRoom = new(
+        "scanner",
+        "Scanner",
+        MinimumSize: 5,
+        FloorSprite: 19,
+        YellowWalls,
+        NeededObjects: new Dictionary<string, int> { ["scanner"] = 1, ["console"] = 1, ["screen"] = 1 },
+        LevelConfigId: 13,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -797,10 +830,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner],
         DoorAnimations,
         PatientAnimations)
     {
@@ -945,6 +978,38 @@ public static class BaseGameContent
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
+
+    /// <summary>
+    /// scanner.lua's animations for the three kinds of stripped patient: down, staying down, up, staying up and back,
+    /// then the scan forwards and back and tipping forward again.
+    /// </summary>
+    private static Dictionary<HumanoidType, UseAnimations> ScannerUse() => new()
+    {
+        [HumanoidType.StrippedMalePatient] = new(new(1402, 1), [], new(1402, 1), Begin2: new(1402, 1), Finish2: new(1406, 5))
+        {
+            More = new(Begin3: new(1406, 5), Begin4: new(1410, 1), Begin5: new(1414, 5), Finish3: new(1410, 1), Finish4: new(1414, 5), Finish5: new(1402, 1)),
+        },
+        [HumanoidType.StrippedFemalePatient] = new(new(1442, 1), [], new(1442, 1), Begin2: new(1442, 1), Finish2: new(1446, 5))
+        {
+            More = new(Begin3: new(1446, 5), Begin4: new(1450, 1), Begin5: new(1454, 5), Finish3: new(1450, 1), Finish4: new(1454, 5), Finish5: new(1442, 1)),
+        },
+        [HumanoidType.StrippedMalePatient2] = new(new(1406, 5), [], new(1422, 1), Begin2: new(1410, 1), Finish2: new(1426, 6))
+        {
+            More = new(Begin3: new(1414, 5), Begin4: new(1402, 1), Begin5: new(1418, 6), Finish3: new(1430, 1), Finish4: new(1434, 6), Finish5: new(1438, 6)),
+        },
+        [HumanoidType.StrippedFemalePatient2] = new(new(1446, 5), [], new(1462, 1), Begin2: new(1450, 1), Finish2: new(1466, 6))
+        {
+            More = new(Begin3: new(1454, 5), Begin4: new(1442, 1), Begin5: new(1458, 6), Finish3: new(1470, 1), Finish4: new(1474, 6), Finish5: new(1478, 6)),
+        },
+        [HumanoidType.StrippedMalePatient3] = new(new(1402, 1), [], new(1430, 1), Begin2: new(1402, 1), Finish2: new(1434, 6))
+        {
+            More = new(Begin3: new(1418, 6), Begin4: new(1422, 1), Begin5: new(1426, 6), Finish3: new(1422, 1), Finish4: new(1422, 1), Finish5: new(1438, 6)),
+        },
+        [HumanoidType.StrippedFemalePatient3] = new(new(1442, 1), [], new(1470, 1), Begin2: new(1442, 1), Finish2: new(1474, 6))
+        {
+            More = new(Begin3: new(1458, 6), Begin4: new(1462, 1), Begin5: new(1466, 6), Finish3: new(1462, 1), Finish4: new(1462, 1), Finish5: new(1478, 6)),
+        },
+    };
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()
