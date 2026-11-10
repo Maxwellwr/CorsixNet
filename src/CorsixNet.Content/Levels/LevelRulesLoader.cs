@@ -285,7 +285,8 @@ public static partial class LevelRulesLoader
             config.GetInt("gbv.MinDrugCost") ?? Sim.Research.ResearchRules.DefaultMinDrugCost,
             config.GetInt("gbv.MaxObjectStrength") ?? Sim.Research.ResearchRules.DefaultMaxObjectStrength,
             config.GetInt("gbv.ResearchIncrement") ?? Sim.Research.ResearchRules.DefaultResearchIncrement,
-            config.GetInt("gbv.AutopsyRschPercent") ?? Sim.Research.ResearchRules.DefaultAutopsyPercent);
+            config.GetInt("gbv.AutopsyRschPercent") ?? Sim.Research.ResearchRules.DefaultAutopsyPercent,
+            config.GetInt("gbv.AutopsyRepHitPercent") ?? Sim.Research.ResearchRules.DefaultAutopsyReputationHitPercent);
     }
 
     /// <summary>

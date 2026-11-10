@@ -424,6 +424,37 @@ public sealed class ResearchDepartment
     /// discovered can now be built; the improvements area takes the weakest discovered machine if it had nothing; then
     /// the object's area moves on.
     /// </summary>
+    /// <summary>
+    /// <c>addResearchPointsForAutopsy</c>: if the room is not discovered yet, the first of its needed objects not yet
+    /// discovered gets <c>AutopsyRschPercent</c> of what it needs, and is discovered if that is enough.
+    /// </summary>
+    internal void AddPointsForAutopsy(Simulation simulation, Hospital hospital, string roomType)
+    {
+        if (hospital.IsRoomDiscovered(roomType) || simulation.Content.FindRoom(roomType) is not { } room)
+        {
+            return;
+        }
+
+        foreach (var objectId in room.NeededObjects?.Keys ?? Enumerable.Empty<string>())
+        {
+            if (ResearchObjects.Find(objectId) is not { } obj || !_objects.TryGetValue(obj.Id, out var research) || research.Discovered)
+            {
+                continue;
+            }
+
+            if (Required(simulation, ResearchTarget.Object(obj.Id)) is { } required)
+            {
+                research.Points += required * simulation.Rules.Research.AutopsyPercent / 100;
+                if (research.Points > required)
+                {
+                    DiscoverObject(simulation, hospital, obj);
+                }
+            }
+
+            break;
+        }
+    }
+
     private void DiscoverObject(Simulation simulation, Hospital hospital, ResearchObject obj)
     {
         _objects[obj.Id].Discovered = true;

@@ -401,7 +401,8 @@ public static class BaseGameContent
                 RenderAttach: (-1, 0),
                 UsePosition: (1, 0),
                 SecondaryUsePosition: (1, -2)),
-        });
+        },
+        MultiUsage: AutopsyMultiUsage());
 
     /// <summary>
     /// The research department (rooms/research.lua): researchers work at its desks, cabinets, computers and atom
@@ -1413,6 +1414,34 @@ public static class BaseGameContent
             More = new(Begin3: new(2598, 16), Finish3: new(2684, 10)),
         },
     };
+
+    /// <summary>
+    /// autopsy.lua's <c>multi_usage_animations</c> for the doctor with each kind of patient: the bed comes out, the patient
+    /// gets on, the doctor presses buttons, the bed goes back in, the door closes, the machine flashes.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> AutopsyMultiUsage()
+    {
+        static IReadOnlyList<MultiUseAnimations> Use(AnimationRef inviteIn, AnimationRef configure, AnimationRef takenIn, AnimationRef closing) =>
+        [
+            new(
+                [new(new(2154, 22)), new(inviteIn), new(configure)],
+                new(takenIn),
+                [new(closing), new(new(4010, 10))]),
+        ];
+
+        var male = Use(new(2166, 8), new(3334, 13), new(4548, 12), new(4552, 10));
+        var female = Use(new(3196, 8), new(3200, 4), new(3188, 12), new(3192, 10));
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.Doctor, HumanoidType.StandardMalePatient)] = male,
+            [(HumanoidType.Doctor, HumanoidType.StandardFemalePatient)] = female,
+            [(HumanoidType.Doctor, HumanoidType.AlternateMalePatient)] = Use(new(4544, 8), new(3334, 13), new(4548, 12), new(4552, 10)),
+            [(HumanoidType.Doctor, HumanoidType.ChewbaccaPatient)] = Use(new(4118, 8), new(4126, 13), new(4130, 12), new(4134, 10)),
+            [(HumanoidType.Doctor, HumanoidType.SlackMalePatient)] = Use(new(4332, 8), new(4336, 2), new(4340, 12), new(4552, 10)),
+            [(HumanoidType.Doctor, HumanoidType.SlackFemalePatient)] = female,
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
 
     /// <summary>shower.lua's animations for the standard patients: stepping in, showering, stepping out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> ShowerUse() => new()

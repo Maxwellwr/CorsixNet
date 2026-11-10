@@ -255,7 +255,13 @@ Next, in this order (2026-11-10):
    skill (with millionths kept in `StaffProfile`) and specialism progress (`SpecialismProgress`, `TrainSpecialism`) from
    `TrainingRules` (gbv.TrainingRate, AbilityThreshold, TrainingValue); a student who becomes a consultant leaves. Not
    yet: the promotion advice, "needs a consultant" and "not enough lecture chairs" advice, the wage following the
-   promotion, learning on the job, doctors going back to the room after resting. Next: autopsies, the hire window's faces.
+   promotion, learning on the job, doctors going back to the room after resting. Autopsies done (save format 71): the fax's Research choice
+   (`PatientAnswer.Research`, `PatientBehaviour.CanGoToResearch`) sends a patient asking for a treatment room to the
+   research department (`RoomSeek.Research`; it now has a door queue); the room's first researcher leaves research for
+   the autopsy machine and uses it with the patient (a doctor-driven machine like the blood machine); `Autopsied`: the
+   last treatment room's first undiscovered object gets AutopsyRschPercent, the autopsy may come out (1 in 3, 2 in 3
+   with unhappy staff) for AutopsyRepHitPercent of the reputation, and the patient is gone without counting as a death.
+   Not yet: the advice, the patient's idea mood. Next: the hire window's faces.
    The DNA fixer (rooms/dna_fixer.lua) needs more than the other rooms: its in-use animation is a "morph" from the
    alien (3594) into the standard patient (3618 men, 1150 women, mirrored), which the client cannot draw yet; it is
    staffed by a researcher; aliens have no normal door animations and come only by emergency (CorsixTH's

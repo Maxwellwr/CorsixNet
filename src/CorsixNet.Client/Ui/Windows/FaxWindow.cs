@@ -95,6 +95,10 @@ internal sealed class FaxWindow : UiWindow
             {
                 cells.Add(WindowCell.Button("Guess cure", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.GuessCure))));
             }
+            else if (PatientBehaviour.CanGoToResearch(simulation, humanoid))
+            {
+                cells.Add(WindowCell.Button("Research", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Research))));
+            }
 
             cells.Add(WindowCell.Button("Patient", () => host.Open(new PatientWindow(humanoid.Id))));
             yield return new WindowRow(cells);
