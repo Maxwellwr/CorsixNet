@@ -100,6 +100,9 @@ public enum TransactionKind : byte
 
     /// <summary>A bonus of a tenth of a wage paid from the staff management screen (<c>personal_bonus</c>).</summary>
     PersonalBonus = 26,
+
+    /// <summary>A machine replaced from the machine window (<c>machine_replacement</c>); the subject is its object type.</summary>
+    MachineReplacement = 27,
 }
 
 /// <summary>

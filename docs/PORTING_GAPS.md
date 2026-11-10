@@ -34,9 +34,10 @@ objects from the level file.
   split over three tiles as CorsixTH does (drawn from its own tile for now).
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
-- Machines: replacement and upgrade, the machine window, the repair announcement and the invulnerable machines cheat
-  (`entities/machine.lua`, `dialogs/machine_dialog.lua`, `resizables/machine_menu.lua`). Strength, wear per use,
-  smoking, explosion (room crash) and repair by handymen are done (`Machines`, `HandymanBehaviour`).
+- Machines: the machines list (`resizables/machine_menu.lua`), the gear icon over a machine a handyman was called to,
+  the repair announcement and the invulnerable machines cheat (`entities/machine.lua`). Strength, wear per use,
+  smoking, explosion (room crash), repair by handymen and the machine window's call and replace (`MachineWindow`,
+  `CallHandymanCommand`, `ReplaceMachineCommand`) are done (`Machines`, `HandymanBehaviour`).
 - Object state: plants being watered, bins filling (`plant.lua`, `bin.lua`), litter being swept and the
   "need a handyman" advice. Plants drooping (`PlantState`), radiators heating tiles, litter (`Litter`, its ranks)
   and patients dropping rubbish (`Littering`) are done.
@@ -174,7 +175,7 @@ fonts, faces) and the details listed.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
   edit panel are text windows. Resizing a finished room or moving its door is not done.
-- Hire, staff, patient, queue and watch windows are text windows; the machine window is missing (`dialogs/*.lua`).
+- Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
 - Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of shame is missing.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
 - Adviser: the speaking figure and the announcer (`dialogs/adviser.lua`, `announcer.lua`); the queue, history and much
