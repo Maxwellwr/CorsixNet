@@ -212,13 +212,16 @@ Done and committed:
   Stripped patients come in CorsixTH's three kinds (`StrippedMalePatient2/3`, ...; PR #206). The cardiogram
   (cardiogram.lua, cardio.lua) runs through general diagnosis's flow (`RoomVisits.UndressesFirst`): undress, the
   machine with the doctor (54 in-use rounds, the time of CorsixTH's slowed-down loop), dress. Two-person uses are now
-  drawn from the object's tile in its attach tile's pass, as single uses (it doubled the cardiogram). From 2026-11-10 the user lets threads merge their own green PRs.
+  drawn from the object's tile in its attach tile's pass, as single uses (it doubled the cardiogram).
+  The scanner (scanner_room.lua, scanner.lua; save format 64): undress, the scanner's five begin and five finish
+  animations (`UseAnimations.More`, `ObjectUsePhase.Begin3`..`Finish5`; it has no in-use one) while the doctor works
+  the console, dress. From 2026-11-10 the user lets threads merge their own green PRs.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  scanner, operating theatre, fracture
+  operating theatre, fracture
   clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and

@@ -36,9 +36,12 @@ public static class RoomVisits
     /// <summary>The cardiogram's room type (rooms/cardiogram.lua): undressing, the machine with the doctor, dressing.</summary>
     internal const string CardiogramRoom = "cardiogram";
 
-    /// <summary>Whether patients undress behind the room's screen before they are examined: general diagnosis, the cardiogram.</summary>
+    /// <summary>The scanner's room type (rooms/scanner_room.lua): undressing, the scanner while the doctor works the console, dressing.</summary>
+    internal const string ScannerRoom = "scanner";
+
+    /// <summary>Whether patients undress behind the room's screen before they are examined: general diagnosis, the cardiogram, the scanner.</summary>
     internal static bool UndressesFirst(string roomType) =>
-        string.Equals(roomType, GeneralDiagnosisRoom, StringComparison.Ordinal) || string.Equals(roomType, CardiogramRoom, StringComparison.Ordinal);
+        roomType is GeneralDiagnosisRoom or CardiogramRoom or ScannerRoom;
 
     /// <summary>The toilets' room type: no staff, as many patients at once as there are toilets.</summary>
     internal const string ToiletsRoom = "toilets";
@@ -63,6 +66,7 @@ public static class RoomVisits
     {
         [GeneralDiagnosisRoom] = TrolleyType,
         [CardiogramRoom] = "cardio",
+        [ScannerRoom] = "scanner",
         [UltrascanRoom] = "ultrascanner",
         [XRayRoom] = "x_ray",
         [InflationRoom] = "inflator",
@@ -80,7 +84,7 @@ public static class RoomVisits
     internal static string? DoctorConsole(string roomType) => roomType switch
     {
         XRayRoom => "radiation_shield",
-        DecontaminationRoom => "console",
+        DecontaminationRoom or ScannerRoom => "console",
         _ => null,
     };
 
@@ -125,6 +129,7 @@ public static class RoomVisits
         [PharmacyRoom] = (BehaviourKind.Nurse, "pharmacy_cabinet"),
         [GeneralDiagnosisRoom] = (BehaviourKind.Doctor, "screen"),
         [CardiogramRoom] = (BehaviourKind.Doctor, "screen"),
+        [ScannerRoom] = (BehaviourKind.Doctor, "screen"),
         [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),

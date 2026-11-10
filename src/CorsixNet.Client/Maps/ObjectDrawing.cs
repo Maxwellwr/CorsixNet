@@ -49,6 +49,7 @@ internal sealed class ObjectDrawing
         ["console"] = new() { [N] = 794, [S] = 794 },
         ["shower"] = new() { [N] = 2014, [S] = 2014 },
         ["cardio"] = new() { [N] = 648, [S] = 648 },
+        ["scanner"] = new() { [N] = 1398, [S] = 1398 },
         ["radiation_shield"] = new() { [N] = 794, [S] = 794 },
         ["computer"] = new() { [N] = 2094, [S] = 2094 },
         ["analyser"] = new() { [N] = 2134, [S] = 2134 },

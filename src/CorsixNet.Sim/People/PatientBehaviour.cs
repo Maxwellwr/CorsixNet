@@ -1810,6 +1810,17 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 {
                     // CardiogramRoom's loop callback runs the in-use animation for five spells of six rounds, the
                     // middle ones slowed to two and three ticks a frame: 54 rounds' time, played here at normal speed.
+                    if (string.Equals(room.RoomType, RoomVisits.ScannerRoom, StringComparison.Ordinal))
+                    {
+                        // ScannerRoom:commandEnteringPatient: both ready, the patient goes into the scanner (its five begin
+                        // and five finish animations; it has no in-use one, so its loop callback never runs) while the
+                        // doctor works the console.
+                        Use = ObjectUse.Start(simulation, humanoid, trolley);
+                        Phase = PatientPhase.OnTrolley;
+                        ((DoctorBehaviour)doctor.Behaviour!).StartShield(simulation, doctor, room);
+                        return;
+                    }
+
                     var rounds = string.Equals(room.RoomType, RoomVisits.CardiogramRoom, StringComparison.Ordinal) ? CardiogramRounds : 0;
                     TrolleyUse = MultiObjectUse.Start(simulation, humanoid, trolley, doctor, inUseRounds: rounds);
                     Phase = PatientPhase.OnTrolley;
@@ -1818,7 +1829,17 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                 return;
             case PatientPhase.OnTrolley:
-                if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                if (Use is not null)
+                {
+                    // In the scanner.
+                    if (Use.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                    {
+                        return;
+                    }
+
+                    Use = null;
+                }
+                else if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
                 {
                     return;
                 }

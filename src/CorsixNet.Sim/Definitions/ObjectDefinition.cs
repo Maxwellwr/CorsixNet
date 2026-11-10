@@ -86,10 +86,23 @@ public readonly record struct AnimationRef(int Id, int Length);
 /// <param name="Finish2">A second finish animation after the first (<c>finish_use_2</c>).</param>
 public sealed record UseAnimations(AnimationRef? Begin, IReadOnlyList<AnimationRef> InUse, AnimationRef? Finish, AnimationRef? Begin2 = null, AnimationRef? Finish2 = null)
 {
+    /// <summary>The third to fifth begin and finish animations, which few objects have (the scanner).</summary>
+    public MoreUseAnimations? More { get; init; }
+
     /// <summary>Every animation the use may play.</summary>
     public IEnumerable<AnimationRef> All =>
-        new[] { Begin, Begin2, Finish, Finish2 }.OfType<AnimationRef>().Concat(InUse);
+        new[] { Begin, Begin2, More?.Begin3, More?.Begin4, More?.Begin5, Finish, Finish2, More?.Finish3, More?.Finish4, More?.Finish5 }
+            .OfType<AnimationRef>().Concat(InUse);
 }
+
+/// <summary>An object's <c>begin_use_3</c> to <c>begin_use_5</c> and <c>finish_use_3</c> to <c>finish_use_5</c>.</summary>
+public sealed record MoreUseAnimations(
+    AnimationRef? Begin3 = null,
+    AnimationRef? Begin4 = null,
+    AnimationRef? Begin5 = null,
+    AnimationRef? Finish3 = null,
+    AnimationRef? Finish4 = null,
+    AnimationRef? Finish5 = null);
 
 /// <summary>
 /// One phase of two people using an object together: the animation of the one who uses it, and the animation the
