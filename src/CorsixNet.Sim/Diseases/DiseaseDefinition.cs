@@ -14,6 +14,9 @@ public enum PatientLook : byte
 
     /// <summary>A slack man with a bald head (<c>diseases/baldness.lua</c>).</summary>
     Baldness,
+
+    /// <summary>A patient covered in hair (<c>diseases/hairyitis.lua</c>).</summary>
+    Hairyitis,
 }
 
 /// <summary>

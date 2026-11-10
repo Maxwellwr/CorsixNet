@@ -73,6 +73,7 @@ public static class RoomVisits
         [InflationRoom] = "inflator",
         [SlackTongueRoom] = "slicer",
         [HairRestorationRoom] = "hair_restorer",
+        [ElectrolysisRoom] = "electrolyser",
         [BloodMachineRoom] = "blood_machine",
         [DecontaminationRoom] = "shower",
     };
@@ -87,7 +88,7 @@ public static class RoomVisits
     internal static string? DoctorConsole(string roomType) => roomType switch
     {
         XRayRoom => "radiation_shield",
-        DecontaminationRoom or ScannerRoom or HairRestorationRoom => "console",
+        DecontaminationRoom or ScannerRoom or HairRestorationRoom or ElectrolysisRoom => "console",
         _ => null,
     };
 
@@ -173,6 +174,9 @@ public static class RoomVisits
     /// <summary>The hair restoration room's type (rooms/hair_restoration.lua): the hair restorer, a console and a doctor.</summary>
     internal const string HairRestorationRoom = "hair_restoration";
 
+    /// <summary>The electrolysis room's type (rooms/electrolysis.lua): the electrolyser, a console and a doctor.</summary>
+    internal const string ElectrolysisRoom = "electrolysis";
+
     /// <summary>The X-ray room's type.</summary>
     internal const string XRayRoom = "x_ray";
 
@@ -211,6 +215,7 @@ public static class RoomVisits
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),
         [SlackTongueRoom] = (BehaviourKind.Doctor, "slicer"),
         [HairRestorationRoom] = (BehaviourKind.Doctor, "hair_restorer"),
+        [ElectrolysisRoom] = (BehaviourKind.Doctor, "electrolyser"),
         [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
         [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),

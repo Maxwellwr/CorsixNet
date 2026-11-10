@@ -128,6 +128,7 @@ public static class DiseaseCatalog
         },
         new("hairyitis", 3, 1150)
         {
+            Look = PatientLook.Hairyitis,
             EmergencyNumber = 12,
             VisualsId = 1,
             DiagnosisRooms = ["x_ray", "scanner"],

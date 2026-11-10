@@ -76,6 +76,9 @@ public enum HumanoidType : byte
     /// show the tongue) except at the scanner and the slicer, and she never undresses for the scanner.
     /// </summary>
     SlackFemalePatient = 19,
+
+    /// <summary>CorsixTH's "Chewbacca Patient": covered in hair (diseases/hairyitis.lua) until the electrolysis.</summary>
+    ChewbaccaPatient = 20,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -814,6 +817,15 @@ public sealed class Humanoid : Entity
 
             layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
             return new Humanoid(id, tile, type, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
+        if (look == PatientLook.Hairyitis)
+        {
+            // hairyitis.lua: the layers are a standard man's, seen only once the hair is off.
+            layers[0] = (byte)(random.NextInclusive(1, 5) * 2);
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            layers[2] = (byte)(random.NextInclusive(0, 1) * 2);
+            return new Humanoid(id, tile, HumanoidType.ChewbaccaPatient, layers) { HospitalPlayer = hospitalPlayer };
         }
 
         if (look == PatientLook.Baldness)

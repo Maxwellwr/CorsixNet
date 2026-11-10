@@ -28,11 +28,11 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 66;
+    private const int FormatVersion = 67;
 
     /// <summary>
     /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
-    /// emptying to be edited (version 59), 59 the psychiatrist's session (version 60) 60 the ward's beds, stays and nurses (version 61) 61 swing doors (version 62) 62 prolonged uses of two people (version 63) 63 five begin and finish phases (version 64) 64 the surgeons' animations (version 65) and 65 resting in the staff room (version 66).
+    /// emptying to be edited (version 59), 59 the psychiatrist's session (version 60) 60 the ward's beds, stays and nurses (version 61) 61 swing doors (version 62) 62 prolonged uses of two people (version 63) 63 five begin and finish phases (version 64) 64 the surgeons' animations (version 65) 65 resting in the staff room (version 66) and 66 the electrolysis doctor's fatigue (version 67).
     /// </summary>
     private const int OldestFormatVersion = 57;
 

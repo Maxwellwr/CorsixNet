@@ -57,6 +57,7 @@ internal sealed class ObjectDrawing
         ["sofa"] = new() { [N] = 2122, [E] = 2124 },
         ["slicer"] = new() { [N] = 1386, [S] = 1386 },
         ["hair_restorer"] = new() { [N] = 2070, [S] = 2070 },
+        ["electrolyser"] = new() { [N] = 1262, [S] = 1262 },
         ["pool_table"] = new() { [N] = 2130, [S] = 2130 },
         ["video_game"] = new() { [N] = 3696, [S] = 3696 },
         ["tv"] = new() { [N] = 396, [E] = 398 },

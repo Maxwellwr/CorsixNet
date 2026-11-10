@@ -1962,7 +1962,30 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley } doctorBehaviour, IsMoving: false } doctor)
                 {
-                    if (string.Equals(room.RoomType, RoomVisits.HairRestorationRoom, StringComparison.Ordinal))
+                    if (string.Equals(room.RoomType, RoomVisits.ElectrolysisRoom, StringComparison.Ordinal))
+                    {
+                        // ElectrolysisRoom:commandEnteringPatient: 1 to 5 electrocutions, times 2 less the doctor's skill;
+                        // the patient turns into a standard man, or a woman with a new head and clothes, to show
+                        // under the hair; the doctor works the console meanwhile.
+                        var skill = (doctor.Profile?.Skill ?? 0) / (decimal)Staff.StaffProfile.MaxSkill;
+                        _machineRounds = simulation.Random.NextInclusive(1, 5) * (2 - skill);
+                        _electrolysisFatigue = doctor.Fatigue;
+                        if (simulation.Random.NextInclusive(0, 1) == 1)
+                        {
+                            humanoid.Type = HumanoidType.StandardMalePatient;
+                        }
+                        else
+                        {
+                            humanoid.Type = HumanoidType.StandardFemalePatient;
+                            humanoid.SetLayer(0, (byte)(simulation.Random.NextInclusive(1, 4) * 2));
+                            humanoid.SetLayer(1, (byte)(simulation.Random.NextInclusive(0, 3) * 2));
+                            humanoid.SetLayer(2, 0);
+                        }
+
+                        Use = ObjectUse.Start(simulation, humanoid, machine);
+                        doctorBehaviour.StartShield(simulation, doctor, room);
+                    }
+                    else if (string.Equals(room.RoomType, RoomVisits.HairRestorationRoom, StringComparison.Ordinal))
                     {
                         // HairRestorationRoom's loop callback ends the use at the first round: sit down, the cap comes down,
                         // a round of restoring, the cap goes up; the doctor works the console meanwhile.
@@ -2009,7 +2032,17 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 if (Use is not null)
                 {
                     var useEvent = Use.Update(simulation, humanoid);
-                    if (useEvent == ObjectUseEvent.Loop)
+                    if (useEvent == ObjectUseEvent.Loop && string.Equals(room.RoomType, RoomVisits.ElectrolysisRoom, StringComparison.Ordinal))
+                    {
+                        // electrolysis_loop_callback: once the electrocutions are done, a tired doctor may go on a little:
+                        // math.random() <= 0.1 + 2 * (1 - fatigue) ends it.
+                        _machineRounds--;
+                        if (_machineRounds <= 0 && simulation.Random.Next(1_000_000) / 1_000_000m <= 0.1m + (2 * (1 - _electrolysisFatigue)))
+                        {
+                            Use.Interrupt();
+                        }
+                    }
+                    else if (useEvent == ObjectUseEvent.Loop)
                     {
                         if (_machineRounds <= 0)
                         {
@@ -2098,6 +2131,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>The cardiogram's in-use rounds after the first (see <see cref="GeneralDiagnosisStep"/>).</summary>
     private const int CardiogramRounds = 53;
+
+    /// <summary>The electrolysis doctor's fatigue as the use began (CorsixTH reads it at each round; it barely changes).</summary>
+    private decimal _electrolysisFatigue;
 
     /// <summary>How much higher a slack woman's layer 0 is than her normal head's (<c>after_use_slack_tongue</c>).</summary>
     private const int SlackTongueLayerShift = 8;
@@ -2385,6 +2421,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteInt32(_sinkWait);
         writer.WriteInt32(WardBedId);
         writer.WriteDecimal(_wardWork);
+        writer.WriteDecimal(_electrolysisFatigue);
         writer.WriteString(_afterToiletsRoom);
         writer.WriteBool(_afterToiletsReception);
         writer.WriteBool(IsThirsty);
@@ -2477,6 +2514,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         {
             patient.WardBedId = reader.ReadInt32();
             patient._wardWork = reader.ReadDecimal();
+        }
+
+        if (reader.Version is 0 or >= 67)
+        {
+            patient._electrolysisFatigue = reader.ReadDecimal();
         }
         patient._afterToiletsRoom = reader.ReadString();
         patient._afterToiletsReception = reader.ReadBool();
