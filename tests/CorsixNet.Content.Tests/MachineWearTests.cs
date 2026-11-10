@@ -1,6 +1,7 @@
 using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
@@ -116,6 +117,41 @@ public class MachineWearTests
         Assert.True(repairs > 0, $"The inflator was used {inflator.Machine!.TotalUsage} times and never repaired.");
         Assert.True(inflator.Machine!.TotalUsage > inflator.Machine.Strength);
         Assert.Equal([3480], repairAnimations);
+    }
+
+    [Fact]
+    public void EachRoundOfAnEarthquakeWearsTheMachinesWithoutCountingAsAUse()
+    {
+        var simulation = NewStaffedHospital(InflationTests.Rules());
+        var room = InflationTests.BuildInflation(simulation);
+        var inflator = Inflator(simulation);
+        Run(simulation, new CheatCommand(CheatKind.Earthquake));
+        var size = simulation.Earthquakes.Size;
+        var rounds = 0;
+        var started = false;
+
+        for (var tick = 0; tick < 2 * 31 * GameDate.HoursPerDay && !room.IsCrashed; tick++)
+        {
+            var timesUsed = inflator.Machine!.TimesUsed;
+            var totalUsage = inflator.Machine.TotalUsage;
+            var remaining = simulation.Earthquakes.RemainingDamage;
+            simulation.Step();
+            started |= simulation.Earthquakes.IsActive;
+            if (simulation.Earthquakes.RemainingDamage < remaining)
+            {
+                Assert.Equal(totalUsage, inflator.Machine.TotalUsage);
+                Assert.True(inflator.Machine.TimesUsed == timesUsed + 1 || room.IsCrashed);
+                rounds++;
+            }
+
+            if (started && !simulation.Earthquakes.IsActive)
+            {
+                break;
+            }
+        }
+
+        Assert.True(rounds == size || room.IsCrashed, $"{rounds} rounds of {size}.");
+        Assert.True(rounds > 0);
     }
 
     private static RoomObject Inflator(Simulation simulation) => simulation.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "inflator");
