@@ -43,6 +43,9 @@ public sealed class ResearchRules
     /// <summary>base_config.lua's <c>gbv.AutopsyRschPercent</c>.</summary>
     public const int DefaultAutopsyPercent = 33;
 
+    /// <summary>base_config.lua's <c>gbv.AutopsyRepHitPercent</c>.</summary>
+    public const int DefaultAutopsyReputationHitPercent = 25;
+
     private const int MaxObjects = 256;
 
     private readonly SortedDictionary<int, ResearchObjectRules> _objects;
@@ -60,7 +63,8 @@ public sealed class ResearchRules
         int minDrugCost = DefaultMinDrugCost,
         int maxObjectStrength = DefaultMaxObjectStrength,
         int researchIncrement = DefaultResearchIncrement,
-        int autopsyPercent = DefaultAutopsyPercent)
+        int autopsyPercent = DefaultAutopsyPercent,
+        int autopsyReputationHitPercent = DefaultAutopsyReputationHitPercent)
     {
         _objects = new SortedDictionary<int, ResearchObjectRules>();
         foreach (var (thob, entry) in objects ?? [])
@@ -82,6 +86,7 @@ public sealed class ResearchRules
         MaxObjectStrength = maxObjectStrength;
         ResearchIncrement = researchIncrement;
         AutopsyPercent = autopsyPercent;
+        AutopsyReputationHitPercent = autopsyReputationHitPercent;
     }
 
     /// <summary>No objects to research: what levels without settings get.</summary>
@@ -110,6 +115,9 @@ public sealed class ResearchRules
 
     /// <summary>The share of an object's discovery an autopsy brings, in percent (<c>AutopsyRschPercent</c>).</summary>
     public int AutopsyPercent { get; }
+
+    /// <summary>The share of its reputation a hospital loses when an autopsy comes out, in percent (<c>AutopsyRepHitPercent</c>).</summary>
+    public int AutopsyReputationHitPercent { get; }
 
     /// <summary>The level's entry for an object type number, if it has one.</summary>
     public ResearchObjectRules? Object(int objectType) => _objects.TryGetValue(objectType, out var entry) ? entry : null;
@@ -145,6 +153,7 @@ public sealed class ResearchRules
         writer.WriteInt32(MaxObjectStrength);
         writer.WriteInt32(ResearchIncrement);
         writer.WriteInt32(AutopsyPercent);
+        writer.WriteInt32(AutopsyReputationHitPercent);
     }
 
     internal static ResearchRules Read(SimReader reader)
@@ -164,6 +173,13 @@ public sealed class ResearchRules
             expertise[i] = reader.ReadInt32();
         }
 
-        return new ResearchRules(objects, expertise, reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        var settings = new int[8];
+        for (var i = 0; i < settings.Length; i++)
+        {
+            settings[i] = reader.ReadInt32();
+        }
+
+        var reputationHit = reader.Version is 0 or >= 71 ? reader.ReadInt32() : DefaultAutopsyReputationHitPercent;
+        return new ResearchRules(objects, expertise, settings[0], settings[1], settings[2], settings[3], settings[4], settings[5], settings[6], settings[7], reputationHit);
     }
 }

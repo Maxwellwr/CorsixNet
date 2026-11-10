@@ -78,6 +78,7 @@ public static class RoomVisits
         [BloodMachineRoom] = "blood_machine",
         [DecontaminationRoom] = "shower",
         [JellyVatRoom] = "jelly_moulder",
+        [ResearchRoom] = "autopsy",
     };
 
     /// <summary>The decontamination room's type (rooms/decontamination.lua), the treatment of serious radiation.</summary>
@@ -107,7 +108,7 @@ public static class RoomVisits
     internal const string JellyVatRoom = "jelly_vat";
 
     /// <summary>Whether the room's doctor uses its machine with the patient, rather than the patient with the doctor.</summary>
-    internal static bool DoctorUsesMachine(string roomType) => roomType is BloodMachineRoom or JellyVatRoom;
+    internal static bool DoctorUsesMachine(string roomType) => roomType is BloodMachineRoom or JellyVatRoom or ResearchRoom;
 
 
     /// <summary>The operating theatre's room type (rooms/operating_theatre.lua): two surgeons operate on one patient.</summary>
@@ -235,6 +236,7 @@ public static class RoomVisits
         [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
         [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
         [JellyVatRoom] = (BehaviourKind.Doctor, "jelly_moulder"),
+        [ResearchRoom] = (BehaviourKind.Doctor, "autopsy"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),
         [WardRoom] = (BehaviourKind.Nurse, "bed"),
         [OperatingTheatreRoom] = (BehaviourKind.Doctor, "surgeon_screen"),
@@ -376,6 +378,7 @@ public static class RoomVisits
     {
         PsychRoom => staff.Profile is { IsPsychiatrist: true },
         OperatingTheatreRoom => staff.Profile is { IsSurgeon: true },
+        ResearchRoom => staff.Profile is { IsResearcher: true },
         _ => true,
     };
 
@@ -540,7 +543,10 @@ public static class RoomVisits
 
         if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
         {
+            // The researchers, and patients sent for an autopsy at its door.
             CallResearchers(simulation, room);
+            EnsureQueue(simulation, room);
+            TryAdvanceQueue(simulation, room);
             return;
         }
 

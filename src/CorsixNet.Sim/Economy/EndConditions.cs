@@ -233,7 +233,7 @@ public sealed class EndConditions
     /// <c>Hospital:getAverageStaffAttribute</c> and <c>getAveragePatientAttribute</c> for happiness: the mean over the
     /// hospital's staff or patients on its land, made up to <paramref name="minCount"/> with the default of 0.5.
     /// </summary>
-    private static decimal AverageHappiness(Simulation simulation, Hospital hospital, bool staff, int minCount)
+    internal static decimal AverageHappiness(Simulation simulation, Hospital hospital, bool staff, int minCount)
     {
         var sum = 0m;
         var count = 0;
@@ -260,7 +260,7 @@ public sealed class EndConditions
             count++;
         }
 
-        return sum / count;
+        return count == 0 ? DefaultHappiness : sum / count;
     }
 
     /// <summary><c>Hospital:isInHospital</c>: a hospital tile on land the hospital owns.</summary>

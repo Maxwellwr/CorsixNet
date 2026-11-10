@@ -156,6 +156,9 @@ public enum PatientAnswer : byte
 
     /// <summary><c>guess_cure</c>: the disease counts as diagnosed and the patient goes on to treatment; only for a known disease.</summary>
     GuessCure = 3,
+
+    /// <summary><c>research</c>: the patient goes to the research department for an autopsy; only with a researcher there.</summary>
+    Research = 4,
 }
 
 /// <summary>What kind of room a patient is looking for.</summary>
@@ -169,6 +172,9 @@ public enum RoomSeek : byte
 
     /// <summary>The next room of the disease's treatment.</summary>
     Treatment,
+
+    /// <summary>The research department, for an autopsy (the fax's <c>research</c> choice).</summary>
+    Research,
 }
 
 /// <summary>What a patient does once out of the room they are in.</summary>
@@ -711,8 +717,23 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
 
                 break;
+            case PatientAnswer.Research when question == PatientQuestion.NoTreatmentRoom && CanGoToResearch(simulation, humanoid):
+                // setNextAction(SeekRoomAction("research")).
+                _question = PatientQuestion.None;
+                Waiting = -1;
+                Seeking = RoomSeek.Research;
+                SeekRoom(simulation, humanoid);
+                break;
         }
     }
+
+    /// <summary>
+    /// <c>Patient:updateMessage("research")</c>: the fax's research choice is there when the hospital has a research
+    /// department and a researcher.
+    /// </summary>
+    public static bool CanGoToResearch(Simulation simulation, Humanoid humanoid) =>
+        simulation.Entities.Any(e => e is Room { IsActive: true, RoomType: RoomVisits.ResearchRoom } room && RoomVisits.Owner(simulation, room) == humanoid.HospitalPlayer)
+        && simulation.Entities.Any(e => e is Humanoid { Profile.IsResearcher: true, IsFired: false } staff && staff.Employer == humanoid.HospitalPlayer);
 
     /// <summary>
     /// <c>UIPatient:goHome</c>: the player sends the patient home, counted as kicked out (<c>goHome("kicked")</c>);
@@ -910,6 +931,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         {
             RoomSeek.Treatment => disease.TreatmentRooms.Contains(roomType, StringComparer.Ordinal),
             RoomSeek.Diagnosis => _availableDiagnosisRooms.Contains(roomType, StringComparer.Ordinal),
+            RoomSeek.Research => string.Equals(roomType, RoomVisits.ResearchRoom, StringComparison.Ordinal),
             _ => false,
         };
         if (wanted)
@@ -1453,6 +1475,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             case RoomSeek.Treatment:
                 SeekTreatmentRoom(simulation, humanoid);
                 return;
+            case RoomSeek.Research:
+                if (!GoToBestRoom(simulation, humanoid, RoomVisits.ResearchRoom))
+                {
+                    StartWaiting(simulation, humanoid, PatientQuestion.None);
+                }
+
+                return;
         }
 
         if (!GoToBestRoom(simulation, humanoid, FirstRoom))
@@ -1946,7 +1975,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         switch (Phase)
         {
             case PatientPhase.AtTrolley:
-                if ((machine is null || !room.StaffPresent) && Seeking == RoomSeek.Treatment)
+                if ((machine is null || !room.StaffPresent) && Seeking is RoomSeek.Treatment or RoomSeek.Research)
                 {
                     // The treatment room lost its doctor: leave and look for it again.
                     Next = AfterRoom.SeekRoom;
@@ -2029,6 +2058,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                         Use = ObjectUse.Start(simulation, humanoid, machine, prolonged: length >= 1);
                         doctorBehaviour.StartShield(simulation, doctor, room);
                     }
+                    else if (string.Equals(room.RoomType, RoomVisits.ResearchRoom, StringComparison.Ordinal))
+                    {
+                        // ResearchRoom:commandEnteringPatient: the researcher uses the autopsy machine with the patient,
+                        // who stands by it while its bed comes out (its secondary begin_use is the idle animation).
+                        TrolleyUse = MultiObjectUse.Start(simulation, doctor, machine, humanoid, invisiblePhases: (-4, 5));
+                    }
                     else if (string.Equals(room.RoomType, RoomVisits.JellyVatRoom, StringComparison.Ordinal))
                     {
                         // JellyVatRoom:commandEnteringPatient: the doctor uses the moulder with the patient, who stays in
@@ -2094,6 +2129,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
 
                 TrolleyUse = null;
+                if (string.Equals(room.RoomType, RoomVisits.ResearchRoom, StringComparison.Ordinal))
+                {
+                    Autopsied(simulation, humanoid, room);
+                    return;
+                }
+
                 if (string.Equals(room.RoomType, RoomVisits.FractureClinicRoom, StringComparison.Ordinal))
                 {
                     // fracture_clinic_after_use: the casts come off.
@@ -2140,6 +2181,39 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 LeaveRoom(simulation, humanoid);
                 return;
         }
+    }
+
+    /// <summary>
+    /// <c>after_use_autopsy</c>: the patient is dead; the research toward the last room of their treatment gets
+    /// <c>AutopsyRschPercent</c> of it, and the autopsy may come out (one in three, two in three when the staff are unhappy),
+    /// costing <c>AutopsyRepHitPercent</c> of the hospital's reputation; the researcher goes back to research.
+    /// </summary>
+    private void Autopsied(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour researcher })
+        {
+            researcher.OnExamined(room);
+        }
+
+        room.PatientId = 0;
+        var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
+        if (Disease is { TreatmentRooms.Count: > 0 } disease)
+        {
+            hospital.Research.AddPointsForAutopsy(simulation, hospital, disease.TreatmentRooms[^1]);
+        }
+
+        var happiness = EndConditions.AverageHappiness(simulation, hospital, staff: true, minCount: 0);
+        var discovered = happiness < 0.25m ? simulation.Random.NextInclusive(1, 3) != 1 : simulation.Random.NextInclusive(1, 3) == 1;
+        if (discovered && hospital.Reputation is var reputation)
+        {
+            hospital.ChangeReputation(simulation.Random, (int)Math.Floor(-reputation * simulation.Rules.Research.AutopsyReputationHitPercent / 100m), null);
+        }
+
+        // hosp:removePatient and destroyEntity: gone, without counting as a death.
+        TargetId = 0;
+        humanoid.ClearActionAnimation();
+        humanoid.StopWalking();
+        humanoid.IsDespawning = true;
     }
 
     /// <summary>

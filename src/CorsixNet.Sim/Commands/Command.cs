@@ -136,7 +136,7 @@ public abstract record Command
     private static PatientAnswer ReadPatientAnswer(SimReader reader)
     {
         var answer = reader.ReadByte();
-        return answer is >= (byte)PatientAnswer.SendHome and <= (byte)PatientAnswer.GuessCure ? (PatientAnswer)answer : throw new InvalidDataException($"Unknown patient answer {answer}.");
+        return answer is >= (byte)PatientAnswer.SendHome and <= (byte)PatientAnswer.Research ? (PatientAnswer)answer : throw new InvalidDataException($"Unknown patient answer {answer}.");
     }
 
     private static PolicyKind ReadPolicy(SimReader reader)

@@ -637,6 +637,24 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// </summary>
     private void ResearchStep(Simulation simulation, Humanoid humanoid, Room room)
     {
+        if (room.StaffId == humanoid.Id && IsPatientComingToTrolley(simulation, room))
+        {
+            // ResearchRoom:commandEnteringPatient: the researcher leaves what they are doing (staff:walkTo) for the
+            // autopsy machine, once the use in hand is over.
+            if (Use is { IsUsing: true } use)
+            {
+                use.Interrupt();
+                if (use.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                {
+                    return;
+                }
+            }
+
+            ResearchObjectId = 0;
+            WalkToTrolley(simulation, humanoid, room);
+            return;
+        }
+
         switch (Phase)
         {
             case DoctorPhase.WalkingToResearchObject:
@@ -1087,7 +1105,15 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary><c>after_use_trolley</c>: the examination is over and the doctor meanders again.</summary>
     internal void OnExamined(Room room)
     {
-        if (Phase == DoctorPhase.AtTrolley && RoomId == room.Id)
+        if (Phase == DoctorPhase.AtTrolley && RoomId == room.Id && string.Equals(room.RoomType, RoomVisits.ResearchRoom, StringComparison.Ordinal))
+        {
+            // after_use_autopsy: commandEnteringStaff, the research cycle again (at the next meander round).
+            Use = null;
+            Phase = DoctorPhase.ResearchMeandering;
+            _researchMeanders = 1;
+            Meander.Reset();
+        }
+        else if (Phase == DoctorPhase.AtTrolley && RoomId == room.Id)
         {
             Wait();
         }
