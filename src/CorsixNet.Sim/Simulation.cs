@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 69;
+    private const int FormatVersion = 70;
 
     /// <summary>
     /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
@@ -780,6 +780,9 @@ public sealed class Simulation
                 handymen[employer]++;
             }
         }
+
+        // Doctor:tickDay: students learn.
+        Training.OnEndDay(this);
 
         foreach (var hospital in _hospitals)
         {

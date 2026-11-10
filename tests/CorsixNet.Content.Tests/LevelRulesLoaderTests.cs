@@ -71,6 +71,21 @@ public class LevelRulesLoaderTests
     }
 
     [Fact]
+    public void ReadsTheTrainingSettings()
+    {
+        var config = LevelConfig.Parse(Encoding.ASCII.GetBytes("""
+            #gbv.TrainingRate		30	Add to student doctor's ability when being taught MIN 1 MAX 255
+            #gbv.AbilityThreshold[0]	50		Threshold at which skill is granted - SURGEON
+            #gbv.TrainingValue[2]		25		Bookcase
+            """));
+
+        var training = LevelRulesLoader.StaffFromConfig(config).Training;
+
+        Assert.Equal(new TrainingRules(30, 50, 60, 45, 10, 15, 25), training);
+        Assert.Equal(TrainingRules.Default, LevelRulesLoader.StaffFromConfig(LevelConfig.Parse([])).Training);
+    }
+
+    [Fact]
     public void CampaignLevelFiveGetsCorsixThsThreeSpecialistConsultants()
     {
         var config = LevelConfig.Parse([]);
