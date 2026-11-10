@@ -43,6 +43,8 @@ internal sealed class ObjectDrawing
         ["couch"] = new() { [N] = 2540, [S] = 2540 },
         ["comfortable_chair"] = new() { [N] = 2524, [S] = 2524 },
         ["bookcase"] = new() { [N] = 2406, [S] = 2406 },
+        ["lecture_chair"] = new() { [N] = 2626, [S] = 2626 },
+        ["projector"] = new() { [N] = 2586, [S] = 2586 },
         ["skeleton"] = new() { [N] = 2402, [S] = 2402 },
         ["bed"] = new() { [N] = 2644, [E] = 2646 },
         ["blood_machine"] = new() { [N] = 2228, [S] = 2228 },

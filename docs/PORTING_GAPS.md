@@ -16,7 +16,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 |---|---|
 | Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); the VIP's visit to the ward; in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
 | Treatment rooms: DNA fixer; the jelly wobble effect (the jelly vat itself is done) | `rooms/dna_fixer.lua`, `th_gfx_sdl.cpp` |
-| Facilities: training room (the staff room is done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
+| Facilities: (the staff room and training room are done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Autopsies in the research department (the research, the room and its researchers are ported) | `rooms/research.lua`, `objects/autopsy.lua` |
 | Editing a finished room back to the blueprint (resize, move the door), destroyed rooms after an explosion (editing objects and taking a room down for half its cost are done) | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
@@ -77,7 +77,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Staff room idle actions (`meander.lua`, `use_staffroom.lua`, `seek_staffroom.lua`). Doctors, nurses, receptionists
   and handymen without a job meander (`Meandering`), so do the pharmacy's nurse and the general diagnosis doctor
   between patients, handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).
-- Training: training room, consultant teaching, skill growth, gaining abilities (`rooms/training.lua`).
+- Training: the advice (promotions, a consultant needed, too few chairs), learning on the job (`doctor.lua`); the room, teaching, skill growth and gaining abilities are done (`Training`).
 - Surgeons, psychiatrists, researchers actually being required by rooms.
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
 - Tiredness animations (yawn, check watch, tap foot) (`humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`).

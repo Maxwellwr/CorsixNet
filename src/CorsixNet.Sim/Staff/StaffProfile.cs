@@ -29,6 +29,14 @@ public static class StaffClasses
     public static IReadOnlyList<StaffClass> HireOrder { get; } = [StaffClass.Doctor, StaffClass.Nurse, StaffClass.Handyman, StaffClass.Receptionist];
 }
 
+/// <summary>A doctor's ability beyond the general skill.</summary>
+public enum Specialism : byte
+{
+    Surgeon,
+    Psychiatrist,
+    Researcher,
+}
+
 /// <summary>
 /// A member of staff as a candidate for hire and, once hired, as an employee: skill, abilities,
 /// salary and looks.
@@ -84,6 +92,77 @@ public sealed class StaffProfile
 
     /// <summary>Variant of animation layer 5 (skin colour of doctors).</summary>
     public byte Layer5 { get; private set; } = 2;
+
+    /// <summary>
+    /// What training has added to the skill beyond its thousandths, in millionths (CorsixTH keeps the skill as a fraction).
+    /// </summary>
+    private int _skillMillionths;
+
+    /// <summary>How far a doctor has been taught surgery, psychiatry and research, in millionths of the ability.</summary>
+    private readonly int[] _specialismMillionths = new int[3];
+
+    /// <summary>How far a doctor has been taught an ability they do not have yet, from 0 to 1 (CorsixTH's <c>is_surgeon</c> etc.).</summary>
+    public decimal SpecialismProgress(Specialism specialism) =>
+        Has(specialism) ? 1 : _specialismMillionths[(int)specialism] / 1_000_000m;
+
+    /// <summary>Whether the doctor has the ability (CorsixTH's <c>hasSpecialism</c>).</summary>
+    public bool Has(Specialism specialism) => specialism switch
+    {
+        Specialism.Surgeon => IsSurgeon,
+        Specialism.Psychiatrist => IsPsychiatrist,
+        _ => IsResearcher,
+    };
+
+    /// <summary>
+    /// <c>Doctor:updateSkill("skill", amount)</c>: the skill grows, up to 1, and whether the doctor is a junior or a
+    /// consultant follows it.
+    /// </summary>
+    internal void TrainSkill(decimal amount, StaffRules rules)
+    {
+        if (Skill >= MaxSkill)
+        {
+            return;
+        }
+
+        var total = ((long)Skill * 1000) + _skillMillionths + (long)decimal.Floor(amount * 1_000_000);
+        total = Math.Min(total, (long)MaxSkill * 1000);
+        Skill = (int)(total / 1000);
+        _skillMillionths = (int)(total % 1000);
+        ParseSkillLevel(rules);
+    }
+
+    /// <summary><c>Doctor:updateSkill("is_surgeon", amount)</c> and so on: at 1 the doctor has the ability.</summary>
+    /// <returns>Whether the doctor has just gained the ability.</returns>
+    internal bool TrainSpecialism(Specialism specialism, decimal amount)
+    {
+        if (Has(specialism))
+        {
+            return false;
+        }
+
+        var index = (int)specialism;
+        _specialismMillionths[index] = (int)Math.Min(1_000_000, _specialismMillionths[index] + (long)decimal.Floor(amount * 1_000_000));
+        if (_specialismMillionths[index] < 1_000_000)
+        {
+            return false;
+        }
+
+        _specialismMillionths[index] = 0;
+        switch (specialism)
+        {
+            case Specialism.Surgeon:
+                IsSurgeon = true;
+                break;
+            case Specialism.Psychiatrist:
+                IsPsychiatrist = true;
+                break;
+            default:
+                IsResearcher = true;
+                break;
+        }
+
+        return true;
+    }
 
     /// <summary>
     /// Makes a random candidate for hire in month <paramref name="month"/> of the game, as CorsixTH's
@@ -175,6 +254,11 @@ public sealed class StaffProfile
         writer.WriteInt32(FaceIndex);
         writer.WriteInt32(ChinIndex);
         writer.WriteByte(Layer5);
+        writer.WriteInt32(_skillMillionths);
+        foreach (var progress in _specialismMillionths)
+        {
+            writer.WriteInt32(progress);
+        }
     }
 
     internal static StaffProfile Read(SimReader reader)
@@ -185,7 +269,7 @@ public sealed class StaffProfile
             throw new InvalidDataException($"Unknown staff class {staffClass}.");
         }
 
-        return new StaffProfile((StaffClass)staffClass)
+        var profile = new StaffProfile((StaffClass)staffClass)
         {
             NameSeed = reader.ReadInt32(),
             AttentionToDetail = reader.ReadInt32(),
@@ -201,6 +285,16 @@ public sealed class StaffProfile
             ChinIndex = reader.ReadInt32(),
             Layer5 = reader.ReadByte(),
         };
+        if (reader.Version is 0 or >= 70)
+        {
+            profile._skillMillionths = reader.ReadInt32();
+            for (var i = 0; i < profile._specialismMillionths.Length; i++)
+            {
+                profile._specialismMillionths[i] = reader.ReadInt32();
+            }
+        }
+
+        return profile;
     }
 
     private void Randomise(int month, StaffRules rules, SimRandom random, bool superDoctor)

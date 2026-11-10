@@ -440,7 +440,8 @@ public static partial class LevelRulesLoader
     /// <summary>
     /// The staff settings: <c>staff[n].MinSalary</c>, <c>gbv.SalaryAdd[3]</c> to <c>[8]</c>,
     /// <c>gbv.SalaryAbilityDivisor</c>, <c>gbv.DoctorThreshold</c>, <c>gbv.ConsultantThreshold</c> and
-    /// the <c>staff_levels</c> entries. What the files leave out comes from CorsixTH's base_config.lua,
+    /// the <c>staff_levels</c> entries, and the training settings (<c>gbv.TrainingRate</c>, <c>gbv.AbilityThreshold</c>,
+    /// <c>gbv.TrainingValue</c>). What the files leave out comes from CorsixTH's base_config.lua,
     /// on which CorsixTH reads the level files.
     /// </summary>
     public static StaffRules StaffFromConfig(LevelConfig config)
@@ -477,7 +478,17 @@ public static partial class LevelRulesLoader
             config.GetInt("gbv.DoctorThreshold") ?? defaults.DoctorThreshold,
             config.GetInt("gbv.ConsultantThreshold") ?? defaults.ConsultantThreshold,
             levels,
-            StartStaffFromConfig(config));
+            StartStaffFromConfig(config))
+        {
+            Training = new TrainingRules(
+                config.GetInt("gbv.TrainingRate") ?? TrainingRules.Default.Rate,
+                config.GetInt("gbv.AbilityThreshold[0]") ?? TrainingRules.Default.SurgeonThreshold,
+                config.GetInt("gbv.AbilityThreshold[1]") ?? TrainingRules.Default.PsychiatristThreshold,
+                config.GetInt("gbv.AbilityThreshold[2]") ?? TrainingRules.Default.ResearcherThreshold,
+                config.GetInt("gbv.TrainingValue[0]") ?? TrainingRules.Default.ProjectorValue,
+                config.GetInt("gbv.TrainingValue[1]") ?? TrainingRules.Default.SkeletonValue,
+                config.GetInt("gbv.TrainingValue[2]") ?? TrainingRules.Default.BookcaseValue),
+        };
     }
 
     /// <summary>

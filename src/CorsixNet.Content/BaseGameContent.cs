@@ -1151,6 +1151,46 @@ public static class BaseGameContent
         LevelConfigId: 21,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>The lecture chair (objects/lecture_chair.lua): a student doctor sits on it for as long as the lecture goes on.</summary>
+    public static readonly ObjectDefinition LectureChair = new(
+        "lecture_chair",
+        "Lecture Chair",
+        ObjectType: 36,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: LectureChairUse(),
+        UsageSouth: LectureChairUse());
+
+    /// <summary>The projector (objects/projector.lua): the consultant lectures from it.</summary>
+    public static readonly ObjectDefinition Projector = new(
+        "projector",
+        "Projector",
+        ObjectType: 37,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, UsePosition), new(0, 1), new(-1, 0), new(-1, 1)]),
+            [Direction.East] = new([new(0, 0, UsePosition), new(0, -1), new(1, 0), new(1, -1)]),
+        },
+        UsageNorth: ProjectorUse(),
+        UsageSouth: ProjectorUse());
+
+    /// <summary>
+    /// The training room (rooms/training.lua): a consultant teaches the doctors on its lecture chairs; the skeletons and
+    /// bookcases make it teach specialisms faster.
+    /// </summary>
+    public static readonly RoomDefinition Training = new(
+        "training",
+        "Training Room",
+        MinimumSize: 4,
+        FloorSprite: 17,
+        GreenWalls,
+        NeededObjects: new Dictionary<string, int> { ["lecture_chair"] = 1, ["projector"] = 1 },
+        LevelConfigId: 22,
+        AdditionalObjects: ["extinguisher", "radiator", "plant", "bin", "lecture_chair", "bookcase", "skeleton"]);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -1209,10 +1249,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration, Electrolysis, FractureClinic, JellyVat],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration, Electrolysis, FractureClinic, JellyVat, Training],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer, Electrolyser, CastRemover, JellyMoulder],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer, Electrolyser, CastRemover, JellyMoulder, LectureChair, Projector],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1358,6 +1398,21 @@ public static class BaseGameContent
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
+
+    /// <summary>lecture_chair.lua's animations for a doctor: sitting down, listening, getting up.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> LectureChairUse() => new()
+    {
+        [HumanoidType.Doctor] = new(new(2632, 27), [new(2622, 1)], new(2636, 18)),
+    };
+
+    /// <summary>projector.lua's animations for a doctor: three to start, lecturing, three to finish.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> ProjectorUse() => new()
+    {
+        [HumanoidType.Doctor] = new(new(2594, 7), [new(2602, 39)], new(2606, 7), Begin2: new(2590, 12), Finish2: new(2610, 17))
+        {
+            More = new(Begin3: new(2598, 16), Finish3: new(2684, 10)),
+        },
+    };
 
     /// <summary>shower.lua's animations for the standard patients: stepping in, showering, stepping out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> ShowerUse() => new()

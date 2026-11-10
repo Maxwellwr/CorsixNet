@@ -249,7 +249,13 @@ Next, in this order (2026-11-10):
    (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
    and moved to `FinishSecondaryUsePosition` facing `FinishSecondaryFacing` at the in-use phase. Not yet: the jelly
    wobble drawing effect (CorsixTH's AnimationEffect.Jelly, th_gfx_sdl.cpp), the patient facing the moulder while
-   waiting. Next: training room, autopsies, the hire window's faces.
+   waiting. Training room done (save format 70): the player puts doctors in (`RoomVisits.SettleInTraining`, only when
+   placed): a consultant lectures at the projector and goes to a skeleton or bookcase now and then, replacing any
+   consultant already lecturing; other doctors sit on free lecture chairs or leave. `Training.OnEndDay` is trainSkills:
+   skill (with millionths kept in `StaffProfile`) and specialism progress (`SpecialismProgress`, `TrainSpecialism`) from
+   `TrainingRules` (gbv.TrainingRate, AbilityThreshold, TrainingValue); a student who becomes a consultant leaves. Not
+   yet: the promotion advice, "needs a consultant" and "not enough lecture chairs" advice, the wage following the
+   promotion, learning on the job, doctors going back to the room after resting. Next: autopsies, the hire window's faces.
    The DNA fixer (rooms/dna_fixer.lua) needs more than the other rooms: its in-use animation is a "morph" from the
    alien (3594) into the standard patient (3618 men, 1150 women, mirrored), which the client cannot draw yet; it is
    staffed by a researcher; aliens have no normal door animations and come only by emergency (CorsixTH's

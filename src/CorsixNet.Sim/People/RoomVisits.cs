@@ -418,7 +418,14 @@ public static class RoomVisits
 
         if (room.IsActive && Owner(simulation, room) == staff.Employer)
         {
-            if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
+            if (string.Equals(room.RoomType, Staff.Training.RoomType, StringComparison.Ordinal))
+            {
+                if (placed && staff.Behaviour is DoctorBehaviour && staff.Profile is { } profile && SettleInTraining(simulation, room, staff, profile, roomStaff, tile))
+                {
+                    return true;
+                }
+            }
+            else if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
             {
                 // ResearchRoom's maximum_staff: as many researchers as desks.
                 if (staff is { Behaviour: DoctorBehaviour, Profile.IsResearcher: true } && CountResearchers(simulation, room) < CountObjects(simulation, room, "desk"))
@@ -453,6 +460,38 @@ public static class RoomVisits
         // createLeaveAction, then MeanderAction: out of the door, and wander about from there.
         var outside = OutsideTile(room, door);
         return staff.WalkTo(simulation, outside);
+    }
+
+    /// <summary>
+    /// <c>TrainingRoom:commandEnteringStaff</c> for a doctor put down in the training room: a consultant gives the lecture,
+    /// sending away the one giving it; any other doctor is a student while there are lecture chairs for them
+    /// (<c>maximum_staff</c>: the chairs and the consultant).
+    /// </summary>
+    private static bool SettleInTraining(Simulation simulation, Room room, Humanoid staff, Staff.StaffProfile profile, IRoomStaff roomStaff, TilePosition tile)
+    {
+        if (profile.IsConsultant)
+        {
+            if (room.StaffId != 0 && room.StaffId != staff.Id && simulation.FindEntity(room.StaffId) is Humanoid { Profile: not null } lecturer)
+            {
+                StaffEmployment.Detach(simulation, lecturer);
+                lecturer.Behaviour = StaffHiring.NewBehaviour(lecturer.Profile.Class);
+                SettleIdleStaff(simulation, lecturer);
+            }
+
+            room.StaffId = staff.Id;
+            room.StaffPresent = true;
+            roomStaff.GoToRoom(simulation, staff, room, tile);
+            return true;
+        }
+
+        var students = simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour doctor, IsFired: false } h && doctor.RoomId == room.Id && h.Id != room.StaffId);
+        if (students >= CountObjects(simulation, room, "lecture_chair"))
+        {
+            return false;
+        }
+
+        roomStaff.GoToRoom(simulation, staff, room, tile);
+        return true;
     }
 
     private static int CountResearchers(Simulation simulation, Room room) =>
@@ -502,6 +541,12 @@ public static class RoomVisits
         if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
         {
             CallResearchers(simulation, room);
+            return;
+        }
+
+        if (string.Equals(room.RoomType, Staff.Training.RoomType, StringComparison.Ordinal))
+        {
+            // No patients and no calls: the player puts the doctors in (TrainingRoom has no queue).
             return;
         }
 

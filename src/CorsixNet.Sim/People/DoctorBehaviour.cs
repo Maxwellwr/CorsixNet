@@ -83,6 +83,24 @@ public enum DoctorPhase : byte
 
     /// <summary>In the operating theatre: the second surgeon operating from the far side of the table.</summary>
     OtOperating,
+
+    /// <summary>In the training room: a student walking to a free lecture chair.</summary>
+    WalkingToLectureChair,
+
+    /// <summary>In the training room: a student on a lecture chair, learning while the room has its consultant.</summary>
+    Studying,
+
+    /// <summary>In the training room: the consultant walking to the projector.</summary>
+    WalkingToProjector,
+
+    /// <summary>In the training room: the consultant lecturing at the projector.</summary>
+    Lecturing,
+
+    /// <summary>In the training room: the consultant walking to a skeleton or bookcase.</summary>
+    WalkingToTrainingAid,
+
+    /// <summary>In the training room: the consultant showing the skeleton or reading at the bookcase.</summary>
+    UsingTrainingAid,
 }
 
 /// <summary>
@@ -147,6 +165,15 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary>The object the sequence's animations show and hide meanwhile.</summary>
     private int _sequenceObject;
 
+    /// <summary>In the training room: the lecture chair, projector, skeleton or bookcase used or gone to, or 0 (<c>reserved_for</c>).</summary>
+    public int TrainingObjectId { get; private set; }
+
+    /// <summary>
+    /// In the training room: rounds at the projector left before the consultant goes to a skeleton or bookcase
+    /// (<c>projector_use_time</c>), or uses of it left.
+    /// </summary>
+    private int _trainingRounds;
+
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         Meander.Reset();
@@ -203,6 +230,11 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 {
                     // ResearchRoom:commandEnteringStaff.
                     StartResearchCycle(simulation, humanoid, room);
+                }
+                else if (string.Equals(room.RoomType, Staff.Training.RoomType, StringComparison.Ordinal))
+                {
+                    // TrainingRoom:commandEnteringStaff.
+                    StartTraining(simulation, humanoid, room);
                 }
                 else if (string.Equals(room.RoomType, RoomVisits.OperatingTheatreRoom, StringComparison.Ordinal))
                 {
@@ -261,6 +293,14 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             case DoctorPhase.UsingResearchObject:
             case DoctorPhase.ResearchMeandering:
                 ResearchStep(simulation, humanoid, room);
+                break;
+            case DoctorPhase.WalkingToLectureChair:
+            case DoctorPhase.Studying:
+            case DoctorPhase.WalkingToProjector:
+            case DoctorPhase.Lecturing:
+            case DoctorPhase.WalkingToTrainingAid:
+            case DoctorPhase.UsingTrainingAid:
+                TrainingStep(simulation, humanoid, room);
                 break;
             case DoctorPhase.OtWalkingToScreen:
             case DoctorPhase.OtChanging:
@@ -364,6 +404,204 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// <c>TrainingRoom:commandEnteringStaff</c>: the consultant, the room's staff member, goes to the projector; a student
+    /// to a free lecture chair, to sit on it from then on; without one they leave.
+    /// </summary>
+    private void StartTraining(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Use = null;
+        Meander.Reset();
+        if (room.StaffId == humanoid.Id)
+        {
+            StartLectureCycle(simulation, humanoid, room);
+            return;
+        }
+
+        if (FindFreeTrainingObject(simulation, room, humanoid, "lecture_chair") is { } chair)
+        {
+            TrainingObjectId = chair.Id;
+            Phase = DoctorPhase.WalkingToLectureChair;
+            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, chair));
+            return;
+        }
+
+        LeaveTrainingRoom(simulation, humanoid);
+    }
+
+    /// <summary>Out of the training room, and looking for work like any idle doctor.</summary>
+    private void LeaveTrainingRoom(Simulation simulation, Humanoid humanoid)
+    {
+        Staff.StaffEmployment.Detach(simulation, humanoid);
+        Phase = DoctorPhase.Idle;
+        RoomId = 0;
+        TrainingObjectId = 0;
+        Use = null;
+        RoomVisits.SettleIdleStaff(simulation, humanoid);
+    }
+
+    /// <summary><c>TrainingRoom:doStaffUseCycle</c>: to the projector, to lecture there for 6 to 20 rounds.</summary>
+    private void StartLectureCycle(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Use = null;
+        TrainingObjectId = 0;
+        if (RoomVisits.FindObject(simulation, room.Id, "projector") is not { } projector)
+        {
+            Phase = DoctorPhase.Lecturing;
+            return;
+        }
+
+        TrainingObjectId = projector.Id;
+        _trainingRounds = simulation.Random.NextInclusive(6, 20);
+        Phase = DoctorPhase.WalkingToProjector;
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, projector));
+    }
+
+    /// <summary>
+    /// <c>findFreeObjectNearToUse</c> in the training room: the nearest object of the type that no other doctor uses or goes
+    /// to.
+    /// </summary>
+    private static RoomObject? FindFreeTrainingObject(Simulation simulation, Room room, Humanoid humanoid, string type)
+    {
+        RoomObject? best = null;
+        var bestDistance = 0;
+        foreach (var placed in simulation.Entities.OfType<RoomObject>())
+        {
+            if (placed.RoomId != room.Id || placed.IsDestroyed || !string.Equals(placed.ObjectType, type, StringComparison.Ordinal)
+                || simulation.Entities.Any(e => e is Humanoid { Behaviour: DoctorBehaviour other } h && h.Id != humanoid.Id && other.TrainingObjectId == placed.Id))
+            {
+                continue;
+            }
+
+            var tile = RoomVisits.UseTile(simulation, placed);
+            var distance = Math.Abs(tile.X - humanoid.Tile.X) + Math.Abs(tile.Y - humanoid.Tile.Y);
+            if (best is null || distance < bestDistance)
+            {
+                (best, bestDistance) = (placed, distance);
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// The training room's cycles. A student sits on the lecture chair for good. The consultant lectures at the projector;
+    /// once its rounds are up, they show a skeleton or read at a bookcase (either at random, when there are both) 3 to 10
+    /// times and go back (<c>loop_callback_training</c>); with neither, they lecture on.
+    /// </summary>
+    private void TrainingStep(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        var target = simulation.FindEntity(TrainingObjectId) as RoomObject;
+        switch (Phase)
+        {
+            case DoctorPhase.WalkingToLectureChair:
+                if (target is null || humanoid.Tile != RoomVisits.UseTile(simulation, target))
+                {
+                    LeaveTrainingRoom(simulation, humanoid);
+                    return;
+                }
+
+                Phase = DoctorPhase.Studying;
+                Use = ObjectUse.Start(simulation, humanoid, target);
+                break;
+            case DoctorPhase.Studying:
+                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+                {
+                    // queueAction(MeanderAction()): the lecture chair's use ends only when interrupted.
+                    Use = null;
+                    Meander.Update(simulation, humanoid);
+                }
+
+                break;
+            case DoctorPhase.WalkingToProjector:
+                if (target is null || humanoid.Tile != RoomVisits.UseTile(simulation, target))
+                {
+                    StartLectureCycle(simulation, humanoid, room);
+                    return;
+                }
+
+                Phase = DoctorPhase.Lecturing;
+                Use = ObjectUse.Start(simulation, humanoid, target);
+                break;
+            case DoctorPhase.Lecturing:
+                if (Use is null)
+                {
+                    return;
+                }
+
+                switch (Use.Update(simulation, humanoid))
+                {
+                    case ObjectUseEvent.Loop:
+                        _trainingRounds--;
+                        if (_trainingRounds == 0 && ChooseTrainingAid(simulation, room, humanoid) is not null)
+                        {
+                            Use.Interrupt();
+                        }
+
+                        _trainingRounds = Math.Max(_trainingRounds, 0);
+                        break;
+                    case ObjectUseEvent.Done:
+                        Use = null;
+                        if (ChooseTrainingAid(simulation, room, humanoid) is { } aid)
+                        {
+                            TrainingObjectId = aid.Id;
+                            _trainingRounds = simulation.Random.NextInclusive(3, 10);
+                            Phase = DoctorPhase.WalkingToTrainingAid;
+                            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, aid));
+                        }
+                        else
+                        {
+                            StartLectureCycle(simulation, humanoid, room);
+                        }
+
+                        break;
+                }
+
+                break;
+            case DoctorPhase.WalkingToTrainingAid:
+                if (target is null || humanoid.Tile != RoomVisits.UseTile(simulation, target))
+                {
+                    StartLectureCycle(simulation, humanoid, room);
+                    return;
+                }
+
+                Phase = DoctorPhase.UsingTrainingAid;
+                Use = ObjectUse.Start(simulation, humanoid, target);
+                break;
+            case DoctorPhase.UsingTrainingAid:
+                if (Use is null || target is null)
+                {
+                    StartLectureCycle(simulation, humanoid, room);
+                    return;
+                }
+
+                if (Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+                {
+                    _trainingRounds--;
+                    Use = _trainingRounds > 0 ? ObjectUse.Start(simulation, humanoid, target) : null;
+                    if (Use is null)
+                    {
+                        StartLectureCycle(simulation, humanoid, room);
+                    }
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>A free skeleton or bookcase nearby: the bookcase half the time when there are both.</summary>
+    private RoomObject? ChooseTrainingAid(Simulation simulation, Room room, Humanoid humanoid)
+    {
+        var skeleton = FindFreeTrainingObject(simulation, room, humanoid, "skeleton");
+        var bookcase = FindFreeTrainingObject(simulation, room, humanoid, Bookcase);
+        if (simulation.Random.Next(2) == 0 && bookcase is not null)
+        {
+            skeleton = null;
+        }
+
+        return skeleton ?? bookcase;
     }
 
     /// <summary>
@@ -930,6 +1168,8 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteTile(_sequenceTile);
         writer.WriteTile(_sequenceDrawTile);
         writer.WriteInt32(_sequenceObject);
+        writer.WriteInt32(TrainingObjectId);
+        writer.WriteInt32(_trainingRounds);
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
@@ -959,6 +1199,12 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             doctor._sequenceTile = reader.ReadTile();
             doctor._sequenceDrawTile = reader.ReadTile();
             doctor._sequenceObject = reader.ReadInt32();
+        }
+
+        if (reader.Version is 0 or >= 70)
+        {
+            doctor.TrainingObjectId = reader.ReadInt32();
+            doctor._trainingRounds = reader.ReadInt32();
         }
 
         return doctor;
