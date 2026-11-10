@@ -64,6 +64,18 @@ public enum HumanoidType : byte
     GownedMalePatient = 16,
 
     GownedFemalePatient = 17,
+
+    /// <summary>
+    /// CorsixTH's "Slack Male Patient": a man with a slack tongue (diseases/slack_tongue.lua) or a bald head
+    /// (baldness.lua), with animations of his own.
+    /// </summary>
+    SlackMalePatient = 18,
+
+    /// <summary>
+    /// CorsixTH's "Slack Female Patient": a woman with a slack tongue. Her animations are a standard woman's (her layers
+    /// show the tongue) except at the scanner and the slicer, and she never undresses for the scanner.
+    /// </summary>
+    SlackFemalePatient = 19,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -786,6 +798,32 @@ public sealed class Humanoid : Entity
     {
         Span<byte> layers = stackalloc byte[LayerCount];
         HumanoidType type;
+        if (look == PatientLook.SlackTongue)
+        {
+            // slack_tongue.lua: a woman (5 to 8) or a man (1 to 5) with the tongue in layer 0.
+            if (random.NextInclusive(0, 1) == 1)
+            {
+                layers[0] = (byte)(random.NextInclusive(5, 8) * 2);
+                type = HumanoidType.SlackFemalePatient;
+            }
+            else
+            {
+                layers[0] = (byte)(random.NextInclusive(1, 5) * 2);
+                type = HumanoidType.SlackMalePatient;
+            }
+
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            return new Humanoid(id, tile, type, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
+        if (look == PatientLook.Baldness)
+        {
+            // baldness.lua: a slack man with the bald head (layer 0 at 12).
+            layers[0] = 12;
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            return new Humanoid(id, tile, HumanoidType.SlackMalePatient, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
         if (look == PatientLook.BloatyHead)
         {
             layers[0] = (byte)(random.NextInclusive(6, 8) * 2);

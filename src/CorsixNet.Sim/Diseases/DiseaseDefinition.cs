@@ -8,6 +8,12 @@ public enum PatientLook : byte
 
     /// <summary>A standard male patient with one of the swollen heads (<c>diseases/bloaty_head.lua</c>).</summary>
     BloatyHead,
+
+    /// <summary>A slack man or woman with the tongue hanging out (<c>diseases/slack_tongue.lua</c>).</summary>
+    SlackTongue,
+
+    /// <summary>A slack man with a bald head (<c>diseases/baldness.lua</c>).</summary>
+    Baldness,
 }
 
 /// <summary>

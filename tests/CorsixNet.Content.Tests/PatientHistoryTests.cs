@@ -1,5 +1,7 @@
 using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
+using CorsixNet.Sim.Diseases;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 using static CorsixNet.Content.Tests.PatientFlowTests;
@@ -12,10 +14,11 @@ public class PatientHistoryTests
     [Fact]
     public void ThePatientWindowsHistoriesFollowTheVisit()
     {
-        var simulation = NewStaffedHospital();
+        // Broken wind only, which the pharmacy cures, so that cures do not hang on which diseases come.
+        var simulation = NewStaffedHospital(PharmacyOnly());
         BuildPharmacy(simulation);
         var histories = new Dictionary<int, (IReadOnlyList<TreatmentHistoryEntry> Treatment, IReadOnlyList<decimal> Health)>();
-        for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay; tick++)
+        for (var tick = 0; tick < 5 * 31 * GameDate.HoursPerDay; tick++)
         {
             simulation.Step();
             foreach (var humanoid in simulation.Entities.OfType<Humanoid>())
@@ -82,5 +85,26 @@ public class PatientHistoryTests
             Assert.Equal(original.HealthHistory, loaded.HealthHistory);
             Assert.Equal(original.IsSad, loaded.IsSad);
         }
+    }
+
+    private static LevelRules PharmacyOnly()
+    {
+        var nonVisuals = new int[DiseaseRules.NonVisualsCount];
+        nonVisuals[DiseaseCatalog.Find("broken_wind")!.NonVisualsId!.Value] = 1;
+        var diseases = new DiseaseRules(
+            Enumerable.Repeat(100, DiseaseRules.ExpertiseCount + 1).ToArray(),
+            Enumerable.Repeat(true, DiseaseRules.ExpertiseCount + 1).ToArray(),
+            Enumerable.Repeat(500, DiseaseRules.ExpertiseCount + 1).ToArray(),
+            new int[DiseaseRules.VisualsCount],
+            nonVisuals,
+            new int[DiseaseRules.VisualsCount],
+            new int[DiseaseRules.NonVisualsCount],
+            0,
+            0);
+        return new LevelRules(
+            1_000_000,
+            [KeyValuePair.Create("gp", 2500), KeyValuePair.Create("pharmacy", 2500)],
+            [KeyValuePair.Create(ReceptionDesks.ObjectId, 600)],
+            diseases: diseases);
     }
 }

@@ -32,6 +32,7 @@ public static class DiseaseCatalog
         },
         new("baldness", 10, 950)
         {
+            Look = PatientLook.Baldness,
             EmergencyNumber = 18,
             VisualsId = 8,
             DiagnosisRooms = ["x_ray", "blood_machine", "scanner"],
@@ -209,6 +210,7 @@ public static class DiseaseCatalog
         },
         new("slack_tongue", 7, 900)
         {
+            Look = PatientLook.SlackTongue,
             EmergencyNumber = 18,
             VisualsId = 5,
             DiagnosisRooms = ["x_ray", "scanner"],

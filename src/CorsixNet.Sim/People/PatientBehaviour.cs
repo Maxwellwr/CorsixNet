@@ -1692,6 +1692,21 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             return;
         }
 
+        if (string.Equals(room.RoomType, RoomVisits.ScannerRoom, StringComparison.Ordinal)
+            && humanoid.Type is not (HumanoidType.StandardMalePatient or HumanoidType.StandardFemalePatient)
+            && RoomVisits.ExaminingObject(simulation, room) is { } scanner)
+        {
+            // ScannerRoom's do_change: only standard patients undress; the others go straight to the scanner.
+            Phase = PatientPhase.WalkingToTrolley;
+            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, scanner));
+            if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour summoned } staff)
+            {
+                summoned.OnPatientUndressed(simulation, staff, room);
+            }
+
+            return;
+        }
+
         if (RoomVisits.UndressesFirst(room.RoomType))
         {
             Phase = PatientPhase.Undressing;
