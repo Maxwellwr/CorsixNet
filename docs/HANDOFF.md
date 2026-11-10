@@ -196,12 +196,18 @@ Done and committed:
   rounds; a session is 16 to 72 rounds of the chair counted while the patient lies on the couch, with trips to the
   bookcase. Save format 60. Objects against a room's front wall draw their user over the wall (seen with the
   chair); a drawing-order matter for later.
+  The ward (rooms/ward.lua, bed.lua; save format 61) takes as many patients as beds and calls as many nurses as desks
+  (`RoomVisits.UpdateWard`, kept out of the single-patient `Room.PatientId` as the toilets are). Nurses meander 4 to
+  10 rounds and write at a free desk 7 to 14 rounds; patients lie in a free bed until 150 to 600 of work is done, each
+  round taking off `WardHealingAmount` (nurses in the room x (0.5 + service quality) / ln(1 + patients) / (0.8 +
+  difficulty / 10)). Not yet: the swing doors (a plain door for now, to come with the operating theatre) and the
+  VIP's visit. From 2026-11-10 the user lets threads merge their own green PRs.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  scanner, blood machine, cardiogram, ward, operating theatre, fracture
+  scanner, blood machine, cardiogram, operating theatre, fracture
   clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and

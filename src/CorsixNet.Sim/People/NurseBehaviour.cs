@@ -1,5 +1,5 @@
 // Ported from CorsixTH CorsixTH/Lua/rooms/pharmacy.lua (PharmacyRoom:commandEnteringPatient) and CorsixTH/Lua/room.lua
-// (commandEnteringStaff).
+// (commandEnteringStaff) and CorsixTH/Lua/rooms/ward.lua (WardRoom:doStaffUseCycle).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Entities;
@@ -30,6 +30,15 @@ public enum NursePhase : byte
 
     /// <summary>Standing next to the patient, vaccinating them.</summary>
     Vaccinating,
+
+    /// <summary>In the ward: meandering a number of rounds.</summary>
+    WardMeandering,
+
+    /// <summary>In the ward: walking to a free desk.</summary>
+    WalkingToWardDesk,
+
+    /// <summary>In the ward: writing at the desk.</summary>
+    UsingWardDesk,
 }
 
 /// <summary>
@@ -57,6 +66,21 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
 
     /// <summary>Hours left of vaccinating (the 5 of CorsixTH's idle before <c>perform_vaccination</c>).</summary>
     private int VaccinateTimer { get; set; }
+
+    /// <summary>In the ward: the desk she goes to or writes at (CorsixTH's <c>reserved_for</c>), or 0.</summary>
+    public int WardDeskId { get; private set; }
+
+    /// <summary>In the ward: her use of the desk, while it lasts.</summary>
+    private ObjectUse? DeskUse { get; set; }
+
+    /// <summary>In the ward: meander rounds left (<c>meander_time</c>, then <c>num_meanders</c>).</summary>
+    private int _wardMeanders;
+
+    /// <summary>In the ward: rounds at the desk left (<c>desk_use_time</c>).</summary>
+    private int _wardDeskRounds;
+
+    /// <summary>In the ward: whether the meander after finding no free desk is under way (the second meander).</summary>
+    private bool _wardSecondMeander;
 
     /// <summary>Whether she is free for a room or a vaccination: without a room and not vaccinating.</summary>
     internal bool IsFree => Phase == NursePhase.Idle && RoomId == 0;
@@ -111,7 +135,20 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
 
                 // Room:commandEnteringStaff.
                 RoomVisits.TryToFindNearbyPatients(simulation, room);
-                Wait();
+                if (string.Equals(room.RoomType, RoomVisits.WardRoom, StringComparison.Ordinal))
+                {
+                    StartWardCycle(simulation);
+                }
+                else
+                {
+                    Wait();
+                }
+
+                break;
+            case NursePhase.WardMeandering:
+            case NursePhase.WalkingToWardDesk:
+            case NursePhase.UsingWardDesk:
+                WardStep(simulation, humanoid, room);
                 break;
             case NursePhase.WalkingToObject:
                 Phase = NursePhase.Waiting;
@@ -187,6 +224,93 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             WalkToObject(simulation, humanoid, room);
         }
     }
+
+    /// <summary><c>WardRoom:doStaffUseCycle</c>: meander 4 to 10 rounds before going to a desk.</summary>
+    private void StartWardCycle(Simulation simulation)
+    {
+        DeskUse = null;
+        WardDeskId = 0;
+        Phase = NursePhase.WardMeandering;
+        Meander.Reset();
+        _wardMeanders = simulation.Random.NextInclusive(4, 10);
+        _wardSecondMeander = false;
+    }
+
+    /// <summary>
+    /// The ward nurse's cycle: after meandering she writes at a free desk for 7 to 14 rounds and starts again; without a
+    /// free desk she meanders 2 to 4 rounds more and starts again.
+    /// </summary>
+    private void WardStep(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        switch (Phase)
+        {
+            case NursePhase.WardMeandering:
+                Meander.Update(simulation, humanoid, loop: () =>
+                {
+                    if (--_wardMeanders > 0)
+                    {
+                        return false;
+                    }
+
+                    if (_wardSecondMeander)
+                    {
+                        StartWardCycle(simulation);
+                        return true;
+                    }
+
+                    if (RoomVisits.FindFreeWardDesk(simulation, room, humanoid) is { } desk)
+                    {
+                        WardDeskId = desk.Id;
+                        _wardDeskRounds = simulation.Random.NextInclusive(7, 14);
+                        Phase = NursePhase.WalkingToWardDesk;
+                        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, desk));
+                    }
+                    else
+                    {
+                        _wardSecondMeander = true;
+                        _wardMeanders = simulation.Random.NextInclusive(2, 4);
+                    }
+
+                    return true;
+                });
+                break;
+            case NursePhase.WalkingToWardDesk:
+                if (simulation.FindEntity(WardDeskId) is RoomObject target && humanoid.Tile == RoomVisits.UseTile(simulation, target))
+                {
+                    Phase = NursePhase.UsingWardDesk;
+                    DeskUse = ObjectUse.Start(simulation, humanoid, target);
+                }
+                else
+                {
+                    StartWardCycle(simulation);
+                }
+
+                break;
+            case NursePhase.UsingWardDesk:
+                switch (DeskUse?.Update(simulation, humanoid) ?? ObjectUseEvent.Done)
+                {
+                    case ObjectUseEvent.Loop:
+                        if (--_wardDeskRounds <= 0)
+                        {
+                            DeskUse!.Interrupt();
+                        }
+
+                        break;
+                    case ObjectUseEvent.Done:
+                        StartWardCycle(simulation);
+                        break;
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// <c>Staff:getServiceQuality</c>: seven tenths her skill, two tenths how rested and a tenth how happy she is, from 0
+    /// to 1.
+    /// </summary>
+    internal static decimal ServiceQuality(Humanoid humanoid) =>
+        (0.7m * (humanoid.Profile?.Skill ?? 0) / Staff.StaffProfile.MaxSkill) + (0.2m * (1 - humanoid.Fatigue)) + (0.1m * humanoid.Happiness);
 
     /// <summary>Waits for a patient, meandering about the room, starting with a walk.</summary>
     private void Wait()
@@ -283,11 +407,16 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteInt32(VaccinatePatientId);
         writer.WriteInt32(VaccinateTimer);
         Meander.Write(writer);
+        writer.WriteInt32(WardDeskId);
+        ObjectUse.WriteOptional(writer, DeskUse);
+        writer.WriteInt32(_wardMeanders);
+        writer.WriteInt32(_wardDeskRounds);
+        writer.WriteBool(_wardSecondMeander);
     }
 
     internal static NurseBehaviour ReadState(SimReader reader)
     {
-        return new NurseBehaviour
+        var nurse = new NurseBehaviour
         {
             Phase = (NursePhase)reader.ReadByte(),
             RoomId = reader.ReadInt32(),
@@ -296,5 +425,15 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             VaccinateTimer = reader.ReadInt32(),
             Meander = Meandering.Read(reader),
         };
+        if (reader.Version is 0 or >= 61)
+        {
+            nurse.WardDeskId = reader.ReadInt32();
+            nurse.DeskUse = ObjectUse.ReadOptional(reader);
+            nurse._wardMeanders = reader.ReadInt32();
+            nurse._wardDeskRounds = reader.ReadInt32();
+            nurse._wardSecondMeander = reader.ReadBool();
+        }
+
+        return nurse;
     }
 }

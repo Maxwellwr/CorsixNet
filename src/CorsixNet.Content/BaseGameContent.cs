@@ -50,10 +50,12 @@ public static class BaseGameContent
         {
             // 72 (normal use) is meant to happen far more often than 718 (head scratching).
             [HumanoidType.Doctor] = new(new(56, 18), [.. Enumerable.Repeat(new AnimationRef(72, 4), 11), new(718, 17)], new(64, 13)),
+            [HumanoidType.Nurse] = new(new(3240, 16), [new(3256, 14)], new(3248, 11)),
         },
         UsageEast: new Dictionary<HumanoidType, UseAnimations>
         {
             [HumanoidType.Doctor] = new(new(58, 18), [new(74, 9)], new(66, 9)),
+            [HumanoidType.Nurse] = new(new(3242, 18), [new(3258, 15)], new(3250, 9)),
         });
 
     /// <summary>The filing cabinet (objects/cabinet.lua).</summary>
@@ -562,6 +564,51 @@ public static class BaseGameContent
         LevelConfigId: 8,
         AdditionalObjects: ["extinguisher", "radiator", "plant", "bin", "bookcase", "skeleton"]);
 
+    /// <summary>The ward's bed (objects/bed.lua): the patient lies down, stays and gets up.</summary>
+    public static readonly ObjectDefinition Bed = new(
+        "bed",
+        "Bed",
+        ObjectType: 8,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(1, -1, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell)],
+                UsePosition: (1, -1)),
+            [Direction.East] = new(
+                [new(0, 1, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell)],
+                UsePosition: (0, 1)),
+            [Direction.South] = new(
+                [new(1, 0, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell)],
+                UsePosition: (1, 0)),
+            [Direction.West] = new(
+                [new(-1, 1, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell)],
+                UsePosition: (-1, 1)),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations>
+        {
+            [HumanoidType.StandardMalePatient] = new(new(4686, 29), [new(4694, 1)], new(4702, 14)),
+            [HumanoidType.StandardFemalePatient] = new(new(4710, 29), [new(4718, 1)], new(4726, 16)),
+        },
+        UsageEast: new Dictionary<HumanoidType, UseAnimations>
+        {
+            [HumanoidType.StandardMalePatient] = new(new(4688, 23), [new(4696, 1)], new(4704, 15)),
+            [HumanoidType.StandardFemalePatient] = new(new(4712, 23), [new(4720, 1)], new(4728, 15)),
+        });
+
+    /// <summary>
+    /// The ward (rooms/ward.lua): a diagnosis and treatment room with beds and desks, as many patients as beds and as many
+    /// nurses as desks.
+    /// </summary>
+    public static readonly RoomDefinition Ward = new(
+        "ward",
+        "Ward",
+        MinimumSize: 6,
+        FloorSprite: 21,
+        WhiteWalls,
+        NeededObjects: new Dictionary<string, int> { ["desk"] = 1, ["bed"] = 1 },
+        LevelConfigId: 9,
+        AdditionalObjects: ["extinguisher", "radiator", "plant", "desk", "bin", "bed"]);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -616,10 +663,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed],
         DoorAnimations,
         PatientAnimations);
 
