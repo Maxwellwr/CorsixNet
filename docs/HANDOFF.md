@@ -224,6 +224,24 @@ Done and committed:
   for as long; then the patient changes back and is cured. Left out: the surgeons changing back as they leave (they
   turn into doctors at once), the X-ray viewer lighting up, the screen's outfit idles, the "needs a ward/surgeon" advice. From 2026-11-10 the user lets threads merge their own green PRs.
 
+Next, in this order (2026-11-10):
+
+1. Staff room (rooms/staff_room.lua, use_staffroom.lua, seek_staffroom.lua, sofa, video_game, pool_table): staff past
+   the GoToStaffRoom policy leave their room (if "staff leave their rooms" allows), rest until fatigue is gone and go
+   back; today fatigue only grows. Cross-cutting: every staff behaviour needs a way out of its room and back.
+2. Looks of visual diseases: Slack Male/Female, Alternate Male, Chewbacca, Transparent, Invisible, Elvis, Alien
+   (walk_anims in entities/humanoid.lua) with their animations in every object they use on the way (GP chair, drinks
+   machine, loo, sink, screen, bench, the diagnosis machines). Then the rooms that need them: slack tongue, hair
+   restoration, electrolysis, fracture clinic, DNA fixer, jelly vat; and psychiatry's king complex change.
+3. Training room, autopsies, the hire window's faces, machine wear and repairs.
+
+How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
+Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to
+BaseGameContent and the idles (and slave parts) to ObjectDrawing, fit the flow into RoomVisits/PatientBehaviour/
+DoctorBehaviour (machine flow, general diagnosis flow, multi-staff rooms like the ward), write a Content test with a
+small hospital (PatientFlowTests helpers; a disease-only DiseaseRules; the super doctor cheat for specialists), then a
+throwaway test saves that state and `--load` + `--script` shots show it live.
+
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
