@@ -176,17 +176,20 @@ public sealed class MultiObjectUse
         }
 
         var current = animations.Phases.ElementAt(phase);
-        TilePosition tile;
+        TilePosition tile, drawTile;
         if (layout.AnimateFromUsePosition)
         {
-            tile = new TilePosition(placed.Tile.X + layout.Use.X, placed.Tile.Y + layout.Use.Y);
+            tile = drawTile = new TilePosition(placed.Tile.X + layout.Use.X, placed.Tile.Y + layout.Use.Y);
         }
         else
         {
-            tile = new TilePosition(placed.Tile.X + layout.RenderAttach.X, placed.Tile.Y + layout.RenderAttach.Y);
+            // Drawn from the object's own tile, in the pass of its render attach tile, as CorsixTH's animation_offset
+            // makes up for the attach tile (and as a single use of the object is drawn).
+            tile = placed.Tile;
+            drawTile = new TilePosition(placed.Tile.X + layout.RenderAttach.X, placed.Tile.Y + layout.RenderAttach.Y);
         }
 
-        humanoid.SetActionAnimation(simulation, current.Primary, flip, tile, tile, placed.Id);
+        humanoid.SetActionAnimation(simulation, current.Primary, flip, tile, drawTile, placed.Id);
         if (current.Secondary is { } secondary)
         {
             useWith.SetActionAnimation(simulation, secondary, flip, useWith.Tile, useWith.Tile, 0);

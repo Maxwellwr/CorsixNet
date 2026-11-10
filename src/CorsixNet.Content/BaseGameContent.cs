@@ -709,6 +709,40 @@ public static class BaseGameContent
         LevelConfigId: 30,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>
+    /// The cardiogram machine (objects/machines/cardio.lua): the stripped patient is wired up while the doctor watches the
+    /// readout at its other end.
+    /// </summary>
+    public static readonly ObjectDefinition Cardio = new(
+        "cardio",
+        "Cardiogram",
+        ObjectType: 13,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(1, -1, UsePosition), new(0, -1, NeedNorthSide), new(0, 0, UsePosition)],
+                RenderAttach: (-1, 0),
+                UsePosition: (1, -1),
+                SecondaryUsePosition: (0, 0)),
+            [Direction.East] = new(
+                [new(-1, -1, CompleteCell), new(-1, 0), new(0, -1, CompleteCell), new(0, 0, UsePosition), new(-1, 1, UsePosition)],
+                RenderAttach: (0, -1),
+                UsePosition: (-1, 1),
+                SecondaryUsePosition: (0, 0)),
+        },
+        MultiUsage: CardioMultiUsage());
+
+    /// <summary>The cardiogram room (rooms/cardiogram.lua): a diagnosis room with a screen, the machine and a doctor.</summary>
+    public static readonly RoomDefinition Cardiogram = new(
+        "cardiogram",
+        "Cardiogram",
+        MinimumSize: 4,
+        FloorSprite: 19,
+        YellowWalls,
+        NeededObjects: new Dictionary<string, int> { ["cardio"] = 1, ["screen"] = 1 },
+        LevelConfigId: 12,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -763,10 +797,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio],
         DoorAnimations,
         PatientAnimations)
     {
@@ -888,6 +922,29 @@ public static class BaseGameContent
         [HumanoidType.StandardMalePatient] = new(new(2018, 21), [new(2150, 27)], new(2026, 14)),
         [HumanoidType.StandardFemalePatient] = new(new(2852, 27), [new(2856, 42)], new(2860, 15)),
     };
+
+    /// <summary>
+    /// cardio.lua's <c>multi_usage_animations</c>, the same for the three kinds of stripped patient: getting on, being
+    /// monitored (looped) and getting off, with the doctor's own animations at the readout.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> CardioMultiUsage()
+    {
+        static MultiUseAnimations Use(AnimationRef begin, AnimationRef inUse, AnimationRef finish) =>
+            new([new(begin, new(1030, 1))], new(inUse, new(656, 6)), [new(finish, new(1030, 1))]);
+
+        MultiUseAnimations[] male = [Use(new(1018, 16), new(652, 6), new(3282, 10))];
+        MultiUseAnimations[] female = [Use(new(3008, 16), new(2840, 6), new(4556, 10))];
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.StrippedMalePatient, HumanoidType.Doctor)] = male,
+            [(HumanoidType.StrippedMalePatient2, HumanoidType.Doctor)] = male,
+            [(HumanoidType.StrippedMalePatient3, HumanoidType.Doctor)] = male,
+            [(HumanoidType.StrippedFemalePatient, HumanoidType.Doctor)] = female,
+            [(HumanoidType.StrippedFemalePatient2, HumanoidType.Doctor)] = female,
+            [(HumanoidType.StrippedFemalePatient3, HumanoidType.Doctor)] = female,
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()

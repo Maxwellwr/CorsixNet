@@ -208,13 +208,17 @@ Done and committed:
   the patient hidden in its animations at the other end; `MultiObjectUse.InUseRounds` plays the in-use phase again
   as a prolonged use (2 to 4 more times here).
   Decontamination (decontamination.lua, shower.lua, console.lua): the X-ray's flow with the console as the doctor's
-  station (`RoomVisits.DoctorConsole`); the shower lasts math.random() * 3 - skill (short without loops under 1). From 2026-11-10 the user lets threads merge their own green PRs.
+  station (`RoomVisits.DoctorConsole`); the shower lasts math.random() * 3 - skill (short without loops under 1).
+  Stripped patients come in CorsixTH's three kinds (`StrippedMalePatient2/3`, ...; PR #206). The cardiogram
+  (cardiogram.lua, cardio.lua) runs through general diagnosis's flow (`RoomVisits.UndressesFirst`): undress, the
+  machine with the doctor (54 in-use rounds, the time of CorsixTH's slowed-down loop), dress. Two-person uses are now
+  drawn from the object's tile in its attach tile's pass, as single uses (it doubled the cardiogram). From 2026-11-10 the user lets threads merge their own green PRs.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  scanner, cardiogram, operating theatre, fracture
+  scanner, operating theatre, fracture
   clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and
