@@ -29,6 +29,8 @@ internal sealed record ClientOptions
     public GameSpeed Speed { get; init; } = GameSpeed.Normal;
     public Difficulty Difficulty { get; init; } = Difficulty.Medium;
     public string? CapturePath { get; init; }
+
+    public string? ScriptPath { get; init; }
     public string? LoadPath { get; init; }
     public bool ContinueGame { get; init; }
 }
@@ -176,6 +178,12 @@ internal static class ClientCommandLine
         HelpName = "FILE",
     };
 
+    private static readonly Option<string?> ScriptOption = new("--script")
+    {
+        Description = "Play the mouse and keyboard from a text file and take screenshots (see Input/InputScript.cs)",
+        HelpName = "FILE",
+    };
+
     private static readonly Option<bool> SpriteViewerOption = new("--sprite-viewer")
     {
         Description = "Browse sprite sheets instead of maps",
@@ -249,6 +257,7 @@ internal static class ClientCommandLine
         LoadOption,
         ContinueOption,
         CaptureOption,
+        ScriptOption,
         SpriteViewerOption,
         SheetOption,
         ConfigOption,
@@ -307,6 +316,7 @@ internal static class ClientCommandLine
             Difficulty = result.GetValue(DifficultyOption),
             CapturePath = FullPath(result.GetValue(CaptureOption)),
             LoadPath = FullPath(result.GetValue(LoadOption)),
+            ScriptPath = FullPath(result.GetValue(ScriptOption)),
             ContinueGame = result.GetValue(ContinueOption),
         };
     }

@@ -155,6 +155,19 @@ else
     };
 }
 
+if (options.ScriptPath is not null)
+{
+    try
+    {
+        CorsixNet.Client.Input.InputScript.Current = CorsixNet.Client.Input.InputScript.Load(options.ScriptPath);
+    }
+    catch (Exception e) when (e is InvalidDataException or IOException or UnauthorizedAccessException)
+    {
+        Console.Error.WriteLine(e.Message);
+        return 1;
+    }
+}
+
 using var game = new CorsixNetGame($"CorsixNet - {install.RootPath}", createScreen, config.Width, config.Height, config.Fullscreen);
 game.Run();
 return 0;

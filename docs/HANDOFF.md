@@ -31,7 +31,10 @@ the new session has absorbed it.
   `CORSIXNET_TH_PATH`. Real-data tests skip without it.
 - CorsixTH checkout: `C:\repos\github\CorsixTH`.
 - Commands: `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`.
-- Live checks were done by starting the client and injecting mouse and keyboard input from a
+- Live checks: `CorsixNet.exe --script checks.txt` plays the mouse and keyboard from a text file and saves
+  screenshots of the whole window (commands in `Client/Input/InputScript.cs`: wait, key, click, drag, wheel,
+  shot, quit). It needs no focus and leaves the real mouse alone, so it works while the user is at the computer.
+- Earlier live checks were done by starting the client and injecting mouse and keyboard input from a
   PowerShell script (user32 `SetCursorPos`, `mouse_event`, `keybd_event`, `PrintWindow` for
   screenshots). Wait about 6 seconds after start before sending input, or the steps land before
   the level has loaded. With the default window on `LEVEL.L1`, a GP's office goes in with:

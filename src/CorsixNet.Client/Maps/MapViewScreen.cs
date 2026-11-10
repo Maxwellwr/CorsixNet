@@ -370,8 +370,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
-        var keys = Keyboard.GetState();
-        var mouse = Mouse.GetState();
+        var keys = InputScript.Keyboard();
+        var mouse = InputScript.Mouse();
         var viewSize = ViewSize;
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_previousKeys.IsKeyDown(key);
 
@@ -636,7 +636,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         DrawRoomList(batch);
         if (IsWindowHostReady)
         {
-            var pointer = Mouse.GetState();
+            var pointer = InputScript.Mouse();
             _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
         }
 
@@ -2638,7 +2638,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var box = new Rectangle(8, StatusHeight + 8, width, ((labels.Count + 1) * lineHeight) + 12);
         batch.Draw(_pixel, box, MoneyPanelColor);
         _text.Draw(batch, title, new Vector2(box.X + 12, box.Y + 6));
-        var mouse = Mouse.GetState();
+        var mouse = InputScript.Mouse();
         for (var i = 0; i < labels.Count; i++)
         {
             var row = new Rectangle(box.X + 4, box.Y + 6 + ((i + 1) * lineHeight) - 2, box.Width - 8, lineHeight);
@@ -2742,7 +2742,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var box = new Rectangle(8, StatusHeight + 8, width, ((rows.Count + 1) * lineHeight) + 12);
         batch.Draw(_pixel, box, MoneyPanelColor);
         _text.Draw(batch, title, new Vector2(box.X + 12, box.Y + 6));
-        var mouse = Mouse.GetState();
+        var mouse = InputScript.Mouse();
         for (var i = 0; i < rows.Count; i++)
         {
             var (room, cost, problem) = rows[i];

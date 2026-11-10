@@ -72,7 +72,8 @@ it; taking an unfinished room down sells the furniture back. The balance is in t
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
 initial view. `--upscale 2` (or 4) starts with smoothed sprites. `--capture shot.png` saves
-the map view to a PNG after a few seconds and quits, which works even when the screen is locked. `--demo` builds and furnishes a GP's office near the start and adds twenty patients, half of them outside,
+the map view to a PNG after a few seconds and quits, which works even when the screen is locked. `--script checks.txt` plays the mouse and keyboard
+from a text file and saves screenshots of the whole window (see `Input/InputScript.cs`). `--demo` builds and furnishes a GP's office near the start and adds twenty patients, half of them outside,
 wandering into and around the hospital.
 
 Alt+Shift+S quick saves a local game and Alt+Shift+L loads the quick save. The game also saves
