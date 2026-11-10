@@ -1,6 +1,8 @@
 using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim.Calendar;
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Client.Tests;
@@ -93,6 +95,36 @@ public class AdviserTests
         doctor.RaiseRequest = 0;
         checks.Observe(host.Simulation, 0, null, 0);
         doctor.RaiseRequest = 50;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AFinishedRoomSaysWhichStaffItLacks()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var theatre = host.Simulation.AddEntity(id => new Room(id, "operating_theatre", new TileRect(2, 2, 4, 4), new OriginalTile[16]));
+        var ward = host.Simulation.AddEntity(id => new Room(id, "ward", new TileRect(8, 2, 4, 4), new OriginalTile[16]));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        // operating_theatre.lua: no ward and no surgeon.
+        theatre.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.OpNeedWard.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.OpNeedTwoSurgeons.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+
+        // ward.lua: a nurse; once there is one, nothing more is said.
+        ward.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.WardNeedNurse.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        host.Hire(StaffClass.Nurse);
+        ward.IsActive = false;
+        checks.Observe(host.Simulation, 0, null, 0);
+        ward.IsActive = true;
         checks.Observe(host.Simulation, 0, null, 0);
         Assert.Null(host.Adviser.Current);
     }

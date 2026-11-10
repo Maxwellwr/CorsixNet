@@ -106,6 +106,16 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     // earthquakes, research
     public static readonly Advice EarthquakeAlert = new(11, 107, "An earthquake is coming!");
     public static readonly Advice EarthquakeEnded = new(11, 78, "The earthquake is over. It measured %d on the Richter scale.");
+    // room_requirements, said when a room is finished (Room:roomFinished in rooms/*.lua)
+    public static readonly Advice PsychiatryNeedPsychiatrist = new(11, 79, "You need to employ a psychiatrist for the psychiatric room.");
+    public static readonly Advice PharmacyNeedNurse = new(11, 80, "You need to employ a nurse for the pharmacy.");
+    public static readonly Advice TrainingRoomNeedConsultant = new(11, 81, "You need to employ a consultant to teach in the training room.");
+    public static readonly Advice OpNeedTwoSurgeons = new(11, 85, "You need to employ two surgeons for the operating theatre.");
+    public static readonly Advice OpNeedAnotherSurgeon = new(11, 86, "You need to employ another surgeon for the operating theatre.");
+    public static readonly Advice OpNeedWard = new(11, 87, "You need to build a ward for patients to recover in after an operation.");
+    public static readonly Advice WardNeedNurse = new(11, 88, "You need to employ a nurse for the ward.");
+    public static readonly Advice GpsOfficeNeedDoctor = new(11, 105, "You need to employ a doctor for the GP's office.");
+
     public static readonly Advice NewMachineResearched = new(11, 24, "Research has produced a new %s.");
 
     // room requirements (ResearchRoom:roomFinished)
@@ -225,6 +235,18 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             if (research.Discovered && !last.Discovered.Contains(id))
             {
                 Say(NewMachineResearched, simulation.Content.FindObject(id)?.Name ?? id);
+            }
+        }
+
+        // Room:roomFinished: a room just finished says which staff it still lacks.
+        foreach (var roomId in snapshot.ActiveRooms)
+        {
+            if (!last.ActiveRooms.Contains(roomId) && simulation.FindEntity(roomId) is Room room)
+            {
+                foreach (var advice in RoomRequirements(simulation, player, room.RoomType))
+                {
+                    Say(advice);
+                }
             }
         }
 
@@ -382,6 +404,50 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
     private static bool HasRoomType(Simulation simulation, string roomType) => simulation.Content.FindRoom(roomType) is not null;
 
+    /// <summary>
+    /// What the rooms' <c>roomFinished</c> say: gp.lua, pharmacy.lua, ward.lua, psych.lua, training.lua, research.lua and
+    /// operating_theatre.lua (a ward first, then two surgeons). CorsixTH's other rooms, the DNA fixer's included, say
+    /// nothing.
+    /// </summary>
+    private static IEnumerable<Advice> RoomRequirements(Simulation simulation, int player, string roomType)
+    {
+        var staff = Staff(simulation, player).Select(h => h.Profile!).ToList();
+        switch (roomType)
+        {
+            case "gp" when !staff.Any(p => p.Class == StaffClass.Doctor):
+                yield return GpsOfficeNeedDoctor;
+                break;
+            case "pharmacy" when !staff.Any(p => p.Class == StaffClass.Nurse):
+                yield return PharmacyNeedNurse;
+                break;
+            case "ward" when !staff.Any(p => p.Class == StaffClass.Nurse):
+                yield return WardNeedNurse;
+                break;
+            case "psych" when !staff.Any(p => p.Class == StaffClass.Doctor && p.IsPsychiatrist):
+                yield return PsychiatryNeedPsychiatrist;
+                break;
+            case "training" when !staff.Any(p => p.Class == StaffClass.Doctor && p.IsConsultant):
+                yield return TrainingRoomNeedConsultant;
+                break;
+            case "research" when !staff.Any(p => p.Class == StaffClass.Doctor && p.IsResearcher):
+                yield return ResearchRoomNeedResearcher;
+                break;
+            case "operating_theatre":
+                if (!simulation.Entities.OfType<Room>().Any(r => r.RoomType == "ward" && r.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, r, player)))
+                {
+                    yield return OpNeedWard;
+                }
+
+                var surgeons = staff.Count(p => p.Class == StaffClass.Doctor && p.IsSurgeon);
+                if (surgeons < 2)
+                {
+                    yield return surgeons == 0 ? OpNeedTwoSurgeons : OpNeedAnotherSurgeon;
+                }
+
+                break;
+        }
+    }
+
     private static bool HasRoom(Simulation simulation, int player, string roomType) =>
         simulation.Entities.OfType<Room>().Any(room => room.RoomType == roomType && RoomBuilder.IsOwnedBy(simulation.Map, room, player));
 
@@ -414,7 +480,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         bool Earthquake,
         int EarthquakeSize,
         bool HasStaffedDesk,
-        IReadOnlySet<string> Discovered)
+        IReadOnlySet<string> Discovered,
+        IReadOnlySet<int> ActiveRooms)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -429,7 +496,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 simulation.Earthquakes.IsActive,
                 simulation.Earthquakes.Size,
                 staff.Any(s => s.Profile!.Class == StaffClass.Receptionist) && Count(simulation, player, ReceptionDesks.ObjectId) > 0,
-                hospital.Research.Objects.Where(pair => pair.Value.Discovered).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal));
+                hospital.Research.Objects.Where(pair => pair.Value.Discovered).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal),
+                simulation.Entities.OfType<Room>().Where(room => room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, player)).Select(room => room.Id).ToHashSet());
         }
     }
 }
