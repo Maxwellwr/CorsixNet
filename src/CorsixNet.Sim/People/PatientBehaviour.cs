@@ -1632,8 +1632,14 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             room.MaxTimes = RoomVisits.GpMaxTimes;
         }
 
-        // The GP's chair, or general diagnosis's screen.
+        // The GP's chair, general diagnosis's screen, the psychiatric couch.
         humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, placed));
+        if (string.Equals(room.RoomType, RoomVisits.PsychRoom, StringComparison.Ordinal)
+            && simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour psychiatrist } staffMember)
+        {
+            // PsychRoom:commandEnteringPatient: the psychiatrist goes to the comfortable chair.
+            psychiatrist.StartSession(simulation, staffMember, room);
+        }
     }
 
     /// <summary>

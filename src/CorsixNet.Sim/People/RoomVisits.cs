@@ -92,7 +92,18 @@ public static class RoomVisits
         [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),
+        [PsychRoom] = (BehaviourKind.Doctor, "couch"),
     };
+
+    /// <summary>The psychiatric room's type (rooms/psych.lua): a diagnosis and treatment room for a psychiatrist.</summary>
+    internal const string PsychRoom = "psych";
+
+    /// <summary>
+    /// Whether <paramref name="staff"/> has what the room type asks for beyond their kind (CorsixTH's
+    /// <c>required_staff</c> of <c>Psychiatrist</c>): the psychiatric room takes only psychiatrists.
+    /// </summary>
+    internal static bool IsQualifiedFor(string roomType, Humanoid staff) =>
+        !string.Equals(roomType, PsychRoom, StringComparison.Ordinal) || staff.Profile is { IsPsychiatrist: true };
 
     /// <summary>The object the room's patient is examined on with the doctor, or null for rooms without one.</summary>
     internal static RoomObject? ExaminingObject(Simulation simulation, Room room) =>
@@ -147,7 +158,7 @@ public static class RoomVisits
                     return true;
                 }
             }
-            else if (Rules.TryGetValue(room.RoomType, out var rules) && rules.Staff == staff.Behaviour!.Kind)
+            else if (Rules.TryGetValue(room.RoomType, out var rules) && rules.Staff == staff.Behaviour!.Kind && IsQualifiedFor(room.RoomType, staff))
             {
                 if (placed && room.StaffId != 0 && room.StaffId != staff.Id && room.PatientId == 0 && simulation.FindEntity(room.StaffId) is Humanoid { Profile: not null } current)
                 {
@@ -642,7 +653,7 @@ public static class RoomVisits
         var bestScore = 0m;
         foreach (var entity in simulation.Entities)
         {
-            if (entity is not Humanoid { Behaviour: { } behaviour } staff || !IsFreeFor(staff, rules.Staff, owner))
+            if (entity is not Humanoid { Behaviour: { } behaviour } staff || !IsFreeFor(staff, rules.Staff, owner) || !IsQualifiedFor(room.RoomType, staff))
             {
                 continue;
             }
@@ -706,7 +717,7 @@ public static class RoomVisits
         foreach (var entity in simulation.Entities)
         {
             if (entity is not Room { IsActive: true, StaffId: 0 } other || other.Id == room.Id
-                || !Rules.TryGetValue(other.RoomType, out var rules) || rules.Staff != kind || Owner(simulation, other) != owner
+                || !Rules.TryGetValue(other.RoomType, out var rules) || rules.Staff != kind || !IsQualifiedFor(other.RoomType, staff) || Owner(simulation, other) != owner
                 || simulation.FindEntity(other.DoorId) is not RoomDoor door)
             {
                 continue;
