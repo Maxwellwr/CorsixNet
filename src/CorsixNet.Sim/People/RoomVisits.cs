@@ -57,7 +57,11 @@ public static class RoomVisits
         [GeneralDiagnosisRoom] = TrolleyType,
         [UltrascanRoom] = "ultrascanner",
         [XRayRoom] = "x_ray",
+        [InflationRoom] = "inflator",
     };
+
+    /// <summary>The inflation room's type (rooms/inflation.lua), the treatment of bloaty heads.</summary>
+    internal const string InflationRoom = "inflation";
 
     /// <summary>The X-ray room's type.</summary>
     internal const string XRayRoom = "x_ray";
@@ -87,6 +91,7 @@ public static class RoomVisits
         [GeneralDiagnosisRoom] = (BehaviourKind.Doctor, "screen"),
         [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
+        [InflationRoom] = (BehaviourKind.Doctor, "inflator"),
     };
 
     /// <summary>The object the room's patient is examined on with the doctor, or null for rooms without one.</summary>

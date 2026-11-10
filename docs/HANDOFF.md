@@ -186,11 +186,17 @@ Done and committed:
   (the difficulties whose level files are installed); the levels list follows that campaign.
   The bottom panel's buttons have tooltips (CorsixTH's toolbar texts and the hotkeys) above the cursor.
 
+- 2026-11-10 on MSI: every window of the second overnight batch was looked at live with `--script` on the game
+  data and works; the tip and the watch now open where CorsixTH puts them (PR #199). The inflation room
+  (rooms/inflation.lua, inflator.lua; frame counts read from VSTART-1/VFRA-1) treats bloaty heads: the doctor
+  waits at the machine's other end, the patient's head is popped and pumped up (464, 478, 482, 496 once, 576)
+  and comes back to normal size (layer 0 less 10) before the cure. Checked live from a save made by a test.
+
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  scanner, blood machine, cardiogram, psychiatry, ward, operating theatre, inflation, fracture
+  scanner, blood machine, cardiogram, psychiatry, ward, operating theatre, fracture
   clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and

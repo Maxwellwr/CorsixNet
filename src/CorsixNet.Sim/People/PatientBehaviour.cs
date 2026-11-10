@@ -1792,6 +1792,14 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         switch (Phase)
         {
             case PatientPhase.AtTrolley:
+                if ((machine is null || !room.StaffPresent) && Seeking == RoomSeek.Treatment)
+                {
+                    // The treatment room lost its doctor: leave and look for it again.
+                    Next = AfterRoom.SeekRoom;
+                    LeaveRoom(simulation, humanoid);
+                    return;
+                }
+
                 if (machine is null || !room.StaffPresent)
                 {
                     _availableDiagnosisRooms.Add(room.RoomType);
@@ -1849,6 +1857,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
 
                 TrolleyUse = null;
+                if (string.Equals(room.RoomType, RoomVisits.InflationRoom, StringComparison.Ordinal) && humanoid.Layers[0] >= InflatedHeadLayerShift)
+                {
+                    // inflation_after_use: the head is back to normal size, whether the cure then works or not.
+                    humanoid.SetLayer(0, (byte)(humanoid.Layers[0] - InflatedHeadLayerShift));
+                }
+
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour examiner })
                 {
                     examiner.OnExamined(room);
@@ -1859,6 +1873,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 return;
         }
     }
+
+    /// <summary>How much higher a bloated head's layer 0 is than the normal head's (<c>inflation_after_use</c>).</summary>
+    private const int InflatedHeadLayerShift = 10;
 
     /// <summary>Rounds of a machine's in-use animation left (the X-ray's <c>length</c>).</summary>
     private decimal _machineRounds;
