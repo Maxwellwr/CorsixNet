@@ -28,11 +28,11 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 59;
+    private const int FormatVersion = 60;
 
     /// <summary>
     /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
-    /// emptying to be edited (version 59).
+    /// emptying to be edited (version 59), and 59 the psychiatrist's session (version 60).
     /// </summary>
     private const int OldestFormatVersion = 57;
 

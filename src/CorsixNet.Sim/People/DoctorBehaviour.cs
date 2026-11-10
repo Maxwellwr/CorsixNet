@@ -1,5 +1,6 @@
 // Ported from CorsixTH CorsixTH/Lua/rooms/gp.lua (GPRoom:doStaffUseCycle, commandEnteringStaff) and
-// CorsixTH/Lua/rooms/general_diag.lua (GeneralDiagRoom:commandEnteringPatient, the doctor's part).
+// CorsixTH/Lua/rooms/general_diag.lua (GeneralDiagRoom:commandEnteringPatient, the doctor's part) and
+// CorsixTH/Lua/rooms/psych.lua (PsychRoom:commandEnteringStaff, commandEnteringPatient).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Entities;
@@ -41,6 +42,21 @@ public enum DoctorPhase : byte
 
     /// <summary>In the research department: meandering a few rounds before the next.</summary>
     ResearchMeandering,
+
+    /// <summary>In the psychiatric room: walking to the bookcase, between patients or during a session.</summary>
+    WalkingToBookcase,
+
+    /// <summary>In the psychiatric room: reading at the bookcase.</summary>
+    UsingBookcase,
+
+    /// <summary>In the psychiatric room: meandering a few rounds between visits to the bookcase.</summary>
+    PsychMeandering,
+
+    /// <summary>In the psychiatric room: walking to the comfortable chair for a session.</summary>
+    WalkingToChair,
+
+    /// <summary>In the psychiatric room: in the comfortable chair while the patient lies on the couch.</summary>
+    UsingChair,
 }
 
 /// <summary>
@@ -54,6 +70,8 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 {
     private const string CabinetType = "cabinet";
     private const string DeskType = "desk";
+    private const string Bookcase = "bookcase";
+    private const string ComfortableChair = "comfortable_chair";
 
     public override BehaviourKind Kind => BehaviourKind.Doctor;
 
@@ -82,6 +100,9 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 
     /// <summary>Meander rounds left before the next object (<c>num_meanders</c>).</summary>
     private int _researchMeanders;
+
+    /// <summary>In the psychiatric room: rounds of the session left (<c>duration</c>), or 0 between patients.</summary>
+    private int _psychDuration;
 
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
@@ -133,6 +154,15 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                     // ResearchRoom:commandEnteringStaff.
                     StartResearchCycle(simulation, humanoid, room);
                 }
+                else if (string.Equals(room.RoomType, RoomVisits.PsychRoom, StringComparison.Ordinal))
+                {
+                    StartPsychCycle(simulation, humanoid, room);
+                    if (simulation.FindEntity(room.PatientId) is Humanoid { Behaviour: PatientBehaviour })
+                    {
+                        // A patient came in before the psychiatrist did.
+                        StartSession(simulation, humanoid, room);
+                    }
+                }
                 else if (RoomVisits.HasExaminingObject(room.RoomType))
                 {
                     // Room:commandEnteringStaff: the doctor meanders until a patient needs them.
@@ -177,6 +207,13 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             case DoctorPhase.UsingResearchObject:
             case DoctorPhase.ResearchMeandering:
                 ResearchStep(simulation, humanoid, room);
+                break;
+            case DoctorPhase.WalkingToBookcase:
+            case DoctorPhase.UsingBookcase:
+            case DoctorPhase.PsychMeandering:
+            case DoctorPhase.WalkingToChair:
+            case DoctorPhase.UsingChair:
+                PsychStep(simulation, humanoid, room);
                 break;
             case DoctorPhase.WalkingToCabinet:
                 if (RoomVisits.FindObject(simulation, room.Id, CabinetType) is { } cabinet)
@@ -361,6 +398,193 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         }
     }
 
+    /// <summary>
+    /// <c>PsychRoom:commandEnteringStaff</c>: to the bookcase and read there, then meander 2 to 8 rounds, then again; without
+    /// a bookcase just meander.
+    /// </summary>
+    private void StartPsychCycle(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Use = null;
+        _psychDuration = 0;
+        Meander.Reset();
+        if (RoomVisits.FindObject(simulation, room.Id, Bookcase) is { } bookcase)
+        {
+            Phase = DoctorPhase.WalkingToBookcase;
+            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, bookcase));
+            _researchMeanders = simulation.Random.NextInclusive(2, 8);
+        }
+        else
+        {
+            Phase = DoctorPhase.PsychMeandering;
+            _researchMeanders = 0;
+        }
+    }
+
+    /// <summary>
+    /// <c>PsychRoom:commandEnteringPatient</c>: the session lasts 16 to 72 rounds of the comfortable chair counted while
+    /// the patient lies on the couch; the psychiatrist walks to the chair and sits in it.
+    /// </summary>
+    internal void StartSession(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (RoomId != room.Id || Phase is DoctorPhase.WalkingToRoom or DoctorPhase.WalkingToChair or DoctorPhase.UsingChair || _psychDuration > 0)
+        {
+            return;
+        }
+
+        _psychDuration = simulation.Random.NextInclusive(16, 72);
+        WalkToChair(simulation, humanoid, room);
+    }
+
+    private void WalkToChair(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Use = null;
+        if (RoomVisits.FindObject(simulation, room.Id, ComfortableChair) is not { } chair)
+        {
+            StartPsychCycle(simulation, humanoid, room);
+            return;
+        }
+
+        Phase = DoctorPhase.WalkingToChair;
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, chair));
+    }
+
+    /// <summary>The psychiatrist's day: the bookcase and meandering between patients, the chair and its loop callback during a session.</summary>
+    private void PsychStep(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        switch (Phase)
+        {
+            case DoctorPhase.WalkingToBookcase:
+                if (RoomVisits.FindObject(simulation, room.Id, Bookcase) is { } bookcase && humanoid.Tile == RoomVisits.UseTile(simulation, bookcase))
+                {
+                    Phase = DoctorPhase.UsingBookcase;
+                    Use = ObjectUse.Start(simulation, humanoid, bookcase, prolonged: false);
+                }
+                else if (_psychDuration > 0)
+                {
+                    WalkToChair(simulation, humanoid, room);
+                }
+                else
+                {
+                    Phase = DoctorPhase.PsychMeandering;
+                }
+
+                break;
+            case DoctorPhase.UsingBookcase:
+                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+                {
+                    Use = null;
+                    if (_psychDuration > 0)
+                    {
+                        // During a session: back to the chair.
+                        WalkToChair(simulation, humanoid, room);
+                    }
+                    else
+                    {
+                        Phase = DoctorPhase.PsychMeandering;
+                        Meander.Reset();
+                    }
+                }
+
+                break;
+            case DoctorPhase.PsychMeandering:
+                Meander.Update(simulation, humanoid, loop: () =>
+                {
+                    _researchMeanders--;
+                    if (_researchMeanders != 0)
+                    {
+                        return false;
+                    }
+
+                    StartPsychCycle(simulation, humanoid, room);
+                    return true;
+                });
+                break;
+            case DoctorPhase.WalkingToChair:
+                if (RoomVisits.FindObject(simulation, room.Id, ComfortableChair) is { } chair && humanoid.Tile == RoomVisits.UseTile(simulation, chair))
+                {
+                    Phase = DoctorPhase.UsingChair;
+                    Use = ObjectUse.Start(simulation, humanoid, chair);
+                }
+                else
+                {
+                    EndSession(simulation, humanoid, room);
+                }
+
+                break;
+            case DoctorPhase.UsingChair:
+                switch (Use?.Update(simulation, humanoid) ?? ObjectUseEvent.Done)
+                {
+                    case ObjectUseEvent.Loop:
+                        SessionLoop(simulation, humanoid, room);
+                        break;
+                    case ObjectUseEvent.Done:
+                        Use = null;
+                        if (_psychDuration > 0 && RoomVisits.FindObject(simulation, room.Id, Bookcase) is { } shelf)
+                        {
+                            // The loop callback sent the psychiatrist to the bookcase.
+                            Phase = DoctorPhase.WalkingToBookcase;
+                            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, shelf));
+                        }
+                        else
+                        {
+                            StartPsychCycle(simulation, humanoid, room);
+                        }
+
+                        break;
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// <c>psych_loop_callback</c>: a round of the session counts while the patient lies on the couch; at the end the room is
+    /// done with the patient and the psychiatrist meanders again. Now and then (every tenth round, one time in two) they
+    /// get up to look something up at the bookcase, which shortens the session to at least 8 rounds.
+    /// </summary>
+    private void SessionLoop(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (simulation.FindEntity(room.PatientId) is not Humanoid { Behaviour: PatientBehaviour patient } || patient.TargetId != room.Id)
+        {
+            // The patient left the room: the psychiatrist meanders.
+            EndSession(simulation, humanoid, room);
+            return;
+        }
+
+        if (patient is { Phase: PatientPhase.UsingObject, Use.IsUsing: true })
+        {
+            _psychDuration--;
+        }
+
+        if (_psychDuration == 0)
+        {
+            // King complex patients would change at the screen first; they look like everyone else here.
+            EndSession(simulation, humanoid, room);
+            RoomVisits.DealtWithPatient(simulation, room);
+            return;
+        }
+
+        if (_psychDuration % 10 == 0 && simulation.Random.NextInclusive(1, 2) == 1
+            && RoomVisits.FindObject(simulation, room.Id, Bookcase) is not null)
+        {
+            _psychDuration = Math.Max(8, _psychDuration - 72);
+            Use!.Interrupt();
+        }
+    }
+
+    private void EndSession(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        _psychDuration = 0;
+        if (Phase == DoctorPhase.UsingChair && Use is { IsUsing: true })
+        {
+            // Get up first; the cycle starts once the chair's finish animation is done.
+            Use.Interrupt();
+            return;
+        }
+
+        StartPsychCycle(simulation, humanoid, room);
+    }
+
     /// <summary>GPRoom:doStaffUseCycle: to the cabinet, then the desk.</summary>
     private void StartCycle(Simulation simulation, Humanoid humanoid, Room room)
     {
@@ -459,6 +683,7 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteInt32(_previousResearchObject);
         writer.WriteInt32(_researchRounds);
         writer.WriteInt32(_researchMeanders);
+        writer.WriteInt32(_psychDuration);
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
@@ -474,6 +699,7 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             _previousResearchObject = reader.ReadInt32(),
             _researchRounds = reader.ReadInt32(),
             _researchMeanders = reader.ReadInt32(),
+            _psychDuration = reader.Version is 0 or >= 60 ? reader.ReadInt32() : 0,
         };
     }
 }

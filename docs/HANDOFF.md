@@ -191,12 +191,17 @@ Done and committed:
   (rooms/inflation.lua, inflator.lua; frame counts read from VSTART-1/VFRA-1) treats bloaty heads: the doctor
   waits at the machine's other end, the patient's head is popped and pumped up (464, 478, 482, 496 once, 576)
   and comes back to normal size (layer 0 less 10) before the cure. Checked live from a save made by a test.
+  The psychiatric room (rooms/psych.lua; couch, comfortable chair, bookcase, skeleton) diagnoses and treats with a
+  psychiatrist only (`RoomVisits.IsQualifiedFor`): between patients they read at the bookcase and meander 2 to 8
+  rounds; a session is 16 to 72 rounds of the chair counted while the patient lies on the couch, with trips to the
+  bookcase. Save format 60. Objects against a room's front wall draw their user over the wall (seen with the
+  chair); a drawing-order matter for later.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  scanner, blood machine, cardiogram, psychiatry, ward, operating theatre, fracture
+  scanner, blood machine, cardiogram, ward, operating theatre, fracture
   clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and

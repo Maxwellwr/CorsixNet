@@ -496,6 +496,72 @@ public static class BaseGameContent
         LevelConfigId: 17,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>The psychiatric couch (objects/couch.lua): the patient lies on it for the session.</summary>
+    public static readonly ObjectDefinition Couch = new(
+        "couch",
+        "Couch",
+        ObjectType: 18,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(-1, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, -1, UsePosition), new(0, 0, UsePosition)], RenderAttach: (-1, 0)),
+            [Direction.East] = new([new(-1, -1, CompleteCell), new(-1, 0, UsePosition), new(0, -1, CompleteCell), new(0, 0, UsePosition)]),
+        },
+        UsageNorth: CouchUse(),
+        UsageSouth: CouchUse());
+
+    /// <summary>The psychiatrist's comfortable chair (objects/comfortable_chair.lua).</summary>
+    public static readonly ObjectDefinition ComfortableChair = new(
+        "comfortable_chair",
+        "Comfortable Chair",
+        ObjectType: 61,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: ComfortableChairUse(),
+        UsageSouth: ComfortableChairUse());
+
+    /// <summary>The bookcase (objects/bookcase.lua), which the psychiatrist reads at.</summary>
+    public static readonly ObjectDefinition Bookcase = new(
+        "bookcase",
+        "Bookcase",
+        ObjectType: 56,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(2414, 43)], null) },
+        UsageSouth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(2414, 43)], null) });
+
+    /// <summary>The skeleton (objects/skeleton.lua), an extra object of the psychiatric room.</summary>
+    public static readonly ObjectDefinition Skeleton = new(
+        "skeleton",
+        "Skeleton",
+        ObjectType: 60,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(2614, 38)], null) },
+        UsageSouth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Doctor] = new(null, [new(2614, 38)], null) });
+
+    /// <summary>
+    /// The psychiatric room (rooms/psych.lua): a diagnosis and treatment room for a psychiatrist, with a screen, a couch
+    /// and a comfortable chair; bookcases and skeletons are its extra objects.
+    /// </summary>
+    public static readonly RoomDefinition Psych = new(
+        "psych",
+        "Psychiatric",
+        MinimumSize: 5,
+        FloorSprite: 18,
+        WhiteWalls,
+        NeededObjects: new Dictionary<string, int> { ["screen"] = 1, ["couch"] = 1, ["comfortable_chair"] = 1 },
+        LevelConfigId: 8,
+        AdditionalObjects: ["extinguisher", "radiator", "plant", "bin", "bookcase", "skeleton"]);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -550,10 +616,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton],
         DoorAnimations,
         PatientAnimations);
 
@@ -628,6 +694,19 @@ public static class BaseGameContent
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
+
+    /// <summary>couch.lua's animations for the standard patients: lying down, lying there, getting up.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> CouchUse() => new()
+    {
+        [HumanoidType.StandardMalePatient] = new(new(2528, 15), [new(2536, 1)], new(2532, 8)),
+        [HumanoidType.StandardFemalePatient] = new(new(3180, 12), [new(3330, 1)], new(3326, 7)),
+    };
+
+    /// <summary>comfortable_chair.lua's doctor: two animations to sit down, sitting, getting up.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> ComfortableChairUse() => new()
+    {
+        [HumanoidType.Doctor] = new(new(2516, 10), [new(2544, 1)], new(2520, 5), Begin2: new(2512, 9)),
+    };
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()
