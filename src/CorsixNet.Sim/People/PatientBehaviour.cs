@@ -2030,6 +2030,19 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
 
                 TrolleyUse = null;
+                if (string.Equals(room.RoomType, RoomVisits.SlackTongueRoom, StringComparison.Ordinal))
+                {
+                    // after_use_slack_tongue: a slack man becomes a standard one; a slack woman's tongue goes from layer 0.
+                    if (humanoid.Type == HumanoidType.SlackMalePatient)
+                    {
+                        humanoid.Type = HumanoidType.StandardMalePatient;
+                    }
+                    else if (humanoid.Layers[0] >= SlackTongueLayerShift)
+                    {
+                        humanoid.SetLayer(0, (byte)(humanoid.Layers[0] - SlackTongueLayerShift));
+                    }
+                }
+
                 if (string.Equals(room.RoomType, RoomVisits.InflationRoom, StringComparison.Ordinal) && humanoid.Layers[0] >= InflatedHeadLayerShift)
                 {
                     // inflation_after_use: the head is back to normal size, whether the cure then works or not.
@@ -2071,6 +2084,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>The cardiogram's in-use rounds after the first (see <see cref="GeneralDiagnosisStep"/>).</summary>
     private const int CardiogramRounds = 53;
+
+    /// <summary>How much higher a slack woman's layer 0 is than her normal head's (<c>after_use_slack_tongue</c>).</summary>
+    private const int SlackTongueLayerShift = 8;
 
     /// <summary>How much higher a bloated head's layer 0 is than the normal head's (<c>inflation_after_use</c>).</summary>
     private const int InflatedHeadLayerShift = 10;
