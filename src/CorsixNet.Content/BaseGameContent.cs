@@ -15,7 +15,10 @@ namespace CorsixNet.Content;
 public static class BaseGameContent
 {
     /// <summary>The "white" wall set (walls/white.lua).</summary>
-    public static readonly WallSet WhiteWalls = new(InsideNorth: 82, InsideWest: 83, OutsideNorth: 90, OutsideWest: 91, WindowNorth: 128, WindowWest: 129);
+    public static readonly WallSet WhiteWalls = new(InsideNorth: 82, InsideWest: 83, OutsideNorth: 90, OutsideWest: 91, WindowNorth: 128, WindowWest: 129)
+    {
+        Swing = new SwingWalls(98, 99, 130, 131, 106, 107, 148, 149),
+    };
 
     /// <summary>The "green" wall set (walls/green.lua).</summary>
     /// <summary>walls/yellow.lua.</summary>
@@ -607,7 +610,8 @@ public static class BaseGameContent
         WhiteWalls,
         NeededObjects: new Dictionary<string, int> { ["desk"] = 1, ["bed"] = 1 },
         LevelConfigId: 9,
-        AdditionalObjects: ["extinguisher", "radiator", "plant", "desk", "bin", "bed"]);
+        AdditionalObjects: ["extinguisher", "radiator", "plant", "desk", "bin", "bed"],
+        SwingDoors: true);
 
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
@@ -655,11 +659,11 @@ public static class BaseGameContent
     /// </summary>
     public static readonly IReadOnlyDictionary<HumanoidType, DoorAnimations> DoorAnimations = new Dictionary<HumanoidType, DoorAnimations>
     {
-        [HumanoidType.StandardMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12)),
-        [HumanoidType.StandardFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12)),
-        [HumanoidType.Doctor] = new(Entering: new(672, 10), Leaving: new(670, 12)),
-        [HumanoidType.Nurse] = new(Entering: new(3266, 10), Leaving: new(3264, 12)),
-        [HumanoidType.Handyman] = new(Entering: new(3288, 10), Leaving: new(3286, 12)),
+        [HumanoidType.StandardMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12), EnteringSwing: new(2042, 6), LeavingSwing: new(2040, 9)),
+        [HumanoidType.StandardFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9)),
+        [HumanoidType.Doctor] = new(Entering: new(672, 10), Leaving: new(670, 12), EnteringSwing: new(4752, 6), LeavingSwing: new(4750, 5)),
+        [HumanoidType.Nurse] = new(Entering: new(3266, 10), Leaving: new(3264, 12), EnteringSwing: new(3274, 6), LeavingSwing: new(3272, 7)),
+        [HumanoidType.Handyman] = new(Entering: new(3288, 10), Leaving: new(3286, 12), EnteringSwing: new(3520, 6), LeavingSwing: new(3518, 9)),
     };
 
     public static GameContent Create() => new(
@@ -668,7 +672,11 @@ public static class BaseGameContent
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
         [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed],
         DoorAnimations,
-        PatientAnimations);
+        PatientAnimations)
+    {
+        // swing_door_right.lua: the left door swings in 2032 or out 2034, the right one in 2048 or out 2052.
+        SwingDoor = new SwingDoorAnimations(SlaveIn: new(2032, 27), SlaveOut: new(2034, 22), MasterIn: new(2048, 19), MasterOut: new(2052, 17)),
+    };
 
     /// <summary>humanoid.lua's <c>vomit_anim</c> and <c>pee_anim</c> for the standard patients.</summary>
     public static readonly IReadOnlyDictionary<HumanoidType, PatientAnimations> PatientAnimations = new Dictionary<HumanoidType, PatientAnimations>

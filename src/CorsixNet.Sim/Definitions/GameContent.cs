@@ -8,7 +8,13 @@ namespace CorsixNet.Sim.Definitions;
 /// </summary>
 /// <param name="Entering">Going through towards the camera, east or (mirrored) south.</param>
 /// <param name="Leaving">Going through away from the camera, north or (mirrored) west.</param>
-public sealed record DoorAnimations(AnimationRef Entering, AnimationRef Leaving);
+public sealed record DoorAnimations(AnimationRef Entering, AnimationRef Leaving, AnimationRef? EnteringSwing = null, AnimationRef? LeavingSwing = null);
+
+/// <summary>
+/// The swing doors' own animations (objects/doors/swing_door_right.lua): the left door (the slave) swings first, the
+/// right one (the master) once the humanoid is through; each swings in or out.
+/// </summary>
+public sealed record SwingDoorAnimations(AnimationRef SlaveIn, AnimationRef SlaveOut, AnimationRef MasterIn, AnimationRef MasterOut);
 
 /// <summary>Block sprites for the walls of a room type, as in CorsixTH's <c>walls/*.lua</c>.</summary>
 /// <param name="InsideNorth">North wall seen from inside the room.</param>
@@ -19,9 +25,26 @@ public sealed record DoorAnimations(AnimationRef Entering, AnimationRef Leaving)
 /// <param name="WindowWest">West wall with a window, used inside and outside alike; 0 if the room has no windows.</param>
 public sealed record WallSet(ushort InsideNorth, ushort InsideWest, ushort OutsideNorth, ushort OutsideWest, ushort WindowNorth = 0, ushort WindowWest = 0)
 {
+    /// <summary>
+    /// The wall pieces beside swing doors (CorsixTH's <c>swing_inside_tiles</c> and <c>swing_outside_tiles</c>): the
+    /// left one behind the left door, the right one beyond the right door, for north and west walls inside and outside.
+    /// </summary>
+    public SwingWalls? Swing { get; init; }
+
     /// <summary>Whether the room type allows windows.</summary>
     public bool HasWindows => WindowNorth != 0 && WindowWest != 0;
 }
+
+/// <summary>Wall pieces beside swing doors, inside and outside the room, left and right, north and west.</summary>
+public sealed record SwingWalls(
+    ushort InsideNorthLeft,
+    ushort InsideWestLeft,
+    ushort InsideNorthRight,
+    ushort InsideWestRight,
+    ushort OutsideNorthLeft,
+    ushort OutsideWestLeft,
+    ushort OutsideNorthRight,
+    ushort OutsideWestRight);
 
 /// <summary>A kind of room the player can build, as in CorsixTH's <c>rooms/*.lua</c>.</summary>
 /// <param name="Id">Stable identifier used in commands and saves, e.g. "gp".</param>
@@ -32,6 +55,7 @@ public sealed record WallSet(ushort InsideNorth, ushort InsideWest, ushort Outsi
 /// <param name="NeededObjects">Objects the room needs before it works, with how many of each.</param>
 /// <param name="AdditionalObjects">Further objects that may be placed in the room.</param>
 /// <param name="LevelConfigId">The room's number in the level files (<c>rooms[n]</c>), CorsixTH's <c>level_config_id</c>; 0 if none.</param>
+/// <param name="SwingDoors">Whether the room has a pair of swing doors rather than a door (CorsixTH's <c>swing_doors</c>).</param>
 public sealed record RoomDefinition(
     string Id,
     string Name,
@@ -40,7 +64,8 @@ public sealed record RoomDefinition(
     WallSet Walls,
     IReadOnlyDictionary<string, int>? NeededObjects = null,
     IReadOnlyList<string>? AdditionalObjects = null,
-    int LevelConfigId = 0)
+    int LevelConfigId = 0,
+    bool SwingDoors = false)
 {
     /// <summary>Whether objects of type <paramref name="objectId"/> may be placed in the room.</summary>
     public bool Allows(string objectId)
@@ -106,6 +131,9 @@ public sealed class GameContent
         Objects = [.. _objects.Values.OrderBy(obj => obj.Id, StringComparer.Ordinal)];
         _windowSprites = [.. Rooms.SelectMany(room => new[] { room.Walls.WindowNorth, room.Walls.WindowWest }).Where(sprite => sprite != 0)];
     }
+
+    /// <summary>The swing doors' animations, or null when no room has swing doors.</summary>
+    public SwingDoorAnimations? SwingDoor { get; init; }
 
     /// <summary>All object types, ordered by id.</summary>
     public IReadOnlyList<ObjectDefinition> Objects { get; }
