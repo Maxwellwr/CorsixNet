@@ -55,7 +55,7 @@ objects from the level file.
 refreshed monthly, `HireStaffCommand` with placement check, monthly wages; receptionist at a desk,
 doctor in GP and general diagnosis, nurse in the pharmacy.
 
-- Hire window with faces (names and descriptions are done, `StaffTexts`); picking up and placing staff
+- Hire window: the original's panel (names, descriptions and portraits are done, `StaffTexts`, `StaffFaces`); picking up and placing staff
   (two steps, cancel puts candidate back) (`dialogs/hire_staff.lua`, `place_staff.lua`, `staff_profile.lua`).
 - Staff management screen: list, salaries, raise, fire, train (`fullscreen/staff_management.lua`). Firing and
   answering a raise request are commands only (`FireStaffCommand`, `AnswerRaiseCommand`).

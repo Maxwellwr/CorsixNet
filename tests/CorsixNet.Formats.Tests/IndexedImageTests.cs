@@ -37,4 +37,16 @@ public class IndexedImageTests
 
         Assert.Equal((640, 480), (background.Width, background.Height));
     }
+
+    [Fact]
+    public void LoadsTheStaffFaceParts()
+    {
+        var install = RealGameData.Require();
+
+        // hire_staff.lua's loadRaw("Face01V", 65, 1350): 18 hairs, faces and chins under each other.
+        var parts = install.LoadRawBitmap("QDATA", "FACE01V", 65, 1350);
+
+        Assert.Equal((65, 1350), (parts.Width, parts.Height));
+        Assert.Contains(parts.Pixels.ToArray(), pixel => pixel != 0);
+    }
 }
