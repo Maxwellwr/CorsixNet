@@ -58,7 +58,14 @@ public static class RoomVisits
         [UltrascanRoom] = "ultrascanner",
         [XRayRoom] = "x_ray",
         [InflationRoom] = "inflator",
+        [BloodMachineRoom] = "blood_machine",
     };
+
+    /// <summary>
+    /// The blood machine room's type (rooms/blood_machine_room.lua): the doctor works the machine at its use position and
+    /// the patient waits at its other end, the reverse of the other machines.
+    /// </summary>
+    internal const string BloodMachineRoom = "blood_machine";
 
     /// <summary>The inflation room's type (rooms/inflation.lua), the treatment of bloaty heads.</summary>
     internal const string InflationRoom = "inflation";
@@ -77,6 +84,11 @@ public static class RoomVisits
             return FindObject(simulation, room.Id, "radiation_shield") is { } shield ? UseTile(simulation, shield) : null;
         }
 
+        if (string.Equals(room.RoomType, BloodMachineRoom, StringComparison.Ordinal))
+        {
+            return ExaminingObject(simulation, room) is { } machine ? UseTile(simulation, machine) : null;
+        }
+
         return ExaminingObject(simulation, room) is { } examining ? SecondaryUseTile(simulation, examining) : null;
     }
 
@@ -92,6 +104,7 @@ public static class RoomVisits
         [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),
+        [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),
         [WardRoom] = (BehaviourKind.Nurse, "bed"),
     };

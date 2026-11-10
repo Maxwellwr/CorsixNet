@@ -203,13 +203,16 @@ Done and committed:
   difficulty / 10)). Swing doors (swing_door_left/right.lua; `RoomDefinition.SwingDoors`, save format 62): the right door
   is walked through with the humanoids' swing animations, the left one beside it and the wall beyond get the swing
   wall pieces; the left door swings at once, the right one once the walker is through, and nobody else goes through
-  until it is done. Not yet: the VIP's visit to the ward. From 2026-11-10 the user lets threads merge their own green PRs.
+  until it is done. Not yet: the VIP's visit to the ward.
+  The blood machine (blood_machine_room.lua; save format 63): the doctor works the machine at its use position with
+  the patient hidden in its animations at the other end; `MultiObjectUse.InUseRounds` plays the in-use phase again
+  as a prolonged use (2 to 4 more times here). From 2026-11-10 the user lets threads merge their own green PRs.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  scanner, blood machine, cardiogram, operating theatre, fracture
+  scanner, cardiogram, operating theatre, fracture
   clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, decontamination, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and

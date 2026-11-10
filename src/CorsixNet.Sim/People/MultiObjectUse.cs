@@ -15,7 +15,7 @@ namespace CorsixNet.Sim.People;
 /// the longer of the two animations.
 /// </summary>
 /// <remarks>
-/// Prolonged use, which no ported room needs yet, is left out: the in-use phase plays once. The patient's change of
+/// Prolonged use plays the in-use phase <see cref="InUseRounds"/> more times, each a loop (the blood machine's). The patient's change of
 /// looks during the use (CorsixTH's morphs, for invisible patients) is left to when the client can draw them.
 /// </remarks>
 public sealed class MultiObjectUse
@@ -46,6 +46,9 @@ public sealed class MultiObjectUse
     /// <summary>Ticks left of the current phase.</summary>
     public int Timer { get; private set; }
 
+    /// <summary>How many more times the in-use phase plays (a prolonged use's loops), 0 to play it once.</summary>
+    public int InUseRounds { get; private set; }
+
     /// <summary>Which of the object's animation variants the use plays (CorsixTH's <c>random_anim</c>).</summary>
     public int Variant { get; private set; }
 
@@ -60,7 +63,7 @@ public sealed class MultiObjectUse
     /// Starts using <paramref name="placed"/> with <paramref name="useWith"/> (<c>action_multi_use_object_start</c>);
     /// null when the object has no animations for the two.
     /// </summary>
-    internal static MultiObjectUse? Start(Simulation simulation, Humanoid humanoid, RoomObject placed, Humanoid useWith, int layer3 = -1)
+    internal static MultiObjectUse? Start(Simulation simulation, Humanoid humanoid, RoomObject placed, Humanoid useWith, int layer3 = -1, int inUseRounds = 0)
     {
         if (simulation.Content.FindObject(placed.ObjectType)?.MultiUse(placed.Orientation, humanoid.Type, useWith.Type) is not var (variants, _))
         {
@@ -70,6 +73,7 @@ public sealed class MultiObjectUse
         var use = new MultiObjectUse(placed.Id, useWith.Id)
         {
             UseLayer3 = layer3,
+            InUseRounds = inUseRounds,
             Variant = variants.Count > 1 ? simulation.Random.Next(variants.Count) : 0,
         };
         if (humanoid.Profile is not null)
@@ -109,6 +113,14 @@ public sealed class MultiObjectUse
         {
             End(simulation, humanoid);
             return ObjectUseEvent.Done;
+        }
+
+        if (Phase == animations.Begin.Count && InUseRounds > 0)
+        {
+            // A prolonged use: the in-use animation again.
+            InUseRounds--;
+            EnterPhase(simulation, humanoid, Phase);
+            return ObjectUseEvent.Loop;
         }
 
         var next = Phase + 1;
@@ -211,11 +223,12 @@ public sealed class MultiObjectUse
         writer.WriteInt32(UseLayer3);
         writer.WriteByte(OldLayer3);
         writer.WriteByte(OldLayer3UseWith);
+        writer.WriteInt32(InUseRounds);
     }
 
     internal static MultiObjectUse Read(SimReader reader)
     {
-        return new MultiObjectUse(reader.ReadInt32(), reader.ReadInt32())
+        var use = new MultiObjectUse(reader.ReadInt32(), reader.ReadInt32())
         {
             Phase = reader.ReadInt32(),
             Timer = reader.ReadInt32(),
@@ -224,6 +237,12 @@ public sealed class MultiObjectUse
             OldLayer3 = reader.ReadByte(),
             OldLayer3UseWith = reader.ReadByte(),
         };
+        if (reader.Version is 0 or >= 63)
+        {
+            use.InUseRounds = reader.ReadInt32();
+        }
+
+        return use;
     }
 
     internal static void WriteOptional(SimWriter writer, MultiObjectUse? use)
