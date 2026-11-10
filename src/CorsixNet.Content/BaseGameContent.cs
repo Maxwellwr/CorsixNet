@@ -959,6 +959,35 @@ public static class BaseGameContent
         LevelConfigId: 25,
         AdditionalObjects: ["extinguisher", "radiator", "plant", "sofa", "pool_table", "tv", "video_game"]);
 
+    /// <summary>The slicer (objects/machines/slicer.lua): the doctor draws the slack tongue out and cuts it.</summary>
+    public static readonly ObjectDefinition Slicer = new(
+        "slicer",
+        "Slicer",
+        ObjectType: 26,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [new(-1, -1, UsePosition), new(-1, 0), new(-1, 1), new(0, -1, UsePosition), new(0, 0, UsePosition | NeedEastSide), new(0, 1, UsePosition)],
+                UsePosition: (0, 0),
+                SecondaryUsePosition: (-1, -1)),
+            [Direction.East] = new(
+                [new(-1, -1, UsePosition), new(0, -1), new(1, -1), new(-1, 0, UsePosition), new(0, 0, UsePosition | NeedSouthSide), new(1, 0, UsePosition)],
+                UsePosition: (0, 0),
+                SecondaryUsePosition: (-1, -1)),
+        },
+        MultiUsage: SlicerMultiUsage());
+
+    /// <summary>The slack tongue room (rooms/slack_tongue.lua): a treatment room with the slicer and a doctor.</summary>
+    public static readonly RoomDefinition SlackTongue = new(
+        "slack_tongue",
+        "Slack Tongue",
+        MinimumSize: 4,
+        FloorSprite: 17,
+        BlueWalls,
+        NeededObjects: new Dictionary<string, int> { ["slicer"] = 1 },
+        LevelConfigId: 20,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -1015,10 +1044,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1246,6 +1275,17 @@ public static class BaseGameContent
         [HumanoidType.Doctor] = new(null, [new(3700, 40)], null),
         [HumanoidType.Nurse] = new(null, [new(4764, 40)], null),
     };
+
+    /// <summary>slicer.lua's <c>multi_usage_animations</c>: the slack patient has the tongue drawn out, the doctor shown too.</summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> SlicerMultiUsage()
+    {
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.SlackMalePatient, HumanoidType.Doctor)] = [new MultiUseAnimations([], new(new(1390, 27)), [])],
+            [(HumanoidType.SlackFemalePatient, HumanoidType.Doctor)] = [new MultiUseAnimations([], new(new(1394, 27)), [])],
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()

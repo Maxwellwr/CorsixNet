@@ -71,6 +71,7 @@ public static class RoomVisits
         [UltrascanRoom] = "ultrascanner",
         [XRayRoom] = "x_ray",
         [InflationRoom] = "inflator",
+        [SlackTongueRoom] = "slicer",
         [BloodMachineRoom] = "blood_machine",
         [DecontaminationRoom] = "shower",
     };
@@ -165,6 +166,9 @@ public static class RoomVisits
     /// <summary>The inflation room's type (rooms/inflation.lua), the treatment of bloaty heads.</summary>
     internal const string InflationRoom = "inflation";
 
+    /// <summary>The slack tongue room's type (rooms/slack_tongue.lua): the slicer and a doctor.</summary>
+    internal const string SlackTongueRoom = "slack_tongue";
+
     /// <summary>The X-ray room's type.</summary>
     internal const string XRayRoom = "x_ray";
 
@@ -201,6 +205,7 @@ public static class RoomVisits
         [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),
+        [SlackTongueRoom] = (BehaviourKind.Doctor, "slicer"),
         [BloodMachineRoom] = (BehaviourKind.Doctor, "blood_machine"),
         [DecontaminationRoom] = (BehaviourKind.Doctor, "shower"),
         [PsychRoom] = (BehaviourKind.Doctor, "couch"),

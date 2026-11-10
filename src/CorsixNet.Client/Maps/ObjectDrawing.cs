@@ -55,6 +55,7 @@ internal sealed class ObjectDrawing
         ["x_ray_viewer"] = new() { [N] = 2390, [S] = 2390 },
         ["operating_table"] = new() { [N] = 2314, [S] = 2314 },
         ["sofa"] = new() { [N] = 2122, [E] = 2124 },
+        ["slicer"] = new() { [N] = 1386, [S] = 1386 },
         ["pool_table"] = new() { [N] = 2130, [S] = 2130 },
         ["video_game"] = new() { [N] = 3696, [S] = 3696 },
         ["tv"] = new() { [N] = 396, [E] = 398 },
