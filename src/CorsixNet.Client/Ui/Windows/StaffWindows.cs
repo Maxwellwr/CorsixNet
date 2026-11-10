@@ -1,10 +1,13 @@
 using System.Globalization;
 using CorsixNet.Client.Maps;
+using CorsixNet.Client.Rendering;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -183,6 +186,19 @@ internal sealed class StaffWindow(int staffId) : UiWindow
 {
     private bool _confirmFire;
 
+    /// <summary>The member of staff as the table last showed them, for the portrait (staff_dialog.lua's <c>drawFace</c>).</summary>
+    private StaffProfile? _shown;
+
+    public override Point? CanvasSize => StaffFaces.Current is null ? null : new(StaffFaces.Width, StaffFaces.Height);
+
+    public override void DrawCanvas(SpriteBatch batch, Rectangle area, Texture2D pixel, TextRenderer text)
+    {
+        if (_shown is { } profile)
+        {
+            StaffFaces.Current?.Draw(batch, profile, area.Location);
+        }
+    }
+
     public int StaffId { get; } = staffId;
 
     public override string Title => "Staff";
@@ -199,6 +215,7 @@ internal sealed class StaffWindow(int staffId) : UiWindow
         }
 
         var profile = staff.Profile!;
+        _shown = profile;
         var simulation = host.Simulation;
         yield return WindowCell.Line(StaffLabels.Name(host, staff), highlight: true);
         yield return WindowCell.Line(host.Texts?.Staff.Profession(profile.Class) ?? profile.Class.ToString(), dim: true);

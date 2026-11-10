@@ -261,7 +261,9 @@ Next, in this order (2026-11-10):
    the autopsy machine and uses it with the patient (a doctor-driven machine like the blood machine); `Autopsied`: the
    last treatment room's first undiscovered object gets AutopsyRschPercent, the autopsy may come out (1 in 3, 2 in 3
    with unhappy staff) for AutopsyRepHitPercent of the reputation, and the patient is gone without counting as a death.
-   Not yet: the advice, the patient's idea mood. Next: the hire window's faces.
+   Not yet: the advice, the patient's idea mood. Faces done: `StaffFaces` draws drawFace's hair, face and chin from
+   QDATA/FACE01V (65x1350, main palette; greyscale like the original) in the hire window (click a name to pick whose
+   portrait shows) and the staff window. The list is done; the DNA fixer is for a separate thread.
    The DNA fixer (rooms/dna_fixer.lua) needs more than the other rooms: its in-use animation is a "morph" from the
    alien (3594) into the standard patient (3618 men, 1150 women, mirrored), which the client cannot draw yet; it is
    staffed by a researcher; aliens have no normal door animations and come only by emergency (CorsixTH's

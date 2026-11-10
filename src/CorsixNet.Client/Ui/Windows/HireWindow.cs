@@ -1,17 +1,38 @@
 using System.Globalization;
 using CorsixNet.Client.Maps;
+using CorsixNet.Client.Rendering;
 using CorsixNet.Sim.Staff;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client.Ui.Windows;
 
 /// <summary>
 /// The hire window (CorsixTH's <c>dialogs/hire_staff.lua</c>), Y here: the candidates of a class with name, skill,
-/// wage, rank and description. Hiring one puts them on the cursor to be placed in the hospital (<c>UIPlaceStaff</c>),
-/// if the hospital can afford a month's wage.
+/// wage, rank and description, and the portrait of the one picked (<c>drawFace</c>). Hiring one puts them on the cursor
+/// to be placed in the hospital (<c>UIPlaceStaff</c>), if the hospital can afford a month's wage.
 /// </summary>
 internal sealed class HireWindow : UiWindow
 {
+    private const int PortraitScale = 2;
+
     private StaffClass _category = StaffClass.Doctor;
+
+    /// <summary>The candidate whose portrait shows, by index in the class's list.</summary>
+    private int _selected;
+
+    /// <summary>The picked candidate as the table last showed them, for the portrait.</summary>
+    private StaffProfile? _shown;
+
+    public override Point? CanvasSize => StaffFaces.Current is null ? null : new(StaffFaces.Width * PortraitScale, StaffFaces.Height * PortraitScale);
+
+    public override void DrawCanvas(SpriteBatch batch, Rectangle area, Texture2D pixel, TextRenderer text)
+    {
+        if (_shown is { } profile)
+        {
+            StaffFaces.Current?.Draw(batch, profile, area.Location, PortraitScale);
+        }
+    }
 
     public override string Title => "Hire staff";
 
@@ -26,11 +47,14 @@ internal sealed class HireWindow : UiWindow
             () =>
             {
                 _category = staffClass;
+                _selected = 0;
                 host.PlaySound("selectx.wav");
             },
             highlight: staffClass == _category)).ToList());
         yield return WindowRow.Gap;
         var candidates = simulation.AvailableStaff(_category);
+        _selected = Math.Clamp(_selected, 0, Math.Max(0, candidates.Count - 1));
+        _shown = candidates.Count > 0 ? candidates[_selected] : null;
         if (candidates.Count == 0)
         {
             yield return WindowCell.Line("Nobody is looking for work this month.", dim: true);
@@ -44,7 +68,7 @@ internal sealed class HireWindow : UiWindow
             var index = i;
             var name = host.Texts?.Staff.FullName(profile) ?? string.Create(CultureInfo.InvariantCulture, $"Candidate {i + 1}");
             yield return WindowRow.Of(
-                name,
+                new WindowCell(name, () => _selected = index, Highlight: index == _selected) { Tooltip = "Show the portrait" },
                 WindowCell.Number(StaffLabels.Skill(profile)),
                 WindowCell.Number(MoneyText.Format(profile.Wage)),
                 StaffLabels.Abilities(profile),

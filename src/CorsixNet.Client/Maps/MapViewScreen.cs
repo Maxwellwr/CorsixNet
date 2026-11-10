@@ -282,6 +282,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
+        Ui.StaffFaces.Current = Ui.StaffFaces.Load(device, install, palette);
         _texts = LoadTexts(install, _config);
         _sounds = SoundEffects.Load(install, _config);
         _scrolling = new MapScrolling(_config.ScrollSettings());
