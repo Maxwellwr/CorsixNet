@@ -274,8 +274,14 @@ Next, in this order (2026-11-10):
    they turn into, uses the fixer once. Morphs: `UseAnimations.Morph` (`UseMorph`: into, rounds, mirrored, object
    visible) and `FlipFinish`; `Humanoid.MorphAnimation` is saved; the client draws CorsixTH's draw_morph (a line
    rising from the bottom of both animations; `AnimationRenderer.Extent`, `DrawFrameRows`, `SpriteAtlas.DrawRows`).
-   Seen live with `--load` + `--script`. Not yet: the alien death animations (4882/4886), "needs a researcher"
+   Seen live with `--load` + `--script`. Not yet: "needs a researcher"
    advice for the room, the fixer's `early_list` draw order, the jelly vat's morph.
+
+Dying (2026-11-11, save format 74): a dead patient (health run out out of a room, or a failed treatment once out of
+the room) takes one step aside, then falls east or south at random and goes to heaven: rise, wings, hands, and flying up
+4 pixels a tick for 30 ticks (die.lua's `action_die_tick`; `PatientPhase.Dying`, `DyingStage`, `GameContent.DeathAnimations`,
+aliens included; stripped and gowned patients die as the standard man or woman). Not yet: the trip to hell with the grim
+reaper and the gates to hell (`action_die_tick_reaper`), which CorsixTH gives 65 % of the men; for now everyone goes up.
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to

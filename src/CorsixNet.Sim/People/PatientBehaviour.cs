@@ -90,6 +90,37 @@ public enum PatientPhase : byte
     /// home (CorsixTH's <c>waiting</c>).
     /// </summary>
     Waiting,
+
+    /// <summary>Dead: a step aside, then falling down and the trip to heaven (<see cref="DyingStage"/>).</summary>
+    Dying,
+}
+
+/// <summary>Where a dead patient is on the way out (die.lua's phases).</summary>
+public enum DyingStage : byte
+{
+    /// <summary>Not dying.</summary>
+    None,
+
+    /// <summary>The one step aside before falling (Patient:die's <c>MeanderAction():setCount(1)</c>).</summary>
+    SteppingAside,
+
+    /// <summary>Falling down (<c>fall_east</c>).</summary>
+    Falling,
+
+    /// <summary>The transformation or ending of the fall some patients have (<c>extra_east</c>).</summary>
+    Extra,
+
+    /// <summary>Rising from the body as a ghost (<c>rise_east</c>, 11 ticks).</summary>
+    Rising,
+
+    /// <summary>Growing wings (<c>wings_east</c>, 11 ticks).</summary>
+    Wings,
+
+    /// <summary>Hands together (<c>hands_east</c>, 15 ticks).</summary>
+    Hands,
+
+    /// <summary>Flying up, 4 pixels a tick for 30 ticks (<c>fly_east</c>); then the patient is gone.</summary>
+    Flying,
 }
 
 /// <summary>Something a patient does on the spot, interrupting what they were doing.</summary>
@@ -346,6 +377,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>What the patient does on the spot, interrupting what they were doing, or none.</summary>
     public PatientSpotAction SpotAction { get; private set; }
 
+    /// <summary>Where a dead patient is on the way out; <see cref="DyingStage.None"/> while alive.</summary>
+    public DyingStage DyingStage { get; private set; }
+
+    /// <summary>Ticks the current stage of dying has been going for.</summary>
+    public int DyingTicks { get; private set; }
+
+    /// <summary>Whether the dead patient fell towards the south (mirrored) rather than the east.</summary>
+    private bool _dieSouth;
+
     /// <summary>Ticks left of the spot action's animation, or −1 until the patient stands still to start it.</summary>
     private int _spotTimer;
 
@@ -437,6 +477,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
+        if (Phase == PatientPhase.Dying)
+        {
+            UpdateDying(simulation, humanoid);
+            return;
+        }
+
         // Patient:tick: out of rooms and doorways, a patient whose health ran out dies.
         if (IsSetToDie && !IsInRoom && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0)
         {
@@ -561,9 +607,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                         break;
                     case AfterRoom.Die:
-                        // Dying (falling down, and the trip to heaven or hell) is not animated yet: the patient is gone.
-                        TargetId = 0;
-                        humanoid.IsDespawning = true;
+                        StartDying(simulation, humanoid);
                         break;
                     default:
                         GoHome(simulation, humanoid);
@@ -786,7 +830,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// Whether the patient is going home or to die, so that another room must not take them from a queue
     /// (<c>tryMovePatient</c> in room.lua; there are no toilets yet to be going to).
     /// </summary>
-    internal bool IsGoingHomeOrToDie => Phase == PatientPhase.GoingHome || IsSetToDie || Next == AfterRoom.Die;
+    internal bool IsGoingHomeOrToDie => Phase is PatientPhase.GoingHome or PatientPhase.Dying || IsSetToDie || Next == AfterRoom.Die;
 
     /// <summary>
     /// <c>UIQueue:onMouseUp</c>: a patient on their way to a room, or queueing at its door, is dropped on another active
@@ -2416,7 +2460,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary><c>Patient:die</c>: the death counts, and the patient is gone.</summary>
-    internal void Die(Simulation simulation, Humanoid humanoid)
+    internal void Die(Simulation simulation, Humanoid humanoid, bool animated = true)
     {
         IsSetToDie = false;
         DrinksMachineId = 0;
@@ -2435,11 +2479,124 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
 
         LeaveQueue(simulation, humanoid);
+        if (animated)
+        {
+            StartDying(simulation, humanoid);
+            return;
+        }
 
-        // Falling down and the trip to heaven or hell are not animated yet: the patient is gone.
+        // Room:crashRoom: those killed in an explosion are simply gone.
         TargetId = 0;
         humanoid.StopWalking();
         humanoid.IsDespawning = true;
+    }
+
+    /// <summary>
+    /// <c>Patient:die</c>'s actions out of a room: one step aside (<c>MeanderAction():setCount(1)</c>) to one of the 24
+    /// nearest idle tiles, then the <c>DieAction</c>.
+    /// </summary>
+    private void StartDying(Simulation simulation, Humanoid humanoid)
+    {
+        Phase = PatientPhase.Dying;
+        TargetId = 0;
+        IsSetToDie = false;
+        DyingTicks = 0;
+        humanoid.StopWalking();
+        humanoid.ClearActionAnimation();
+        DyingStage = DyingStage.SteppingAside;
+        if (simulation.Pathfinder.TryFindIdleTile(simulation.Map, humanoid.Tile, simulation.Random.NextInclusive(1, 24), out var tile)
+            && tile != humanoid.Tile)
+        {
+            humanoid.WalkTo(simulation, tile);
+        }
+    }
+
+    /// <summary>
+    /// die.lua's <c>action_die_start</c> and <c>action_die_tick</c>: the patient falls east or south at random, rises as a
+    /// ghost, grows wings, puts the hands together and flies up out of sight.
+    /// </summary>
+    /// <remarks>
+    /// CorsixTH sends 65 percent of the men (bloaty heads excepted) to hell instead, with the grim reaper and the gates to
+    /// hell (<c>action_die_tick_reaper</c>); that is not ported yet, so everyone goes to heaven.
+    /// </remarks>
+    private void UpdateDying(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.Content.FindDeathAnimations(humanoid.Type) is not { } animations)
+        {
+            humanoid.ClearActionAnimation();
+            humanoid.IsDespawning = true;
+            return;
+        }
+
+        if (DyingStage == DyingStage.SteppingAside)
+        {
+            if (humanoid.IsMoving)
+            {
+                return;
+            }
+
+            _dieSouth = simulation.Random.NextInclusive(0, 1) != 1;
+
+            // So that a bald patient's head does not swell up instead of growing its hair back.
+            if (DiseaseId == "baldness")
+            {
+                humanoid.SetLayer(0, 2);
+            }
+
+            Enter(DyingStage.Falling, animations.Fall);
+            return;
+        }
+
+        DyingTicks++;
+        var length = DyingStage switch
+        {
+            DyingStage.Falling => animations.FallLength ?? animations.Fall.Length,
+            DyingStage.Extra => animations.Extra?.Length ?? 0,
+            DyingStage.Rising or DyingStage.Wings => 11,
+            DyingStage.Hands => 15,
+            _ => 30,
+        };
+        if (DyingTicks < length)
+        {
+            return;
+        }
+
+        switch (DyingStage)
+        {
+            case DyingStage.Falling when animations.Extra is { } extra:
+                Enter(DyingStage.Extra, extra);
+                break;
+            case DyingStage.Falling:
+            case DyingStage.Extra:
+                Enter(DyingStage.Rising, animations.Rise);
+                break;
+            case DyingStage.Rising:
+                // The slack woman's head layer is missing from the wings on: the standard head takes its place.
+                if (humanoid.Type == HumanoidType.SlackFemalePatient && humanoid.Layers[0] >= 8)
+                {
+                    humanoid.SetLayer(0, (byte)(humanoid.Layers[0] - 8));
+                }
+
+                Enter(DyingStage.Wings, animations.Wings);
+                break;
+            case DyingStage.Wings:
+                Enter(DyingStage.Hands, animations.Hands);
+                break;
+            case DyingStage.Hands:
+                Enter(DyingStage.Flying, animations.Fly);
+                break;
+            default:
+                humanoid.ClearActionAnimation();
+                humanoid.IsDespawning = true;
+                break;
+        }
+
+        void Enter(DyingStage stage, Definitions.AnimationRef animation)
+        {
+            DyingStage = stage;
+            DyingTicks = 0;
+            humanoid.SetActionAnimation(simulation, animation, _dieSouth, humanoid.Tile, humanoid.Tile, 0);
+        }
     }
 
     /// <summary>Leaves the reception or door queue the patient stands in, if any.</summary>
@@ -2530,6 +2687,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteByte((byte)SpotAction);
         writer.WriteInt32(_spotTimer);
         writer.WriteBool(_spotSouth);
+        writer.WriteByte((byte)DyingStage);
+        writer.WriteInt32(DyingTicks);
+        writer.WriteBool(_dieSouth);
         writer.WriteBool(HasVomited);
         writer.WriteBool(IsNeedingToilet);
         writer.WriteByte((byte)GoingToToilet);
@@ -2620,6 +2780,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.SpotAction = spot <= (byte)PatientSpotAction.Pee ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
         patient._spotTimer = reader.ReadInt32();
         patient._spotSouth = reader.ReadBool();
+        if (reader.Version is 0 or >= 74)
+        {
+            var stage = reader.ReadByte();
+            patient.DyingStage = stage <= (byte)DyingStage.Flying ? (DyingStage)stage : throw new InvalidDataException($"Unknown dying stage {stage}.");
+            patient.DyingTicks = reader.ReadInt32();
+            patient._dieSouth = reader.ReadBool();
+        }
         patient.HasVomited = reader.ReadBool();
         patient.IsNeedingToilet = reader.ReadBool();
         var toilet = reader.ReadByte();

@@ -1,6 +1,7 @@
 using CorsixNet.Client.Rendering;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Maps;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -151,6 +152,12 @@ internal sealed class HumanoidDrawing
 
         var tile = humanoid.ActionAnimationTile;
         int x = 32 * (tile.X - tile.Y), y = 16 * (tile.X + tile.Y);
+
+        // die.lua: the flying ghost moves up 4 pixels a tick.
+        if (humanoid.Behaviour is PatientBehaviour { DyingStage: DyingStage.Flying })
+        {
+            y -= (int)(4 * elapsed);
+        }
         if (humanoid.MorphAnimation is { } into)
         {
             DrawMorph(batch, humanoid, action, into, frame, elapsed, x, y, layers);
