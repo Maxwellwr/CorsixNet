@@ -33,6 +33,13 @@ public static class RoomVisits
     /// <summary>General diagnosis's room type.</summary>
     internal const string GeneralDiagnosisRoom = "general_diag";
 
+    /// <summary>The cardiogram's room type (rooms/cardiogram.lua): undressing, the machine with the doctor, dressing.</summary>
+    internal const string CardiogramRoom = "cardiogram";
+
+    /// <summary>Whether patients undress behind the room's screen before they are examined: general diagnosis, the cardiogram.</summary>
+    internal static bool UndressesFirst(string roomType) =>
+        string.Equals(roomType, GeneralDiagnosisRoom, StringComparison.Ordinal) || string.Equals(roomType, CardiogramRoom, StringComparison.Ordinal);
+
     /// <summary>The toilets' room type: no staff, as many patients at once as there are toilets.</summary>
     internal const string ToiletsRoom = "toilets";
 
@@ -55,6 +62,7 @@ public static class RoomVisits
     private static readonly Dictionary<string, string> ExaminingObjects = new(StringComparer.Ordinal)
     {
         [GeneralDiagnosisRoom] = TrolleyType,
+        [CardiogramRoom] = "cardio",
         [UltrascanRoom] = "ultrascanner",
         [XRayRoom] = "x_ray",
         [InflationRoom] = "inflator",
@@ -116,6 +124,7 @@ public static class RoomVisits
         [PatientBehaviour.FirstRoom] = (BehaviourKind.Doctor, "chair"),
         [PharmacyRoom] = (BehaviourKind.Nurse, "pharmacy_cabinet"),
         [GeneralDiagnosisRoom] = (BehaviourKind.Doctor, "screen"),
+        [CardiogramRoom] = (BehaviourKind.Doctor, "screen"),
         [UltrascanRoom] = (BehaviourKind.Doctor, "ultrascanner"),
         [XRayRoom] = (BehaviourKind.Doctor, "x_ray"),
         [InflationRoom] = (BehaviourKind.Doctor, "inflator"),

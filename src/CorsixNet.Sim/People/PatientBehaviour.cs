@@ -510,7 +510,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 break;
             case PatientPhase.AtTrolley:
             case PatientPhase.OnTrolley:
-                if (simulation.FindEntity(TargetId) is Room { RoomType: not RoomVisits.GeneralDiagnosisRoom } machineRoom)
+                if (simulation.FindEntity(TargetId) is Room machineRoom && !RoomVisits.UndressesFirst(machineRoom.RoomType))
                 {
                     MachineStep(simulation, humanoid, machineRoom);
                 }
@@ -1683,7 +1683,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             return;
         }
 
-        if (string.Equals(room.RoomType, RoomVisits.GeneralDiagnosisRoom, StringComparison.Ordinal))
+        if (RoomVisits.UndressesFirst(room.RoomType))
         {
             Phase = PatientPhase.Undressing;
             UseScreen(simulation, humanoid, placed);
@@ -1768,7 +1768,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             return;
         }
 
-        var trolley = RoomVisits.FindObject(simulation, room.Id, RoomVisits.TrolleyType);
+        // The crash trolley, or the cardiogram's machine.
+        var trolley = RoomVisits.ExaminingObject(simulation, room);
         switch (Phase)
         {
             case PatientPhase.Undressing:
@@ -1807,7 +1808,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley }, IsMoving: false } doctor)
                 {
-                    TrolleyUse = MultiObjectUse.Start(simulation, humanoid, trolley, doctor);
+                    // CardiogramRoom's loop callback runs the in-use animation for five spells of six rounds, the
+                    // middle ones slowed to two and three ticks a frame: 54 rounds' time, played here at normal speed.
+                    var rounds = string.Equals(room.RoomType, RoomVisits.CardiogramRoom, StringComparison.Ordinal) ? CardiogramRounds : 0;
+                    TrolleyUse = MultiObjectUse.Start(simulation, humanoid, trolley, doctor, inUseRounds: rounds);
                     Phase = PatientPhase.OnTrolley;
                     IsExamined = TrolleyUse is null;
                 }
@@ -1972,6 +1976,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 return;
         }
     }
+
+    /// <summary>The cardiogram's in-use rounds after the first (see <see cref="GeneralDiagnosisStep"/>).</summary>
+    private const int CardiogramRounds = 53;
 
     /// <summary>How much higher a bloated head's layer 0 is than the normal head's (<c>inflation_after_use</c>).</summary>
     private const int InflatedHeadLayerShift = 10;
