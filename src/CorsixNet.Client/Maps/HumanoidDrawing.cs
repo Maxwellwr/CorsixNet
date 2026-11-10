@@ -28,7 +28,11 @@ internal sealed class HumanoidDrawing
         [HumanoidType.Handyman] = (1858, 1860, 1866, 1868),
         [HumanoidType.Receptionist] = (3668, 3670, 3676, 3678),
         [HumanoidType.StrippedMalePatient] = (818, 820, 826, 828),
+        [HumanoidType.StrippedMalePatient2] = (818, 820, 826, 828),
+        [HumanoidType.StrippedMalePatient3] = (818, 820, 826, 828),
         [HumanoidType.StrippedFemalePatient] = (834, 836, 842, 844),
+        [HumanoidType.StrippedFemalePatient2] = (834, 836, 842, 844),
+        [HumanoidType.StrippedFemalePatient3] = (834, 836, 842, 844),
         [HumanoidType.Vip] = (266, 268, 274, 276),
         [HumanoidType.Inspector] = (266, 268, 274, 276),
     };

@@ -1994,11 +1994,20 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Use = ObjectUse.Start(simulation, humanoid, screen);
         humanoid.Type = humanoid.Type switch
         {
-            HumanoidType.StandardMalePatient => HumanoidType.StrippedMalePatient,
-            HumanoidType.StandardFemalePatient => HumanoidType.StrippedFemalePatient,
-            HumanoidType.StrippedMalePatient => HumanoidType.StandardMalePatient,
-            HumanoidType.StrippedFemalePatient => HumanoidType.StandardFemalePatient,
-            var other => other,
+            // change_to = math.random(1, 3): one of the three kinds of stripped patient.
+            HumanoidType.StandardMalePatient => simulation.Random.NextInclusive(1, 3) switch
+            {
+                1 => HumanoidType.StrippedMalePatient,
+                2 => HumanoidType.StrippedMalePatient2,
+                _ => HumanoidType.StrippedMalePatient3,
+            },
+            HumanoidType.StandardFemalePatient => simulation.Random.NextInclusive(1, 3) switch
+            {
+                1 => HumanoidType.StrippedFemalePatient,
+                2 => HumanoidType.StrippedFemalePatient2,
+                _ => HumanoidType.StrippedFemalePatient3,
+            },
+            var other => Dressed(other),
         };
     }
 
@@ -2012,14 +2021,17 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             screen.HangingClothes = null;
         }
 
-        humanoid.Type = humanoid.Type switch
-        {
-            HumanoidType.StrippedMalePatient => HumanoidType.StandardMalePatient,
-            HumanoidType.StrippedFemalePatient => HumanoidType.StandardFemalePatient,
-            var other => other,
-        };
+        humanoid.Type = Dressed(humanoid.Type);
         humanoid.ClearActionAnimation();
     }
+
+    /// <summary>A stripped patient's type once dressed again; other types as they are.</summary>
+    internal static HumanoidType Dressed(HumanoidType type) => type switch
+    {
+        HumanoidType.StrippedMalePatient or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 => HumanoidType.StandardMalePatient,
+        HumanoidType.StrippedFemalePatient or HumanoidType.StrippedFemalePatient2 or HumanoidType.StrippedFemalePatient3 => HumanoidType.StandardFemalePatient,
+        _ => type,
+    };
 
     private void LeaveRoom(Simulation simulation, Humanoid humanoid)
     {

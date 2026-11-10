@@ -230,7 +230,11 @@ public static class BaseGameContent
             [HumanoidType.StandardMalePatient] = new(null, [new(1048, 22)], null),
             [HumanoidType.StandardFemalePatient] = new(null, [new(2848, 31)], null),
             [HumanoidType.StrippedMalePatient] = new(null, [new(1052, 39)], null),
+            [HumanoidType.StrippedMalePatient2] = new(null, [new(1052, 39)], null),
+            [HumanoidType.StrippedMalePatient3] = new(null, [new(1052, 39)], null),
             [HumanoidType.StrippedFemalePatient] = new(null, [new(2844, 29)], null),
+            [HumanoidType.StrippedFemalePatient2] = new(null, [new(2844, 29)], null),
+            [HumanoidType.StrippedFemalePatient3] = new(null, [new(2844, 29)], null),
         });
 
     /// <summary>
@@ -930,16 +934,24 @@ public static class BaseGameContent
             return [.. Enumerable.Range(0, begin.Length).Select(i => new MultiUseAnimations([new(begin[i])], new(inUse[i]), [new(finish[i])]))];
         }
 
+        var male = Variants(
+            [new(3740, 14), new(3736, 14), new(3818, 11)],
+            [new(540, 25), new(544, 41), new(552, 29)],
+            [new(3802, 12), new(3806, 12), new(3826, 6)]);
+        var female = Variants(
+            [new(3732, 14), new(3728, 14), new(3822, 11)],
+            [new(524, 22), new(528, 35), new(536, 29)],
+            [new(3810, 12), new(3814, 12), new(3830, 6)]);
+
+        // The same for each of the three kinds of stripped patient.
         var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
         {
-            [(HumanoidType.StrippedMalePatient, HumanoidType.Doctor)] = Variants(
-                [new(3740, 14), new(3736, 14), new(3818, 11)],
-                [new(540, 25), new(544, 41), new(552, 29)],
-                [new(3802, 12), new(3806, 12), new(3826, 6)]),
-            [(HumanoidType.StrippedFemalePatient, HumanoidType.Doctor)] = Variants(
-                [new(3732, 14), new(3728, 14), new(3822, 11)],
-                [new(524, 22), new(528, 35), new(536, 29)],
-                [new(3810, 12), new(3814, 12), new(3830, 6)]),
+            [(HumanoidType.StrippedMalePatient, HumanoidType.Doctor)] = male,
+            [(HumanoidType.StrippedMalePatient2, HumanoidType.Doctor)] = male,
+            [(HumanoidType.StrippedMalePatient3, HumanoidType.Doctor)] = male,
+            [(HumanoidType.StrippedFemalePatient, HumanoidType.Doctor)] = female,
+            [(HumanoidType.StrippedFemalePatient2, HumanoidType.Doctor)] = female,
+            [(HumanoidType.StrippedFemalePatient3, HumanoidType.Doctor)] = female,
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
