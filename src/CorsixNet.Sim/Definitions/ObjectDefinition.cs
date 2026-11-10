@@ -57,13 +57,19 @@ public readonly record struct FootprintTile(int X, int Y, FootprintFlags Flags =
 /// Whether the user's animation is drawn from the use position rather than from the object
 /// (CorsixTH's <c>use_animate_from_use_position</c>).
 /// </param>
+/// <param name="FinishSecondaryUsePosition">
+/// Where the other user of a use together ends up, if not the secondary use position (<c>finish_use_position_secondary</c>).
+/// </param>
+/// <param name="FinishSecondaryFacing">Which way the other user then faces (<c>finish_use_orientation_secondary</c>).</param>
 public sealed record ObjectOrientation(
     IReadOnlyList<FootprintTile> Footprint,
     (int X, int Y) RenderAttach = default,
     (int X, int Y)? UsePosition = null,
     (int X, int Y)? SecondaryUsePosition = null,
     (int X, int Y)? FinishUsePosition = null,
-    bool AnimateFromUsePosition = false)
+    bool AnimateFromUsePosition = false,
+    (int X, int Y)? FinishSecondaryUsePosition = null,
+    Direction? FinishSecondaryFacing = null)
 {
     /// <summary>The use position relative to the placement tile.</summary>
     public (int X, int Y) Use => UsePosition ?? Footprint.Where(part => part.IsUsePosition).Select(part => (part.X, part.Y)).FirstOrDefault();
