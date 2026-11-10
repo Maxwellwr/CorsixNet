@@ -21,6 +21,9 @@ public static class BaseGameContent
     /// <summary>walls/yellow.lua.</summary>
     public static readonly WallSet YellowWalls = new(InsideNorth: 84, InsideWest: 85, OutsideNorth: 92, OutsideWest: 93, WindowNorth: 132, WindowWest: 133);
 
+    /// <summary>walls/blue.lua.</summary>
+    public static readonly WallSet BlueWalls = new(InsideNorth: 86, InsideWest: 87, OutsideNorth: 94, OutsideWest: 95, WindowNorth: 136, WindowWest: 137);
+
     public static readonly WallSet GreenWalls = new(InsideNorth: 88, InsideWest: 89, OutsideNorth: 96, OutsideWest: 97, WindowNorth: 140, WindowWest: 141);
 
     /// <summary>The doctor's desk (objects/desk.lua). The doctor's chair is part of it.</summary>
@@ -451,6 +454,48 @@ public static class BaseGameContent
         LevelConfigId: 16,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>
+    /// The inflator (objects/machines/inflator.lua): the doctor pops the bloated head and pumps it up again while the
+    /// patient stands on the machine; facing south it uses the north animations.
+    /// </summary>
+    public static readonly ObjectDefinition Inflator = new(
+        "inflator",
+        "Inflator",
+        ObjectType: 9,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-1, -1), new(0, -1, NeedNorthSide), new(1, -1, UsePosition),
+                    new(-1, 0), new(0, 0), new(1, 0, UsePosition),
+                    new(-1, 1, UsePosition), new(0, 1, UsePosition), new(1, 1, UsePosition),
+                ],
+                UsePosition: (0, 1),
+                SecondaryUsePosition: (-1, 1),
+                FinishUsePosition: (1, 0)),
+            [Direction.East] = new(
+                [
+                    new(-1, -1), new(0, -1), new(1, -1, UsePosition),
+                    new(-1, 0, NeedWestSide), new(0, 0), new(1, 0, UsePosition),
+                    new(-1, 1, UsePosition), new(0, 1, UsePosition), new(1, 1, UsePosition),
+                ],
+                UsePosition: (1, 0),
+                SecondaryUsePosition: (1, -1),
+                FinishUsePosition: (0, 1)),
+        },
+        MultiUsage: InflatorMultiUsage());
+
+    /// <summary>The inflation room (rooms/inflation.lua): a treatment room for bloaty heads with a doctor.</summary>
+    public static readonly RoomDefinition Inflation = new(
+        "inflation",
+        "Inflation",
+        MinimumSize: 4,
+        FloorSprite: 17,
+        BlueWalls,
+        NeededObjects: new Dictionary<string, int> { ["inflator"] = 1 },
+        LevelConfigId: 17,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -505,10 +550,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator],
         DoorAnimations,
         PatientAnimations);
 
@@ -563,6 +608,23 @@ public static class BaseGameContent
         {
             [(HumanoidType.StandardMalePatient, HumanoidType.Doctor)] = Use(new(1560, 7), new(1568, 20), new(1614, 28), new(1574, 32), new(1610, 11)),
             [(HumanoidType.StandardFemalePatient, HumanoidType.Doctor)] = Use(new(3084, 7), new(3092, 16), new(3096, 19), new(3100, 22), new(1618, 12)),
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
+
+    /// <summary>
+    /// inflator.lua's <c>multi_usage_animations</c> for the standard male patient (bloaty heads are men): he is invited
+    /// onto the machine, the doctor pops his head, walks round the machine and pumps it up again (played once), and he
+    /// walks off; each animation shows both, so the doctor is hidden.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> InflatorMultiUsage()
+    {
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.StandardMalePatient, HumanoidType.Doctor)] =
+            [
+                new MultiUseAnimations([new(new(464, 11)), new(new(478, 27)), new(new(482, 36))], new(new(496, 38)), [new(new(576, 14))]),
+            ],
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }

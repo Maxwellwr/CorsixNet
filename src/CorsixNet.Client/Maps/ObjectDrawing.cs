@@ -39,6 +39,7 @@ internal sealed class ObjectDrawing
         ["loo"] = new() { [N] = 1760, [S] = 1760 },
         ["ultrascanner"] = new() { [N] = 1556, [S] = 1556 },
         ["x_ray"] = new() { [N] = 1988, [S] = 1988 },
+        ["inflator"] = new() { [N] = 572, [S] = 572 },
         ["radiation_shield"] = new() { [N] = 794, [S] = 794 },
         ["computer"] = new() { [N] = 2094, [S] = 2094 },
         ["analyser"] = new() { [N] = 2134, [S] = 2134 },
