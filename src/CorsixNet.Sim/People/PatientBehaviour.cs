@@ -1642,8 +1642,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             room.MaxTimes = RoomVisits.GpMaxTimes;
         }
 
-        // The GP's chair, general diagnosis's screen, the psychiatric couch.
-        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, placed));
+        // The GP's chair, general diagnosis's screen, the psychiatric couch; the blood machine's other end.
+        humanoid.WalkTo(simulation, string.Equals(room.RoomType, RoomVisits.BloodMachineRoom, StringComparison.Ordinal)
+            ? RoomVisits.SecondaryUseTile(simulation, placed)
+            : RoomVisits.UseTile(simulation, placed));
         if (string.Equals(room.RoomType, RoomVisits.PsychRoom, StringComparison.Ordinal)
             && simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour psychiatrist } staffMember)
         {
@@ -1895,6 +1897,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                         Use = ObjectUse.Start(simulation, humanoid, machine);
                         doctorBehaviour.StartShield(simulation, doctor, room);
                     }
+                    else if (string.Equals(room.RoomType, RoomVisits.BloodMachineRoom, StringComparison.Ordinal))
+                    {
+                        // BloodMachineRoom:commandEnteringPatient: the doctor uses the machine with the patient, who is in
+                        // its animations; its in-use animation plays 3 to 5 times (length 2 to 4, then one more).
+                        TrolleyUse = MultiObjectUse.Start(simulation, doctor, machine, humanoid, inUseRounds: simulation.Random.NextInclusive(2, 4));
+                    }
                     else
                     {
                         TrolleyUse = MultiObjectUse.Start(simulation, humanoid, machine, doctor);
@@ -1925,9 +1933,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                     Use = null;
                 }
-                else if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                else if (TrolleyUse is not null)
                 {
-                    return;
+                    // The blood machine's use is the doctor's, driven from here.
+                    var user = string.Equals(room.RoomType, RoomVisits.BloodMachineRoom, StringComparison.Ordinal)
+                        && simulation.FindEntity(room.StaffId) is Humanoid staffMember ? staffMember : humanoid;
+                    if (TrolleyUse.Update(simulation, user) != ObjectUseEvent.Done)
+                    {
+                        return;
+                    }
                 }
 
                 TrolleyUse = null;

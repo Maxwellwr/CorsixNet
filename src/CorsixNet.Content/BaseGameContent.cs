@@ -613,6 +613,46 @@ public static class BaseGameContent
         AdditionalObjects: ["extinguisher", "radiator", "plant", "desk", "bin", "bed"],
         SwingDoors: true);
 
+    /// <summary>
+    /// The blood machine (objects/machines/blood_machine.lua): its door opens, the chair comes out, the patient sits and
+    /// goes in, the machine works and lets them out again; the doctor's animations show the patient too.
+    /// </summary>
+    public static readonly ObjectDefinition BloodMachine = new(
+        "blood_machine",
+        "Blood Machine",
+        ObjectType: 42,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-1, -1, UsePosition | NeedEastSide | NeedWestSide), new(0, -1, UsePosition | NeedNorthSide),
+                    new(-2, 0, NeedSouthSide | NeedNorthSide), new(-1, 0), new(0, 0, CompleteCell), new(1, 0, UsePosition),
+                    new(-1, 1, NeedEastSide | NeedWestSide),
+                ],
+                UsePosition: (0, -1),
+                SecondaryUsePosition: (1, 0)),
+            [Direction.East] = new(
+                [
+                    new(0, -2, NeedEastSide | NeedWestSide), new(-1, -1, UsePosition | CompleteCell), new(0, -1),
+                    new(1, -1, NeedSouthSide | NeedNorthSide), new(-1, 0, UsePosition | NeedWestSide),
+                    new(0, 0, CompleteCell), new(0, 1, UsePosition),
+                ],
+                UsePosition: (-1, 0),
+                SecondaryUsePosition: (0, 1)),
+        },
+        MultiUsage: BloodMachineMultiUsage());
+
+    /// <summary>The blood machine room (rooms/blood_machine_room.lua): a diagnosis room with a doctor.</summary>
+    public static readonly RoomDefinition BloodMachineRoom = new(
+        "blood_machine",
+        "Blood Machine",
+        MinimumSize: 4,
+        FloorSprite: 19,
+        YellowWalls,
+        NeededObjects: new Dictionary<string, int> { ["blood_machine"] = 1 },
+        LevelConfigId: 15,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -667,10 +707,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine],
         DoorAnimations,
         PatientAnimations)
     {
@@ -762,6 +802,29 @@ public static class BaseGameContent
     {
         [HumanoidType.Doctor] = new(new(2516, 10), [new(2544, 1)], new(2520, 5), Begin2: new(2512, 9)),
     };
+
+    /// <summary>
+    /// blood_machine.lua's <c>multi_usage_animations</c> for the doctor with the standard patients, who are hidden: five
+    /// begin phases, the in-use phase (looped) and five finish phases.
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> BloodMachineMultiUsage()
+    {
+        static MultiUseAnimations Use(AnimationRef[] begin, AnimationRef[] finish) =>
+            new([.. begin.Select(a => new MultiUsePhase(a))], new(new(2566, 8)), [.. finish.Select(a => new MultiUsePhase(a))]);
+
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.Doctor, HumanoidType.StandardMalePatient)] =
+            [
+                Use([new(2232, 13), new(2236, 31), new(2554, 19), new(2220, 38), new(2224, 23)], [new(2252, 17), new(2256, 19), new(2558, 14), new(2204, 38), new(2274, 23)]),
+            ],
+            [(HumanoidType.Doctor, HumanoidType.StandardFemalePatient)] =
+            [
+                Use([new(2232, 13), new(2236, 31), new(4614, 19), new(3232, 38), new(3236, 27)], [new(1172, 19), new(4738, 39), new(4618, 13), new(2204, 38), new(2274, 23)]),
+            ],
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()
