@@ -346,6 +346,8 @@ public static class ObjectPlacer
             placed.Plant = new PlantState();
         }
 
+        Machines.OnPlaced(simulation, placed, map.GetParcelOwner(map[tile.X, tile.Y].Parcel) - 1);
+
         if (definition.Orientations[orientation].Footprint.Any(part => part.IsSide))
         {
             OccupySide(map, tile, SideOf(definition, orientation), placed.Id);
@@ -363,7 +365,7 @@ public static class ObjectPlacer
     public static bool CanPickUp(Simulation simulation, int objectId, int player)
     {
         return simulation.FindEntity(objectId) is RoomObject placed
-            && simulation.FindEntity(placed.RoomId) is Room { IsActive: false, IsClosing: false } room
+            && simulation.FindEntity(placed.RoomId) is Room { IsActive: false, IsClosing: false, IsCrashed: false } room
             && RoomBuilder.IsOwnedBy(simulation.Map, room, player);
     }
 
@@ -385,7 +387,7 @@ public static class ObjectPlacer
     /// the room, the door's walkway is kept clear, and every remaining object occupies its footprint.
     /// Occupying only clears flags, so the order of the objects does not matter.
     /// </summary>
-    private static void Reoccupy(Simulation simulation, Room room)
+    internal static void Reoccupy(Simulation simulation, Room room)
     {
         var map = simulation.Map;
         var area = room.Area;
@@ -407,7 +409,7 @@ public static class ObjectPlacer
 
         foreach (var placed in simulation.Entities.OfType<RoomObject>())
         {
-            if (placed.RoomId == room.Id
+            if (placed.RoomId == room.Id && !placed.IsDestroyed
                 && simulation.Content.FindObject(placed.ObjectType) is { } definition
                 && definition.Orientations.TryGetValue(placed.Orientation, out var layout))
             {
@@ -519,7 +521,7 @@ public static class ObjectPlacer
         }
 
         // Objects go into rooms while they are being built, as in CorsixTH's edit room dialog.
-        return simulation.FindEntity(roomId) is Room { IsActive: false, IsClosing: false } room
+        return simulation.FindEntity(roomId) is Room { IsActive: false, IsClosing: false, IsCrashed: false } room
             && simulation.Content.FindRoom(room.RoomType) is { } roomDefinition
             && roomDefinition.Allows(definition.Id);
     }

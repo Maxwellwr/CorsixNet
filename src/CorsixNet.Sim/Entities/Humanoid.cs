@@ -374,6 +374,12 @@ public sealed class Humanoid : Entity
 
     public override void Update(Simulation simulation)
     {
+        // Killed earlier in the tick (a machine exploding): gone at the end of it.
+        if (IsDespawning)
+        {
+            return;
+        }
+
         // Staff tire and think of their pay before they act, as CorsixTH's Staff:tick does its checks after Entity.tick.
         if (Profile is not null && Employer >= 0 && !IsDespawning)
         {

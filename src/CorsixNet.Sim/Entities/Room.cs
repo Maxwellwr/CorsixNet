@@ -58,6 +58,12 @@ public sealed class Room : Entity
     /// </summary>
     public bool IsClosing { get; internal set; }
 
+    /// <summary>
+    /// Whether a machine exploded in the room (CorsixTH's <c>Room.crashed</c>): it is a sooty wreck that takes nobody and
+    /// can only be taken down.
+    /// </summary>
+    public bool IsCrashed { get; internal set; }
+
     /// <summary>Whether the room has been paid for, once first confirmed (CorsixTH's <c>UIEditRoom.paid</c>).</summary>
     public bool IsPaid { get; internal set; }
 
@@ -125,6 +131,7 @@ public sealed class Room : Entity
             MaxTimes = reader.ReadInt32(),
             IsPaid = reader.Version >= 59 ? reader.ReadBool() : active,
             IsClosing = reader.Version >= 59 && reader.ReadBool(),
+            IsCrashed = reader.Version is 0 or >= 68 && reader.ReadBool(),
         };
     }
 
@@ -152,6 +159,7 @@ public sealed class Room : Entity
         writer.WriteInt32(MaxTimes);
         writer.WriteBool(IsPaid);
         writer.WriteBool(IsClosing);
+        writer.WriteBool(IsCrashed);
     }
 }
 
@@ -192,6 +200,12 @@ public sealed class RoomObject : Entity
     /// <summary>For a plant, how thirsty it is; null for other objects.</summary>
     public PlantState? Plant { get; internal set; }
 
+    /// <summary>Whether the object was destroyed (a crashed room's furniture) and goes at the end of the tick.</summary>
+    public bool IsDestroyed { get; internal set; }
+
+    /// <summary>For a machine, how worn it is; null for other objects.</summary>
+    public Objects.MachineState? Machine { get; internal set; }
+
     public override void Update(Simulation simulation)
     {
         if (Desk is not null)
@@ -207,6 +221,7 @@ public sealed class RoomObject : Entity
             Desk = reader.ReadBool() ? ReceptionDeskState.Read(reader) : null,
             HangingClothes = reader.ReadBool() ? reader.ReadByte() : null,
             Plant = reader.ReadBool() ? PlantState.Read(reader) : null,
+            Machine = reader.Version is 0 or >= 68 && reader.ReadBool() ? Objects.MachineState.Read(reader) : null,
         };
     }
 
@@ -226,6 +241,8 @@ public sealed class RoomObject : Entity
 
         writer.WriteBool(Plant is not null);
         Plant?.Write(writer);
+        writer.WriteBool(Machine is not null);
+        Machine?.Write(writer);
     }
 }
 

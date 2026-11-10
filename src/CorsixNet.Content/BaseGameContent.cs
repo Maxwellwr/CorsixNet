@@ -334,7 +334,8 @@ public static class BaseGameContent
                 UsePosition: (0, -1),
                 SecondaryUsePosition: (-1, 1)),
         },
-        MultiUsage: UltrascanMultiUsage());
+        MultiUsage: UltrascanMultiUsage(),
+        Machine: new(new(3396, 1), new(3436, 4), new(null, [new(664, 41)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(2, 0)], [Direction.East] = [(0, 2)] }));
 
     /// <summary>The ultrascan (rooms/ultrascan.lua): a diagnosis room with a doctor.</summary>
     public static readonly RoomDefinition Ultrascan = new(
@@ -436,7 +437,8 @@ public static class BaseGameContent
                 UsePosition: (-1, 1)),
         },
         UsageNorth: XRayUse(),
-        UsageSouth: XRayUse());
+        UsageSouth: XRayUse(),
+        Machine: new(new(3384, 1), new(3440, 4), new(new(3558, 37), [new(3562, 40)], new(3562, 40))));
 
     /// <summary>
     /// The radiation shield (objects/radiation_shield.lua): the doctor sits at its console while the patient is X-rayed. Its
@@ -500,7 +502,8 @@ public static class BaseGameContent
                 SecondaryUsePosition: (1, -1),
                 FinishUsePosition: (0, 1)),
         },
-        MultiUsage: InflatorMultiUsage());
+        MultiUsage: InflatorMultiUsage(),
+        Machine: new(new(3362, 1), new(3424, 4), new(null, [new(3480, 41)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(1, -1)], [Direction.East] = [(-1, 1)] }));
 
     /// <summary>The inflation room (rooms/inflation.lua): a treatment room for bloaty heads with a doctor.</summary>
     public static readonly RoomDefinition Inflation = new(
@@ -652,7 +655,8 @@ public static class BaseGameContent
                 UsePosition: (-1, 0),
                 SecondaryUsePosition: (0, 1)),
         },
-        MultiUsage: BloodMachineMultiUsage());
+        MultiUsage: BloodMachineMultiUsage(),
+        Machine: new(new(3372, 1), new(3460, 4), new(null, [new(3498, 4), new(3484, 38)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(0, -1)], [Direction.East] = [(-1, 0)] }));
 
     /// <summary>The blood machine room (rooms/blood_machine_room.lua): a diagnosis room with a doctor.</summary>
     public static readonly RoomDefinition BloodMachineRoom = new(
@@ -704,7 +708,8 @@ public static class BaseGameContent
                 UsePosition: (1, -1)),
         },
         UsageNorth: ShowerUse(),
-        UsageSouth: ShowerUse());
+        UsageSouth: ShowerUse(),
+        Machine: new(new(3380, 1), new(3448, 4), new(new(3534, 36), [new(3538, 38)], new(3542, 14))));
 
     /// <summary>The decontamination room (rooms/decontamination.lua): a treatment room for serious radiation with a doctor.</summary>
     public static readonly RoomDefinition Decontamination = new(
@@ -738,7 +743,8 @@ public static class BaseGameContent
                 UsePosition: (-1, 1),
                 SecondaryUsePosition: (0, 0)),
         },
-        MultiUsage: CardioMultiUsage());
+        MultiUsage: CardioMultiUsage(),
+        Machine: new(new(3308, 1), new(3432, 4), new(null, [new(890, 41)], new(894, 12)), HandymanOffsets: new Dictionary<Direction, (int X, int Y)> { [Direction.North] = (1, -1), [Direction.East] = (-1, 1) }));
 
     /// <summary>The cardiogram room (rooms/cardiogram.lua): a diagnosis room with a screen, the machine and a doctor.</summary>
     public static readonly RoomDefinition Cardiogram = new(
@@ -771,7 +777,8 @@ public static class BaseGameContent
                 UsePosition: (0, 0)),
         },
         UsageNorth: ScannerUse(),
-        UsageSouth: ScannerUse());
+        UsageSouth: ScannerUse(),
+        Machine: new(new(3316, 1), new(3428, 4), new(null, [], null, Begin2: new(564, 35))));
 
     /// <summary>The scanner room (rooms/scanner_room.lua): a diagnosis room with the scanner, a console, a screen and a doctor.</summary>
     public static readonly RoomDefinition ScannerRoom = new(
@@ -857,7 +864,8 @@ public static class BaseGameContent
                 UsePosition: (-2, -1),
                 SecondaryUsePosition: (-1, -2)),
         },
-        MultiUsage: OperatingTableMultiUsage());
+        MultiUsage: OperatingTableMultiUsage(),
+        Machine: new(new(3392, 1), new(3472, 4), new(null, [new(660, 35)], null)));
 
     /// <summary>
     /// The operating theatre (rooms/operating_theatre.lua): two surgeons, a table, a surgeon screen, a sink and an X-ray
@@ -979,7 +987,8 @@ public static class BaseGameContent
                 UsePosition: (0, 0),
                 SecondaryUsePosition: (-1, -1)),
         },
-        MultiUsage: SlicerMultiUsage());
+        MultiUsage: SlicerMultiUsage(),
+        Machine: new(new(3400, 1), new(3464, 4), new(null, [new(3490, 41)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(1, -1)], [Direction.East] = [(-1, 1)] }));
 
     /// <summary>The slack tongue room (rooms/slack_tongue.lua): a treatment room with the slicer and a doctor.</summary>
     public static readonly RoomDefinition SlackTongue = new(
@@ -1003,7 +1012,8 @@ public static class BaseGameContent
             [Direction.East] = new([new(-1, 0, UsePosition), new(0, 0, CompleteCell), new(1, 0, UsePosition)], UsePosition: (1, 0), FinishUsePosition: (1, 0), AnimateFromUsePosition: true),
         },
         UsageNorth: HairRestorerUse(),
-        UsageSouth: HairRestorerUse());
+        UsageSouth: HairRestorerUse(),
+        Machine: new(new(5116, 1), new(3460, 4), new(null, [new(568, 35)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(0, -1)], [Direction.East] = [(-1, 0)] }, HandymanOffsets: new Dictionary<Direction, (int X, int Y)> { [Direction.North] = (0, 2), [Direction.East] = (2, 0) }));
 
     /// <summary>The hair restoration room (rooms/hair_restoration.lua): a treatment room for baldness with a doctor.</summary>
     public static readonly RoomDefinition HairRestoration = new(
@@ -1041,7 +1051,8 @@ public static class BaseGameContent
                 RenderAttach: (-1, -1)),
         },
         UsageNorth: ElectrolyserUse(),
-        UsageSouth: ElectrolyserUse());
+        UsageSouth: ElectrolyserUse(),
+        Machine: new(new(3300, 1), new(3456, 4), new(new(3546, 30), [new(3550, 38)], new(3554, 17))));
 
     /// <summary>The electrolysis room (rooms/electrolysis.lua): a treatment room for hairyitis with a doctor.</summary>
     public static readonly RoomDefinition Electrolysis = new(
@@ -1077,7 +1088,8 @@ public static class BaseGameContent
                 UsePosition: (0, 0),
                 SecondaryUsePosition: (-1, 0)),
         },
-        MultiUsage: CastRemoverMultiUsage());
+        MultiUsage: CastRemoverMultiUsage(),
+        Machine: new(new(3388, 1), new(3468, 4), new(null, [new(3514, 20)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(0, -2), (-1, -1)], [Direction.East] = [(-1, -1), (-2, 0)] }));
 
     /// <summary>The fracture clinic (rooms/fracture_clinic.lua): a treatment room for fractured bones with a nurse.</summary>
     public static readonly RoomDefinition FractureClinic = new(

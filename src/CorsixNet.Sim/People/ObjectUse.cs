@@ -130,8 +130,28 @@ public sealed class ObjectUse
         }
     }
 
-    /// <summary>Advances the use by a tick; call while the humanoid is not walking.</summary>
+    /// <summary>
+    /// Advances the use by a tick; call while the humanoid is not walking. At the end of a use of a machine
+    /// (use_object.lua's phase 100), the machine wears (<c>machineUsed</c>); if it explodes, the user is dead and the
+    /// use is not reported as done, as CorsixTH skips <c>after_use</c>.
+    /// </summary>
     internal ObjectUseEvent Update(Simulation simulation, Humanoid humanoid)
+    {
+        var wasDone = Phase == ObjectUsePhase.Done;
+        var result = Advance(simulation, humanoid);
+        if (!wasDone && Phase == ObjectUsePhase.Done && simulation.FindEntity(ObjectId) is RoomObject { Machine: not null } placed)
+        {
+            Objects.Machines.Used(simulation, placed, humanoid);
+            if (humanoid.IsDespawning)
+            {
+                return ObjectUseEvent.None;
+            }
+        }
+
+        return result;
+    }
+
+    private ObjectUseEvent Advance(Simulation simulation, Humanoid humanoid)
     {
         switch (Phase)
         {

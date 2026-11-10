@@ -24,6 +24,9 @@ public class UltrascanTests
         // default rules, which have every room from the start, stand in for a level where it has been.
         var simulation = NewStaffedHospital(weakDoctor: true);
         var room = BuildUltrascan(simulation);
+
+        // A handyman keeps the machine repaired; without one it wears out and explodes (Machine:machineUsed).
+        Run(simulation, new HireStaffCommand(StaffClass.Handyman, 0, new(14, 15)));
         var hospital = simulation.Hospitals[0];
         var scanned = new HashSet<int>();
         var backAtGp = new HashSet<int>();

@@ -676,6 +676,9 @@ public sealed class Hospital
     /// Pays money out, except in free build mode; what is paid for land, a room or an object adds to the hospital's value (CorsixTH's
     /// <c>spendMoney</c> with <c>changeValue</c>).
     /// </summary>
+    /// <summary>Changes the hospital's value without money changing hands, as a crashed room's loss (<c>Room:crashRoom</c>).</summary>
+    internal void ChangeValue(long amount) => Value += amount;
+
     internal void Spend(long tick, int amount, TransactionKind kind, string subject)
     {
         if (FreeBuild)

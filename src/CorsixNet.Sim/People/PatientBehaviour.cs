@@ -2326,7 +2326,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary><c>Patient:die</c>: the death counts, and the patient is gone.</summary>
-    private void Die(Simulation simulation, Humanoid humanoid)
+    internal void Die(Simulation simulation, Humanoid humanoid)
     {
         IsSetToDie = false;
         DrinksMachineId = 0;

@@ -83,7 +83,7 @@ public class InflationTests
     }
 
     /// <summary>Bloaty head the only disease, known and easy to diagnose, so that the GP sends patients straight on.</summary>
-    private static LevelRules Rules()
+    internal static LevelRules Rules()
     {
         var visuals = new int[DiseaseRules.VisualsCount];
         visuals[DiseaseCatalog.Find("bloaty_head")!.VisualsId!.Value] = 1;
@@ -104,7 +104,7 @@ public class InflationTests
             diseases: diseases);
     }
 
-    private static Room BuildInflation(Simulation simulation)
+    internal static Room BuildInflation(Simulation simulation)
     {
         Run(simulation, new BuildRoomCommand(new RoomPlan("inflation", Area, new DoorPlacement(new(5, Area.Y), EdgeOrientation.North))));
         var room = Assert.Single(simulation.Entities.OfType<Room>(), r => r.RoomType == "inflation");

@@ -236,7 +236,16 @@ Next, in this order (2026-11-10):
    (walk_anims in entities/humanoid.lua) with their animations in every object they use on the way (GP chair, drinks
    machine, loo, sink, screen, bench, the diagnosis machines). Then the rooms that need them: slack tongue, hair
    restoration, electrolysis, fracture clinic, DNA fixer, jelly vat; and psychiatry's king complex change.
-3. Training room, autopsies, the hire window's faces, machine wear and repairs.
+3. Machine wear and repairs done (save format 68): `MachineState` on every machine `RoomObject` (strength from the
+   research, times used), `Machines.Used` at the end of each use by anyone but a handyman (ObjectUse/MultiObjectUse
+   report no Done when it explodes), `Machines.Crash` (crashRoom: everyone inside dies, other objects go at the end of
+   the tick via `RoomObject.IsDestroyed`, soot on the floor, value and 50 reputation lost, `Room.IsCrashed`), handymen
+   repair below 6 uses left (priority 2 below 4): walk to the handyman position, meander until the room's patient has
+   gone or is leaving, then `GoingToRepair` stops the room letting anyone in until the repair (begin/in-use for at least
+   20 frames/finish) ends. Client: smoke plumes below 4 uses, the crashed animation. Not yet: the machine window
+   (replace, call handyman), earthquakes wearing machines, the invulnerable machines cheat, the repair announcement,
+   num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
+   floor soot on the same tiles, as in CorsixTH. Next: jelly vat, training room, autopsies, the hire window's faces.
    The DNA fixer (rooms/dna_fixer.lua) needs more than the other rooms: its in-use animation is a "morph" from the
    alien (3594) into the standard patient (3618 men, 1150 women, mirrored), which the client cannot draw yet; it is
    staffed by a researcher; aliens have no normal door animations and come only by emergency (CorsixTH's

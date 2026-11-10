@@ -28,6 +28,21 @@ public class BaseGameContentTests
     }
 
     [Fact]
+    public void MachineAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var machines = BaseGameContent.Create().Objects.Select(o => o.Machine).OfType<MachineDefinition>().ToList();
+        var animations = machines.SelectMany(m => m.Repair.All.Append(m.Smoke).Append(m.Crashed)).Distinct().ToList();
+
+        Assert.Equal(12, machines.Count);
+        foreach (var animation in animations)
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+    }
+
+    [Fact]
     public void DoorAnimationsLastAsLongAsTheOriginalsAnimations()
     {
         var set = AnimationSet.Load(RealGameData.Require());

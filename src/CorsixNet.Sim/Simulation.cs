@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 67;
+    private const int FormatVersion = 68;
 
     /// <summary>
     /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
@@ -262,7 +262,8 @@ public sealed class Simulation
         // People who have left the map go now, as CorsixTH's _flushDestroyedEntities.
         // So do construction sites that are done, litter swept up or displaced and rats gone: removing them during the
         // loop would skip an entity.
-        _entities.RemoveAll(entity => entity is Humanoid { IsDespawning: true } or ConstructionSite { IsDone: true } or Litter { IsRemoved: true } or Rat { IsGone: true });
+        _entities.RemoveAll(entity => entity is Humanoid { IsDespawning: true } or ConstructionSite { IsDone: true } or Litter { IsRemoved: true } or Rat { IsGone: true }
+            or RoomObject { IsDestroyed: true });
 
         // Then the heat spreads, at the new hour's month (CorsixTH's World:onTick after the entities).
         UpdateTemperatures(GameDate.FromHours(Hours + 1).Month);

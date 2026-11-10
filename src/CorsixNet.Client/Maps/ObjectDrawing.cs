@@ -131,6 +131,36 @@ internal sealed class ObjectDrawing
         _renderer.DrawFrame(batch, _renderer.Animations.FirstFrame(part.Animation), 32 * (x - y), 16 * (x + y), NoLayers, part.Flip, tint);
     }
 
+    /// <summary>
+    /// Draws what is left of a machine that exploded (<c>Machine:setCrashedAnimation</c>, not mirrored, as CorsixTH sets it
+    /// without flags).
+    /// </summary>
+    public void DrawCrashed(SpriteBatch batch, int animation, TilePosition tile, Color tint)
+    {
+        _renderer.DrawFrame(batch, _renderer.Animations.FirstFrame(animation), 32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y), NoLayers, flipHorizontally: false, tint);
+    }
+
+    /// <summary>
+    /// The smoke over a machine that needs urgent repair (<c>setSmoke</c>, <c>updateSmokeDisplay</c>): one plume below 4
+    /// uses left, two below 3, three below 2 (layers 10 to 12); mirrored facing east and west.
+    /// </summary>
+    public void DrawSmoke(SpriteBatch batch, int animation, TilePosition tile, Direction orientation, int remainingUses, long tick)
+    {
+        if (remainingUses >= 4)
+        {
+            return;
+        }
+
+        Span<byte> layers = stackalloc byte[13];
+        layers[10] = 2;
+        layers[11] = (byte)(remainingUses < 3 ? 2 : 0);
+        layers[12] = (byte)(remainingUses < 2 ? 2 : 0);
+        var set = _renderer.Animations;
+        var first = set.FirstFrame(animation);
+        var frame = set.Advance(first, (int)(tick % set.Length(first)));
+        _renderer.DrawFrame(batch, frame, 32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y), layers, orientation is Direction.East or Direction.West, Color.White);
+    }
+
     /// <summary>Draws an object placed on <paramref name="tile"/>.</summary>
     /// <param name="hangingClothes">For a screen, the clothes (layer 1) hanging on it, or null.</param>
     /// <param name="frameOffset">

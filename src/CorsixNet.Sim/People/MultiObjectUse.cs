@@ -111,8 +111,7 @@ public sealed class MultiObjectUse
 
         if (Resolve(simulation, humanoid) is not var (placed, layout, animations, _, useWith))
         {
-            End(simulation, humanoid);
-            return ObjectUseEvent.Done;
+            return End(simulation, humanoid);
         }
 
         if (Phase == animations.Begin.Count && InUseRounds > 0)
@@ -133,16 +132,18 @@ public sealed class MultiObjectUse
 
         if (next >= animations.Begin.Count + 1 + animations.Finish.Count)
         {
-            End(simulation, humanoid);
-            return ObjectUseEvent.Done;
+            return End(simulation, humanoid);
         }
 
         EnterPhase(simulation, humanoid, next);
         return ObjectUseEvent.None;
     }
 
-    /// <summary>The end of the use: layers back, the other user visible again, and the user at the use position.</summary>
-    private void End(Simulation simulation, Humanoid humanoid)
+    /// <summary>
+    /// The end of the use: layers back, the other user visible again, and the user at the use position. A machine wears
+    /// (<c>machineUsed</c>); if it explodes, the users are dead and the use is not reported as done.
+    /// </summary>
+    private ObjectUseEvent End(Simulation simulation, Humanoid humanoid)
     {
         var useWith = simulation.FindEntity(UseWithId) as Humanoid;
         if (UseLayer3 >= 0)
@@ -163,6 +164,17 @@ public sealed class MultiObjectUse
             var use = layout.FinishUsePosition ?? layout.Use;
             humanoid.PlaceAt(new TilePosition(placed.Tile.X + use.X, placed.Tile.Y + use.Y));
         }
+
+        if (simulation.FindEntity(ObjectId) is RoomObject { Machine: not null } machine)
+        {
+            Objects.Machines.Used(simulation, machine, humanoid);
+            if (humanoid.IsDespawning)
+            {
+                return ObjectUseEvent.None;
+            }
+        }
+
+        return ObjectUseEvent.Done;
     }
 
     /// <summary><c>action_multi_use_phase</c>: both users' animations for the phase.</summary>

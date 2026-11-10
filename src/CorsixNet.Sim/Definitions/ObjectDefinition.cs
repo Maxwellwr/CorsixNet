@@ -155,7 +155,8 @@ public sealed record ObjectDefinition(
     IReadOnlyDictionary<Direction, IReadOnlyDictionary<(HumanoidType Primary, HumanoidType Secondary), IReadOnlyList<MultiUseAnimations>>>? MultiUsage = null,
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageSouth = null,
     IReadOnlyDictionary<HumanoidType, UseAnimations>? UsageWest = null,
-    bool VisibleWhileUsed = false)
+    bool VisibleWhileUsed = false,
+    MachineDefinition? Machine = null)
 {
     /// <summary>
     /// The kind of humanoid whose animations another borrows where an object has none for it: CorsixTH's "Slack Female
