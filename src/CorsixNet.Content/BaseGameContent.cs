@@ -988,6 +988,30 @@ public static class BaseGameContent
         LevelConfigId: 20,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>The hair restorer (objects/machines/hair_restorer.lua): a bald man sits under its cap.</summary>
+    public static readonly ObjectDefinition HairRestorer = new(
+        "hair_restorer",
+        "Hair Restorer",
+        ObjectType: 25,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, -1, UsePosition), new(0, 0, CompleteCell), new(0, 1, UsePosition)], UsePosition: (0, 1), FinishUsePosition: (0, 1), AnimateFromUsePosition: true),
+            [Direction.East] = new([new(-1, 0, UsePosition), new(0, 0, CompleteCell), new(1, 0, UsePosition)], UsePosition: (1, 0), FinishUsePosition: (1, 0), AnimateFromUsePosition: true),
+        },
+        UsageNorth: HairRestorerUse(),
+        UsageSouth: HairRestorerUse());
+
+    /// <summary>The hair restoration room (rooms/hair_restoration.lua): a treatment room for baldness with a doctor.</summary>
+    public static readonly RoomDefinition HairRestoration = new(
+        "hair_restoration",
+        "Hair Restoration",
+        MinimumSize: 4,
+        FloorSprite: 17,
+        BlueWalls,
+        NeededObjects: new Dictionary<string, int> { ["hair_restorer"] = 1, ["console"] = 1 },
+        LevelConfigId: 19,
+        AdditionalObjects: AdditionalRoomObjects);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -1044,10 +1068,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre, StaffRoom, SlackTongue, HairRestoration],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable, Sofa, PoolTable, VideoGame, Television, Slicer, HairRestorer],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1286,6 +1310,12 @@ public static class BaseGameContent
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
+
+    /// <summary>hair_restorer.lua's slack man: sits down, the cap comes down, restoring, the cap goes up as he gets up.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> HairRestorerUse() => new()
+    {
+        [HumanoidType.SlackMalePatient] = new(new(2074, 14), [new(2082, 4)], new(2086, 10), Begin2: new(2078, 11)),
+    };
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()

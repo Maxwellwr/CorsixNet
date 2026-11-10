@@ -250,7 +250,7 @@ Needs MSI (game data or a live look; the cloud has neither):
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
   fracture
-  clinic, hair restoration, DNA fixer, electrolysis, jelly vat, staff
+  clinic, DNA fixer, electrolysis, jelly vat, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and
   explosions without repairs would only do harm.

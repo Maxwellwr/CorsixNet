@@ -1962,7 +1962,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley } doctorBehaviour, IsMoving: false } doctor)
                 {
-                    if (string.Equals(room.RoomType, RoomVisits.XRayRoom, StringComparison.Ordinal))
+                    if (string.Equals(room.RoomType, RoomVisits.HairRestorationRoom, StringComparison.Ordinal))
+                    {
+                        // HairRestorationRoom's loop callback ends the use at the first round: sit down, the cap comes down,
+                        // a round of restoring, the cap goes up; the doctor works the console meanwhile.
+                        _machineRounds = 0;
+                        Use = ObjectUse.Start(simulation, humanoid, machine);
+                        doctorBehaviour.StartShield(simulation, doctor, room);
+                    }
+                    else if (string.Equals(room.RoomType, RoomVisits.XRayRoom, StringComparison.Ordinal))
                     {
                         // XRayRoom's loop callback: X-rayed for 2 to 4 rounds, times 2 less the doctor's skill; the doctor
                         // sits at the console meanwhile.
@@ -2030,6 +2038,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
 
                 TrolleyUse = null;
+                if (string.Equals(room.RoomType, RoomVisits.HairRestorationRoom, StringComparison.Ordinal))
+                {
+                    // hair_restoration_after_use: normal hair.
+                    humanoid.SetLayer(0, (byte)(humanoid.Layers[0] + 2));
+                }
+
                 if (string.Equals(room.RoomType, RoomVisits.SlackTongueRoom, StringComparison.Ordinal))
                 {
                     // after_use_slack_tongue: a slack man becomes a standard one; a slack woman's tongue goes from layer 0.
