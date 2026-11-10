@@ -56,6 +56,14 @@ public enum HumanoidType : byte
     StrippedFemalePatient2 = 13,
 
     StrippedFemalePatient3 = 14,
+
+    /// <summary>A doctor in scrubs in the operating theatre (CorsixTH's "Surgeon").</summary>
+    Surgeon = 15,
+
+    /// <summary>A patient in a surgical gown (CorsixTH's "Gowned Male Patient" and "Gowned Female Patient").</summary>
+    GownedMalePatient = 16,
+
+    GownedFemalePatient = 17,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>

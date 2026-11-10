@@ -1,8 +1,10 @@
 // Ported from CorsixTH CorsixTH/Lua/rooms/gp.lua (GPRoom:doStaffUseCycle, commandEnteringStaff) and
 // CorsixTH/Lua/rooms/general_diag.lua (GeneralDiagRoom:commandEnteringPatient, the doctor's part) and
-// CorsixTH/Lua/rooms/psych.lua (PsychRoom:commandEnteringStaff, commandEnteringPatient).
+// CorsixTH/Lua/rooms/psych.lua (PsychRoom:commandEnteringStaff, commandEnteringPatient) and
+// CorsixTH/Lua/rooms/operating_theatre.lua (the surgeons).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Serialization;
@@ -57,6 +59,30 @@ public enum DoctorPhase : byte
 
     /// <summary>In the psychiatric room: in the comfortable chair while the patient lies on the couch.</summary>
     UsingChair,
+
+    /// <summary>In the operating theatre: walking to the surgeon screen, and waiting for it to be free.</summary>
+    OtWalkingToScreen,
+
+    /// <summary>In the operating theatre: changing into scrubs behind the screen.</summary>
+    OtChanging,
+
+    /// <summary>In the operating theatre: in scrubs, meandering, ready for a patient.</summary>
+    OtReady,
+
+    /// <summary>In the operating theatre: walking to the sink, and waiting for it to be free.</summary>
+    OtWalkingToSink,
+
+    /// <summary>In the operating theatre: washing hands.</summary>
+    OtWashing,
+
+    /// <summary>In the operating theatre: walking to their place at the table.</summary>
+    OtWalkingToTable,
+
+    /// <summary>In the operating theatre: at the table; the first surgeon operates from here, the patient's use drives it.</summary>
+    OtAtTable,
+
+    /// <summary>In the operating theatre: the second surgeon operating from the far side of the table.</summary>
+    OtOperating,
 }
 
 /// <summary>
@@ -72,6 +98,9 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     private const string DeskType = "desk";
     private const string Bookcase = "bookcase";
     private const string ComfortableChair = "comfortable_chair";
+    private const string SurgeonScreen = "surgeon_screen";
+    private const string OperatingSink = "op_sink1";
+    private const string OperatingTable = "operating_table";
 
     public override BehaviourKind Kind => BehaviourKind.Doctor;
 
@@ -104,6 +133,20 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary>In the psychiatric room: rounds of the session left (<c>duration</c>), or 0 between patients.</summary>
     private int _psychDuration;
 
+    /// <summary>In the operating theatre: the animations still to play (changing at the screen, operating).</summary>
+    private readonly List<AnimationRef> _sequence = [];
+
+    /// <summary>Ticks left of the animation playing from <see cref="_sequence"/>.</summary>
+    private int _sequenceTimer;
+
+    /// <summary>Where the sequence's animations are drawn from and in which tile's pass.</summary>
+    private TilePosition _sequenceTile;
+
+    private TilePosition _sequenceDrawTile;
+
+    /// <summary>The object the sequence's animations show and hide meanwhile.</summary>
+    private int _sequenceObject;
+
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         Meander.Reset();
@@ -114,6 +157,13 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
+        if (humanoid.Type == HumanoidType.Surgeon
+            && (Phase is DoctorPhase.Idle or DoctorPhase.WalkingToRoom || simulation.FindEntity(RoomId) is not Room { RoomType: RoomVisits.OperatingTheatreRoom }))
+        {
+            // The screen's last use, as a surgeon leaves the operating theatre, is left out: they are a doctor again.
+            humanoid.Type = HumanoidType.Doctor;
+        }
+
         if (Phase == DoctorPhase.Idle)
         {
             if (!RoomVisits.SettleIdleStaff(simulation, humanoid))
@@ -153,6 +203,10 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
                 {
                     // ResearchRoom:commandEnteringStaff.
                     StartResearchCycle(simulation, humanoid, room);
+                }
+                else if (string.Equals(room.RoomType, RoomVisits.OperatingTheatreRoom, StringComparison.Ordinal))
+                {
+                    StartChangingIntoScrubs(simulation, humanoid, room);
                 }
                 else if (string.Equals(room.RoomType, RoomVisits.PsychRoom, StringComparison.Ordinal))
                 {
@@ -207,6 +261,17 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             case DoctorPhase.UsingResearchObject:
             case DoctorPhase.ResearchMeandering:
                 ResearchStep(simulation, humanoid, room);
+                break;
+            case DoctorPhase.OtWalkingToScreen:
+            case DoctorPhase.OtChanging:
+            case DoctorPhase.OtReady:
+            case DoctorPhase.OtWalkingToSink:
+            case DoctorPhase.OtWashing:
+            case DoctorPhase.OtWalkingToTable:
+            case DoctorPhase.OtOperating:
+                OperatingTheatreStep(simulation, humanoid, room);
+                break;
+            case DoctorPhase.OtAtTable:
                 break;
             case DoctorPhase.WalkingToBookcase:
             case DoctorPhase.UsingBookcase:
@@ -585,6 +650,175 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         StartPsychCycle(simulation, humanoid, room);
     }
 
+    /// <summary>
+    /// <c>OperatingTheatreRoom:commandEnteringStaff</c>: to the surgeon screen, waiting for it to be free, to change into
+    /// scrubs; then meander, ready for a patient.
+    /// </summary>
+    private void StartChangingIntoScrubs(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Use = null;
+        _sequence.Clear();
+        if (RoomVisits.FindObject(simulation, room.Id, SurgeonScreen) is not { } screen)
+        {
+            Phase = DoctorPhase.OtReady;
+            Meander.Reset();
+            return;
+        }
+
+        Phase = DoctorPhase.OtWalkingToScreen;
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, screen));
+    }
+
+    /// <summary><c>commandEnteringPatient</c>: the surgeons wash their hands at the sink, then go to their places at the table.</summary>
+    internal void StartWashing(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        if (RoomId != room.Id || Phase != DoctorPhase.OtReady || RoomVisits.FindObject(simulation, room.Id, OperatingSink) is not { } sink)
+        {
+            return;
+        }
+
+        Phase = DoctorPhase.OtWalkingToSink;
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, sink));
+    }
+
+    /// <summary>Whether the surgeon stands at their place at the table, ready to operate.</summary>
+    public bool IsAtTable => Phase == DoctorPhase.OtAtTable;
+
+    /// <summary>
+    /// <c>_buildTableAction2</c>: the second surgeon's part from the far side of the table (operating_table_b.lua): two
+    /// begin animations, 2 to 5 rounds of cutting or sewing, two finish animations.
+    /// </summary>
+    /// <returns>How many ticks it takes, which the first surgeon's use of the table lasts too.</returns>
+    internal int StartOperating(Simulation simulation, Humanoid humanoid, RoomObject table)
+    {
+        _sequence.Clear();
+        _sequence.Add(new AnimationRef(2306, 25));
+        _sequence.Add(new AnimationRef(2330, 5));
+        var loops = simulation.Random.NextInclusive(2, 5);
+        for (var i = 0; i < loops; i++)
+        {
+            _sequence.Add(simulation.Random.Next(2) == 0 ? new AnimationRef(4890, 34) : new AnimationRef(2326, 9));
+        }
+
+        _sequence.Add(new AnimationRef(2334, 5));
+        _sequence.Add(new AnimationRef(2342, 12));
+        _sequenceTile = _sequenceDrawTile = RoomVisits.OperatingTableSlaveTile(simulation, table);
+        _sequenceObject = table.Id;
+        Phase = DoctorPhase.OtOperating;
+        PlayNext(simulation, humanoid);
+        return _sequence.Sum(animation => animation.Length);
+    }
+
+    /// <summary>The operation is over (<c>operatring_theatre_table_after_use</c>): the surgeon meanders, ready again.</summary>
+    internal void OnOperated()
+    {
+        if (Phase is DoctorPhase.OtAtTable or DoctorPhase.OtOperating)
+        {
+            Phase = DoctorPhase.OtReady;
+            _sequence.Clear();
+            Meander.Reset();
+        }
+    }
+
+    /// <summary>The surgeon's part of the operating theatre.</summary>
+    private void OperatingTheatreStep(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        switch (Phase)
+        {
+            case DoctorPhase.OtWalkingToScreen:
+                if (RoomVisits.FindObject(simulation, room.Id, SurgeonScreen) is not { } screen)
+                {
+                    Phase = DoctorPhase.OtReady;
+                    break;
+                }
+
+                if (RoomVisits.IsObjectBusy(simulation, screen, humanoid))
+                {
+                    // wait_for_object: idle until nobody uses the screen.
+                    break;
+                }
+
+                // use_screen.lua: the doctor turns into a surgeon; the screen's outfits decide the animation.
+                var surgeons = RoomVisits.SurgeonsInScrubs(simulation, room);
+                var greens = 2 - surgeons;
+                _sequence.Clear();
+                _sequence.Add(surgeons > 0 ? (greens > 1 ? new AnimationRef(2780, 33) : new AnimationRef(2784, 40)) : new AnimationRef(2782, 40));
+                _sequenceTile = screen.Tile;
+                _sequenceDrawTile = RoomVisits.RenderTile(simulation, screen);
+                _sequenceObject = screen.Id;
+                humanoid.Type = HumanoidType.Surgeon;
+                Phase = DoctorPhase.OtChanging;
+                PlayNext(simulation, humanoid);
+                break;
+            case DoctorPhase.OtChanging:
+            case DoctorPhase.OtOperating:
+                if (--_sequenceTimer > 0)
+                {
+                    break;
+                }
+
+                if (_sequence.Count > 0)
+                {
+                    PlayNext(simulation, humanoid);
+                    break;
+                }
+
+                humanoid.ClearActionAnimation();
+                _sequenceObject = 0;
+                Phase = DoctorPhase.OtReady;
+                Meander.Reset();
+                break;
+            case DoctorPhase.OtReady:
+                Meander.Update(simulation, humanoid);
+                break;
+            case DoctorPhase.OtWalkingToSink:
+                if (RoomVisits.FindObject(simulation, room.Id, OperatingSink) is not { } sink)
+                {
+                    WalkToTablePlace(simulation, humanoid, room);
+                    break;
+                }
+
+                if (!RoomVisits.IsObjectBusy(simulation, sink, humanoid))
+                {
+                    Phase = DoctorPhase.OtWashing;
+                    Use = ObjectUse.Start(simulation, humanoid, sink);
+                }
+
+                break;
+            case DoctorPhase.OtWashing:
+                if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
+                {
+                    Use = null;
+                    WalkToTablePlace(simulation, humanoid, room);
+                }
+
+                break;
+            case DoctorPhase.OtWalkingToTable:
+                Phase = DoctorPhase.OtAtTable;
+                break;
+        }
+    }
+
+    /// <summary>The first surgeon (the room's) to the table's patient side, the second to the far side (operating_table_b).</summary>
+    private void WalkToTablePlace(Simulation simulation, Humanoid humanoid, Room room)
+    {
+        Phase = DoctorPhase.OtWalkingToTable;
+        if (RoomVisits.FindObject(simulation, room.Id, OperatingTable) is not { } table)
+        {
+            return;
+        }
+
+        humanoid.WalkTo(simulation, room.StaffId == humanoid.Id ? RoomVisits.UseTile(simulation, table) : RoomVisits.OperatingTableSlaveTile(simulation, table));
+    }
+
+    private void PlayNext(Simulation simulation, Humanoid humanoid)
+    {
+        var animation = _sequence[0];
+        _sequence.RemoveAt(0);
+        humanoid.SetActionAnimation(simulation, animation, false, _sequenceTile, _sequenceDrawTile, _sequenceObject);
+        _sequenceTimer = animation.Length;
+    }
+
     /// <summary>GPRoom:doStaffUseCycle: to the cabinet, then the desk.</summary>
     private void StartCycle(Simulation simulation, Humanoid humanoid, Room room)
     {
@@ -685,11 +919,22 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteInt32(_researchRounds);
         writer.WriteInt32(_researchMeanders);
         writer.WriteInt32(_psychDuration);
+        writer.WriteInt32(_sequence.Count);
+        foreach (var animation in _sequence)
+        {
+            writer.WriteInt32(animation.Id);
+            writer.WriteInt32(animation.Length);
+        }
+
+        writer.WriteInt32(_sequenceTimer);
+        writer.WriteTile(_sequenceTile);
+        writer.WriteTile(_sequenceDrawTile);
+        writer.WriteInt32(_sequenceObject);
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
     {
-        return new DoctorBehaviour
+        var doctor = new DoctorBehaviour
         {
             Phase = (DoctorPhase)reader.ReadByte(),
             RoomId = reader.ReadInt32(),
@@ -702,5 +947,20 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             _researchMeanders = reader.ReadInt32(),
             _psychDuration = reader.Version is 0 or >= 60 ? reader.ReadInt32() : 0,
         };
+        if (reader.Version is 0 or >= 65)
+        {
+            var count = reader.ReadCount(64);
+            for (var i = 0; i < count; i++)
+            {
+                doctor._sequence.Add(new AnimationRef(reader.ReadInt32(), reader.ReadInt32()));
+            }
+
+            doctor._sequenceTimer = reader.ReadInt32();
+            doctor._sequenceTile = reader.ReadTile();
+            doctor._sequenceDrawTile = reader.ReadTile();
+            doctor._sequenceObject = reader.ReadInt32();
+        }
+
+        return doctor;
     }
 }

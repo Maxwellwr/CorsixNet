@@ -776,6 +776,96 @@ public static class BaseGameContent
         LevelConfigId: 13,
         AdditionalObjects: AdditionalRoomObjects);
 
+    /// <summary>
+    /// The surgeon screen (objects/surgeon_screen.lua): patients change into a gown behind it; surgeons change into scrubs
+    /// there too, with animations the operating theatre picks itself.
+    /// </summary>
+    public static readonly ObjectDefinition SurgeonScreen = new(
+        "surgeon_screen",
+        "Surgeon Screen",
+        ObjectType: 35,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(-1, -1, UsePosition), new(-1, 0), new(0, -1), new(0, 0)], RenderAttach: (-1, 0)),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations>
+        {
+            // Into the gown, then out of it again.
+            [HumanoidType.StandardMalePatient] = new(null, [new(4760, 24)], null),
+            [HumanoidType.StandardFemalePatient] = new(null, [new(4762, 24)], null),
+            [HumanoidType.GownedMalePatient] = new(null, [new(4768, 23)], null),
+            [HumanoidType.GownedFemalePatient] = new(null, [new(4770, 23)], null),
+        });
+
+    /// <summary>The surgeons' sink (objects/op_sink1.lua, with op_sink2 drawn beside it): a surgeon steps in and washes.</summary>
+    public static readonly ObjectDefinition OperatingSink = new(
+        "op_sink1",
+        "Sink",
+        ObjectType: 33,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, CompleteCell), new(0, -1, CompleteCell), new(1, 0, UsePosition)], UsePosition: (1, 0)),
+            [Direction.East] = new([new(0, 0, CompleteCell), new(-1, 0, CompleteCell), new(0, 1, UsePosition)], UsePosition: (0, 1)),
+        },
+        UsageNorth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Surgeon] = new(null, [new(2362, 33)], null) },
+        UsageSouth: new Dictionary<HumanoidType, UseAnimations> { [HumanoidType.Surgeon] = new(null, [new(2362, 33)], null) },
+        WalkInToUse: true);
+
+    /// <summary>The X-ray viewer (objects/x_ray_viewer.lua) on the operating theatre's wall.</summary>
+    public static readonly ObjectDefinition XRayViewer = new(
+        "x_ray_viewer",
+        "X-Ray Viewer",
+        ObjectType: 29,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new([new(0, 0, NeedWestSide)]),
+            [Direction.East] = new([new(0, 0, NeedNorthSide)]),
+        });
+
+    /// <summary>
+    /// The operating table (objects/machines/operating_table.lua): the first surgeon operates with the gowned patient on
+    /// it; operating_table_b, its far side, is where the second surgeon works (drawn beside it).
+    /// </summary>
+    public static readonly ObjectDefinition OperatingTable = new(
+        "operating_table",
+        "Operating Table",
+        ObjectType: 30,
+        new Dictionary<Direction, ObjectOrientation>
+        {
+            [Direction.North] = new(
+                [
+                    new(-2, -1, UsePosition), new(-1, -1, CompleteCell), new(-1, -2, UsePosition), new(0, -1, CompleteCell), new(0, -2, CompleteCell),
+                    new(1, 0, CompleteCell), new(1, -2, CompleteCell), new(1, -1, UsePosition),
+                ],
+                RenderAttach: (0, -1),
+                UsePosition: (-1, -2),
+                SecondaryUsePosition: (-2, -1)),
+            [Direction.East] = new(
+                [
+                    new(-1, -2, UsePosition), new(-1, -1, CompleteCell), new(-2, -1, UsePosition), new(-1, 0, CompleteCell), new(-2, 0, CompleteCell),
+                    new(0, 1, CompleteCell), new(-2, 1, CompleteCell), new(-1, 1, UsePosition), new(0, 0),
+                ],
+                RenderAttach: (-1, 0),
+                UsePosition: (-2, -1),
+                SecondaryUsePosition: (-1, -2)),
+        },
+        MultiUsage: OperatingTableMultiUsage());
+
+    /// <summary>
+    /// The operating theatre (rooms/operating_theatre.lua): two surgeons, a table, a surgeon screen, a sink and an X-ray
+    /// viewer behind swing doors; the treatment after the ward for the surgical diseases.
+    /// </summary>
+    public static readonly RoomDefinition OperatingTheatre = new(
+        "operating_theatre",
+        "Operating Theatre",
+        MinimumSize: 6,
+        FloorSprite: 21,
+        WhiteWalls,
+        NeededObjects: new Dictionary<string, int> { ["operating_table"] = 1, ["surgeon_screen"] = 1, ["op_sink1"] = 1, ["x_ray_viewer"] = 1 },
+        LevelConfigId: 10,
+        AdditionalObjects: AdditionalRoomObjects,
+        SwingDoors: true);
+
     /// <summary>The GP's office (rooms/gp.lua).</summary>
     public static readonly RoomDefinition GpOffice = new(
         "gp",
@@ -830,10 +920,10 @@ public static class BaseGameContent
     };
 
     public static GameContent Create() => new(
-        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom],
+        [GpOffice, Pharmacy, GeneralDiagnosis, Toilets, Ultrascan, ResearchRoom, XRayRoom, Inflation, Psych, Ward, BloodMachineRoom, Decontamination, Cardiogram, ScannerRoom, OperatingTheatre],
         ExternalWalls,
         // Corridor objects in the order of CorsixTH's furnish corridor window (corridor_object).
-        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner],
+        [Desk, Cabinet, Chair, PharmacyCabinet, Screen, CrashTrolley, ReceptionDesk, Bench, DrinksMachine, FireExtinguisher, Radiator, Bin, Plant, Loo, Sink, Ultrascanner, Computer, Analyser, Autopsy, XRay, RadiationShield, Inflator, Couch, ComfortableChair, Bookcase, Skeleton, Bed, BloodMachine, DoctorConsole, Shower, Cardio, Scanner, SurgeonScreen, OperatingSink, XRayViewer, OperatingTable],
         DoorAnimations,
         PatientAnimations)
     {
@@ -1010,6 +1100,27 @@ public static class BaseGameContent
             More = new(Begin3: new(1458, 6), Begin4: new(1462, 1), Begin5: new(1466, 6), Finish3: new(1462, 1), Finish4: new(1462, 1), Finish5: new(1478, 6)),
         },
     };
+
+    /// <summary>
+    /// operating_table.lua's <c>multi_usage_animations</c>: the surgeon with the gowned patient, who stands idle at the
+    /// table's side at the first and last phases and is in the surgeon's animations between; the one-frame in-use
+    /// animation loops (CorsixTH sets its length to 1).
+    /// </summary>
+    private static Dictionary<Direction, IReadOnlyDictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>> OperatingTableMultiUsage()
+    {
+        var north = new Dictionary<(HumanoidType, HumanoidType), IReadOnlyList<MultiUseAnimations>>
+        {
+            [(HumanoidType.Surgeon, HumanoidType.GownedMalePatient)] =
+            [
+                new MultiUseAnimations([new(new(2318, 9), new(416, 1)), new(new(2322, 21))], new(new(2348, 1)), [new(new(2346, 14)), new(new(2338, 12), new(416, 1))]),
+            ],
+            [(HumanoidType.Surgeon, HumanoidType.GownedFemalePatient)] =
+            [
+                new MultiUseAnimations([new(new(2318, 9), new(2886, 1)), new(new(2932, 20))], new(new(2938, 1)), [new(new(2936, 14)), new(new(2338, 12), new(2886, 1))]),
+            ],
+        };
+        return new() { [Direction.North] = north, [Direction.South] = north };
+    }
 
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()

@@ -1642,6 +1642,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             room.MaxTimes = RoomVisits.GpMaxTimes;
         }
 
+        if (string.Equals(room.RoomType, RoomVisits.OperatingTheatreRoom, StringComparison.Ordinal))
+        {
+            // OperatingTheatreRoom:commandEnteringPatient: the surgeons wash their hands meanwhile.
+            foreach (var surgeon in RoomVisits.Surgeons(simulation, room))
+            {
+                ((DoctorBehaviour)surgeon.Behaviour!).StartWashing(simulation, surgeon, room);
+            }
+        }
+
         // The GP's chair, general diagnosis's screen, the psychiatric couch; the blood machine's other end.
         humanoid.WalkTo(simulation, string.Equals(room.RoomType, RoomVisits.BloodMachineRoom, StringComparison.Ordinal)
             ? RoomVisits.SecondaryUseTile(simulation, placed)
@@ -1781,7 +1790,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 // action_use_screen_patient_clothes_state: the clothes now hang on the screen.
                 Use = null;
                 screen.HangingClothes = humanoid.Layers[1];
-                if (room.StaffPresent && trolley is not null)
+                if (room.StaffPresent && trolley is not null && string.Equals(room.RoomType, RoomVisits.OperatingTheatreRoom, StringComparison.Ordinal))
+                {
+                    // In the gown, to the side of the operating table.
+                    Phase = PatientPhase.WalkingToTrolley;
+                    humanoid.WalkTo(simulation, RoomVisits.SecondaryUseTile(simulation, trolley));
+                }
+                else if (room.StaffPresent && trolley is not null)
                 {
                     Phase = PatientPhase.WalkingToTrolley;
                     humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, trolley));
@@ -1803,6 +1818,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 if (trolley is null || !room.StaffPresent)
                 {
                     WalkBackToScreen(simulation, humanoid, screen);
+                    return;
+                }
+
+                if (string.Equals(room.RoomType, RoomVisits.OperatingTheatreRoom, StringComparison.Ordinal))
+                {
+                    StartOperation(simulation, humanoid, room, trolley);
                     return;
                 }
 
@@ -1839,13 +1860,26 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                     Use = null;
                 }
-                else if (TrolleyUse is not null && TrolleyUse.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                else if (TrolleyUse is not null)
                 {
-                    return;
+                    // The operating table's use is the first surgeon's, driven from here.
+                    var user = string.Equals(room.RoomType, RoomVisits.OperatingTheatreRoom, StringComparison.Ordinal)
+                        && simulation.FindEntity(room.StaffId) is Humanoid surgeon ? surgeon : humanoid;
+                    if (TrolleyUse.Update(simulation, user) != ObjectUseEvent.Done)
+                    {
+                        return;
+                    }
                 }
 
                 TrolleyUse = null;
                 IsExamined = true;
+                if (string.Equals(room.RoomType, RoomVisits.OperatingTheatreRoom, StringComparison.Ordinal))
+                {
+                    foreach (var surgeon in RoomVisits.Surgeons(simulation, room))
+                    {
+                        ((DoctorBehaviour)surgeon.Behaviour!).OnOperated();
+                    }
+                }
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour examiner })
                 {
                     examiner.OnExamined(room);
@@ -1998,6 +2032,28 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
     }
 
+    /// <summary>
+    /// <c>operation_standby</c>: once both surgeons stand at the table, the second operates from its far side and the
+    /// first uses the table with the patient (operating_table.lua's multi-use), its one-frame in-use animation looping
+    /// until the second surgeon has finished (<c>operatring_theatre_after_use</c>).
+    /// </summary>
+    private void StartOperation(Simulation simulation, Humanoid humanoid, Room room, RoomObject table)
+    {
+        var surgeons = RoomVisits.Surgeons(simulation, room);
+        if (surgeons.Count < 2 || !surgeons.All(s => s is { IsMoving: false, Behaviour: DoctorBehaviour { IsAtTable: true } })
+            || simulation.FindEntity(room.StaffId) is not Humanoid first)
+        {
+            return;
+        }
+
+        var second = surgeons.First(s => s.Id != first.Id);
+        var length = ((DoctorBehaviour)second.Behaviour!).StartOperating(simulation, second, table);
+        var begin = humanoid.Type == HumanoidType.GownedFemalePatient ? 9 + 20 : 9 + 21;
+        TrolleyUse = MultiObjectUse.Start(simulation, first, table, humanoid, inUseRounds: Math.Max(0, length - begin - 1));
+        Phase = PatientPhase.OnTrolley;
+        IsExamined = TrolleyUse is null;
+    }
+
     /// <summary>The cardiogram's in-use rounds after the first (see <see cref="GeneralDiagnosisStep"/>).</summary>
     private const int CardiogramRounds = 53;
 
@@ -2022,6 +2078,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Use = ObjectUse.Start(simulation, humanoid, screen);
         humanoid.Type = humanoid.Type switch
         {
+            // The surgeon screen: into a surgical gown.
+            HumanoidType.StandardMalePatient when screen.ObjectType == "surgeon_screen" => HumanoidType.GownedMalePatient,
+            HumanoidType.StandardFemalePatient when screen.ObjectType == "surgeon_screen" => HumanoidType.GownedFemalePatient,
+
             // change_to = math.random(1, 3): one of the three kinds of stripped patient.
             HumanoidType.StandardMalePatient => simulation.Random.NextInclusive(1, 3) switch
             {
@@ -2056,8 +2116,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>A stripped patient's type once dressed again; other types as they are.</summary>
     internal static HumanoidType Dressed(HumanoidType type) => type switch
     {
-        HumanoidType.StrippedMalePatient or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 => HumanoidType.StandardMalePatient,
-        HumanoidType.StrippedFemalePatient or HumanoidType.StrippedFemalePatient2 or HumanoidType.StrippedFemalePatient3 => HumanoidType.StandardFemalePatient,
+        HumanoidType.StrippedMalePatient or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 or HumanoidType.GownedMalePatient => HumanoidType.StandardMalePatient,
+        HumanoidType.StrippedFemalePatient or HumanoidType.StrippedFemalePatient2 or HumanoidType.StrippedFemalePatient3 or HumanoidType.GownedFemalePatient => HumanoidType.StandardFemalePatient,
         _ => type,
     };
 

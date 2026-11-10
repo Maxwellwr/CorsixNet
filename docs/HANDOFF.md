@@ -215,13 +215,20 @@ Done and committed:
   drawn from the object's tile in its attach tile's pass, as single uses (it doubled the cardiogram).
   The scanner (scanner_room.lua, scanner.lua; save format 64): undress, the scanner's five begin and five finish
   animations (`UseAnimations.More`, `ObjectUsePhase.Begin3`..`Finish5`; it has no in-use one) while the doctor works
-  the console, dress. From 2026-11-10 the user lets threads merge their own green PRs.
+  the console, dress.
+  The operating theatre (operating_theatre.lua; surgeon_screen, op_sink1/2, x_ray_viewer, operating_table/_b; save
+  format 65): two surgeons (doctors with the surgeon ability) change into scrubs at the screen (the outfits' count picks
+  the animation), wait meandering; the patient changes into a gown (new types Surgeon, GownedMale/FemalePatient), the
+  surgeons wash at the sink and take their places; the second surgeon operates from the far side (operating_table_b's
+  animations, 2 to 5 rounds) while the first's use of the table with the patient loops its one-frame in-use animation
+  for as long; then the patient changes back and is cured. Left out: the surgeons changing back as they leave (they
+  turn into doctors at once), the X-ray viewer lighting up, the screen's outfit idles, the "needs a ward/surgeon" advice. From 2026-11-10 the user lets threads merge their own green PRs.
 
 Needs MSI (game data or a live look; the cloud has neither):
 
 - Every window and the adviser from the second overnight batch: nothing was seen on screen.
 - Rooms with machines or their own animations, which need frame counts from VSTART-1/VFRA-1:
-  operating theatre, fracture
+  fracture
   clinic, hair restoration, slack tongue, DNA fixer, electrolysis, jelly vat, staff
   room, training room.
 - Machine wear, breakdowns and handymen repairing them (#33): the repair animations are needed, and

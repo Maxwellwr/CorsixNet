@@ -33,6 +33,9 @@ internal sealed class HumanoidDrawing
         [HumanoidType.StrippedFemalePatient] = (834, 836, 842, 844),
         [HumanoidType.StrippedFemalePatient2] = (834, 836, 842, 844),
         [HumanoidType.StrippedFemalePatient3] = (834, 836, 842, 844),
+        [HumanoidType.Surgeon] = (2288, 2290, 2296, 2298),
+        [HumanoidType.GownedMalePatient] = (406, 408, 414, 416),
+        [HumanoidType.GownedFemalePatient] = (2876, 2878, 2884, 2886),
         [HumanoidType.Vip] = (266, 268, 274, 276),
         [HumanoidType.Inspector] = (266, 268, 274, 276),
     };
