@@ -106,6 +106,14 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     // earthquakes, research
     public static readonly Advice EarthquakeAlert = new(11, 107, "An earthquake is coming!");
     public static readonly Advice EarthquakeEnded = new(11, 78, "The earthquake is over. It measured %d on the Richter scale.");
+    // doctor.lua's updateSkill: promotions from training or on the job
+    public static readonly Advice PromotionToDoctor = new(11, 23, "One of your junior doctors has become a doctor.");
+    public static readonly Advice PromotionToSpecialist = new(11, 69, "One of your doctors has become a %s.");
+    public static readonly Advice PromotionToConsultant = new(11, 138, "One of your doctors has become a consultant.");
+
+    /// <summary>training.lua: a student placed in the training room finds no lecture chair (CorsixTH's own text).</summary>
+    public static readonly Advice NotEnoughLectureChairs = new(0, 0, "Each student doctor needs a lecture chair to sit in!");
+
     public static readonly Advice NewMachineResearched = new(11, 24, "Research has produced a new %s.");
 
     // room requirements (ResearchRoom:roomFinished)
@@ -225,6 +233,37 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             if (research.Discovered && !last.Discovered.Contains(id))
             {
                 Say(NewMachineResearched, simulation.Content.FindObject(id)?.Name ?? id);
+            }
+        }
+
+        // Doctor:updateSkill: a doctor who becomes a specialist, a doctor or a consultant.
+        foreach (var (id, rank) in snapshot.Ranks)
+        {
+            if (!last.Ranks.TryGetValue(id, out var before))
+            {
+                continue;
+            }
+
+            foreach (var (gained, title, fallback) in new[]
+            {
+                (rank.Surgeon && !before.Surgeon, 6, "surgeon"),
+                (rank.Psychiatrist && !before.Psychiatrist, 7, "psychiatrist"),
+                (rank.Researcher && !before.Researcher, 9, "researcher"),
+            })
+            {
+                if (gained)
+                {
+                    Say(PromotionToSpecialist, texts?.String(34, title) ?? fallback);
+                }
+            }
+
+            if (before.Junior && !rank.Junior)
+            {
+                Say(PromotionToDoctor);
+            }
+            else if (!before.Consultant && rank.Consultant)
+            {
+                Say(PromotionToConsultant);
             }
         }
 
@@ -404,6 +443,27 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     private static bool IsInHospital(LevelMap map, int player, TilePosition tile) =>
         map.Contains(tile.X, tile.Y) && map[tile.X, tile.Y].Has(TileFlags.Hospital) && map.GetParcelOwner(map[tile.X, tile.Y].Parcel) == player + 1;
 
+    /// <summary>A doctor's grade and specialisms, to notice promotions.</summary>
+    private readonly record struct Rank(bool Junior, bool Consultant, bool Surgeon, bool Psychiatrist, bool Researcher);
+
+    /// <summary>
+    /// training.lua's <c>commandEnteringStaff</c>: a student doctor put into a training room whose lecture chairs are all
+    /// taken is told so (and leaves).
+    /// </summary>
+    public static bool LacksLectureChair(Simulation simulation, StaffProfile profile, TilePosition tile, int movingId)
+    {
+        if (profile.Class != StaffClass.Doctor || profile.IsConsultant || !simulation.Map.Contains(tile.X, tile.Y)
+            || simulation.FindEntity(simulation.Map[tile.X, tile.Y].RoomId) is not Room { RoomType: "training", IsActive: true } room)
+        {
+            return false;
+        }
+
+        var students = simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour doctor, IsFired: false } h
+            && doctor.RoomId == room.Id && h.Id != room.StaffId && h.Id != movingId);
+        var chairs = simulation.Entities.Count(e => e is RoomObject { ObjectType: "lecture_chair" } chair && chair.RoomId == room.Id);
+        return students >= chairs;
+    }
+
     /// <summary>What the checks compare from one frame to the next.</summary>
     private readonly record struct Snapshot(
         long Hours,
@@ -414,7 +474,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         bool Earthquake,
         int EarthquakeSize,
         bool HasStaffedDesk,
-        IReadOnlySet<string> Discovered)
+        IReadOnlySet<string> Discovered,
+        IReadOnlyDictionary<int, Rank> Ranks)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -429,7 +490,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 simulation.Earthquakes.IsActive,
                 simulation.Earthquakes.Size,
                 staff.Any(s => s.Profile!.Class == StaffClass.Receptionist) && Count(simulation, player, ReceptionDesks.ObjectId) > 0,
-                hospital.Research.Objects.Where(pair => pair.Value.Discovered).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal));
+                hospital.Research.Objects.Where(pair => pair.Value.Discovered).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal),
+                staff.Where(s => s.Profile!.Class == StaffClass.Doctor).ToDictionary(s => s.Id, s => new Rank(s.Profile!.IsJunior, s.Profile.IsConsultant, s.Profile.IsSurgeon, s.Profile.IsPsychiatrist, s.Profile.IsResearcher)));
         }
     }
 }

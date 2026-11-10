@@ -1407,6 +1407,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     var problem = StaffMoving.Check(simulation, carried, hand, _session.Player);
                     if (problem == StaffHireProblem.None)
                     {
+                        AdviseIfNoLectureChair(simulation, held.Profile, hand, carried);
                         _session.Submit(new MoveStaffCommand(carried, hand));
                     }
                     else
@@ -2570,6 +2571,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var problem = StaffHiring.Check(simulation, hiring.Class, index, tile, _session!.Player);
             if (problem == StaffHireProblem.None)
             {
+                AdviseIfNoLectureChair(simulation, hiring.Profile, tile, 0);
                 _session.Submit(new HireStaffCommand(hiring.Class, index, tile));
                 _sounds.Play("plac_st2.wav"); // UIPlaceStaff:close
                 _hiring = null;
@@ -2760,6 +2762,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             && !simulation.Entities.Any(e => e is Humanoid { Profile.IsResearcher: true, IsFired: false } staff && staff.Employer == player))
         {
             _adviser.Say(AdviserChecks.ResearchRoomNeedResearcher.Text(_texts), Environment.TickCount64);
+        }
+    }
+
+    /// <summary>The not enough lecture chairs advice, when a student doctor is put into a full training room.</summary>
+    private void AdviseIfNoLectureChair(Simulation simulation, StaffProfile? profile, TilePosition tile, int movingId)
+    {
+        if (profile is not null && AdviserChecks.LacksLectureChair(simulation, profile, tile, movingId))
+        {
+            _adviser.Say(AdviserChecks.NotEnoughLectureChairs.Text(_texts), Environment.TickCount64);
         }
     }
 
