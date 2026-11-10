@@ -50,7 +50,8 @@ public class BaseGameContentTests
 
         var animations = BaseGameContent.PatientAnimations.Values.SelectMany(a => new[] { a.Vomit, a.Pee }).OfType<AnimationRef>().ToList();
 
-        Assert.Equal(4, animations.Count);
+        // The standard and slack men and women.
+        Assert.Equal(8, animations.Count);
         foreach (var animation in animations)
         {
             Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);

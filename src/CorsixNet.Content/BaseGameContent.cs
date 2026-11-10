@@ -92,12 +92,16 @@ public static class BaseGameContent
         {
             [HumanoidType.StandardMalePatient] = new(new(678, 2), [new(702, 1)], new(694, 2)),
             [HumanoidType.StandardFemalePatient] = new(new(2824, 2), [new(2814, 1)], new(2832, 2)),
+            [HumanoidType.SlackMalePatient] = new(new(4580, 2), [new(4588, 1)], new(4596, 2)),
         },
         UsageEast: new Dictionary<HumanoidType, UseAnimations>
         {
             // Not talking, nodding and talking, weighted 16 : 3 : 1 as chair.lua's make_list does.
             [HumanoidType.StandardMalePatient] = new(new(680, 2), ChairTalk(new(704, 1), new(736, 2), new(744, 27)), new(696, 2)),
             [HumanoidType.StandardFemalePatient] = new(new(2826, 2), ChairTalk(new(2818, 1), new(3002, 2), new(2994, 13)), new(2834, 2)),
+
+            // make_list(1544, nil, 4606): quiet and talking, no nodding.
+            [HumanoidType.SlackMalePatient] = new(new(1540, 2), [.. Enumerable.Repeat(new AnimationRef(1544, 1), 16), new(4606, 42)], new(1552, 2)),
         },
         WalkInToUse: true);
 
@@ -161,9 +165,9 @@ public static class BaseGameContent
             [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
         },
         CorridorObject: true,
-        UsageEast: DrinksMachineUse(196, 14, 256, 11),
-        UsageSouth: DrinksMachineUse(190, 14, 250, 11),
-        UsageWest: DrinksMachineUse(192, 11, 252, 10));
+        UsageEast: WithSlackMale(DrinksMachineUse(196, 14, 256, 11), new(null, [new(1538, 14)], null)),
+        UsageSouth: WithSlackMale(DrinksMachineUse(190, 14, 250, 11), new(null, [new(1532, 14)], null)),
+        UsageWest: WithSlackMale(DrinksMachineUse(192, 11, 252, 10), new(null, [new(1534, 11)], null)));
 
     /// <summary>The fire extinguisher (objects/fire_extinguisher.lua), a side object.</summary>
     public static readonly ObjectDefinition FireExtinguisher = new("extinguisher", "Fire Extinguisher", ObjectType: 43, SideOrientations(Direction.North, Direction.East, Direction.South, Direction.West), CorridorObject: true);
@@ -1003,6 +1007,8 @@ public static class BaseGameContent
     {
         [HumanoidType.StandardMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12), EnteringSwing: new(2042, 6), LeavingSwing: new(2040, 9)),
         [HumanoidType.StandardFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9)),
+        [HumanoidType.SlackFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9)),
+        [HumanoidType.SlackMalePatient] = new(Entering: new(1526, 10), Leaving: new(1524, 12)),
         [HumanoidType.Doctor] = new(Entering: new(672, 10), Leaving: new(670, 12), EnteringSwing: new(4752, 6), LeavingSwing: new(4750, 5)),
         [HumanoidType.Nurse] = new(Entering: new(3266, 10), Leaving: new(3264, 12), EnteringSwing: new(3274, 6), LeavingSwing: new(3272, 7)),
         [HumanoidType.Handyman] = new(Entering: new(3288, 10), Leaving: new(3286, 12), EnteringSwing: new(3520, 6), LeavingSwing: new(3518, 9)),
@@ -1025,6 +1031,8 @@ public static class BaseGameContent
     {
         [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8)),
         [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
+        [HumanoidType.SlackFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
+        [HumanoidType.SlackMalePatient] = new(Vomit: new(4324, 9), Pee: new(4328, 8)),
     };
 
     /// <summary>
@@ -1124,6 +1132,12 @@ public static class BaseGameContent
             [
                 Use([new(2232, 13), new(2236, 31), new(4614, 19), new(3232, 38), new(3236, 27)], [new(1172, 19), new(4738, 39), new(4618, 13), new(2204, 38), new(2274, 23)]),
             ],
+
+            // Only for baldness.
+            [(HumanoidType.Doctor, HumanoidType.SlackMalePatient)] =
+            [
+                Use([new(2232, 13), new(2236, 31), new(5146, 19), new(5150, 38), new(2224, 23)], [new(2252, 17), new(5154, 19), new(622, 14), new(2204, 38), new(2274, 23)]),
+            ],
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
@@ -1164,6 +1178,14 @@ public static class BaseGameContent
     /// </summary>
     private static Dictionary<HumanoidType, UseAnimations> ScannerUse() => new()
     {
+        [HumanoidType.SlackMalePatient] = new(new(4974, 1), [], new(4974, 1), Begin2: new(4974, 1), Finish2: new(4978, 5))
+        {
+            More = new(Begin3: new(4978, 5), Begin4: new(4986, 1), Begin5: new(4982, 5), Finish3: new(4986, 1), Finish4: new(4982, 5), Finish5: new(4974, 1)),
+        },
+        [HumanoidType.SlackFemalePatient] = new(new(5158, 1), [], new(5158, 1), Begin2: new(5158, 1), Finish2: new(5162, 5))
+        {
+            More = new(Begin3: new(5162, 5), Begin4: new(5166, 1), Begin5: new(5170, 5), Finish3: new(5166, 1), Finish4: new(5170, 5), Finish5: new(5158, 1)),
+        },
         [HumanoidType.StrippedMalePatient] = new(new(1402, 1), [], new(1402, 1), Begin2: new(1402, 1), Finish2: new(1406, 5))
         {
             More = new(Begin3: new(1406, 5), Begin4: new(1410, 1), Begin5: new(1414, 5), Finish3: new(1410, 1), Finish4: new(1414, 5), Finish5: new(1402, 1)),
@@ -1228,6 +1250,7 @@ public static class BaseGameContent
     /// <summary>x_ray.lua's animations for the standard patients: walking in, the radiation, walking out.</summary>
     private static Dictionary<HumanoidType, UseAnimations> XRayUse() => new()
     {
+        [HumanoidType.SlackMalePatient] = new(new(5178, 27), [new(5174, 2)], new(5182, 16)),
         [HumanoidType.StandardMalePatient] = new(new(1964, 27), [new(1960, 2)], new(1992, 16)),
         [HumanoidType.StandardFemalePatient] = new(new(2948, 27), [new(2952, 2)], new(2956, 16)),
     };
@@ -1238,9 +1261,17 @@ public static class BaseGameContent
         [HumanoidType.Doctor] = new(new(798, 13), [new(810, 19), new(814, 20)], new(802, 8), Begin2: new(806, 20)),
     };
 
+    /// <summary>A usage table with a slack man's animations added.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> WithSlackMale(Dictionary<HumanoidType, UseAnimations> table, UseAnimations slackMale)
+    {
+        table[HumanoidType.SlackMalePatient] = slackMale;
+        return table;
+    }
+
     /// <summary>loo.lua's animations for the standard patients: men pick one of two in-use animations.</summary>
     private static Dictionary<HumanoidType, UseAnimations> LooUse() => new()
     {
+        [HumanoidType.SlackMalePatient] = new(new(4292, 15), [new(4308, 32)], new(4316, 27), Begin2: new(4296, 25), Finish2: new(4320, 18)),
         [HumanoidType.StandardMalePatient] = new(new(1712, 15), [new(1728, 45), new(1732, 32)], new(1740, 27), Begin2: new(1716, 25), Finish2: new(1744, 18)),
         [HumanoidType.StandardFemalePatient] = new(new(3132, 18), [new(3144, 48)], new(3152, 26), Begin2: new(3136, 25), Finish2: new(3156, 18)),
     };

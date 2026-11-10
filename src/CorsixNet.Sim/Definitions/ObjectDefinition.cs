@@ -158,6 +158,12 @@ public sealed record ObjectDefinition(
     bool VisibleWhileUsed = false)
 {
     /// <summary>
+    /// The kind of humanoid whose animations another borrows where an object has none for it: CorsixTH's "Slack Female
+    /// Patient" has a standard woman's everywhere but the scanner and the slicer.
+    /// </summary>
+    public static HumanoidType? LooksLike(HumanoidType type) => type == HumanoidType.SlackFemalePatient ? HumanoidType.StandardFemalePatient : null;
+
+    /// <summary>
     /// The animation variants for <paramref name="primary"/> using the object facing <paramref name="orientation"/> with
     /// <paramref name="secondary"/>, and whether they are mirrored (<c>action_multi_use_object_start</c>).
     /// </summary>
@@ -186,7 +192,13 @@ public sealed record ObjectDefinition(
             flip = true;
         }
 
-        return table.TryGetValue((primary, secondary), out var variants) && variants.Count > 0 ? (variants, flip) : null;
+        if ((table.TryGetValue((primary, secondary), out var variants) && variants.Count > 0)
+            || (table.TryGetValue((LooksLike(primary) ?? primary, LooksLike(secondary) ?? secondary), out variants) && variants.Count > 0))
+        {
+            return (variants, flip);
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -210,7 +222,15 @@ public sealed record ObjectDefinition(
             flip = true;
         }
 
-        return table is not null && table.TryGetValue(type, out var animations) ? (animations, flip) : null;
+        if (table is null)
+        {
+            return null;
+        }
+
+        // A slack woman uses a standard woman's animations where the object has none of her own.
+        return table.TryGetValue(type, out var animations) || (LooksLike(type) is { } alike && table.TryGetValue(alike, out animations))
+            ? (animations, flip)
+            : null;
     }
 
     /// <summary>All the tables of use animations the object has.</summary>
