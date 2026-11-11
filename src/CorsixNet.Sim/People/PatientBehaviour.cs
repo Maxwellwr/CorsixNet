@@ -2274,6 +2274,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (discovered && hospital.Reputation is var reputation)
         {
             hospital.ChangeReputation(simulation.Random, (int)Math.Floor(-reputation * simulation.Rules.Research.AutopsyReputationHitPercent / 100m), null);
+            hospital.AutopsiesDiscovered++;
         }
 
         // hosp:removePatient and destroyEntity: gone, without counting as a death.

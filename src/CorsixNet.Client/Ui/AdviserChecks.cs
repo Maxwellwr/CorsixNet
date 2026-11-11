@@ -107,6 +107,9 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     // earthquakes, research
     public static readonly Advice EarthquakeAlert = new(11, 107, "An earthquake is coming!");
     public static readonly Advice EarthquakeEnded = new(11, 78, "The earthquake is over. It measured %d on the Richter scale.");
+    // research.lua's commandEnteringPatient: an autopsy came out
+    public static readonly Advice AutopsyDiscovered = new(11, 123, "Your Automatic Autopsy Machine has been discovered. Expect an adverse reaction from the public.");
+
     // doctor.lua's updateSkill: promotions from training or on the job
     public static readonly Advice PromotionToDoctor = new(11, 23, "One of your junior doctors has become a doctor.");
     public static readonly Advice PromotionToSpecialist = new(11, 69, "One of your doctors has become a %s.");
@@ -215,6 +218,11 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                     Say(index == 0 ? AnotherPatientCured : PatientsCured, snapshot.Cured);
                 }
             }
+        }
+
+        if (snapshot.AutopsiesDiscovered > last.AutopsiesDiscovered)
+        {
+            Say(AutopsyDiscovered);
         }
 
         if (snapshot.Deaths > last.Deaths)
@@ -632,6 +640,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         long Hours,
         int Cured,
         int Deaths,
+        int AutopsiesDiscovered,
         int RaiseRequests,
         bool HeatingBroken,
         bool Earthquake,
@@ -649,6 +658,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 simulation.Hours,
                 hospital.Cured,
                 hospital.Deaths,
+                hospital.AutopsiesDiscovered,
                 staff.Count(s => s.RaiseRequest > 0),
                 hospital.IsHeatingBroken,
                 simulation.Earthquakes.IsActive,
