@@ -130,7 +130,7 @@ internal sealed class HumanoidDrawing
             layers[i] = humanoid.Layers[i];
         }
 
-        _renderer.DrawFrame(batch, frame, anchorX + offsetX, anchorY + offsetY, layers, flip);
+        DrawFrame(batch, humanoid, frame, anchorX + offsetX, anchorY + offsetY, layers, flip, tick);
     }
 
     /// <summary>
@@ -164,7 +164,23 @@ internal sealed class HumanoidDrawing
             return;
         }
 
-        _renderer.DrawFrame(batch, frame, x, y, layers, humanoid.ActionAnimationFlip);
+        DrawFrame(batch, humanoid, frame, x, y, layers, humanoid.ActionAnimationFlip, tick);
+    }
+
+    /// <summary>
+    /// Draws a humanoid's frame, wobbling while they have jellyitis and have not been to the jelly vat (jellyitis.lua's
+    /// <c>AnimationEffect.Jelly</c>, which <c>Patient:treatDisease</c> turns off). Each patient wobbles from its own point
+    /// in the cycle, as CorsixTH's random <c>patient_effect_offset</c>.
+    /// </summary>
+    private void DrawFrame(SpriteBatch batch, Humanoid humanoid, int frame, int x, int y, ReadOnlySpan<byte> layers, bool flip, long tick)
+    {
+        if (humanoid.Behaviour is PatientBehaviour { DiseaseId: "jellyitis", IsCured: false, CureRoomsVisited: 0 })
+        {
+            _renderer.DrawFrameJelly(batch, frame, x, y, layers, flip, tick + ((humanoid.Id * 7919L) % AnimationRenderer.JellyPeriod));
+            return;
+        }
+
+        _renderer.DrawFrame(batch, frame, x, y, layers, flip);
     }
 
     /// <summary>

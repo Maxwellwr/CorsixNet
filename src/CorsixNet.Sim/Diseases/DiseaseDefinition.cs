@@ -23,6 +23,9 @@ public enum PatientLook : byte
 
     /// <summary>An alien man or woman (<c>diseases/alien_dna.lua</c>).</summary>
     Alien,
+
+    /// <summary>A standard woman, never a man (<c>diseases/pregnant.lua</c>).</summary>
+    Pregnant,
 }
 
 /// <summary>
