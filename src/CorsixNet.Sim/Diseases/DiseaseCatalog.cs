@@ -191,6 +191,7 @@ public static class DiseaseCatalog
         },
         new("pregnant", 14, 200)
         {
+            Look = PatientLook.Pregnant,
             EmergencyNumber = 8,
             VisualsId = 12,
             DiagnosisRooms = ["general_diag", "cardiogram", "scanner", "ultrascan", "blood_machine", "x_ray", "psych", "ward"],
