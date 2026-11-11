@@ -214,9 +214,10 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   levels outside a campaign, `--free-build` on the server; the client shows no free build texts yet: the progress
   report's and the VIP and emergency faxes' remarks, `progress_report.lua`, `player_hospital.lua`). Sandbox options
   beyond it are not done.
-- Main menu (`resizables/main_menu.lua`): the game still starts straight into the first level. The new game dialog
-  (Menu, New game: player name, the installed difficulties, Start from the campaign's first level, `NewGameWindow`) is
-  done, without the tutorial and the player name's text box (`resizables/new_game.lua`).
+- Main menu (`resizables/main_menu.lua`): done as a window over the paused first level when the command line names
+  nothing to play (`MainMenuWindow`: Campaign, Custom Campaign, Single Scenario with Free Build, Continue Game, Load
+  Game, Settings, Exit; `CustomGames`, `levels`/`campaigns` in `config.txt`). Not yet: the map editor, the menu's own
+  background, the tutorial and the player name's text box in the new game dialog (`resizables/new_game.lua`).
 - AI hospitals (Partial: `computer[n]` opponents take their turns for patients and count them as
   visitors, as CorsixTH's `AIHospital` does; like CorsixTH's, they build nothing and play no part in
   the league, awards or end conditions; `hospitals/ai_hospital.lua`).
