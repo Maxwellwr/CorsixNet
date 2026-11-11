@@ -588,7 +588,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 {
                     _objects.Draw(batch, shown.ObjectType, shown.Tile, shown.Orientation, Simulation!.Tick, shown.Tint);
                 }
-            });
+            }, tile => _entitiesByTile.TryGetValue(tile, out var here) && here.Any(e => e is Humanoid or Rat));
             DrawOverlay(batch, map, view);
             _buildTool.DrawPreview(batch, _diamond);
             if (_buildTool.IsActive && _hoveredTile is { } cell)
