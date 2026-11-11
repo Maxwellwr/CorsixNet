@@ -77,7 +77,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Staff room idle actions (`meander.lua`, `use_staffroom.lua`, `seek_staffroom.lua`). Doctors, nurses, receptionists
   and handymen without a job meander (`Meandering`), so do the pharmacy's nurse and the general diagnosis doctor
   between patients, handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).
-- Training: the advice (promotions, a consultant needed, too few chairs), learning on the job (`doctor.lua`); the room, teaching, skill growth and gaining abilities are done (`Training`).
+- Training: learning on the job (`doctor.lua`); the room, teaching, skill growth, gaining abilities and the advice (promotions, a consultant needed, too few lecture chairs; `AdviserChecks`) are done (`Training`).
 - Surgeons, psychiatrists, researchers actually being required by rooms.
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
 - Patients waiting look at the watch, yawn and tap a foot with 30, 20 and 10 days left, and those with sleeping illness yawn one day in ten (`PatientSpotAction`; `humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`). In CorsixTH these are patients' animations only.

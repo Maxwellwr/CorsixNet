@@ -100,6 +100,30 @@ public class AdviserTests
     }
 
     [Fact]
+    public void PromotionsAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var doctor = host.Hire(StaffClass.Doctor);
+        var profile = doctor.Profile!;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        var specialism = profile.IsSurgeon ? (profile.IsPsychiatrist ? Specialism.Researcher : Specialism.Psychiatrist) : Specialism.Surgeon;
+        Assert.True(profile.TrainSpecialism(specialism, 1m));
+        checks.Observe(host.Simulation, 0, null, 0);
+        var title = specialism switch { Specialism.Surgeon => "surgeon", Specialism.Psychiatrist => "psychiatrist", _ => "researcher" };
+        Assert.Equal(AdviserChecks.PromotionToSpecialist.Text(null, title), host.Adviser.Current);
+        host.Adviser.Next(0);
+
+        if (!profile.IsConsultant)
+        {
+            profile.TrainSkill(1m, host.Simulation.Rules.Staff);
+            checks.Observe(host.Simulation, 0, null, 0);
+            Assert.Contains(host.Adviser.Current, new[] { AdviserChecks.PromotionToDoctor.Fallback, AdviserChecks.PromotionToConsultant.Fallback });
+        }
+    }
+
+    [Fact]
     public void AFinishedRoomSaysWhichStaffItLacks()
     {
         var host = new WindowTestHost();
