@@ -14,7 +14,9 @@ namespace CorsixNet.Client.Maps;
 /// <remarks>
 /// Follows CorsixTH's <c>level_map::draw</c>. Tiles with equal x + y form a scanline (one screen row).
 /// Pass 1 draws every floor and floor shadow, so that nothing drawn later is covered by a floor.
-/// Pass 2 goes scanline by scanline: north walls right to left, then west walls left to right.
+/// Pass 2 goes scanline by scanline: north walls right to left, then west walls left to right. Where a tile holds an
+/// animation (a humanoid) and the tile before it on the scanline has a north wall, that wall and its tile's entities
+/// are drawn again over it, so that a room's front wall stays in front of someone sitting or standing just behind it.
 /// </remarks>
 internal sealed class MapRenderer
 {
@@ -43,7 +45,10 @@ internal sealed class MapRenderer
     /// Called for each tile after its west wall, with the tile and its anchor (the top corner of
     /// the floor diamond), to draw the entities standing there.
     /// </param>
-    public void Draw(SpriteBatch batch, LevelMap map, Rectangle view, Action<TilePosition, int, int>? drawEntities = null)
+    /// <param name="isAnimated">
+    /// Whether a tile holds an animation (CorsixTH's <c>is_multiple_frame_animation_fn</c>), for the redrawing above.
+    /// </param>
+    public void Draw(SpriteBatch batch, LevelMap map, Rectangle view, Action<TilePosition, int, int>? drawEntities = null, Func<TilePosition, bool>? isAnimated = null)
     {
         var (firstScanline, lastScanline) = VisibleScanlines(map, view);
 
@@ -64,11 +69,23 @@ internal sealed class MapRenderer
                 DrawNorthWall(batch, map, x, s - x);
             }
 
+            var previousNeedsRedraw = false;
             for (var x = firstX; x <= lastX; x++)
             {
                 var y = s - x;
                 DrawLayer(batch, map[x, y].WestWall, x, y);
                 drawEntities?.Invoke(new TilePosition(x, y), 32 * (x - y), 16 * (x + y));
+
+                // level_map::draw: an animation on this tile may have been drawn over the north wall of the tile to its
+                // left on the scanline (one west, one south); that wall and what stands on its tile are drawn again.
+                if (previousNeedsRedraw && s > firstScanline && isAnimated?.Invoke(new TilePosition(x, y)) == true)
+                {
+                    var (px, py) = (x - 1, y + 1);
+                    DrawNorthWall(batch, map, px, py);
+                    drawEntities?.Invoke(new TilePosition(px, py), 32 * (px - py), 16 * (px + py));
+                }
+
+                previousNeedsRedraw = map[x, y].NorthWall != 0;
             }
         }
     }
