@@ -908,6 +908,14 @@ public sealed class Humanoid : Entity
             return new Humanoid(id, tile, HumanoidType.SlackMalePatient, layers) { HospitalPlayer = hospitalPlayer };
         }
 
+        if (look == PatientLook.Pregnant)
+        {
+            // pregnant.lua: a standard woman with one of heads 1 to 4 and a random body, the other layers at 0.
+            layers[0] = (byte)(random.NextInclusive(1, 4) * 2);
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            return new Humanoid(id, tile, HumanoidType.StandardFemalePatient, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
         if (look == PatientLook.Alien)
         {
             // alien_dna.lua: a man with 5 heads and alternate shoes, or a woman (heads 2 to 4); clothes for both.

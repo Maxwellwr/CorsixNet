@@ -15,7 +15,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Missing | CorsixTH source |
 |---|---|
 | Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); the VIP's visit to the ward; in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
-| Treatment rooms: the jelly wobble effect (the jelly vat and the DNA fixer are done); alien death animations | `th_gfx_sdl.cpp`, `entities/humanoid.lua` |
+| Treatment rooms: alien death animations (the jelly vat, its patients' wobble and the DNA fixer are done) | `entities/humanoid.lua` |
 | Facilities: (the staff room and training room are done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Editing a finished room back to the blueprint (resize, move the door), destroyed rooms after an explosion (editing objects and taking a room down for half its cost are done) | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
@@ -99,8 +99,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Patient needs: boredom, leaving angry, complaining (warmth and its
   effect on happiness, prices changing happiness, health dropping, patients giving up, and thirst and the need for
   the toilet growing (`Needs`), thirsty patients buying a can from the drinks machine, vomiting and peeing on the floor, and going to the toilets, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
-- Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
-  icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
+- Health and death: the trip to hell with the grim reaper and the gates to hell (65 % of the men in CorsixTH), the dying
+  mood icons and the death sounds (`humanoid_actions/die.lua`'s `action_die_tick_reaper`, `entities/humanoids/grim_reaper.lua`,
+  `objects/gates_to_hell.lua`). Health running down, the step aside, the fall and the trip to heaven are done
+  (`PatientBehaviour.UpdateDying`, `DeathAnimations`); those killed when a room crashes simply vanish, as in CorsixTH.
 - Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,
   the inspector and emergency patients, rooms taking patients from other rooms' queues (`TryToFindNearbyPatients`), and
   the window's size buttons, moving patients in the queue and sending a patient to another room of the same type as

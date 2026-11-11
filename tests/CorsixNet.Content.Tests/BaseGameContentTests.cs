@@ -43,6 +43,21 @@ public class BaseGameContentTests
     }
 
     [Fact]
+    public void DeathAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var animations = BaseGameContent.DeathAnimations.Values
+            .SelectMany(death => new[] { death.Fall, death.Rise, death.RiseHell, death.Wings, death.Hands, death.Fly }.Concat(death.Extra is { } extra ? [extra] : []))
+            .Distinct()
+            .ToList();
+        foreach (var animation in animations)
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+    }
+
+    [Fact]
     public void DoorAnimationsLastAsLongAsTheOriginalsAnimations()
     {
         var set = AnimationSet.Load(RealGameData.Require());

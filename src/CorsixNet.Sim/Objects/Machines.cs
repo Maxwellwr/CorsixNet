@@ -236,7 +236,7 @@ internal static class Machines
             humanoid.ClearActionAnimation();
             if (humanoid.Behaviour is PatientBehaviour patient)
             {
-                patient.Die(simulation, humanoid);
+                patient.Die(simulation, humanoid, animated: false);
             }
             else
             {

@@ -70,7 +70,7 @@ internal static class Feelings
         }
 
         // No use for those going home.
-        if (humanoid.IsDespawning || humanoid.IsFired || humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome })
+        if (humanoid.IsDespawning || humanoid.IsFired || humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome or PatientPhase.Dying })
         {
             return;
         }
