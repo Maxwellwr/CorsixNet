@@ -285,8 +285,11 @@ CorsixTH's DNA fixer says nothing, so neither does this.
 Dying (2026-11-11, save format 74): a dead patient (health run out out of a room, or a failed treatment once out of
 the room) takes one step aside, then falls east or south at random and goes to heaven: rise, wings, hands, and flying up
 4 pixels a tick for 30 ticks (die.lua's `action_die_tick`; `PatientPhase.Dying`, `DyingStage`, `GameContent.DeathAnimations`,
-aliens included; stripped and gowned patients die as the standard man or woman). Not yet: the trip to hell with the grim
-reaper and the gates to hell (`action_die_tick_reaper`), which CorsixTH gives 65 % of the men; for now everyone goes up.
+aliens included; stripped and gowned patients die as the standard man or woman). The trip to hell (save format 75,
+`GrimReaperBehaviour`, `HumanoidType.GrimReaper`, `BehaviourKind.GrimReaper`): 65 % of the men (bloaty heads excepted) lie
+as a standard man while the grim reaper rises near the gates to hell (drawn from his behaviour, not a placed object),
+walks to his place and waits; the patient gets up, walks in and falls; he swings, leaves and the hole closes. Not yet: the
+hole blocking its tile and the way-round check, the sounds.
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to

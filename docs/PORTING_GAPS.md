@@ -99,10 +99,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Patient needs: boredom, leaving angry, complaining (warmth and its
   effect on happiness, prices changing happiness, health dropping, patients giving up, and thirst and the need for
   the toilet growing (`Needs`), thirsty patients buying a can from the drinks machine, vomiting and peeing on the floor, and going to the toilets, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
-- Health and death: the trip to hell with the grim reaper and the gates to hell (65 % of the men in CorsixTH), the dying
-  mood icons and the death sounds (`humanoid_actions/die.lua`'s `action_die_tick_reaper`, `entities/humanoids/grim_reaper.lua`,
-  `objects/gates_to_hell.lua`). Health running down, the step aside, the fall and the trip to heaven are done
-  (`PatientBehaviour.UpdateDying`, `DeathAnimations`); those killed when a room crashes simply vanish, as in CorsixTH.
+- Health and death: the dying mood icons and the death sounds; the gates to hell blocking their tile and CorsixTH's check
+  that they leave a way round. Health running down, the step aside, the fall, the trip to heaven and, for 65 % of the men,
+  the trip to hell with the grim reaper and the gates to hell are done (`PatientBehaviour.UpdateDying`, `DeathAnimations`,
+  `GrimReaperBehaviour`); those killed when a room crashes simply vanish, as in CorsixTH.
 - Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,
   the inspector and emergency patients, rooms taking patients from other rooms' queues (`TryToFindNearbyPatients`), and
   the window's size buttons, moving patients in the queue and sending a patient to another room of the same type as
