@@ -127,13 +127,13 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - VIP visits: the faxes asking and reporting, the arrival announcement and judging machines
   (`entities/humanoids/vip.lua`). The visit, the rating (with the litter seen), its grant and reputation and
   the year's trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
-- Earthquakes damaging machines and knocking patients over (`earthquake.lua`); planning, the warning and main
-  quakes and the screen shake are done (`Earthquakes`).
+- Earthquakes: planning, the warning and main quakes, the screen shake, the rounds of damage wearing machines and knocking
+  patients over are done (`Earthquakes`, `Machines.EarthquakeImpact`, `PatientBehaviour.Fall`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
   patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
-- Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
+- Patients knocked over by the player's click (`Patient:falling(true)` and its announcement). Falling in an earthquake, lying, getting up and shaking a fist are done (`PatientBehaviour.Fall`; `humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
 - Floating dollar signs are done for treatments and cans from the drinks machine.
 
 ## 5. Economy, bank, loans, prices

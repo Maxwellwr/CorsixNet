@@ -87,6 +87,17 @@ public class BaseGameContentTests
         {
             Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
         }
+
+        // Yawning, tapping a foot, looking at the watch, falling, lying, getting up and shaking a fist, where there are.
+        var others = BaseGameContent.PatientAnimations.Values
+            .SelectMany(a => new[] { a.Yawn, a.TapFoot, a.CheckWatch, a.Falling, a.OnGround, a.GetUp, a.ShakeFist })
+            .OfType<AnimationRef>()
+            .ToList();
+        Assert.NotEmpty(others);
+        foreach (var animation in others)
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
     }
 
     [Fact]

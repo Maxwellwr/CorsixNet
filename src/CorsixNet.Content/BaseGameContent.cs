@@ -1335,13 +1335,15 @@ public static class BaseGameContent
         new(fall, Rise: new(3208, 13), RiseHell: new(580, 13), Wings: new(3212, 11), Hands: new(3216, 17), Fly: new(3220, 2));
 
     /// <summary>
-    /// humanoid.lua's <c>vomit_anim</c>, <c>pee_anim</c>, <c>yawn_anim</c>, <c>tap_foot_anim</c> and <c>check_watch_anim</c> for
-    /// the patients there are.
+    /// humanoid.lua's <c>vomit_anim</c>, <c>pee_anim</c>, <c>yawn_anim</c>, <c>tap_foot_anim</c>, <c>check_watch_anim</c>,
+    /// <c>falling_anim</c>, <c>on_ground_anim</c>, <c>get_up_anim</c> and <c>shake_fist_anim</c> for the patients there are.
     /// </summary>
     public static readonly IReadOnlyDictionary<HumanoidType, PatientAnimations> PatientAnimations = new Dictionary<HumanoidType, PatientAnimations>
     {
-        [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8), Yawn: new(368, 21), TapFoot: new(2960, 12), CheckWatch: new(2964, 22)),
-        [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8), Yawn: new(4864, 26), TapFoot: new(4464, 2), CheckWatch: new(4468, 16)),
+        [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8), Yawn: new(368, 21), TapFoot: new(2960, 12), CheckWatch: new(2964, 22),
+            Falling: new(1682, 15), OnGround: new(1258, 1), GetUp: new(384, 11), ShakeFist: new(392, 6)),
+        [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8), Yawn: new(4864, 26), TapFoot: new(4464, 2), CheckWatch: new(4468, 16),
+            Falling: new(3116, 16), OnGround: new(1764, 1), GetUp: new(580, 13)),
         [HumanoidType.SlackFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
         [HumanoidType.SlackMalePatient] = new(Vomit: new(4324, 9), Pee: new(4328, 8), CheckWatch: new(4060, 22)),
         [HumanoidType.ChewbaccaPatient] = new(Vomit: new(4138, 15), Pee: new(4178, 9)),
