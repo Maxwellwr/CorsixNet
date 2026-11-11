@@ -1,6 +1,7 @@
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.People;
 
 namespace CorsixNet.Content.Tests;
 
@@ -51,7 +52,7 @@ public class BaseGameContentTests
             .SelectMany(death => new[] { death.Fall, death.Rise, death.RiseHell, death.Wings, death.Hands, death.Fly }.Concat(death.Extra is { } extra ? [extra] : []))
             .Distinct()
             .ToList();
-        foreach (var animation in animations)
+        foreach (var animation in animations.Concat([GrimReaperBehaviour.HoleIdle, GrimReaperBehaviour.HoleClosing, GrimReaperBehaviour.FallingIn, GrimReaperBehaviour.Spawn, GrimReaperBehaviour.Swipe, GrimReaperBehaviour.Leave]))
         {
             Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
         }

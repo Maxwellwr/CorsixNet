@@ -45,6 +45,7 @@ internal sealed class HumanoidDrawing
         [HumanoidType.GownedFemalePatient] = (2876, 2878, 2884, 2886),
         [HumanoidType.Vip] = (266, 268, 274, 276),
         [HumanoidType.Inspector] = (266, 268, 274, 276),
+        [HumanoidType.GrimReaper] = (994, 996, 1002, 1004),
     };
 
     private readonly AnimationRenderer _renderer;

@@ -121,6 +121,21 @@ public enum DyingStage : byte
 
     /// <summary>Flying up, 4 pixels a tick for 30 ticks (<c>fly_east</c>); then the patient is gone.</summary>
     Flying,
+
+    /// <summary>On the way to hell: lying on the ground until the grim reaper is in his place.</summary>
+    OnGround,
+
+    /// <summary>A pause of 20 ticks before getting up.</summary>
+    AwaitingRise,
+
+    /// <summary>Standing up for the walk to hell (<c>rise_hell_east</c>).</summary>
+    RisingToHell,
+
+    /// <summary>Walking to the gates to hell and into them.</summary>
+    WalkingToHole,
+
+    /// <summary>Falling into the gates to hell; then the patient is gone.</summary>
+    FallingIn,
 }
 
 /// <summary>Something a patient does on the spot, interrupting what they were doing.</summary>
@@ -385,6 +400,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>Whether the dead patient fell towards the south (mirrored) rather than the east.</summary>
     private bool _dieSouth;
+
+    /// <summary>Whether the dead patient goes to hell with the grim reaper (die.lua's <c>action_die_tick_reaper</c>).</summary>
+    private bool _toHell;
+
+    /// <summary>The grim reaper come for the dead patient, or 0.</summary>
+    public int ReaperId { get; private set; }
 
     /// <summary>Ticks left of the spot action's animation, or −1 until the patient stands still to start it.</summary>
     private int _spotTimer;
@@ -2516,8 +2537,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// ghost, grows wings, puts the hands together and flies up out of sight.
     /// </summary>
     /// <remarks>
-    /// CorsixTH sends 65 percent of the men (bloaty heads excepted) to hell instead, with the grim reaper and the gates to
-    /// hell (<c>action_die_tick_reaper</c>); that is not ported yet, so everyone goes to heaven.
+    /// 65 percent of the men, bloaty heads excepted (they have no animations of turning into a standard man and falling into
+    /// the hole), go to hell instead (<c>action_die_tick_reaper</c>): they lie as a standard man until the grim reaper has
+    /// come, get up, walk into the gates to hell and fall in. Without a place for the hole they go to heaven after all,
+    /// from the wings on, as CorsixTH's fallback does.
     /// </remarks>
     private void UpdateDying(Simulation simulation, Humanoid humanoid)
     {
@@ -2543,7 +2566,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 humanoid.SetLayer(0, 2);
             }
 
+            _toHell = IsMalePatient(humanoid.Type) && DiseaseId != "bloaty_head" && simulation.Random.NextInclusive(1, 100) <= 65;
             Enter(DyingStage.Falling, animations.Fall);
+            return;
+        }
+
+        if (UpdateHell(simulation, humanoid))
+        {
             return;
         }
 
@@ -2565,6 +2594,21 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         {
             case DyingStage.Falling when animations.Extra is { } extra:
                 Enter(DyingStage.Extra, extra);
+                break;
+            case DyingStage.Falling or DyingStage.Extra when _toHell:
+                // Phases 1 and 2: lying as a standard man, while the grim reaper and the gates to hell appear.
+                humanoid.Type = HumanoidType.StandardMalePatient;
+                if (GrimReaperBehaviour.TrySpawn(simulation, humanoid) is { } reaper)
+                {
+                    ReaperId = reaper.Id;
+                    Enter(DyingStage.OnGround, OnGroundMale);
+                }
+                else
+                {
+                    _toHell = false;
+                    Enter(DyingStage.Wings, simulation.Content.FindDeathAnimations(HumanoidType.StandardMalePatient)?.Wings ?? animations.Wings);
+                }
+
                 break;
             case DyingStage.Falling:
             case DyingStage.Extra:
@@ -2596,6 +2640,100 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             DyingStage = stage;
             DyingTicks = 0;
             humanoid.SetActionAnimation(simulation, animation, _dieSouth, humanoid.Tile, humanoid.Tile, 0);
+        }
+    }
+
+    /// <summary>A standard man lying on the ground (humanoid.lua's <c>on_ground_anim</c>).</summary>
+    private static readonly Definitions.AnimationRef OnGroundMale = new(1258, 1);
+
+    /// <summary><c>Humanoid:isMalePatient</c>: a patient whose type is not a woman's.</summary>
+    private static bool IsMalePatient(HumanoidType type) => type is HumanoidType.StandardMalePatient or HumanoidType.AlternateMalePatient
+        or HumanoidType.SlackMalePatient or HumanoidType.ChewbaccaPatient or HumanoidType.AlienMalePatient or HumanoidType.StrippedMalePatient
+        or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 or HumanoidType.GownedMalePatient;
+
+    /// <summary>The grim reaper is in his place: after a pause the patient gets up (die.lua's phase 4).</summary>
+    internal void ReaperReady(Humanoid humanoid)
+    {
+        if (DyingStage == DyingStage.OnGround)
+        {
+            DyingStage = DyingStage.AwaitingRise;
+            DyingTicks = 0;
+        }
+    }
+
+    /// <summary>
+    /// die.lua's phases 4 to 6 on the way to hell: a pause, standing up, the walk to the gates to hell and into them, and the
+    /// fall. False when the patient is not on the way to hell.
+    /// </summary>
+    private bool UpdateHell(Simulation simulation, Humanoid humanoid)
+    {
+        var reaper = simulation.FindEntity(ReaperId) as Humanoid;
+        switch (DyingStage)
+        {
+            case DyingStage.OnGround:
+                if (reaper?.Behaviour is not GrimReaperBehaviour)
+                {
+                    humanoid.ClearActionAnimation();
+                    humanoid.IsDespawning = true;
+                }
+
+                return true;
+            case DyingStage.AwaitingRise:
+                if (++DyingTicks >= 20)
+                {
+                    var riseHell = simulation.Content.FindDeathAnimations(HumanoidType.StandardMalePatient)!.RiseHell;
+                    DyingStage = DyingStage.RisingToHell;
+                    DyingTicks = 0;
+                    humanoid.SetActionAnimation(simulation, riseHell, _dieSouth, humanoid.Tile, humanoid.Tile, 0);
+                }
+
+                return true;
+            case DyingStage.RisingToHell:
+                if (++DyingTicks >= simulation.Content.FindDeathAnimations(HumanoidType.StandardMalePatient)!.RiseHell.Length)
+                {
+                    humanoid.ClearActionAnimation();
+                    DyingStage = DyingStage.WalkingToHole;
+                    DyingTicks = 0;
+                }
+
+                return true;
+            case DyingStage.WalkingToHole:
+                if (humanoid.IsMoving)
+                {
+                    return true;
+                }
+
+                if (reaper?.Behaviour is not GrimReaperBehaviour grim)
+                {
+                    humanoid.IsDespawning = true;
+                    return true;
+                }
+
+                // To the tile beside the hole, then into it (gates_to_hell's walk_in_to_use).
+                var next = humanoid.Tile == grim.PatientUseTile || humanoid.Tile == grim.HoleTile ? grim.HoleTile : grim.PatientUseTile;
+                if (humanoid.Tile == grim.HoleTile)
+                {
+                    DyingStage = DyingStage.FallingIn;
+                    DyingTicks = 0;
+                    humanoid.SetActionAnimation(simulation, GrimReaperBehaviour.FallingIn, false, grim.HoleTile, grim.HoleTile, 0);
+                    grim.PatientFell(simulation, reaper);
+                }
+                else if (!humanoid.WalkTo(simulation, next))
+                {
+                    humanoid.RawStepTo(next);
+                }
+
+                return true;
+            case DyingStage.FallingIn:
+                if (++DyingTicks >= GrimReaperBehaviour.FallingIn.Length)
+                {
+                    humanoid.ClearActionAnimation();
+                    humanoid.IsDespawning = true;
+                }
+
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -2690,6 +2828,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteByte((byte)DyingStage);
         writer.WriteInt32(DyingTicks);
         writer.WriteBool(_dieSouth);
+        writer.WriteBool(_toHell);
+        writer.WriteInt32(ReaperId);
         writer.WriteBool(HasVomited);
         writer.WriteBool(IsNeedingToilet);
         writer.WriteByte((byte)GoingToToilet);
@@ -2783,9 +2923,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (reader.Version is 0 or >= 74)
         {
             var stage = reader.ReadByte();
-            patient.DyingStage = stage <= (byte)DyingStage.Flying ? (DyingStage)stage : throw new InvalidDataException($"Unknown dying stage {stage}.");
+            patient.DyingStage = stage <= (byte)DyingStage.FallingIn ? (DyingStage)stage : throw new InvalidDataException($"Unknown dying stage {stage}.");
             patient.DyingTicks = reader.ReadInt32();
             patient._dieSouth = reader.ReadBool();
+        }
+
+        if (reader.Version is 0 or >= 75)
+        {
+            patient._toHell = reader.ReadBool();
+            patient.ReaperId = reader.ReadInt32();
         }
         patient.HasVomited = reader.ReadBool();
         patient.IsNeedingToilet = reader.ReadBool();
