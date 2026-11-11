@@ -161,6 +161,27 @@ public class TrainingRoomTests
     }
 
     [Fact]
+    public void ADoctorLearnsOnTheJobWhileUsingTheGpsDesk()
+    {
+        var simulation = NewStaffedHospital(weakDoctor: true);
+        var doctor = simulation.Entities.OfType<Humanoid>().Single(h => h.Profile?.Class == StaffClass.Doctor);
+        var before = doctor.Profile!.Skill;
+        var usingHours = 0;
+        for (var tick = 0; tick < 60 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            if (doctor.ActionAnimation is not null && !doctor.IsCrossingDoor)
+            {
+                usingHours++;
+            }
+        }
+
+        // 0.000003 of skill an hour at the desk or cabinet: thousandths of skill gained, at most one per 333 hours.
+        Assert.True(usingHours > 1000, $"Only {usingHours} hours at the desk.");
+        Assert.InRange(doctor.Profile.Skill - before, 1, (usingHours / 333) + 1);
+    }
+
+    [Fact]
     public void TheTrainingFactorGrowsWithTheTrainingAids()
     {
         var simulation = NewHospital();

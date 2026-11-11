@@ -262,8 +262,10 @@ Next, in this order (2026-11-10):
    consultant already lecturing; other doctors sit on free lecture chairs or leave. `Training.OnEndDay` is trainSkills:
    skill (with millionths kept in `StaffProfile`) and specialism progress (`SpecialismProgress`, `TrainSpecialism`) from
    `TrainingRules` (gbv.TrainingRate, AbilityThreshold, TrainingValue); a student who becomes a consultant leaves. Not
-   yet: the promotion advice and "not enough lecture chairs" advice, the wage following the
-   promotion, learning on the job, doctors going back to the room after resting. Autopsies done (save format 71): the fax's Research choice
+   yet: the promotion advice and "not enough lecture chairs" advice (both since done). Learning on the job done
+   2026-11-12 (`Training.LearnOnTheJob`: 0.000003 skill an hour using an object outside the training room, staff room
+   and toilets); doctors going back to the room after resting done the same night. No wage change on promotion: CorsixTH
+   has none (`parseSkillLevel` only sets the grade; the fair wage grows, so raise requests follow). Autopsies done (save format 71): the fax's Research choice
    (`PatientAnswer.Research`, `PatientBehaviour.CanGoToResearch`) sends a patient asking for a treatment room to the
    research department (`RoomSeek.Research`; it now has a door queue); the room's first researcher leaves research for
    the autopsy machine and uses it with the patient (a doctor-driven machine like the blood machine); `Autopsied`: the

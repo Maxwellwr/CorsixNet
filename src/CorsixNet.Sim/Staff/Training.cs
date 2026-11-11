@@ -1,5 +1,6 @@
 // Training doctors, ported from CorsixTH CorsixTH/Lua/rooms/training.lua (calculateTrainingFactor, getStaffCount) and
-// entities/humanoids/staff/doctor.lua (tickDay, isLearning, trainSkills, _calculateTrainingPerformance, updateSkill).
+// entities/humanoids/staff/doctor.lua (tick, tickDay, isLearning, isLearningOnTheJob, trainSkills,
+// _calculateTrainingPerformance, updateSkill).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Economy;
@@ -16,6 +17,26 @@ internal static class Training
 
     /// <summary>A student always learns at least this much a day (<c>MIN_LEARN_VALUE</c>).</summary>
     private const decimal MinimumLearning = 0.001m;
+
+    /// <summary>What a doctor learns each hour of using something at work (<c>Doctor:tick</c>'s <c>updateSkill</c>).</summary>
+    internal const decimal OnTheJobPerHour = 0.000003m;
+
+    /// <summary>
+    /// <c>Doctor:tick</c>'s learning on the job (<c>isLearningOnTheJob</c>): a doctor using an object in a room other
+    /// than the training room, the staff room or the toilets slowly gains skill, and may be promoted by it.
+    /// </summary>
+    internal static void LearnOnTheJob(Simulation simulation, Humanoid humanoid)
+    {
+        if (humanoid is not { Profile: { Class: StaffClass.Doctor } profile, ActionAnimation: not null, IsCrossingDoor: false }
+            || !simulation.Map.Contains(humanoid.Tile.X, humanoid.Tile.Y)
+            || simulation.FindEntity(simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId) is not Room room
+            || room.RoomType is RoomType or Tiredness.StaffRoomType or RoomVisits.ToiletsRoom)
+        {
+            return;
+        }
+
+        profile.TrainSkill(OnTheJobPerHour, simulation.Rules.Staff);
+    }
 
     /// <summary>
     /// <c>Doctor:tickDay</c> for each doctor learning (<c>isLearning</c>: a student on a lecture chair of a training room
