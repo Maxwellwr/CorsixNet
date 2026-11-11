@@ -148,6 +148,15 @@ public enum PatientSpotAction : byte
 
     /// <summary>Doing it on the floor (<c>PeeAction</c>); pee is left on the floor.</summary>
     Pee,
+
+    /// <summary>Yawning while waiting, or with sleeping illness (<c>YawnAction</c>).</summary>
+    Yawn,
+
+    /// <summary>Tapping a foot while waiting (<c>TapFootAction</c>).</summary>
+    TapFoot,
+
+    /// <summary>Looking at the watch while waiting (<c>CheckWatchAction</c>).</summary>
+    CheckWatch,
 }
 
 /// <summary>Where a patient stands with the toilet (CorsixTH's <c>going_to_toilet</c>).</summary>
@@ -651,6 +660,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 else
                 {
                     Waiting--;
+                    WaitingEvent(humanoid);
                 }
 
                 break;
@@ -1373,6 +1383,45 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>Patient:_dailyWaitChecks</c>' waiting events: with 30 days left the patient looks at the watch, with 20 yawns and
+    /// with 10 taps a foot, if their type has the animation and they are standing (<c>checkWatch</c>, <c>yawn</c>,
+    /// <c>tapFoot</c>).
+    /// </summary>
+    private void WaitingEvent(Humanoid humanoid)
+    {
+        if (Waiting % GameDate.HoursPerDay != 0 || humanoid.IsMoving || IsSidetracked)
+        {
+            return;
+        }
+
+        var spot = (Waiting / GameDate.HoursPerDay) switch
+        {
+            30 => PatientSpotAction.CheckWatch,
+            20 => PatientSpotAction.Yawn,
+            10 => PatientSpotAction.TapFoot,
+            _ => PatientSpotAction.None,
+        };
+        if (spot != PatientSpotAction.None)
+        {
+            StartSpotAction(humanoid, spot);
+        }
+    }
+
+    /// <summary>
+    /// <c>Patient:tickDay</c>: a patient with sleeping illness (<c>disease.yawn</c>) yawns one day in ten, while standing.
+    /// </summary>
+    internal void MaybeYawn(Simulation simulation, Humanoid humanoid)
+    {
+        var willYawn = Phase == PatientPhase.Waiting && Waiting > 0 && Waiting / GameDate.HoursPerDay == 20;
+        if (DiseaseId == "sleeping_illness" && !willYawn && simulation.Random.NextInclusive(1, 10) == 5
+            && Phase is PatientPhase.Waiting or PatientPhase.SeekRoom && !humanoid.IsMoving && !IsSidetracked
+            && simulation.Content.FindPatientAnimations(humanoid.Type)?.Yawn is not null)
+        {
+            StartSpotAction(humanoid, PatientSpotAction.Yawn);
+        }
+    }
+
+    /// <summary>
     /// <c>interruptAndRequeueAction</c>: the patient stops where they are (finishing a step under way) and does it there.
     /// </summary>
     private void StartSpotAction(Humanoid humanoid, PatientSpotAction action)
@@ -1389,10 +1438,19 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     private void DoSpotAction(Simulation simulation, Humanoid humanoid)
     {
         var animations = simulation.Content.FindPatientAnimations(humanoid.Type);
-        var animation = SpotAction == PatientSpotAction.Vomit ? animations?.Vomit : animations?.Pee;
+        var animation = SpotAction switch
+        {
+            PatientSpotAction.Vomit => animations?.Vomit,
+            PatientSpotAction.Pee => animations?.Pee,
+            PatientSpotAction.Yawn => animations?.Yawn,
+            PatientSpotAction.TapFoot => animations?.TapFoot,
+            _ => animations?.CheckWatch,
+        };
+        var fidget = SpotAction is PatientSpotAction.Yawn or PatientSpotAction.TapFoot or PatientSpotAction.CheckWatch;
         if (_spotTimer < 0)
         {
-            _spotSouth = simulation.Random.NextInclusive(0, 1) != 1;
+            // Yawning and the like face the way the patient last moved: mirrored unless east.
+            _spotSouth = fidget ? humanoid.Facing != Direction.East : simulation.Random.NextInclusive(0, 1) != 1;
             if (animation is not { } start)
             {
                 SpotAction = PatientSpotAction.None;
@@ -1412,7 +1470,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
 
         humanoid.ClearActionAnimation();
-        if (humanoid.HospitalPlayer >= 0)
+        if (humanoid.HospitalPlayer >= 0 && !fidget)
         {
             Litter.Drop(simulation, humanoid.HospitalPlayer, SpotAction == PatientSpotAction.Vomit ? LitterType.Puke : LitterType.Pee, humanoid.Tile, isMirrored: !_spotSouth);
         }
@@ -2917,7 +2975,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.DrinksMachineId = reader.ReadInt32();
         patient._drinkUse = ObjectUse.ReadOptional(reader);
         var spot = reader.ReadByte();
-        patient.SpotAction = spot <= (byte)PatientSpotAction.Pee ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
+        patient.SpotAction = spot <= (byte)PatientSpotAction.CheckWatch ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
         patient._spotTimer = reader.ReadInt32();
         patient._spotSouth = reader.ReadBool();
         if (reader.Version is 0 or >= 74)

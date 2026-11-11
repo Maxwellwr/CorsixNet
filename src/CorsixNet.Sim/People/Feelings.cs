@@ -160,6 +160,7 @@ internal static class Feelings
         }
 
         patient.Health = Math.Max(patient.Health - PatientBehaviour.DailyHealthLoss, 0m);
+        patient.MaybeYawn(simulation, humanoid);
         Needs.OnEndDay(simulation, humanoid, patient);
     }
 

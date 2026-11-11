@@ -74,6 +74,36 @@ public class PatientFaxTests
         Assert.Equal(PatientPhase.Waiting, patient.Phase);
     }
 
+    [Fact]
+    public void AWaitingPatientLooksAtTheWatchYawnsAndTapsAFoot()
+    {
+        var simulation = NewStaffedHospital(Rules());
+        var (humanoid, patient) = WaitForQuestion(simulation);
+        Run(simulation, new AnswerPatientCommand(humanoid.Id, PatientAnswer.Wait));
+
+        // Patient:_dailyWaitChecks: with 30, 20 and 10 days of waiting left.
+        var seen = new List<PatientSpotAction>();
+        var animations = new HashSet<int>();
+        for (var tick = 0; tick < PatientCare.WaitingDays * GameDate.HoursPerDay && patient.Phase == PatientPhase.Waiting; tick++)
+        {
+            simulation.Step();
+            if (patient.SpotAction is PatientSpotAction.CheckWatch or PatientSpotAction.Yawn or PatientSpotAction.TapFoot
+                && (seen.Count == 0 || seen[^1] != patient.SpotAction))
+            {
+                seen.Add(patient.SpotAction);
+            }
+
+            if (patient.SpotAction is PatientSpotAction.CheckWatch or PatientSpotAction.Yawn or PatientSpotAction.TapFoot && humanoid.ActionAnimation is { } animation)
+            {
+                animations.Add(animation.Id);
+            }
+        }
+
+        Assert.Equal([PatientSpotAction.CheckWatch, PatientSpotAction.Yawn, PatientSpotAction.TapFoot], seen);
+        var expected = BaseGameContent.PatientAnimations[humanoid.Type];
+        Assert.Equal(new[] { expected.CheckWatch!.Value.Id, expected.Yawn!.Value.Id, expected.TapFoot!.Value.Id }.ToHashSet(), animations);
+    }
+
     private static (Humanoid Humanoid, PatientBehaviour Patient) WaitForQuestion(Simulation simulation)
     {
         Run(simulation, new CheatCommand(CheatKind.CreatePatient));
