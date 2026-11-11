@@ -39,8 +39,8 @@ public enum EarthquakeShake : byte
 /// main quake, which does a round of damage every 16 hours until its size is used up.
 /// </summary>
 /// <remarks>
-/// A round of damage would wear the machines in every room (<c>Machine:earthquakeImpact</c>) and might knock over
-/// patients in the corridors; neither machines nor falling animations exist yet, so the rounds only count down.
+/// A round of damage wears the machines in every room (<c>Machine:earthquakeImpact</c>, done by the simulation when
+/// <see cref="Tick"/> says so). CorsixTH also knocks over patients in the corridors; the falling animation is not ported.
 /// </remarks>
 public sealed class Earthquakes
 {
@@ -97,12 +97,12 @@ public sealed class Earthquakes
         return earthquakes;
     }
 
-    /// <summary>One hour of an earthquake (<c>Earthquake:tick</c>).</summary>
-    internal void Tick(IReadOnlyList<PlannedEarthquake> planned, SimRandom random)
+    /// <summary>One hour of an earthquake (<c>Earthquake:tick</c>). True when this hour does a round of damage.</summary>
+    internal bool Tick(IReadOnlyList<PlannedEarthquake> planned, SimRandom random)
     {
         if (!IsActive || IsDisabled)
         {
-            return;
+            return false;
         }
 
         if (RemainingDamage == 0)
@@ -110,7 +110,7 @@ public sealed class Earthquakes
             IsActive = false;
             Shake = EarthquakeShake.None;
             PlanNext(planned, random);
-            return;
+            return false;
         }
 
         if (WarningTimer == WarningPeriod)
@@ -133,7 +133,7 @@ public sealed class Earthquakes
             // comes after this test and so never plays: the hour the timer reaches 0 returns here too.
             if (WarningTimer < WarningPeriod - WarningLength)
             {
-                return;
+                return false;
             }
         }
 
@@ -142,17 +142,18 @@ public sealed class Earthquakes
 
         if (WarningTimer > 0)
         {
-            return;
+            return false;
         }
 
         DamageTimer--;
         if (DamageTimer > 0)
         {
-            return;
+            return false;
         }
 
         RemainingDamage--;
         DamageTimer += DamageTime;
+        return true;
     }
 
     /// <summary>Starts the planned earthquake on its day (<c>Earthquake:onEndDay</c>).</summary>

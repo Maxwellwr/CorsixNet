@@ -125,8 +125,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - VIP visits: the faxes asking and reporting, the arrival announcement and judging machines
   (`entities/humanoids/vip.lua`). The visit, the rating (with the litter seen), its grant and reputation and
   the year's trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
-- Earthquakes damaging machines and knocking patients over (`earthquake.lua`); planning, the warning and main
-  quakes and the screen shake are done (`Earthquakes`).
+- Earthquakes knocking patients over (`earthquake.lua`, the falling animation); planning, the warning and main
+  quakes, the screen shake and the rounds of damage wearing machines are done (`Earthquakes`, `Machines.EarthquakeImpact`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
   patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,

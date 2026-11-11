@@ -234,7 +234,11 @@ public sealed class Simulation
         }
 
         // CorsixTH's World:onTick ticks the earthquake, then handles the end of a day before the hour that starts the next one.
-        Earthquakes.Tick(Rules.Earthquakes, Random);
+        if (Earthquakes.Tick(Rules.Earthquakes, Random))
+        {
+            Objects.Machines.EarthquakeImpact(this);
+        }
+
         if (Date.Day != GameDate.FromHours(Hours + 1).Day)
         {
             OnEndDay();
