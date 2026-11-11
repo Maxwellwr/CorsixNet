@@ -54,6 +54,7 @@ public enum CommandKind : ushort
     EditRoom = 39,
     CallHandyman = 40,
     ReplaceMachine = 41,
+    RemoveDestroyedRoom = 42,
 }
 
 /// <summary>
@@ -119,6 +120,7 @@ public abstract record Command
             CommandKind.IncreaseSalary => new IncreaseSalaryCommand(reader.ReadInt32()),
             CommandKind.CallHandyman => new CallHandymanCommand(reader.ReadInt32()),
             CommandKind.ReplaceMachine => new ReplaceMachineCommand(reader.ReadInt32()),
+            CommandKind.RemoveDestroyedRoom => new RemoveDestroyedRoomCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -447,7 +449,8 @@ public sealed record CancelRoomCommand(int RoomId) : Command
 
     public override void Execute(Simulation simulation, int player)
     {
-        if (simulation.FindEntity(RoomId) is Room { IsActive: false, IsClosing: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
+        // A room wrecked by an explosion cannot be taken down this way (RemoveDestroyedRoomCommand).
+        if (simulation.FindEntity(RoomId) is Room { IsActive: false, IsClosing: false, IsCrashed: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
         {
             var definition = simulation.Content.FindRoom(room.RoomType);
             if (room.IsPaid)
@@ -472,6 +475,50 @@ public sealed record CancelRoomCommand(int RoomId) : Command
             {
                 RoomPurchases.SellNeededObjects(simulation, definition, player);
             }
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>
+/// Clears away a room wrecked by an explosion, for a fee (CorsixTH's <c>remove_destroyed_rooms</c> option: the confirmation
+/// in <c>GameUI:onMouseUp</c>, <c>UIEditRoom:removeRoom</c> and <c>Room:calculateRemovalCost</c>): twice the room's cost,
+/// less 40 % of each kind of object it needs as scrap. The hospital pays even into the red, as CorsixTH's
+/// <c>spendMoney</c>.
+/// </summary>
+public sealed record RemoveDestroyedRoomCommand(int RoomId) : Command
+{
+    /// <summary>The share of a needed object's price recovered as scrap (<c>COST_RECOVERY</c>).</summary>
+    private const decimal CostRecovery = 0.40m;
+
+    public override CommandKind Kind => CommandKind.RemoveDestroyedRoom;
+
+    /// <summary><c>Room:calculateRemovalCost</c>, or null for a room that is not a wreck of the player's.</summary>
+    public static int? RemovalCost(Simulation simulation, Room room, int player)
+    {
+        if (!room.IsCrashed || !RoomBuilder.IsOwnedBy(simulation.Map, room, player) || player < 0 || player >= simulation.Hospitals.Count
+            || simulation.Content.FindRoom(room.RoomType) is not { } definition)
+        {
+            return null;
+        }
+
+        var hospital = simulation.Hospitals[player];
+        var cost = RoomPurchases.BuildCost(simulation, hospital, definition) * 2;
+        foreach (var (objectId, _) in LevelRules.Needed(definition))
+        {
+            cost -= (int)decimal.Floor(hospital.Research.ObjectCost(simulation.Rules, objectId) * CostRecovery);
+        }
+
+        return cost;
+    }
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RoomId) is Room room && RemovalCost(simulation, room, player) is { } cost)
+        {
+            RoomBuilder.Remove(simulation, room);
+            simulation.Hospitals[player].Spend(simulation.Hours, cost, TransactionKind.RemoveRoom, room.RoomType);
         }
     }
 

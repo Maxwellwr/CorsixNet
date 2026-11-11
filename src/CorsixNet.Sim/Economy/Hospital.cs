@@ -103,6 +103,9 @@ public enum TransactionKind : byte
 
     /// <summary>A machine replaced from the machine window (<c>machine_replacement</c>); the subject is its object type.</summary>
     MachineReplacement = 27,
+
+    /// <summary>Clearing away a room wrecked by an explosion (<c>transactions.remove_room</c>).</summary>
+    RemoveRoom = 28,
 }
 
 /// <summary>
