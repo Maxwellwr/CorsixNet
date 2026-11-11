@@ -81,7 +81,7 @@ public sealed record RoomDefinition(
 /// <summary>
 /// What a kind of patient does on the spot (humanoid.lua's <c>vomit_anim</c> and <c>pee_anim</c>); null where it has none.
 /// </summary>
-public sealed record PatientAnimations(AnimationRef? Vomit, AnimationRef? Pee);
+public sealed record PatientAnimations(AnimationRef? Vomit, AnimationRef? Pee, AnimationRef? Yawn = null, AnimationRef? TapFoot = null, AnimationRef? CheckWatch = null, AnimationRef? Falling = null, AnimationRef? OnGround = null, AnimationRef? GetUp = null, AnimationRef? ShakeFist = null);
 
 /// <summary>
 /// How a kind of patient dies (humanoid.lua's <c>die_anims</c>): the fall, then rising as a ghost, growing wings, putting

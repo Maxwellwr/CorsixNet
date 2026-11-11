@@ -132,3 +132,44 @@ public class DyingTests
         Assert.Equal([GrimReaperPhase.Spawning, GrimReaperPhase.Standing, GrimReaperPhase.Walking, GrimReaperPhase.Waiting, GrimReaperPhase.Swiping, GrimReaperPhase.Leaving, GrimReaperPhase.Closing], reaperPhases.SkipWhile(p => p == GrimReaperPhase.Spawning).Prepend(GrimReaperPhase.Spawning).ToList());
     }
 }
+
+/// <summary>Patients knocked over by an earthquake (CorsixTH's Patient:falling and humanoid_actions/falling.lua).</summary>
+public class FallingTests
+{
+    [Fact]
+    public void AnEarthquakeKnocksAPatientOverAndTheyGetUpAgain()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var humanoid = simulation.AddEntity(id => Humanoid.CreatePatient(id, new TilePosition(10, 10), simulation.Random, PatientLook.Standard, 0));
+        humanoid.Type = HumanoidType.StandardMalePatient;
+        var patient = new PatientBehaviour { Health = 0.9m };
+        patient.SetDisease(DiseaseCatalog.Find("uncommon_cold")!, 0, simulation.Random);
+        humanoid.Behaviour = patient;
+        var happiness = humanoid.Happiness;
+
+        patient.Fall(simulation, humanoid);
+        Assert.Equal(PatientSpotAction.Falling, patient.SpotAction);
+        Assert.Equal(2, patient.HasFallen);
+        Assert.Equal(happiness - 0.05m, humanoid.Happiness);
+
+        var seen = new List<PatientSpotAction>();
+        for (var tick = 0; tick < 200 && patient.SpotAction != PatientSpotAction.None; tick++)
+        {
+            patient.Update(simulation, humanoid);
+            if (patient.SpotAction != PatientSpotAction.None && (seen.Count == 0 || seen[^1] != patient.SpotAction))
+            {
+                seen.Add(patient.SpotAction);
+            }
+        }
+
+        Assert.Equal([PatientSpotAction.Falling, PatientSpotAction.OnGround, PatientSpotAction.GettingUp], seen.Where(s => s != PatientSpotAction.ShakingFist).ToList());
+
+        // Not again for two days.
+        patient.Fall(simulation, humanoid);
+        Assert.Equal(PatientSpotAction.None, patient.SpotAction);
+        patient.OnEndDayFall();
+        patient.OnEndDayFall();
+        Assert.Equal(1, patient.HasFallen);
+    }
+}

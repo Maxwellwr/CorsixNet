@@ -67,6 +67,7 @@ internal static class Feelings
         if (humanoid.Behaviour is PatientBehaviour sadOrNot)
         {
             sadOrNot.IsSad = humanoid.Happiness < 0.3m;
+            sadOrNot.OnEndDayFall();
         }
 
         // No use for those going home.
@@ -160,6 +161,7 @@ internal static class Feelings
         }
 
         patient.Health = Math.Max(patient.Health - PatientBehaviour.DailyHealthLoss, 0m);
+        patient.MaybeYawn(simulation, humanoid);
         Needs.OnEndDay(simulation, humanoid, patient);
     }
 

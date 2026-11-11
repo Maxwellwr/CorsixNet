@@ -80,7 +80,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Training: the advice (promotions, a consultant needed, too few chairs), learning on the job (`doctor.lua`); the room, teaching, skill growth and gaining abilities are done (`Training`).
 - Surgeons, psychiatrists, researchers actually being required by rooms.
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
-- Tiredness animations (yawn, check watch, tap foot) (`humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`).
+- Patients waiting look at the watch, yawn and tap a foot with 30, 20 and 10 days left, and those with sleeping illness yawn one day in ten (`PatientSpotAction`; `humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`). In CorsixTH these are patients' animations only.
   Staff speed (juniors, consultants, tiredness, the no-rest cheat) is done (`Tiredness.UpdateSpeed`).
 - Picking staff up with the hand cursor (the grab cursor, the staff drawn under it, `pickup.wav`); the move itself is
   done (`MoveStaffCommand`), but not while the member of staff is treating a patient with an object.
@@ -127,13 +127,13 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - VIP visits: the faxes asking and reporting, the arrival announcement and judging machines
   (`entities/humanoids/vip.lua`). The visit, the rating (with the litter seen), its grant and reputation and
   the year's trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
-- Earthquakes knocking patients over (`earthquake.lua`, the falling animation); planning, the warning and main
-  quakes, the screen shake and the rounds of damage wearing machines are done (`Earthquakes`, `Machines.EarthquakeImpact`).
+- Earthquakes: planning, the warning and main quakes, the screen shake, the rounds of damage wearing machines and knocking
+  patients over are done (`Earthquakes`, `Machines.EarthquakeImpact`, `PatientBehaviour.Fall`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
   patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
-- Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
+- Patients knocked over by the player's click (`Patient:falling(true)` and its announcement). Falling in an earthquake, lying, getting up and shaking a fist are done (`PatientBehaviour.Fall`; `humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
 - Floating dollar signs are done for treatments and cans from the drinks machine.
 
 ## 5. Economy, bank, loans, prices
