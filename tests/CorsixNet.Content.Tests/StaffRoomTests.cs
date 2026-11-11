@@ -67,13 +67,15 @@ public class StaffRoomTests
         Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
     }
 
-    private static Room BuildStaffRoom(Simulation simulation)
+    internal static Room BuildStaffRoom(Simulation simulation) => BuildStaffRoom(simulation, Area);
+
+    internal static Room BuildStaffRoom(Simulation simulation, TileRect area)
     {
-        Run(simulation, new BuildRoomCommand(new RoomPlan("staff_room", Area, new DoorPlacement(new(5, Area.Y), EdgeOrientation.North))));
+        Run(simulation, new BuildRoomCommand(new RoomPlan("staff_room", area, new DoorPlacement(new(area.X + 2, area.Y), EdgeOrientation.North))));
         var room = Assert.Single(simulation.Entities.OfType<Room>(), r => r.RoomType == "staff_room");
         foreach (var type in new[] { "sofa", "pool_table", "video_game" })
         {
-            Place(simulation, type);
+            Place(simulation, type, area);
         }
 
         Run(simulation, new ConfirmRoomCommand(room.Id));
@@ -81,11 +83,11 @@ public class StaffRoomTests
         return room;
     }
 
-    private static void Place(Simulation simulation, string type)
+    private static void Place(Simulation simulation, string type, TileRect area)
     {
-        for (var y = Area.Bottom - 1; y >= Area.Y; y--)
+        for (var y = area.Bottom - 1; y >= area.Y; y--)
         {
-            for (var x = Area.Right - 1; x >= Area.X; x--)
+            for (var x = area.Right - 1; x >= area.X; x--)
             {
                 foreach (var orientation in new[] { Direction.North, Direction.East, Direction.South, Direction.West })
                 {

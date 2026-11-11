@@ -97,6 +97,70 @@ public class TrainingRoomTests
     }
 
     [Fact]
+    public void RestedStudentsAndTheirLecturerGoBackToTheTrainingRoom()
+    {
+        var simulation = NewHospital();
+        var room = BuildTrainingRoom(simulation);
+        StaffRoomTests.BuildStaffRoom(simulation, new TileRect(3, 3, 6, 6));
+        var student = HireStudent(simulation, new(15, 15));
+        var consultant = HireConsultant(simulation, new(17, 15));
+        Run(simulation, new MoveStaffCommand(student.Id, new(Area.X + 1, Area.Y + 2)));
+        Run(simulation, new MoveStaffCommand(consultant.Id, new(Area.X + 2, Area.Y + 3)));
+
+        // Tired enough for the staff room after a day or so in the training room.
+        Run(simulation, new SetPolicyCommand(PolicyKind.GoToStaffRoom, 20));
+        var rested = new HashSet<int>();
+        var returned = new HashSet<int>();
+        var tiredMood = false;
+        for (var tick = 0; tick < 30 * GameDate.HoursPerDay; tick++)
+        {
+            simulation.Step();
+            foreach (var doctor in new[] { student, consultant })
+            {
+                tiredMood |= doctor.IsTiredMoodShown;
+                if (doctor.Behaviour is RestingBehaviour resting)
+                {
+                    Assert.Equal(room.Id, resting.ReturnRoomId);
+                    rested.Add(doctor.Id);
+                }
+                else if (rested.Contains(doctor.Id) && doctor.Behaviour is DoctorBehaviour { Phase: DoctorPhase.Studying or DoctorPhase.Lecturing or DoctorPhase.UsingTrainingAid } back)
+                {
+                    Assert.Equal(room.Id, back.RoomId);
+                    returned.Add(doctor.Id);
+                }
+            }
+        }
+
+        Assert.Contains(student.Id, rested);
+        Assert.Contains(student.Id, returned);
+        Assert.Contains(consultant.Id, returned);
+
+        // Rested at the threshold of 0.02, they never get very tired.
+        Assert.False(tiredMood);
+
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        var loaded = Simulation.Load(stream, BaseGameContent.Create());
+        Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+    }
+
+    [Fact]
+    public void AVeryTiredDoctorShowsTheTiredMoodUntilRested()
+    {
+        var simulation = NewHospital();
+        BuildTrainingRoom(simulation);
+        var student = HireStudent(simulation, new(15, 15));
+        Run(simulation, new MoveStaffCommand(student.Id, new(Area.X + 1, Area.Y + 2)));
+
+        // No staff room: very tired (0.7) after about 7,800 hours, sped up here by starting tired.
+        Run(simulation, new SetPolicyCommand(PolicyKind.GoToStaffRoom, 900));
+        typeof(Humanoid).GetProperty(nameof(Humanoid.Fatigue))!.SetValue(student, 0.69m);
+        StepFor(simulation, 5 * GameDate.HoursPerDay);
+        Assert.True(student.IsTiredMoodShown);
+    }
+
+    [Fact]
     public void TheTrainingFactorGrowsWithTheTrainingAids()
     {
         var simulation = NewHospital();

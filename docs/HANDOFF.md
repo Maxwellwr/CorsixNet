@@ -228,7 +228,12 @@ Next, in this order (2026-11-10):
 
 1. Done (PR #211): the staff room. `RestingBehaviour` takes over a tired doctor, nurse or handyman (Tiredness.
    CheckIfNeedRest, once their room's patient has gone; ward nurses at once) and gives them back their usual behaviour,
-   free for any room, when rested. Not yet: researchers going back to their room, being on call, the tired icon.
+   free for any room, when rested. Done 2026-11-12 (cloud): researchers and doctors in training go back to their room
+   once rested if it has room for them (`RestingBehaviour.ReturnRoomId`, CorsixTH's `last_room`;
+   `RoomVisits.ReturnToLastRoom`), staff on call (a handyman with a job, a nurse going to vaccinate, staff walking to
+   a room) neither rest nor stop tiring in the staff room, and very tired staff show the tired mood until rested
+   (`Humanoid.IsTiredMoodShown`; text in the staff window, the icon 3990 is not drawn yet). Save format 74. Left out:
+   meander.lua's idle staff going back to any `last_room` that needs staff (rooms here call staff themselves).
 2. Looks of visual diseases: Slack Male/Female done (PR #212: slack tongues and bald heads, with the GP chair, drinks
    machine, loo, X-ray, scanner and blood machine; a slack woman borrows a standard woman's animations,
    `ObjectDefinition.LooksLike`). Still: pregnant patients are women only (not yet: a "pregnant" man was seen). Chewbacca done

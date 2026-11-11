@@ -231,7 +231,7 @@ internal sealed class StaffWindow(int staffId) : UiWindow
             yield return WindowRow.Of("Rank", abilities);
         }
 
-        yield return WindowRow.Of("Tiredness", WindowCell.Number(StaffLabels.Percent(staff.Fatigue)));
+        yield return WindowRow.Of("Tiredness", WindowCell.Number(StaffLabels.Percent(staff.Fatigue)), staff.IsTiredMoodShown ? "Tired" : string.Empty);
         yield return WindowRow.Of("Happiness", WindowCell.Number(StaffLabels.Percent(staff.Happiness)));
         yield return WindowRow.Of("Doing", StaffLabels.Doing(simulation, staff));
         if (staff.RaiseRequest > 0)

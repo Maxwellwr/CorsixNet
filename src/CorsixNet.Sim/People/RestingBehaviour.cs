@@ -40,10 +40,11 @@ public sealed class RestingBehaviour : HumanoidBehaviour
     private const string PoolTable = "pool_table";
     private const string VideoGame = "video_game";
 
-    internal RestingBehaviour(int roomId, int parcel)
+    internal RestingBehaviour(int roomId, int parcel, int returnRoomId = 0)
     {
         RoomId = roomId;
         Parcel = parcel;
+        ReturnRoomId = returnRoomId;
     }
 
     public override BehaviourKind Kind => BehaviourKind.Resting;
@@ -58,6 +59,12 @@ public sealed class RestingBehaviour : HumanoidBehaviour
 
     /// <summary>A handyman's parcel, given back afterwards.</summary>
     public int Parcel { get; }
+
+    /// <summary>
+    /// The research department or training room they rested from, which they go back to once rested if it has room for
+    /// them (CorsixTH's <c>last_room</c>), or 0.
+    /// </summary>
+    public int ReturnRoomId { get; private set; }
 
     /// <summary>The use of the object, while it lasts.</summary>
     public ObjectUse? Use { get; private set; }
@@ -141,6 +148,12 @@ public sealed class RestingBehaviour : HumanoidBehaviour
                 }
 
                 BackToWork(humanoid);
+                if (ReturnRoomId != 0)
+                {
+                    // Back to the research department or training room if it still has room for them.
+                    RoomVisits.ReturnToLastRoom(simulation, humanoid, ReturnRoomId);
+                }
+
                 break;
         }
     }
@@ -292,6 +305,7 @@ public sealed class RestingBehaviour : HumanoidBehaviour
         writer.WriteInt32(_useTime);
         writer.WriteInt32(_nextTargetId);
         writer.WriteInt32(_meanders);
+        writer.WriteInt32(ReturnRoomId);
     }
 
     internal static RestingBehaviour ReadState(SimReader reader)
@@ -307,6 +321,7 @@ public sealed class RestingBehaviour : HumanoidBehaviour
         resting._useTime = reader.ReadInt32();
         resting._nextTargetId = reader.ReadInt32();
         resting._meanders = reader.ReadInt32();
+        resting.ReturnRoomId = reader.Version is 0 or >= 74 ? reader.ReadInt32() : 0;
         return resting;
     }
 }

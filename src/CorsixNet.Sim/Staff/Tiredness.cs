@@ -35,7 +35,10 @@ public sealed record TirednessRules(int Tired, int VeryTired, int CrackUpTired)
 /// unhappy, all the more without a staff room to rest in.
 /// </summary>
 /// <remarks>
-/// Not yet: being on call, the tired mood icon, and researchers going back to their research room afterwards.
+/// A member of staff on call (CorsixTH's <c>on_call</c>: answering one of the dispatcher's calls, such as a handyman sent
+/// to sweep or water in the staff room) neither rests nor stops tiring there. Here a handyman is on call while he has a
+/// job (anything but meandering or leaving a room once done), a nurse while she goes to vaccinate, and a doctor or nurse
+/// while walking to the room that sent for them.
 /// </remarks>
 internal static class Tiredness
 {
@@ -83,6 +86,7 @@ internal static class Tiredness
         else
         {
             // Resting and no longer very tired: things can only get better.
+            humanoid.IsTiredMoodShown = false;
             Feelings.ChangeHappiness(simulation, humanoid, 0.006m);
         }
     }
@@ -160,8 +164,10 @@ internal static class Tiredness
     /// </summary>
     internal static void CheckIfNeedRest(Simulation simulation, Humanoid humanoid)
     {
+        // Only when very tired does the icon show.
         if (IsVeryTired(simulation, humanoid.Fatigue))
         {
+            humanoid.IsTiredMoodShown = true;
             Feelings.ChangeHappiness(simulation, humanoid, -0.0002m);
         }
 
@@ -190,13 +196,18 @@ internal static class Tiredness
 
         // Staff:goToStaffRoom: out of the room (Room:createLeaveAction) and to the nearest staff room.
         var parcel = humanoid.Behaviour is HandymanBehaviour handyman ? handyman.Parcel : 0;
+
+        // last_room: a researcher or a doctor in training goes back there once rested, if it still has room for them.
+        var returnRoom = humanoid.Behaviour is DoctorBehaviour doctor && simulation.FindEntity(doctor.RoomId) is Room { RoomType: RoomVisits.ResearchRoom or Training.RoomType } working
+            ? working.Id
+            : 0;
         StaffEmployment.Detach(simulation, humanoid);
         if (humanoid.Type == HumanoidType.Surgeon)
         {
             humanoid.Type = HumanoidType.Doctor;
         }
 
-        humanoid.Behaviour = new RestingBehaviour(staffRoom.Id, parcel);
+        humanoid.Behaviour = new RestingBehaviour(staffRoom.Id, parcel, returnRoom);
     }
 
     /// <summary>
@@ -248,8 +259,8 @@ internal static class Tiredness
     {
         if (RoomOf(simulation, humanoid) is { } room)
         {
-            // Being in a staff room is quite refreshing (unless on call, which is not modelled yet).
-            return room.RoomType != StaffRoomType;
+            // Being in a staff room is quite refreshing, unless there on call.
+            return room.RoomType != StaffRoomType || IsOnCall(simulation, humanoid);
         }
 
         return humanoid.Profile!.Class == StaffClass.Handyman;
@@ -257,7 +268,20 @@ internal static class Tiredness
 
     /// <summary><c>Staff:isResting</c>: in a staff room and not on call.</summary>
     private static bool IsResting(Simulation simulation, Humanoid humanoid) =>
-        RoomOf(simulation, humanoid) is { RoomType: StaffRoomType };
+        RoomOf(simulation, humanoid) is { RoomType: StaffRoomType } && !IsOnCall(simulation, humanoid);
+
+    /// <summary>
+    /// Whether the member of staff answers a call (<c>on_call</c>): a handyman with a job, a nurse going to vaccinate,
+    /// a doctor or nurse on the way to the room that sent for them.
+    /// </summary>
+    internal static bool IsOnCall(Simulation simulation, Humanoid humanoid) => humanoid.Behaviour switch
+    {
+        HandymanBehaviour handyman => handyman.Phase is not (HandymanPhase.Meandering or HandymanPhase.LeavingRoom),
+        NurseBehaviour { VaccinatePatientId: not 0 } => true,
+        NurseBehaviour { Phase: NursePhase.WalkingToRoom } => true,
+        DoctorBehaviour { Phase: DoctorPhase.WalkingToRoom } => true,
+        _ => false,
+    };
 
     /// <summary><c>Humanoid:getRoom</c>: the room, built or not, whose floor the person stands on.</summary>
     private static Room? RoomOf(Simulation simulation, Humanoid humanoid)
