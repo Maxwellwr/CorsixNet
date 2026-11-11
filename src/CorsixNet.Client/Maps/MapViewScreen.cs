@@ -588,7 +588,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 {
                     _objects.Draw(batch, shown.ObjectType, shown.Tile, shown.Orientation, Simulation!.Tick, shown.Tint);
                 }
-            });
+            }, tile => _entitiesByTile.TryGetValue(tile, out var here) && here.Any(e => e is Humanoid or Rat));
             DrawOverlay(batch, map, view);
             _buildTool.DrawPreview(batch, _diamond);
             if (_buildTool.IsActive && _hoveredTile is { } cell)
@@ -1576,7 +1576,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (tool is { } command)
             {
                 _session.Submit(command);
-                NoticeIfResearchNeedsResearcher(simulation, command);
             }
 
             if (wasBuilding && (pressed(Keys.B) || pressed(Keys.H) || pressed(Keys.G)))
@@ -2749,20 +2748,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _buildTool.Start(roomType);
-    }
-
-    /// <summary>
-    /// <c>ResearchRoom:roomFinished</c>'s advice <c>research_room_need_researcher</c>, as the adviser's advice:
-    /// a research department finished while the hospital has no researcher, whom it needs to work at all.
-    /// </summary>
-    private void NoticeIfResearchNeedsResearcher(Simulation simulation, Command command)
-    {
-        var player = _session!.Player;
-        if (command is ConfirmRoomCommand confirm && simulation.FindEntity(confirm.RoomId) is Room { RoomType: "research" }
-            && !simulation.Entities.Any(e => e is Humanoid { Profile.IsResearcher: true, IsFired: false } staff && staff.Employer == player))
-        {
-            _adviser.Say(AdviserChecks.ResearchRoomNeedResearcher.Text(_texts), Environment.TickCount64);
-        }
     }
 
     /// <summary>The not enough lecture chairs advice, when a student doctor is put into a full training room.</summary>

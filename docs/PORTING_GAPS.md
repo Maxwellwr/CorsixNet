@@ -15,7 +15,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Missing | CorsixTH source |
 |---|---|
 | Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); the VIP's visit to the ward; in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
-| Treatment rooms: the jelly wobble effect (the jelly vat and the DNA fixer are done); alien death animations | `th_gfx_sdl.cpp`, `entities/humanoid.lua` |
+| Treatment rooms: alien death animations (the jelly vat, its patients' wobble and the DNA fixer are done) | `entities/humanoid.lua` |
 | Facilities: (the staff room and training room are done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Editing a finished room back to the blueprint (resize, move the door), destroyed rooms after an explosion (editing objects and taking a room down for half its cost are done) | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
@@ -124,8 +124,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - VIP visits: the faxes asking and reporting, the arrival announcement and judging machines
   (`entities/humanoids/vip.lua`). The visit, the rating (with the litter seen), its grant and reputation and
   the year's trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
-- Earthquakes damaging machines and knocking patients over (`earthquake.lua`); planning, the warning and main
-  quakes and the screen shake are done (`Earthquakes`).
+- Earthquakes knocking patients over (`earthquake.lua`, the falling animation); planning, the warning and main
+  quakes, the screen shake and the rounds of damage wearing machines are done (`Earthquakes`, `Machines.EarthquakeImpact`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
   patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,

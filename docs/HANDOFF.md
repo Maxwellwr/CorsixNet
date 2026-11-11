@@ -222,7 +222,7 @@ Done and committed:
   surgeons wash at the sink and take their places; the second surgeon operates from the far side (operating_table_b's
   animations, 2 to 5 rounds) while the first's use of the table with the patient loops its one-frame in-use animation
   for as long; then the patient changes back and is cured. Left out: the surgeons changing back as they leave (they
-  turn into doctors at once), the X-ray viewer lighting up, the screen's outfit idles, the "needs a ward/surgeon" advice. From 2026-11-10 the user lets threads merge their own green PRs.
+  turn into doctors at once), the X-ray viewer lighting up, the screen's outfit idles (the "needs a ward/surgeon" advice is done with the rooms' requirements below). From 2026-11-10 the user lets threads merge their own green PRs.
 
 Next, in this order (2026-11-10):
 
@@ -243,7 +243,7 @@ Next, in this order (2026-11-10):
    repair below 6 uses left (priority 2 below 4): walk to the handyman position, meander until the room's patient has
    gone or is leaving, then `GoingToRepair` stops the room letting anyone in until the repair (begin/in-use for at least
    20 frames/finish) ends. Client: smoke plumes below 4 uses, the crashed animation. Not yet: the machine window
-   (replace, call handyman), earthquakes wearing machines, the invulnerable machines cheat, the repair announcement,
+   (replace, call handyman), the invulnerable machines cheat, the repair announcement,
    num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
    floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
    (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
@@ -254,7 +254,7 @@ Next, in this order (2026-11-10):
    consultant already lecturing; other doctors sit on free lecture chairs or leave. `Training.OnEndDay` is trainSkills:
    skill (with millionths kept in `StaffProfile`) and specialism progress (`SpecialismProgress`, `TrainSpecialism`) from
    `TrainingRules` (gbv.TrainingRate, AbilityThreshold, TrainingValue); a student who becomes a consultant leaves. Not
-   yet: the promotion advice, "needs a consultant" and "not enough lecture chairs" advice, the wage following the
+   yet: the promotion advice and "not enough lecture chairs" advice, the wage following the
    promotion, learning on the job, doctors going back to the room after resting. Autopsies done (save format 71): the fax's Research choice
    (`PatientAnswer.Research`, `PatientBehaviour.CanGoToResearch`) sends a patient asking for a treatment room to the
    research department (`RoomSeek.Research`; it now has a door queue); the room's first researcher leaves research for
@@ -271,8 +271,12 @@ Next, in this order (2026-11-10):
    they turn into, uses the fixer once. Morphs: `UseAnimations.Morph` (`UseMorph`: into, rounds, mirrored, object
    visible) and `FlipFinish`; `Humanoid.MorphAnimation` is saved; the client draws CorsixTH's draw_morph (a line
    rising from the bottom of both animations; `AnimationRenderer.Extent`, `DrawFrameRows`, `SpriteAtlas.DrawRows`).
-   Seen live with `--load` + `--script`. Not yet: the alien death animations (4882/4886), "needs a researcher"
-   advice for the room, the fixer's `early_list` draw order, the jelly vat's morph.
+   Seen live with `--load` + `--script`. Not yet: the alien death animations (4882/4886), the fixer's `early_list` draw order, the jelly vat's morph.
+
+Rooms' requirements (2026-11-11): when a room of the player's becomes active, `AdviserChecks` says what its
+`roomFinished` says in CorsixTH: a doctor for the GP, a nurse for the pharmacy or ward, a psychiatrist, a consultant
+for training, a researcher for research, a ward and two surgeons for the operating theatre (S[11][79..88], [105]).
+CorsixTH's DNA fixer says nothing, so neither does this.
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to

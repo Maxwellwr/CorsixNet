@@ -77,6 +77,27 @@ internal static class Machines
         }
 
         machine.TotalUsage++;
+        Wear(simulation, room, machine);
+    }
+
+    /// <summary>
+    /// A round of an earthquake's damage (<c>Earthquake:tick</c> calling <c>Machine:earthquakeImpact</c>): every machine in
+    /// every room that has not crashed counts a use, though not in its total usage, and may explode.
+    /// </summary>
+    internal static void EarthquakeImpact(Simulation simulation)
+    {
+        foreach (var placed in simulation.Entities.OfType<RoomObject>().Where(o => o.Machine is not null && !o.IsDestroyed).ToList())
+        {
+            if (simulation.FindEntity(placed.RoomId) is Room { IsCrashed: false } room)
+            {
+                Wear(simulation, room, placed.Machine!);
+            }
+        }
+    }
+
+    /// <summary><c>incrementUsageCounts</c>'s use since the last repair, then the explosion check.</summary>
+    private static void Wear(Simulation simulation, Room room, MachineState machine)
+    {
         machine.TimesUsed++;
         if (MustExplode(simulation, room, machine))
         {
