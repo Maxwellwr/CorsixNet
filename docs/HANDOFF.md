@@ -250,9 +250,12 @@ Next, in this order (2026-11-10):
    20 frames/finish) ends. Client: smoke plumes below 4 uses, the crashed animation. The machine window
    (clicking a machine; save format 73) calls a handyman (`CallHandymanCommand`, `MachineState.IsRepairCalled`: an
    urgent task, the room lets no patient in until the repair) and replaces the machine at today's price
-   (`ReplaceMachineCommand`, after a confirmation). Not yet: the gear icon, the
-   machine_menu list, the invulnerable machines cheat, the repair announcement,
-   num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
+   (`ReplaceMachineCommand`, after a confirmation). Done 2026-11-12 (cloud): the machines list
+   (`MachineMenuWindow`, F10 and a Machines button; machine_menu.lua's columns and sorts as text), the invulnerable
+   machines and repair all machines cheats (`ToggleCheats.InvulnerableMachines`, `Machines.RepairAll`; CorsixTH's repair
+   all still cuts strength through `strength_reducible or true`, a bug not copied), the repair announcement
+   (`RepairAnnouncer`: machwarn.wav and the room's maint0xx.wav when a machine starts smoking, played as effects). Not
+   yet: the gear icon (4564) drawn over a machine, num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
    floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
    (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
    and moved to `FinishSecondaryUsePosition` facing `FinishSecondaryFacing` at the in-use phase. Not yet: the jelly

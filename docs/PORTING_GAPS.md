@@ -34,8 +34,9 @@ objects from the level file.
   split over three tiles as CorsixTH does (drawn from its own tile for now).
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
-- Machines: the machines list (`resizables/machine_menu.lua`), the gear icon over a machine a handyman was called to,
-  the repair announcement and the invulnerable machines cheat (`entities/machine.lua`). Strength, wear per use,
+- Machines: the gear icon over a machine a handyman was called to (`setRepairingStatus`, icon 4564; not drawn).
+  The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
+  invulnerable and repair-all cheats are done. Strength, wear per use,
   smoking, explosion (room crash), repair by handymen and the machine window's call and replace (`MachineWindow`,
   `CallHandymanCommand`, `ReplaceMachineCommand`) are done (`Machines`, `HandymanBehaviour`).
 - Object state: plants being watered, bins filling (`plant.lua`, `bin.lua`), litter being swept and the

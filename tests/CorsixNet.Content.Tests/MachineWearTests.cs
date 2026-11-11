@@ -27,6 +27,47 @@ public class MachineWearTests
     }
 
     [Fact]
+    public void WithTheInvulnerableMachinesCheatOnlyTheTotalUsageCounts()
+    {
+        var simulation = NewStaffedHospital(InflationTests.Rules());
+        var room = InflationTests.BuildInflation(simulation);
+        var inflator = Inflator(simulation);
+        Run(simulation, new CheatCommand(CheatKind.ToggleInvulnerableMachines));
+        Assert.True(simulation.Hospitals[0].ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines));
+        Assert.True(simulation.Hospitals[0].Cheated);
+
+        StepFor(simulation, 6 * 31 * GameDate.HoursPerDay);
+
+        Assert.False(room.IsCrashed);
+        Assert.True(inflator.Machine!.TotalUsage > inflator.Machine.Strength, $"Only {inflator.Machine.TotalUsage} uses.");
+        Assert.Equal(0, inflator.Machine.TimesUsed);
+
+        // Off again, the machine wears as before.
+        Run(simulation, new CheatCommand(CheatKind.ToggleInvulnerableMachines));
+        StepFor(simulation, 31 * GameDate.HoursPerDay);
+        Assert.True(inflator.Machine.TimesUsed > 0);
+    }
+
+    [Fact]
+    public void TheRepairAllMachinesCheatMakesThemAsGoodAsNew()
+    {
+        var simulation = NewStaffedHospital(InflationTests.Rules());
+        InflationTests.BuildInflation(simulation);
+        var inflator = Inflator(simulation);
+        for (var tick = 0; tick < 6 * 31 * GameDate.HoursPerDay && inflator.Machine!.TimesUsed < 3; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(inflator.Machine!.TimesUsed >= 3);
+        var strength = inflator.Machine.Strength;
+        Run(simulation, new CheatCommand(CheatKind.RepairAllMachines));
+
+        Assert.Equal(0, inflator.Machine.TimesUsed);
+        Assert.Equal(strength, inflator.Machine.Strength);
+    }
+
+    [Fact]
     public void AWornOutMachineWithoutAFireExtinguisherExplodesAndWrecksTheRoom()
     {
         var simulation = NewStaffedHospital(InflationTests.Rules());

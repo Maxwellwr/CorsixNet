@@ -89,6 +89,7 @@ public sealed class Hotkeys
         ("ingame_panel_status", new("f7")),
         ("ingame_panel_charts", new("f8")),
         ("ingame_panel_policy", new("f9")),
+        ("ingame_panel_machineMenu", new("f10")),
         ("ingame_panel_adviserHistory", new("h", Ctrl: true)),
         ("ingame_panel_hireStaff", new("y")),
         ("ingame_openFirstMessage", new("c")),
