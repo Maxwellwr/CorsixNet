@@ -489,8 +489,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         // CorsixTH's GameUI scrolling: the arrow keys (and WASD) and the screen's edges scroll, faster with Shift and the
         // longer they do; the right or middle button drags; the wheel zooms with momentum, towards the cursor.
-        var keyX = (keys.IsKeyDown(Keys.Right) || keys.IsKeyDown(Keys.D) ? 1 : 0) - (keys.IsKeyDown(Keys.Left) || keys.IsKeyDown(Keys.A) ? 1 : 0);
-        var keyY = (keys.IsKeyDown(Keys.Down) || keys.IsKeyDown(Keys.S) ? 1 : 0) - (keys.IsKeyDown(Keys.Up) || keys.IsKeyDown(Keys.W) ? 1 : 0);
+        var keyX = (ScrollKeyHeld("ingame_scroll_right", keys) || keys.IsKeyDown(Keys.D) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_left", keys) || keys.IsKeyDown(Keys.A) ? 1 : 0);
+        var keyY = (ScrollKeyHeld("ingame_scroll_down", keys) || keys.IsKeyDown(Keys.S) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_up", keys) || keys.IsKeyDown(Keys.W) ? 1 : 0);
         var shiftHeld = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         var dragging = mouse.RightButton == ButtonState.Pressed || mouse.MiddleButton == ButtonState.Pressed;
         var wasDragging = _previousMouse.RightButton == ButtonState.Pressed || _previousMouse.MiddleButton == ButtonState.Pressed;
@@ -1162,43 +1162,48 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// CorsixTH's camera hotkeys: = and − zoom in and out towards the cursor (five times as far with Shift,
     /// <c>World:adjustZoom</c>), 0 goes back to the original size (<c>World:resetZoom</c>), Alt+digit remembers the view
     /// and Ctrl+digit goes back to it (<c>GameUI:setMapRecallPosition</c>, <c>recallMapPosition</c>). Until the hire window
-    /// exists, Ctrl+1 to Ctrl+4 hire staff instead, so only Ctrl+0 and Ctrl+5 to Ctrl+9 recall.
+    /// exists, Ctrl+1 to Ctrl+4 hire staff instead, so those keys do not recall. All of them are hotkeys
+    /// (<c>ingame_zoom_in</c>, <c>ingame_zoom_in_more</c>, <c>ingame_zoom_out</c>, <c>ingame_zoom_out_more</c>,
+    /// <c>ingame_reset_zoom</c>, <c>ingame_storePosition_N</c>, <c>ingame_recallPosition_N</c>).
     /// </summary>
     private void UpdateCameraKeys(KeyboardState keys, MouseState mouse, Point viewSize, Func<Keys, bool> pressed)
     {
-        var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
-        var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
-        var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
-        var zoomDelta = (pressed(Keys.OemPlus) ? 1 : 0) - (pressed(Keys.OemMinus) ? 1 : 0);
-        if (zoomDelta != 0 && !control && !alt
-            && _scrolling.Zoomed(_camera.Zoom, zoomDelta * (shift ? 5 : 1), _device.Viewport.Width) is { } zoomed)
+        bool hotkey(string action) => HotkeyInput.Pressed(_hotkeys[action], keys, pressed);
+        var zoomDelta = (hotkey("ingame_zoom_in") ? 1 : 0) + (hotkey("ingame_zoom_in_more") ? 5 : 0)
+            - (hotkey("ingame_zoom_out") ? 1 : 0) - (hotkey("ingame_zoom_out_more") ? 5 : 0);
+        if (zoomDelta != 0 && _scrolling.Zoomed(_camera.Zoom, zoomDelta, _device.Viewport.Width) is { } zoomed)
         {
             _camera.ZoomAt((float)zoomed, new Point(mouse.X, mouse.Y - StatusHeight), viewSize);
         }
 
-        if (pressed(Keys.D0) && !control && !alt && !shift)
+        if (hotkey("ingame_reset_zoom"))
         {
             _camera.ZoomAt(1f, new Point(viewSize.X / 2, viewSize.Y / 2), viewSize);
         }
 
         for (var digit = 0; digit <= 9; digit++)
         {
-            if (!pressed(Keys.D0 + digit))
-            {
-                continue;
-            }
-
-            if (alt && !control)
+            var suffix = digit.ToString(CultureInfo.InvariantCulture);
+            if (hotkey("ingame_storePosition_" + suffix))
             {
                 _recallPositions[digit] = (_camera.Center, _camera.Zoom);
             }
-            else if (control && !alt && digit is 0 or >= 5 && _recallPositions[digit] is var (center, zoom))
+            else if (hotkey("ingame_recallPosition_" + suffix) && !IsDebugHireKey(_hotkeys["ingame_recallPosition_" + suffix])
+                && _recallPositions[digit] is var (center, zoom))
             {
                 _camera.ZoomAt(zoom, new Point(viewSize.X / 2, viewSize.Y / 2), viewSize);
                 _camera.Center = center;
             }
         }
     }
+
+    /// <summary>Ctrl+1 to Ctrl+4, which hire staff for now.</summary>
+    private static bool IsDebugHireKey(Hotkey? key) =>
+        key is { Ctrl: true, Shift: false, Alt: false, Key: "1" or "2" or "3" or "4" };
+
+    /// <summary>An <c>ingame_scroll_*</c> key held; Shift (<c>ingame_scroll_shift</c>) only makes it faster, so modifiers do not matter.</summary>
+    private bool ScrollKeyHeld(string action, KeyboardState keys) =>
+        _hotkeys[action] is { } key && HotkeyInput.ToKeys(key.Key) is { } down && keys.IsKeyDown(down);
 
     private void ResetCamera()
     {
@@ -1277,17 +1282,24 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
         var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
-        (Keys Key, GameSpeed Speed)[] speedKeys =
+        (string Action, GameSpeed Speed)[] speedKeys =
         [
-            (Keys.D1, GameSpeed.Slowest), (Keys.D2, GameSpeed.Slower), (Keys.D3, GameSpeed.Normal),
-            (Keys.D4, GameSpeed.MaxSpeed), (Keys.D5, GameSpeed.AndThenSomeMore), (Keys.D6, GameSpeed.Insane),
+            ("ingame_gamespeed_slowest", GameSpeed.Slowest), ("ingame_gamespeed_slower", GameSpeed.Slower),
+            ("ingame_gamespeed_normal", GameSpeed.Normal), ("ingame_gamespeed_max", GameSpeed.MaxSpeed),
+            ("ingame_gamespeed_thensome", GameSpeed.AndThenSomeMore),
         ];
-        foreach (var (key, speed) in speedKeys)
+        foreach (var (action, speed) in speedKeys)
         {
-            if (!control && !alt && pressed(key))
+            if (HotkeyInput.Pressed(_hotkeys[action], keys, pressed))
             {
                 session.SetSpeed(speed);
             }
+        }
+
+        // The insane speed has no hotkey in CorsixTH (only its menu): 6 here.
+        if (!control && !alt && pressed(Keys.D6))
+        {
+            session.SetSpeed(GameSpeed.Insane);
         }
 
         // While building, P is the pick-up key.
@@ -1524,13 +1536,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 return;
             }
 
-            if (pressed(Keys.B))
+            if (HotkeyInput.Pressed(_hotkeys["ingame_panel_buildRoom"], keys, pressed))
             {
                 _roomList = false;
                 return;
             }
         }
-        else if (pressed(Keys.B) && !_buildTool.IsActive && !_furnishTool.IsActive)
+        else if (HotkeyInput.Pressed(_hotkeys["ingame_panel_buildRoom"], keys, pressed) && !_buildTool.IsActive && !_furnishTool.IsActive)
         {
             _roomList = true;
             return;

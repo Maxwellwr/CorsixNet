@@ -68,6 +68,24 @@ public sealed class HotkeysTests : IDisposable
     }
 
     [Fact]
+    public void TheCameraAndSpeedKeysAreCorsixThsAndCanBeChanged()
+    {
+        var hotkeys = Hotkeys.Parse("""
+            ingame_zoom_in = "up"
+            ingame_recallPosition_7 = {"shift", "7"}
+            ingame_gamespeed_normal = "f12"
+            """);
+
+        Assert.Equal(new Hotkey("up"), hotkeys["ingame_zoom_in"]);
+        Assert.Equal(new Hotkey("7", Shift: true), hotkeys["ingame_recallPosition_7"]);
+        Assert.Equal(new Hotkey("f12"), hotkeys["ingame_gamespeed_normal"]);
+        Assert.Equal(new Hotkey("=", Shift: true), hotkeys["ingame_zoom_in_more"]);
+        Assert.Equal(new Hotkey("0", Alt: true), hotkeys["ingame_storePosition_0"]);
+        Assert.Equal(new Hotkey("left"), hotkeys["ingame_scroll_left"]);
+        Assert.Equal(new Hotkey("b"), hotkeys["ingame_panel_buildRoom"]);
+    }
+
+    [Fact]
     public void ARewrittenFileKeepsTheChangedKeys()
     {
         var hotkeys = Hotkeys.Parse("""ingame_quickSave = {"ctrl", "s"}""");

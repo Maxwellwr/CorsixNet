@@ -272,10 +272,10 @@ join.
   (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`) is done
   (`GameConfig`).
 - Hotkeys file (`hotkeys.txt`): read, and written with the defaults when missing, for the dialogs (F1–F9, Shift+F3,
-  Ctrl+H, Y, C, F11), pause, speed up, quick save/load and the adviser toggle (`Hotkeys`, `HotkeyInput`). Still on
-  fixed keys: the camera (zoom, original size, remembering and recalling views, CorsixTH's default keys), scrolling,
-  the speeds, Esc, and this game's stand-in keys; CorsixTH's other actions (sound, music, announcements toggles,
-  screenshots, logs) are not read.
+  Ctrl+H, Y, C, F11), pause, speed up, quick save/load, the adviser toggle, the speeds, scrolling, zoom, remembered
+  views and the room list (`Hotkeys`, `HotkeyInput`). Still on fixed keys: Esc and this game's stand-in keys;
+  CorsixTH's other actions (sound, music, announcements toggles, screenshots, logs, furnish corridor, edit room,
+  rotate object, sell the picked up item) are not read.
 - Update check (`resizables/update.lua`).
 
 ## 12. Map editor and tools
