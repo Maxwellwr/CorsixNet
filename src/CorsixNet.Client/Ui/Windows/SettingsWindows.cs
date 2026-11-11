@@ -104,11 +104,14 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
 /// <summary>
 /// The options window (CorsixTH's <c>dialogs/resizables/options.lua</c> with <c>customise.lua</c> and
 /// <c>sound_setting.lua</c>): sound effects and their volume, screen shake, edge scrolling, scroll speeds and the
-/// autosave frequency. Changes are kept in a draft until Apply, which saves <c>config.txt</c> and uses them at once;
-/// the screen size and the language take effect on the next start.
+/// autosave frequency, and the language among the installed ones (CorsixTH's <c>options.lua</c> language list). Changes
+/// are kept in a draft until Apply, which saves <c>config.txt</c> and uses them at once; the screen size takes effect on
+/// the next start.
 /// </summary>
-internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply) : UiWindow
+internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null) : UiWindow
 {
+    private readonly IReadOnlyList<string> _languages = languages ?? [];
+
     private readonly GameConfig _current = current;
     private GameConfig _draft = current;
 
@@ -126,7 +129,9 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return Stepper("Shift scroll speed", _draft.ShiftScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ShiftScrollSpeed = Math.Max(1, _draft.ShiftScrollSpeed - 1) }, () => _draft = _draft with { ShiftScrollSpeed = Math.Min(10, _draft.ShiftScrollSpeed + 1) });
         yield return Stepper("Autosave", _draft.AutosaveFrequency switch { 0 => "off", 1 => "monthly", 2 => "weekly", _ => "daily" }, () => _draft = _draft with { AutosaveFrequency = Math.Max(0, _draft.AutosaveFrequency - 1) }, () => _draft = _draft with { AutosaveFrequency = Math.Min(3, _draft.AutosaveFrequency + 1) });
         yield return WindowRow.Of("Screen", string.Create(CultureInfo.InvariantCulture, $"{_draft.Width} x {_draft.Height}{(_draft.Fullscreen ? ", fullscreen" : string.Empty)}"));
-        yield return WindowRow.Of("Language", _draft.Language);
+        yield return _languages.Count > 1
+            ? Stepper("Language", _draft.Language, () => StepLanguage(-1), () => StepLanguage(+1))
+            : WindowRow.Of("Language", _draft.Language);
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
             WindowCell.Button("Apply", () =>
@@ -135,6 +140,22 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
                 host.Close(this);
             }, _draft != _current),
             WindowCell.Button("Cancel", () => host.Close(this)));
+    }
+
+    /// <summary>The next or previous installed language; a language not on the list goes to its first.</summary>
+    private void StepLanguage(int step)
+    {
+        var index = -1;
+        for (var i = 0; i < _languages.Count; i++)
+        {
+            if (string.Equals(_languages[i], _draft.Language.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                index = i;
+            }
+        }
+
+        var next = index < 0 ? 0 : (index + step + _languages.Count) % _languages.Count;
+        _draft = _draft with { Language = _languages[next] };
     }
 
     private static string Percent(decimal fraction) => string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(fraction * 100)} %");

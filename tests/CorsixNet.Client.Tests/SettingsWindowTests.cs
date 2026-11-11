@@ -86,6 +86,24 @@ public sealed class SettingsWindowTests : IDisposable
     }
 
     [Fact]
+    public void TheOptionsGoThroughTheInstalledLanguages()
+    {
+        var host = new WindowTestHost();
+        GameConfig? applied = null;
+        var window = new OptionsWindow(new GameConfig { Language = "fr" }, config => applied = config, ["English", "Français", "Deutsch"]);
+
+        // "fr" is not a name on the list, so the first step goes to its first language, then on round the list.
+        host.Click(window, "+", skip: 4);
+        Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "English");
+        host.Click(window, "-", skip: 4);
+        host.Click(window, "Apply");
+
+        Assert.Equal("Deutsch", applied?.Language);
+        Assert.Equal("Français", GameConfig.OriginalLanguageName(1));
+        Assert.Null(GameConfig.OriginalLanguageName(6));
+    }
+
+    [Fact]
     public void TheMenuPassesOnQuitting()
     {
         var host = new WindowTestHost();

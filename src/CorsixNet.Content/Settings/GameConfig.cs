@@ -388,6 +388,10 @@ public sealed record GameConfig
         return null;
     }
 
+    /// <summary>The name the settings give the original's string file <paramref name="number"/>, or null for one CorsixTH does not name.</summary>
+    public static string? OriginalLanguageName(int number) =>
+        OriginalLanguages.FirstOrDefault(language => language.Number == number).Names?[0];
+
     private static string Lua(bool value) => value ? "true" : "false";
 
     private static string Number(decimal value) => value.ToString(CultureInfo.InvariantCulture);
