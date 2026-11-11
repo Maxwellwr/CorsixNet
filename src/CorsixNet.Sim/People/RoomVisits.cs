@@ -382,13 +382,21 @@ public static class RoomVisits
     /// Whether <paramref name="staff"/> has what the room type asks for beyond their kind (CorsixTH's
     /// <c>required_staff</c> of <c>Psychiatrist</c>): the psychiatric room takes only psychiatrists.
     /// </summary>
-    internal static bool IsQualifiedFor(string roomType, Humanoid staff) => roomType switch
+    internal static bool IsQualifiedFor(string roomType, Humanoid staff) => staff.Profile is { } profile ? IsQualifiedFor(roomType, profile) : !NeedsSpecialist(roomType);
+
+    /// <summary>Whether a member of staff with <paramref name="profile"/> has what the room type asks for beyond their kind.</summary>
+    public static bool IsQualifiedFor(string roomType, StaffProfile profile) => roomType switch
     {
-        PsychRoom => staff.Profile is { IsPsychiatrist: true },
-        OperatingTheatreRoom => staff.Profile is { IsSurgeon: true },
-        ResearchRoom or DnaFixerRoom => staff.Profile is { IsResearcher: true },
+        PsychRoom => profile.IsPsychiatrist,
+        OperatingTheatreRoom => profile.IsSurgeon,
+        ResearchRoom or DnaFixerRoom => profile.IsResearcher,
         _ => true,
     };
+
+    private static bool NeedsSpecialist(string roomType) => roomType is PsychRoom or OperatingTheatreRoom or ResearchRoom or DnaFixerRoom;
+
+    /// <summary>The kind of staff a room type works with (CorsixTH's <c>required_staff</c>), or null for rooms without staff.</summary>
+    public static BehaviourKind? RequiredStaff(string roomType) => Rules.TryGetValue(roomType, out var rules) ? rules.Staff : null;
 
     /// <summary>The object the room's patient is examined on with the doctor, or null for rooms without one.</summary>
     internal static RoomObject? ExaminingObject(Simulation simulation, Room room) =>

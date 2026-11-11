@@ -2,6 +2,7 @@ using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 
@@ -170,6 +171,50 @@ public class AdviserTests
         host.Simulation.Step();
         checks.Observe(host.Simulation, 0, null, 0);
         Assert.Contains(AdviserChecks.PlaceRadiators.Fallback, host.Adviser.History);
+    }
+
+    [Fact]
+    public void StaffPutIntoTheWrongRoomAreToldWhoWorksThere()
+    {
+        var host = new WindowTestHost();
+        var doctor = host.Hire(StaffClass.Doctor).Profile!;
+        var nurse = host.Hire(StaffClass.Nurse).Profile!;
+        var handyman = host.Hire(StaffClass.Handyman).Profile!;
+        var x = 2;
+        TilePosition AddRoom(string type)
+        {
+            var room = host.Simulation.AddEntity(id => new Room(id, type, new TileRect(x, 10, 2, 2), new OriginalTile[4]) { IsActive = true });
+            host.Simulation.Map[x, 10].RoomId = room.Id;
+            x += 3;
+            return new TilePosition(x - 3, 10);
+        }
+
+        (Advice, string?)? Say(StaffProfile profile, TilePosition tile) => AdviserChecks.StaffPlacement(host.Simulation, profile, tile, 0, _ => 0);
+
+        var research = AddRoom("research");
+        var theatre = AddRoom("operating_theatre");
+        var pharmacy = AddRoom("pharmacy");
+        var toilets = AddRoom("toilets");
+        var gp = AddRoom("gp");
+        var name = host.Simulation.Content.FindRoom("pharmacy")!.Name;
+
+        Assert.Equal(doctor.IsResearcher ? null : (AdviserChecks.OnlyResearchers, null), Say(doctor, research));
+        Assert.Equal(doctor.IsSurgeon ? null : (AdviserChecks.OnlySurgeons, null), Say(doctor, theatre));
+        Assert.Equal((AdviserChecks.OnlyNursesInRoom, name), Say(doctor, pharmacy));
+        Assert.Null(Say(nurse, pharmacy));
+        Assert.Equal((AdviserChecks.NursesCannotWorkInRoom, host.Simulation.Content.FindRoom("gp")!.Name), Say(nurse, gp));
+        Assert.Null(Say(doctor, gp));
+        Assert.Equal(AdviserChecks.DoctorsCannotWorkInRoom, Say(doctor, toilets)?.Item1);
+        Assert.Null(Say(handyman, toilets));
+        Assert.Null(Say(doctor, new TilePosition(6, 6)));
+
+        // A researcher put into a research department whose desks are all taken is told to give them one each.
+        if (doctor.IsResearcher)
+        {
+            var room = (Room)host.Simulation.FindEntity(host.Simulation.Map[research.X, research.Y].RoomId)!;
+            room.StaffId = 1;
+            Assert.Equal((AdviserChecks.ResearcherNeedsDesk[0], null), Say(doctor, research));
+        }
     }
 
     [Fact]

@@ -2,7 +2,8 @@
 // (dailyAdviceChecks, _adviseMoney, _adviseStaffRoom, _adviseToilets, _adviseHeatingForPatients,
 // _adviseHeatingForStaff, _adviseDrinksMachines, advisePlants, checkReceptionAdvice, giveAdvice, msgCured, msgKilled,
 // onEndDay's VIP announcement), staff/staff.lua (the once-only pay rise advice), hospital.lua (boiler) and
-// disasters/earthquake.lua. Message keys as in CorsixTH/Lua/languages/original_strings.lua; the no_desk messages
+// disasters/earthquake.lua; room.lua (onHumanoidEnter's desk warnings) and the staff classes'
+// adviseWrongPersonForThisRoom. Message keys as in CorsixTH/Lua/languages/original_strings.lua; the no_desk messages
 // are CorsixTH's own (languages/english.lua).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -113,6 +114,29 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
     /// <summary>training.lua: a student placed in the training room finds no lecture chair (CorsixTH's own text).</summary>
     public static readonly Advice NotEnoughLectureChairs = new(0, 0, "Each student doctor needs a lecture chair to sit in!");
+
+    // staff_place_advice: someone put into a room they cannot work in (Staff/Doctor/Nurse:adviseWrongPersonForThisRoom)
+    public static readonly Advice OnlyResearchers = new(11, 124, "Only doctors with a research qualification can work in the research department.");
+    public static readonly Advice OnlySurgeons = new(11, 125, "Only doctors with a surgeon qualification can work in the operating theatre.");
+    public static readonly Advice OnlyPsychiatrists = new(11, 126, "Only doctors with a psychiatry qualification can work in psychiatry.");
+    public static readonly Advice OnlyNursesInRoom = new(11, 127, "Only nurses can work in the %s.");
+    public static readonly Advice DoctorsCannotWorkInRoom = new(11, 128, "Doctors cannot work in the %s.");
+    public static readonly Advice NursesCannotWorkInRoom = new(11, 129, "Nurses cannot work in the %s.");
+    public static readonly Advice OnlyDoctorsInRoom = new(11, 130, "Only doctors can work in the %s.");
+
+    // room.lua's Room:onHumanoidEnter: a researcher or a ward nurse put into a room full of them (CorsixTH's own texts)
+    public static readonly Advice[] ResearcherNeedsDesk =
+    [
+        new(0, 0, "A Researcher needs to have a desk to work at."),
+        new(0, 0, "Your Researcher is pleased that you have allowed him to have a break. If you were intending to have more staff researching, then you need to provide them each with a desk to work from."),
+        new(0, 0, "Each Researcher needs to have his own desk to work from."),
+    ];
+
+    public static readonly Advice[] NurseNeedsDesk =
+    [
+        new(0, 0, "Each Nurse needs to have her own desk to work from."),
+        new(0, 0, "Your Nurse is pleased that you have allowed her to have a break. If you were intending to have more than one working in the ward, then you need to provide them each with a desk to work from."),
+    ];
 
     // room_requirements, said when a room is finished (Room:roomFinished in rooms/*.lua)
     public static readonly Advice PsychiatryNeedPsychiatrist = new(11, 79, "You need to employ a psychiatrist for the psychiatric room.");
@@ -529,6 +553,79 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         var chairs = simulation.Entities.Count(e => e is RoomObject { ObjectType: "lecture_chair" } chair && chair.RoomId == room.Id);
         return students >= chairs;
     }
+
+    /// <summary>
+    /// What the adviser says when a member of staff is put down in a room (room.lua's <c>Room:onHumanoidEnter</c>): a
+    /// researcher or ward nurse in a room already full of them is told to get a desk of their own (and takes over from
+    /// one who is free), and someone the room cannot use is told who can work there
+    /// (<c>adviseWrongPersonForThisRoom</c> in staff.lua, doctor.lua and nurse.lua). Null when there is nothing to say.
+    /// </summary>
+    /// <param name="simulation">The simulation.</param>
+    /// <param name="profile">Who is put down.</param>
+    /// <param name="tile">Where.</param>
+    /// <param name="movingId">The member of staff being moved, or 0 for one being hired.</param>
+    /// <param name="pick">Picks one of a number of messages: given a count, returns an index below it.</param>
+    public static (Advice Advice, string? Argument)? StaffPlacement(Simulation simulation, StaffProfile profile, TilePosition tile, int movingId, Func<int, int> pick)
+    {
+        if (profile.Class is not (StaffClass.Doctor or StaffClass.Nurse) || !simulation.Map.Contains(tile.X, tile.Y)
+            || simulation.FindEntity(simulation.Map[tile.X, tile.Y].RoomId) is not Room { IsActive: true } room)
+        {
+            return null;
+        }
+
+        var name = simulation.Content.FindRoom(room.RoomType)?.Name ?? room.RoomType;
+        var doctor = profile.Class == StaffClass.Doctor;
+        switch (room.RoomType)
+        {
+            case "staff_room":
+                return null;
+            case "training":
+                // A doctor is a student or the lecturer, or told about the lecture chairs.
+                return doctor ? null : (NursesCannotWorkInRoom, name);
+            case "research" when doctor && profile.IsResearcher:
+                {
+                    var researchers = simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour d, IsFired: false } h && d.RoomId == room.Id && h.Id != movingId);
+                    return room.StaffId != 0 && researchers >= CountIn(simulation, room, "desk") ? (Pick(ResearcherNeedsDesk), null) : null;
+                }
+
+            case "ward" when !doctor:
+                {
+                    var nurses = simulation.Entities.Count(e => e is Humanoid { Behaviour: NurseBehaviour n, IsFired: false } h && n.RoomId == room.Id && h.Id != movingId);
+                    return room.StaffId != 0 && room.StaffId != movingId && nurses >= Math.Max(1, CountIn(simulation, room, "desk")) ? (Pick(NurseNeedsDesk), null) : null;
+                }
+        }
+
+        var required = RoomVisits.RequiredStaff(room.RoomType);
+        if (required is null)
+        {
+            // Rooms without staff: only the toilets say so to a doctor.
+            return doctor ? (room.RoomType == "toilets" ? (DoctorsCannotWorkInRoom, name) : null) : (NursesCannotWorkInRoom, name);
+        }
+
+        if (!doctor)
+        {
+            return required == BehaviourKind.Nurse ? null : (NursesCannotWorkInRoom, name);
+        }
+
+        if (required == BehaviourKind.Doctor && RoomVisits.IsQualifiedFor(room.RoomType, profile))
+        {
+            return null;
+        }
+
+        return required == BehaviourKind.Nurse ? (OnlyNursesInRoom, name)
+            : room.RoomType switch
+            {
+                "operating_theatre" => (OnlySurgeons, null),
+                "research" or "dna_fixer" => (OnlyResearchers, null),
+                "psych" => (OnlyPsychiatrists, null),
+                _ => (OnlyDoctorsInRoom, name),
+            };
+
+        Advice Pick(Advice[] messages) => messages[pick(messages.Length)];
+    }
+
+    private static int CountIn(Simulation simulation, Room room, string objectType) =>
+        simulation.Entities.Count(e => e is RoomObject placed && placed.RoomId == room.Id && string.Equals(placed.ObjectType, objectType, StringComparison.Ordinal));
 
     /// <summary>What the checks compare from one frame to the next.</summary>
     private readonly record struct Snapshot(
