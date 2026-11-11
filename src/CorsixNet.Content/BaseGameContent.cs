@@ -1310,15 +1310,18 @@ public static class BaseGameContent
         SwingDoor = new SwingDoorAnimations(SlaveIn: new(2032, 27), SlaveOut: new(2034, 22), MasterIn: new(2048, 19), MasterOut: new(2052, 17)),
     };
 
-    /// <summary>humanoid.lua's <c>vomit_anim</c> and <c>pee_anim</c> for the standard patients.</summary>
+    /// <summary>
+    /// humanoid.lua's <c>vomit_anim</c>, <c>pee_anim</c>, <c>yawn_anim</c>, <c>tap_foot_anim</c> and <c>check_watch_anim</c> for
+    /// the patients there are.
+    /// </summary>
     public static readonly IReadOnlyDictionary<HumanoidType, PatientAnimations> PatientAnimations = new Dictionary<HumanoidType, PatientAnimations>
     {
-        [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8)),
-        [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
+        [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8), Yawn: new(368, 21), TapFoot: new(2960, 12), CheckWatch: new(2964, 22)),
+        [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8), Yawn: new(4864, 26), TapFoot: new(4464, 2), CheckWatch: new(4468, 16)),
         [HumanoidType.SlackFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
-        [HumanoidType.SlackMalePatient] = new(Vomit: new(4324, 9), Pee: new(4328, 8)),
+        [HumanoidType.SlackMalePatient] = new(Vomit: new(4324, 9), Pee: new(4328, 8), CheckWatch: new(4060, 22)),
         [HumanoidType.ChewbaccaPatient] = new(Vomit: new(4138, 15), Pee: new(4178, 9)),
-        [HumanoidType.AlternateMalePatient] = new(Vomit: new(4476, 27), Pee: new(4472, 8)),
+        [HumanoidType.AlternateMalePatient] = new(Vomit: new(4476, 27), Pee: new(4472, 8), TapFoot: new(360, 12), CheckWatch: new(364, 22)),
     };
 
     /// <summary>

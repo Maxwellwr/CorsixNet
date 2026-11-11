@@ -80,7 +80,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Training: the advice (promotions, a consultant needed, too few chairs), learning on the job (`doctor.lua`); the room, teaching, skill growth and gaining abilities are done (`Training`).
 - Surgeons, psychiatrists, researchers actually being required by rooms.
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
-- Tiredness animations (yawn, check watch, tap foot) (`humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`).
+- Patients waiting look at the watch, yawn and tap a foot with 30, 20 and 10 days left, and those with sleeping illness yawn one day in ten (`PatientSpotAction`; `humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`). In CorsixTH these are patients' animations only.
   Staff speed (juniors, consultants, tiredness, the no-rest cheat) is done (`Tiredness.UpdateSpeed`).
 - Picking staff up with the hand cursor (the grab cursor, the staff drawn under it, `pickup.wav`); the move itself is
   done (`MoveStaffCommand`), but not while the member of staff is treating a patient with an object.

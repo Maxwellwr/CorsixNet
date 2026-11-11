@@ -74,9 +74,12 @@ public class SlackTongueTests
         Assert.Contains(animations, id => id is 1390 or 1394);
         Assert.True(hospital.Cured + hospital.Deaths > 0, "Nobody was cured or died.");
 
-        // The doctor keeps to the room.
-        var doctor = simulation.Entities.OfType<Humanoid>().Single(h => h.Behaviour is DoctorBehaviour { RoomId: var id } && id == room.Id);
-        Assert.True(Area.Contains(doctor.Tile), $"The doctor left the inflation room for {doctor.Tile}.");
+        // The doctor keeps to the room, unless a worn slicer has blown it up with him.
+        if (!room.IsCrashed)
+        {
+            var doctor = simulation.Entities.OfType<Humanoid>().Single(h => h.Behaviour is DoctorBehaviour { RoomId: var id } && id == room.Id);
+            Assert.True(Area.Contains(doctor.Tile), $"The doctor left the slack tongue room for {doctor.Tile}.");
+        }
 
         using var stream = new MemoryStream();
         simulation.Save(stream);
