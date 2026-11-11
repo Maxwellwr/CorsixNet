@@ -32,6 +32,9 @@ internal sealed class CheatsWindow : UiWindow
             Toggle(host, "Super doctors", CheatKind.ToggleSuperDoctor, hospital.ActiveCheats.HasFlag(ToggleCheats.SuperDoctor)),
             Cheat(host, "Win level", CheatKind.WinLevel),
             Cheat(host, "Lose level", CheatKind.LoseLevel));
+        yield return WindowRow.Of(
+            Cheat(host, "Repair all machines", CheatKind.RepairAllMachines),
+            Toggle(host, "Invulnerable machines", CheatKind.ToggleInvulnerableMachines, hospital.ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines)));
     }
 
     private static WindowCell Cheat(IWindowHost host, string text, CheatKind cheat) =>

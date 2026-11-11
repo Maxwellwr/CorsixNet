@@ -132,6 +132,7 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
             WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())) with { Tooltip = Tip("Status", "ingame_panel_status") },
             WindowCell.Button("Charts", () => host.Open(new GraphWindow())) with { Tooltip = Tip("Charts", "ingame_panel_charts") },
             WindowCell.Button("Policy", () => host.Open(new PolicyWindow())) with { Tooltip = Tip("Policy", "ingame_panel_policy") },
+            WindowCell.Button("Machines", () => host.Open(new MachineMenuWindow())) with { Tooltip = Tip("Machine menu", "ingame_panel_machineMenu") },
             WindowCell.Button("Messages", () => host.Open(new AdviserHistoryWindow())) with { Tooltip = Tip("The adviser's messages", "ingame_panel_adviserHistory") });
 
         // The adviser pops up from the panel (dialogs/adviser.lua): a click moves on, as a left click on him does;

@@ -1,7 +1,8 @@
 // The menu cheats that the simulation has the parts for, ported from CorsixTH CorsixTH/Lua/cheats.lua
 // (Cheats:performCheat, announceCheat, cheatMoney, cheatPatient, cheatLose, cheatWin, cheatIncreasePrices,
 // cheatDecreasePrices, cheatResetDeathCount, cheatMaxReputation, cheatEarthquake, cheatToggleEarthquake, cheatVip,
-// cheatEmergency, cheatEpidemic, cheatToggleEpidemic, cheatMonth, cheatYear) and
+// cheatEmergency, cheatEpidemic, cheatToggleEpidemic, cheatMonth, cheatYear, cheatRepairAllMachines,
+// cheatToggleInvulnerableMachines) and
 // dialogs/resizables/cheats_dialog.lua (UICheats:buttonClicked).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -74,6 +75,15 @@ public enum CheatKind : byte
 
     /// <summary><c>all_research</c>: every diagnosis and cure object to research is discovered, with the rooms they make buildable.</summary>
     AllResearch = 21,
+
+    /// <summary>
+    /// <c>repair_all_machines</c>: every machine of the hospital as good as new at once, without the strength a repair may
+    /// cost.
+    /// </summary>
+    RepairAllMachines = 22,
+
+    /// <summary><c>toggle_invulnerable_machines</c>, on or off: the hospital's machines neither wear nor explode.</summary>
+    ToggleInvulnerableMachines = 23,
 }
 
 /// <summary>CorsixTH's fax code cheats (<c>toggle_cheats</c>), which stay on until the code is sent again.</summary>
@@ -94,7 +104,10 @@ public enum ToggleCheats : byte
     /// <summary><c>super_doctor</c>.</summary>
     SuperDoctor = 8,
 
-    All = SpawnRate | NoRest | QueueJump | SuperDoctor,
+    /// <summary><c>invulnerable_machines</c> (a menu cheat in CorsixTH, kept with the switches here).</summary>
+    InvulnerableMachines = 16,
+
+    All = SpawnRate | NoRest | QueueJump | SuperDoctor | InvulnerableMachines,
 }
 
 /// <summary>
@@ -198,6 +211,12 @@ public static class Cheats
                 break;
             case CheatKind.AllResearch:
                 hospital.Research.DiscoverAll(simulation, hospital);
+                break;
+            case CheatKind.RepairAllMachines:
+                Objects.Machines.RepairAll(simulation, player);
+                break;
+            case CheatKind.ToggleInvulnerableMachines:
+                Toggle(simulation, hospital, ToggleCheats.InvulnerableMachines);
                 break;
             default:
                 return;

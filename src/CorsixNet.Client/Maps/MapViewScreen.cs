@@ -40,7 +40,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// the view and Ctrl+digit go back to it, Home reset camera,
 /// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or open the menu (save, load, options, quit).
 /// Clicking a member of staff, a patient, a room or a desk opens their window; C faxes, Y hire staff, F4 town map.
-/// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F7 progress report, F11 cheats, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
+/// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F7 progress report, F11 cheats, F6 research, F8 graphs, F9 policy, F10 machines (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
@@ -175,6 +175,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The faxes waiting when last looked, so that a new one opens the faxes window.</summary>
     private HashSet<string> _seenFaxes = new(StringComparer.Ordinal);
+
+    /// <summary>Announces machines that start needing a repair urgently (CorsixTH's <c>announceRepair</c>).</summary>
+    private readonly RepairAnnouncer _repairs = new();
+
+    private object? _repairSession;
 
     /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
     private bool _levelList;
@@ -2077,7 +2082,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>
     /// CorsixTH's dialogs' hotkeys, read from <c>hotkeys.txt</c> (see <see cref="Hotkeys"/>): by default F1 bank manager,
-    /// F2 bank statement, F4 town map, F5 casebook, F6 research, F7 progress report, F8 graphs, F9 policy, Ctrl+H the
+    /// F2 bank statement, F4 town map, F5 casebook, F6 research, F7 progress report, F8 graphs, F9 policy, F10 machines, Ctrl+H the
     /// adviser's history, Y hire, C faxes, F11 cheats, each opening its window or closing it again. F3 (staff
     /// management) stays the level list for now; Shift+F3 opens staff management.
     /// </summary>
@@ -2092,6 +2097,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _seenFaxes = faxes;
+        if (!ReferenceEquals(_session, _repairSession))
+        {
+            _repairSession = _session;
+            _repairs.Reset();
+        }
+
+        foreach (var sound in _repairs.Update(Simulation!, _session.Player))
+        {
+            _sounds.Play(sound);
+        }
         if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))
         {
             _windows.Toggle(new FaxWindow());
@@ -2136,6 +2151,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ("ingame_panel_status", () => new ProgressReportWindow()),
             ("ingame_panel_charts", () => new GraphWindow()),
             ("ingame_panel_policy", () => new PolicyWindow()),
+            ("ingame_panel_machineMenu", () => new MachineMenuWindow()),
             ("ingame_panel_adviserHistory", () => new AdviserHistoryWindow()),
             ("ingame_showCheatWindow", () => new CheatsWindow()),
         ];
