@@ -158,7 +158,8 @@ Done and committed:
   Esc with no window open opens the menu (CorsixTH's menu bar) instead of quitting: save (to a new
   file or over one, after asking), load (manual saves, quick save, autosaves), quick save/load,
   restart, quit, the options (sounds, volume, screen shake, edge scrolling, scroll speeds, autosave;
-  Apply saves config.txt and uses them at once), the levels list, the charts and cheats.
+  the language among the installed LANG-n.DAT, whose texts and speech switch at once; Apply saves
+  config.txt and uses them at once), the levels list, the charts and cheats.
   F8 draws the graphs (graphs.lua): a coloured line per statistic, each scaled to its own range,
   buttons to hide lines, months/years/4-year steps, and Figures for the table.
   The adviser (adviser.lua, player_hospital.lua) speaks over the bottom panel: a queue said in turn

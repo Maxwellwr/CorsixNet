@@ -226,7 +226,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly ThemeHospitalInstall _install;
 
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
-    private readonly OriginalTexts? _texts;
+    private OriginalTexts? _texts;
     private readonly Adviser _adviser = new();
     private readonly Random _adviserRandom = new();
     private AdviserChecks _adviserChecks;
@@ -2301,7 +2301,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new ConfirmWindow(Confirmation(1, "Are you sure you want to quit?"), () => ExitRequested = true));
                 break;
             case "options":
-                _windows.Open(new OptionsWindow(_config, ApplyConfig));
+                _windows.Open(new OptionsWindow(_config, ApplyConfig, InstalledLanguageNames(_install)));
                 break;
             case "savereplay":
                 SaveReplay();
@@ -2472,6 +2472,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
         _sounds = SoundEffects.Load(_install, config);
+        _texts = LoadTexts(_install, config);
         if (_configPath is not null)
         {
             try
@@ -2485,7 +2486,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
-        ShowNotice("Settings saved; the screen size and language change on the next start");
+        ShowNotice("Settings saved; the screen size changes on the next start");
     }
 
     /// <summary>Whether the room edit panel's <paramref name="button"/> was pressed; it counts once.</summary>
@@ -2914,6 +2915,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ? $"   {_texts.Staff.FullName(profile)}, {_texts.Staff.Profession(profile.Class)}: {_texts.Staff.Description(profile)}"
             : string.Empty;
     }
+
+    /// <summary>The names of the original's languages installed, as the settings take them, in their files' order.</summary>
+    private static List<string> InstalledLanguageNames(ThemeHospitalInstall install) =>
+        [.. install.InstalledLanguages().Order().Select(GameConfig.OriginalLanguageName).OfType<string>()];
 
     /// <summary>
     /// The texts in the settings' language if it is installed, else in English, else in the first installed language.
