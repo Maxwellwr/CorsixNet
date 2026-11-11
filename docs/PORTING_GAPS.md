@@ -72,8 +72,9 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
   policy's automatic raise and quitting are in `StaffEmployment`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
-  for working and waiting for a staff room (`Tiredness`); resting, being on call, the no-rest cheat and the mood
-  icons are not.
+  for working and waiting for a staff room (`Tiredness`); resting (`RestingBehaviour`), being on call in the staff
+  room, the no-rest cheat, the tired mood (`Humanoid.IsTiredMoodShown`, shown as text in the staff window; the icon
+  over the head is not drawn) and researchers and trainees going back to their room after resting are done.
 - Staff room idle actions (`meander.lua`, `use_staffroom.lua`, `seek_staffroom.lua`). Doctors, nurses, receptionists
   and handymen without a job meander (`Meandering`), so do the pharmacy's nurse and the general diagnosis doctor
   between patients, handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).

@@ -513,6 +513,59 @@ public static class RoomVisits
         return true;
     }
 
+    /// <summary>
+    /// <c>use_staffroom</c>'s end for a rested researcher or doctor in training: back to their <c>last_room</c> if it is
+    /// still there and has room for them (<c>testStaffCriteria(getMaximumStaffCriteria())</c>): a desk for a researcher,
+    /// a lecture chair for a student, the projector for a consultant while nobody else lectures.
+    /// </summary>
+    /// <returns>Whether they are on their way back.</returns>
+    internal static bool ReturnToLastRoom(Simulation simulation, Humanoid staff, int roomId)
+    {
+        if (simulation.FindEntity(roomId) is not Room { IsActive: true, IsClosing: false, IsCrashed: false } room || Owner(simulation, room) != staff.Employer
+            || simulation.FindEntity(room.DoorId) is not RoomDoor door || staff.Behaviour is not DoctorBehaviour { RoomId: 0 } doctor
+            || staff.Profile is not { } profile)
+        {
+            return false;
+        }
+
+        if (string.Equals(room.RoomType, ResearchRoom, StringComparison.Ordinal))
+        {
+            if (!profile.IsResearcher || CountResearchers(simulation, room) >= CountObjects(simulation, room, "desk"))
+            {
+                return false;
+            }
+        }
+        else if (string.Equals(room.RoomType, Staff.Training.RoomType, StringComparison.Ordinal))
+        {
+            if (profile.IsConsultant)
+            {
+                // The training room can only have one consultant.
+                if (room.StaffId != 0)
+                {
+                    return false;
+                }
+            }
+            else if (simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour other, IsFired: false } h && other.RoomId == room.Id && h.Id != room.StaffId)
+                     >= CountObjects(simulation, room, "lecture_chair"))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+
+        // The research department's first researcher, or the training room's lecturer (never a student).
+        if (room.StaffId == 0 && (profile.IsConsultant || !string.Equals(room.RoomType, Staff.Training.RoomType, StringComparison.Ordinal)))
+        {
+            room.StaffId = staff.Id;
+        }
+
+        ((IRoomStaff)doctor).GoToRoom(simulation, staff, room, door.InsideTile(room.Area));
+        return true;
+    }
+
     private static int CountResearchers(Simulation simulation, Room room) =>
         simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour doctor, IsFired: false } && doctor.RoomId == room.Id);
 

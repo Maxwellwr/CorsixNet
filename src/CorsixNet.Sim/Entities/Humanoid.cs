@@ -145,6 +145,12 @@ public sealed class Humanoid : Entity
     /// </summary>
     public bool WaitingForStaffRoom { get; internal set; }
 
+    /// <summary>
+    /// Whether the member of staff shows the tired mood: very tired, until they rest (CorsixTH's
+    /// <c>setMood("tired", "activate")</c> in <c>checkIfNeedRest</c>, deactivated in <c>tickDay</c>).
+    /// </summary>
+    public bool IsTiredMoodShown { get; internal set; }
+
     /// <summary>Fired or quit: leaving the hospital and no longer counted as its staff (CorsixTH's <c>fired</c>).</summary>
     public bool IsFired { get; internal set; }
 
@@ -738,6 +744,7 @@ public sealed class Humanoid : Entity
             Happiness = ReadAttribute(reader),
             Fatigue = ReadAttribute(reader),
             WaitingForStaffRoom = reader.ReadBool(),
+            IsTiredMoodShown = reader.Version is 0 or >= 74 && reader.ReadBool(),
             IsFired = reader.ReadBool(),
             RaiseTimer = reader.ReadInt32(),
             RaiseRequest = reader.ReadInt32(),
@@ -801,6 +808,7 @@ public sealed class Humanoid : Entity
         writer.WriteDecimal(Happiness);
         writer.WriteDecimal(Fatigue);
         writer.WriteBool(WaitingForStaffRoom);
+        writer.WriteBool(IsTiredMoodShown);
         writer.WriteBool(IsFired);
         writer.WriteInt32(RaiseTimer);
         writer.WriteInt32(RaiseRequest);
