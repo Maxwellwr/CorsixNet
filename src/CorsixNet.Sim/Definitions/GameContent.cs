@@ -81,7 +81,7 @@ public sealed record RoomDefinition(
 /// <summary>
 /// What a kind of patient does on the spot (humanoid.lua's <c>vomit_anim</c> and <c>pee_anim</c>); null where it has none.
 /// </summary>
-public sealed record PatientAnimations(AnimationRef? Vomit, AnimationRef? Pee);
+public sealed record PatientAnimations(AnimationRef? Vomit, AnimationRef? Pee, AnimationRef? Yawn = null, AnimationRef? TapFoot = null, AnimationRef? CheckWatch = null);
 
 public sealed class GameContent
 {
