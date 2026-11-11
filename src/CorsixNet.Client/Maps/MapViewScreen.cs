@@ -1650,6 +1650,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     _windows.Open(new PatientWindow(here.Id));
                 }
             }
+            else if (MachineWindow.At(simulation, tile) is { } machine && simulation.FindEntity(machine.RoomId) is Room machineRoom && RoomBuilder.IsOwnedBy(simulation.Map, machineRoom, _session.Player))
+            {
+                // A click on a machine opens its window (CorsixTH's UIMachine).
+                _selected = null;
+                _windows.Open(new MachineWindow(machine.Id));
+            }
             else if (desk is not null || (roomId > 0 && simulation.FindEntity(roomId) is Room { IsActive: true }))
             {
                 // A click on a reception desk or a room opens its queue (CorsixTH's UIQueue).

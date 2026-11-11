@@ -52,6 +52,8 @@ public enum CommandKind : ushort
     PayBonus = 37,
     IncreaseSalary = 38,
     EditRoom = 39,
+    CallHandyman = 40,
+    ReplaceMachine = 41,
 }
 
 /// <summary>
@@ -115,6 +117,8 @@ public abstract record Command
             CommandKind.ConcentrateResearch => new ConcentrateResearchCommand(reader.ReadString()),
             CommandKind.PayBonus => new PayBonusCommand(reader.ReadInt32()),
             CommandKind.IncreaseSalary => new IncreaseSalaryCommand(reader.ReadInt32()),
+            CommandKind.CallHandyman => new CallHandymanCommand(reader.ReadInt32()),
+            CommandKind.ReplaceMachine => new ReplaceMachineCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -995,6 +999,51 @@ public sealed record SetHandymanParcelCommand(int HandymanId, int Parcel) : Comm
         writer.WriteInt32(HandymanId);
         writer.WriteInt32(Parcel);
     }
+}
+
+/// <summary>
+/// Calls a handyman to a machine of the issuing player's hospital (the machine window's call button,
+/// <c>UIMachine:callHandyman</c>): its repair becomes urgent and its room lets no patient in until then.
+/// </summary>
+public sealed record CallHandymanCommand(int MachineId) : Command
+{
+    public override CommandKind Kind => CommandKind.CallHandyman;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (OwnMachine(simulation, MachineId, player) is { } machine)
+        {
+            Machines.CallHandyman(machine);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(MachineId);
+
+    /// <summary>A machine in a room of the player's that has not crashed, or null.</summary>
+    internal static RoomObject? OwnMachine(Simulation simulation, int machineId, int player) =>
+        simulation.FindEntity(machineId) is RoomObject { Machine: not null, IsDestroyed: false } machine
+        && simulation.FindEntity(machine.RoomId) is Room { IsCrashed: false } room && RoomVisits.Owner(simulation, room) == player
+            ? machine
+            : null;
+}
+
+/// <summary>
+/// Replaces a machine of the issuing player's hospital with a new one at today's price (the machine window's replace
+/// button, <c>Machine:replaceMachine</c>). Ignored without the money.
+/// </summary>
+public sealed record ReplaceMachineCommand(int MachineId) : Command
+{
+    public override CommandKind Kind => CommandKind.ReplaceMachine;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (CallHandymanCommand.OwnMachine(simulation, MachineId, player) is { } machine && player >= 0 && player < simulation.Hospitals.Count)
+        {
+            Machines.Replace(simulation, simulation.Hospitals[player], machine);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(MachineId);
 }
 
 /// <summary>

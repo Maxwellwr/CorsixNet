@@ -34,15 +34,27 @@ public sealed class MachineState
     /// <summary><c>isBreaking</c>: smoking, needing a repair urgently.</summary>
     public bool IsBreaking => RemainingUses < 4;
 
+    /// <summary>
+    /// The player called a handyman from the machine window (<c>setRepairingStatus</c>, the room's <c>manual_repair</c> and
+    /// <c>needs_repair</c>): the room lets no patient in until the machine is repaired.
+    /// </summary>
+    public bool IsRepairCalled { get; internal set; }
+
     internal void Write(SimWriter writer)
     {
         writer.WriteInt32(Strength);
         writer.WriteInt32(TimesUsed);
         writer.WriteInt32(TotalUsage);
+        writer.WriteBool(IsRepairCalled);
     }
 
     internal static MachineState Read(SimReader reader) =>
-        new(reader.ReadInt32()) { TimesUsed = reader.ReadInt32(), TotalUsage = reader.ReadInt32() };
+        new(reader.ReadInt32())
+        {
+            TimesUsed = reader.ReadInt32(),
+            TotalUsage = reader.ReadInt32(),
+            IsRepairCalled = reader.Version is 0 or >= 73 && reader.ReadBool(),
+        };
 }
 
 /// <summary>What happens to machines as they are used.</summary>
@@ -146,6 +158,46 @@ internal static class Machines
         }
 
         machine.TimesUsed = 0;
+        machine.IsRepairCalled = false;
+    }
+
+    /// <summary>
+    /// The machine window's call button (<c>UIMachine:callHandyman</c>): unless the machine is as good as new, its repair
+    /// becomes an urgent task and its room lets no patient in until then.
+    /// </summary>
+    internal static void CallHandyman(RoomObject placed)
+    {
+        if (placed.Machine is { TimesUsed: not 0 } machine)
+        {
+            machine.IsRepairCalled = true;
+        }
+    }
+
+    /// <summary>
+    /// The machine window's replace button (<c>UIMachine:replaceMachine</c>, <c>Machine:replaceMachine</c>): the hospital pays
+    /// what the machine costs now and gets a new one, as strong as its research has made it. False without the money.
+    /// </summary>
+    internal static bool Replace(Simulation simulation, Hospital hospital, RoomObject placed)
+    {
+        if (placed.Machine is not { } machine)
+        {
+            return false;
+        }
+
+        var cost = hospital.Research.ObjectCost(simulation.Rules, placed.ObjectType);
+        if (hospital.Balance < cost)
+        {
+            return false;
+        }
+
+        hospital.Spend(simulation.Hours, cost, TransactionKind.MachineReplacement, placed.ObjectType);
+        machine.TotalUsage = 0;
+        machine.TimesUsed = 0;
+        machine.IsRepairCalled = false;
+        machine.Strength = hospital.Research.Objects.TryGetValue(placed.ObjectType, out var progress) && progress.StartStrength > 0
+            ? progress.StartStrength
+            : ResearchObjects.Find(placed.ObjectType)?.DefaultStrength ?? machine.Strength;
+        return true;
     }
 
     /// <summary>

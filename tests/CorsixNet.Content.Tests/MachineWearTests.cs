@@ -120,6 +120,90 @@ public class MachineWearTests
     }
 
     [Fact]
+    public void ReplacingAMachineBuysANewOneAtTodaysPrice()
+    {
+        var simulation = NewStaffedHospital(InflationTests.Rules());
+        InflationTests.BuildInflation(simulation);
+        var hospital = simulation.Hospitals[0];
+        var inflator = Inflator(simulation);
+        for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay && inflator.Machine!.TimesUsed < 2; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(inflator.Machine!.TimesUsed >= 2);
+        var balance = hospital.Balance;
+        Run(simulation, new ReplaceMachineCommand(inflator.Id));
+
+        var cost = hospital.Research.ObjectCost(simulation.Rules, "inflator");
+        if (cost > 0)
+        {
+            Assert.Equal(TransactionKind.MachineReplacement, hospital.Transactions[^1].Kind);
+            Assert.Equal(-cost, hospital.Transactions[^1].Amount);
+        }
+
+        Assert.Equal(0, inflator.Machine.TimesUsed);
+        Assert.Equal(0, inflator.Machine.TotalUsage);
+        Assert.Equal(10, inflator.Machine.Strength);
+        Assert.Equal(balance - cost, hospital.Balance);
+
+        // Another player cannot replace it.
+        var count = hospital.Transactions.Count;
+        simulation.Schedule(1, new ReplaceMachineCommand(inflator.Id));
+        simulation.Step();
+        Assert.DoesNotContain(hospital.Transactions.Skip(count), t => t.Kind == TransactionKind.MachineReplacement);
+    }
+
+    [Fact]
+    public void CallingAHandymanRepairsTheMachineAtOnceAndKeepsPatientsOut()
+    {
+        var simulation = NewStaffedHospital(InflationTests.Rules());
+        var room = InflationTests.BuildInflation(simulation);
+        var inflator = Inflator(simulation);
+        for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay && inflator.Machine!.TimesUsed < 1; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.Equal(1, inflator.Machine!.TimesUsed);
+        Run(simulation, new CallHandymanCommand(inflator.Id));
+        Assert.True(inflator.Machine.IsRepairCalled);
+
+        using (var stream = new MemoryStream())
+        {
+            simulation.Save(stream);
+            stream.Position = 0;
+            var loaded = Simulation.Load(stream, BaseGameContent.Create());
+            Assert.True(loaded.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "inflator").Machine!.IsRepairCalled);
+        }
+
+        // Nobody new is let in while the call stands; a handyman hired now comes and repairs it.
+        Run(simulation, new HireStaffCommand(StaffClass.Handyman, 0, new(14, 15)));
+        var patientsLetIn = new HashSet<int>();
+        var before = room.PatientId;
+        for (var tick = 0; tick < 31 * GameDate.HoursPerDay && inflator.Machine.IsRepairCalled; tick++)
+        {
+            simulation.Step();
+            if (room.PatientId != 0 && room.PatientId != before)
+            {
+                patientsLetIn.Add(room.PatientId);
+            }
+        }
+
+        Assert.False(inflator.Machine.IsRepairCalled);
+        Assert.Equal(0, inflator.Machine.TimesUsed);
+        Assert.Empty(patientsLetIn);
+
+        foreach (var command in new Command[] { new CallHandymanCommand(5), new ReplaceMachineCommand(6) })
+        {
+            using var wire = new MemoryStream();
+            command.Write(new CorsixNet.Sim.Serialization.SimWriter(wire));
+            wire.Position = 0;
+            Assert.Equal(command, Command.Read(new CorsixNet.Sim.Serialization.SimReader(wire)));
+        }
+    }
+
+    [Fact]
     public void EachRoundOfAnEarthquakeWearsTheMachinesWithoutCountingAsAUse()
     {
         var simulation = NewStaffedHospital(InflationTests.Rules());

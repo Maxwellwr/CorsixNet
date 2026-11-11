@@ -612,12 +612,14 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
                     && Owner(simulation, plant.Tile) == humanoid.Employer && BestUsageTile(simulation, humanoid, plant) is { } tile:
                     yield return new HandymanTask(type, plant, tile, state.State + 1);
                     break;
-                case TaskType.Repairing when entity is RoomObject { Machine: { RemainingUses: < 6 } wear, IsDestroyed: false } machine
+                case TaskType.Repairing when entity is RoomObject { Machine: { } wear, IsDestroyed: false } machine
+                    && (wear.RemainingUses < 6 || wear.IsRepairCalled)
                     && Owner(simulation, machine.Tile) == humanoid.Employer
                     && simulation.FindEntity(machine.RoomId) is Room { IsActive: true, IsCrashed: false }
                     && !IsBeingRepaired(simulation, machine.Id) && RepairTile(simulation, machine) is { } repairTile:
-                    // callHandymanForRepairIfNecessary: below 6 uses left a task of priority 1, below 4 of priority 2.
-                    yield return new HandymanTask(type, machine, repairTile, wear.RemainingUses < 4 ? 2 : 1);
+                    // callHandymanForRepairIfNecessary: below 6 uses left a task of priority 1, below 4 of priority 2; the machine
+                    // window's call (UIMachine:callHandyman) is of priority 2.
+                    yield return new HandymanTask(type, machine, repairTile, wear.RemainingUses < 4 || wear.IsRepairCalled ? 2 : 1);
                     break;
             }
         }
@@ -669,7 +671,8 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
 
     /// <summary>Whether a handyman is repairing a machine in the room or about to, which then lets nobody in.</summary>
     internal static bool IsRepairingIn(Simulation simulation, Room room) =>
-        simulation.Entities.Any(e => e is Humanoid { Behaviour: HandymanBehaviour { Phase: HandymanPhase.GoingToRepair or HandymanPhase.Repairing } other }
+        simulation.Entities.Any(e => e is RoomObject { Machine.IsRepairCalled: true, IsDestroyed: false } called && called.RoomId == room.Id)
+        || simulation.Entities.Any(e => e is Humanoid { Behaviour: HandymanBehaviour { Phase: HandymanPhase.GoingToRepair or HandymanPhase.Repairing } other }
             && simulation.FindEntity(other.TargetId) is RoomObject machine && machine.RoomId == room.Id);
 
     /// <summary>Whether a handyman has started sweeping the litter (the task is gone then).</summary>

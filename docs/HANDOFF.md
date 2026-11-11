@@ -242,8 +242,11 @@ Next, in this order (2026-11-10):
    the tick via `RoomObject.IsDestroyed`, soot on the floor, value and 50 reputation lost, `Room.IsCrashed`), handymen
    repair below 6 uses left (priority 2 below 4): walk to the handyman position, meander until the room's patient has
    gone or is leaving, then `GoingToRepair` stops the room letting anyone in until the repair (begin/in-use for at least
-   20 frames/finish) ends. Client: smoke plumes below 4 uses, the crashed animation. Not yet: the machine window
-   (replace, call handyman), the invulnerable machines cheat, the repair announcement,
+   20 frames/finish) ends. Client: smoke plumes below 4 uses, the crashed animation. The machine window
+   (clicking a machine; save format 73) calls a handyman (`CallHandymanCommand`, `MachineState.IsRepairCalled`: an
+   urgent task, the room lets no patient in until the repair) and replaces the machine at today's price
+   (`ReplaceMachineCommand`, after a confirmation). Not yet: the gear icon, the
+   machine_menu list, the invulnerable machines cheat, the repair announcement,
    num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
    floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
    (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
