@@ -280,6 +280,10 @@ Rooms' requirements (2026-11-11): when a room of the player's becomes active, `A
 `roomFinished` says in CorsixTH: a doctor for the GP, a nurse for the pharmacy or ward, a psychiatrist, a consultant
 for training, a researcher for research, a ward and two surgeons for the operating theatre (S[11][79..88], [105]).
 CorsixTH's DNA fixer says nothing, so neither does this.
+Staff put down in a room (2026-11-12): `AdviserChecks.StaffPlacement` says what `Room:onHumanoidEnter` and the staff
+classes' `adviseWrongPersonForThisRoom` say: only researchers (research, DNA fixer), surgeons, psychiatrists, nurses
+or doctors work there, doctors or nurses cannot work in a room (S[11][124..130]), and a researcher or ward nurse put
+into a room full of them needs a desk of their own (CorsixTH's warnings.researcher_needs_desk_*, nurse_needs_desk_*).
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to
