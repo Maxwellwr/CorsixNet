@@ -157,7 +157,8 @@ public sealed class ConstructionSite : Entity
         if (RoomBuilder.Check(simulation.Map, simulation.Content, plan, Player) == RoomPlanProblem.None
             && simulation.Content.FindRoom(plan.RoomType) is { } room)
         {
-            RoomBuilder.Build(simulation, plan, room);
+            var built = RoomBuilder.Build(simulation, plan, room);
+            RoomRebuild.OnBuilt(simulation, built, Player);
             RoomPurchases.BuyNeededObjects(simulation, room, Player);
         }
     }

@@ -292,6 +292,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _sounds = SoundEffects.Load(install, _config);
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
+        _buildTool.AbandonRequested = () => _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
+        {
+            _session?.Submit(new AbandonRebuildCommand());
+            _buildTool.Stop();
+        }));
         _furnishTool.PlaySound = name => _sounds.Play(name);
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
@@ -1575,7 +1580,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 !leftDown && leftWasDown,
                 rightClicked,
                 pressed(Keys.Enter) || TakeButton(BuildButton.Confirm),
-                TakeDown(simulation, back || TakeButton(BuildButton.Back)),
+                back || TakeButton(BuildButton.Back),
                 pressed(Keys.P) || TakeButton(BuildButton.PickUp));
             var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
             if (tool is { } command)
@@ -2548,29 +2553,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _session.Submit(new EditRoomCommand(room.Id));
             _buildTool.StartEditing(definition, room.Id, simulation.Tick);
         }
-    }
-
-    /// <summary>
-    /// Esc or Take down while editing a finished room: CorsixTH asks first (<c>confirmation.delete_room</c>), then sells
-    /// it for half its cost. While building a new room the build tool deals with it.
-    /// </summary>
-    private bool TakeDown(Simulation simulation, bool back)
-    {
-        if (!back || !_buildTool.IsEditing || _buildTool.IsPickingUp)
-        {
-            return back;
-        }
-
-        if (simulation.FindEntity(_buildTool.RoomId) is Room { IsActive: false, IsClosing: false } room)
-        {
-            _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
-            {
-                _session!.Submit(new CancelRoomCommand(room.Id));
-                _buildTool.Stop();
-            }));
-        }
-
-        return false;
     }
 
     void IWindowHost.StartHiring(StaffClass staffClass, int index)

@@ -174,8 +174,13 @@ Done and committed:
   room) instead of the nearest, and leave staff to a waiting room that scores better for them.
   Edit room (bottom panel, then click a room): the room stops taking patients, its queue goes to
   other rooms, its staff leave once no patient is inside, then its objects can be moved, bought or
-  sold; Confirm costs nothing again, Take down asks and gives half its cost back (Room.IsPaid,
-  IsClosing; save format 59). Not yet: going back to the blueprint to resize or move the door.
+  sold; Confirm costs nothing again (Room.IsPaid, IsClosing; save format 59). Esc while editing goes
+  back to the door, as CorsixTH's returnToDoorPhase: the room comes down, its objects are sold at full
+  price, it stays paid for (Hospital.Rebuild, RoomRebuild, save format 76), and it can be resized or
+  get its door moved; built again, its needed objects are bought again and a machine placed again
+  keeps its wear. Esc on its blueprint asks (delete_room) and gives half its cost back (abortRoom).
+  Deviation: CorsixTH buys every object back on the list, here extra objects are bought again from
+  the edit panel.
   Replays: a local game records its start and every command (LocalSession.Recording); Menu, Save
   replay writes Replays/*.cnreplay in the saves folder, Watch replay plays one back (ReplaySession,
   the player's commands ignored) and the status line says whether it matched the recorded hash.

@@ -75,6 +75,7 @@ internal static class Machines
                 ? progress.StartStrength
                 : research.DefaultStrength;
         placed.Machine = new MachineState(strength);
+        Rooms.RoomRebuild.OnMachinePlaced(simulation, placed, player);
     }
 
     /// <summary>
