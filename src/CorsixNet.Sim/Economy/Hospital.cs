@@ -472,6 +472,9 @@ public sealed class Hospital
     /// </summary>
     public int AutopsiesDiscovered { get; internal set; }
 
+    /// <summary>A finished room taken back to its blueprint and not built again yet, or null (<see cref="Rooms.RoomRebuild"/>).</summary>
+    public Rooms.RoomRebuild? Rebuild { get; internal set; }
+
     /// <summary>Patients who died so far (CorsixTH's <c>num_deaths</c>).</summary>
     public int Deaths { get; internal set; }
 
@@ -1432,6 +1435,8 @@ public sealed class Hospital
 
         Research.Write(writer);
         writer.WriteInt32(AutopsiesDiscovered);
+        writer.WriteBool(Rebuild is not null);
+        Rebuild?.Write(writer);
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1563,6 +1568,7 @@ public sealed class Hospital
 
         hospital.Research = Sim.Research.ResearchDepartment.Read(reader);
         hospital.AutopsiesDiscovered = reader.Version is 0 or >= 75 ? reader.ReadInt32() : 0;
+        hospital.Rebuild = reader.Version is 0 or >= 76 && reader.ReadBool() ? Rooms.RoomRebuild.Read(reader) : null;
         return hospital;
     }
 

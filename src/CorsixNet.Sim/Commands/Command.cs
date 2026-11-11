@@ -55,6 +55,8 @@ public enum CommandKind : ushort
     CallHandyman = 40,
     ReplaceMachine = 41,
     RemoveDestroyedRoom = 42,
+    ReturnToBlueprint = 43,
+    AbandonRebuild = 44,
 }
 
 /// <summary>
@@ -121,6 +123,8 @@ public abstract record Command
             CommandKind.CallHandyman => new CallHandymanCommand(reader.ReadInt32()),
             CommandKind.ReplaceMachine => new ReplaceMachineCommand(reader.ReadInt32()),
             CommandKind.RemoveDestroyedRoom => new RemoveDestroyedRoomCommand(reader.ReadInt32()),
+            CommandKind.ReturnToBlueprint => new ReturnToBlueprintCommand(reader.ReadInt32()),
+            CommandKind.AbandonRebuild => new AbandonRebuildCommand(),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -301,10 +305,13 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
 
     public override void Execute(Simulation simulation, int player)
     {
+        // A room taken back to its blueprint is paid for already, as CorsixTH edits a room without a money check.
+        var rebuilding = player >= 0 && player < simulation.Hospitals.Count && simulation.Hospitals[player].Rebuild is { RoomId: 0 } rebuild
+            && rebuild.RoomType == Plan.RoomType;
         if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) != RoomPlanProblem.None
             || simulation.Content.FindRoom(Plan.RoomType) is not { } room
             || !RoomPurchases.CanBuild(simulation, room, player)
-            || !RoomPurchases.CanAfford(simulation, room, player))
+            || (!rebuilding && !RoomPurchases.CanAfford(simulation, room, player)))
         {
             return;
         }
@@ -415,6 +422,7 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
 
             RoomVisits.OnRoomActivated(simulation, room);
             Tiredness.OnRoomActivated(simulation, room);
+            RoomRebuild.OnRoomFinished(simulation, room, player);
         }
     }
 
@@ -456,6 +464,7 @@ public sealed record CancelRoomCommand(int RoomId) : Command
             if (room.IsPaid)
             {
                 // UIEditRoom:abortRoom for a room that was paid for: half its cost back, objects included.
+                RoomRebuild.OnRoomFinished(simulation, room, player);
                 RoomBuilder.Remove(simulation, room);
                 if (definition is not null)
                 {
@@ -479,6 +488,40 @@ public sealed record CancelRoomCommand(int RoomId) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>
+/// Takes a finished room being edited, once empty, back to its blueprint (CorsixTH's <c>returnToDoorPhase</c>, Esc while
+/// furnishing it): see <see cref="RoomRebuild"/>.
+/// </summary>
+public sealed record ReturnToBlueprintCommand(int RoomId) : Command
+{
+    public override CommandKind Kind => CommandKind.ReturnToBlueprint;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RoomId) is Room room)
+        {
+            RoomRebuild.Start(simulation, room, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>
+/// Gives up a room taken back to its blueprint, for half its cost (CorsixTH's <c>abortRoom</c> after the
+/// <c>delete_room</c> confirmation).
+/// </summary>
+public sealed record AbandonRebuildCommand : Command
+{
+    public override CommandKind Kind => CommandKind.AbandonRebuild;
+
+    public override void Execute(Simulation simulation, int player) => RoomRebuild.Abandon(simulation, player);
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+    }
 }
 
 /// <summary>
