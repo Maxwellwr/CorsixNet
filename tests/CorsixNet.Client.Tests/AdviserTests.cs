@@ -75,6 +75,19 @@ public class AdviserTests
     }
 
     [Fact]
+    public void AnAutopsyComingOutIsAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.Hospitals[0].AutopsiesDiscovered = 1;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.AutopsyDiscovered.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
     public void TheFirstCureAndTheFirstRaiseRequestAreAnnounced()
     {
         var host = new WindowTestHost();

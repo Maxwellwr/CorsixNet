@@ -203,7 +203,8 @@ Done and committed:
   difficulty / 10)). Swing doors (swing_door_left/right.lua; `RoomDefinition.SwingDoors`, save format 62): the right door
   is walked through with the humanoids' swing animations, the left one beside it and the wall beyond get the swing
   wall pieces; the left door swings at once, the right one once the walker is through, and nobody else goes through
-  until it is done. Not yet: the VIP's visit to the ward.
+  until it is done. The VIP's visit to the ward: the ward is a must-visit room, nothing more in CorsixTH (checked
+  2026-11-12; `evaluateRoom` now also counts machines and a patient in the research department, as CorsixTH).
   The blood machine (blood_machine_room.lua; save format 63): the doctor works the machine at its use position with
   the patient hidden in its animations at the other end; `MultiObjectUse.InUseRounds` plays the in-use phase again
   as a prolonged use (2 to 4 more times here).
@@ -274,7 +275,8 @@ Next, in this order (2026-11-10):
    the autopsy machine and uses it with the patient (a doctor-driven machine like the blood machine); `Autopsied`: the
    last treatment room's first undiscovered object gets AutopsyRschPercent, the autopsy may come out (1 in 3, 2 in 3
    with unhappy staff) for AutopsyRepHitPercent of the reputation, and the patient is gone without counting as a death.
-   Not yet: the advice, the patient's idea mood. Faces done: `StaffFaces` draws drawFace's hair, face and chin from
+   The advice when an autopsy comes out done 2026-11-12 (`Hospital.AutopsiesDiscovered`, S[11][123]; save format 75); CorsixTH
+   has no idea mood for autopsied patients (only debug patients use idea1), so none here. Faces done: `StaffFaces` draws drawFace's hair, face and chin from
    QDATA/FACE01V (65x1350, main palette; greyscale like the original) in the hire window (click a name to pick whose
    portrait shows) and the staff window. The list is done. DNA fixer done (save format 72): aliens
    (`HumanoidType.AlienMalePatient`/`AlienFemalePatient`, `PatientLook.Alien`) walk with their own animations, use a

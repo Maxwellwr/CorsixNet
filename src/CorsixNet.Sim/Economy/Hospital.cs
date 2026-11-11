@@ -463,6 +463,12 @@ public sealed class Hospital
     /// <summary>Cans sold from the drinks machines this year (<c>sodas_sold</c>).</summary>
     public int SodasSold { get; internal set; }
 
+    /// <summary>
+    /// Autopsies that came out and cost reputation so far, so that the adviser can say so
+    /// (<c>_A.research.autopsy_discovered_rep_loss</c>).
+    /// </summary>
+    public int AutopsiesDiscovered { get; internal set; }
+
     /// <summary>Patients who died so far (CorsixTH's <c>num_deaths</c>).</summary>
     public int Deaths { get; internal set; }
 
@@ -1422,6 +1428,7 @@ public sealed class Hospital
         }
 
         Research.Write(writer);
+        writer.WriteInt32(AutopsiesDiscovered);
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1552,6 +1559,7 @@ public sealed class Hospital
         }
 
         hospital.Research = Sim.Research.ResearchDepartment.Read(reader);
+        hospital.AutopsiesDiscovered = reader.Version is 0 or >= 75 ? reader.ReadInt32() : 0;
         return hospital;
     }
 
