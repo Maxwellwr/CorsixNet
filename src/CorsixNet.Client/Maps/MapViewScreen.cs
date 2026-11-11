@@ -2527,6 +2527,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var player = _session!.Player;
+        if (simulation.FindEntity(simulation.Map[target.X, target.Y].RoomId) is Room { IsCrashed: true } wreck)
+        {
+            // GameUI:onMouseUp: a wrecked room can only be cleared away, and only with remove_destroyed_rooms, for a fee.
+            if (_config.RemoveDestroyedRooms && RemoveDestroyedRoomCommand.RemovalCost(simulation, wreck, player) is { } cost)
+            {
+                _pickingRoomToEdit = false;
+                var question = string.Create(CultureInfo.InvariantCulture, $"Would you like to remove the room for ${cost}?");
+                _windows.Open(new ConfirmWindow(question, () => _session.Submit(new RemoveDestroyedRoomCommand(wreck.Id))));
+            }
+
+            return;
+        }
+
         if (simulation.FindEntity(simulation.Map[target.X, target.Y].RoomId) is Room { IsActive: true } room
             && RoomBuilder.IsOwnedBy(simulation.Map, room, player)
             && simulation.Content.FindRoom(room.RoomType) is { } definition)

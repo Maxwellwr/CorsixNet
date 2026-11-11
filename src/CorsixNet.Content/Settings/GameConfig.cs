@@ -74,6 +74,12 @@ public sealed record GameConfig
     /// </summary>
     public bool FreeBuildMode { get; init; }
 
+    /// <summary>
+    /// Whether a room wrecked by an explosion can be cleared away for a fee (CorsixTH's <c>remove_destroyed_rooms</c>);
+    /// in the original it stays for good.
+    /// </summary>
+    public bool RemoveDestroyedRooms { get; init; }
+
     /// <summary>Whether sound effects are played (<c>play_sounds</c>).</summary>
     public bool PlaySounds { get; init; } = true;
 
@@ -172,6 +178,7 @@ public sealed record GameConfig
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
+            RemoveDestroyedRooms = Bool("remove_destroyed_rooms", defaults.RemoveDestroyedRooms),
             PlaySounds = Bool("play_sounds", defaults.PlaySounds),
             SoundVolume = Number("sound_volume", defaults.SoundVolume),
             PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
@@ -282,6 +289,15 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"free_build_mode = {Lua(FreeBuildMode)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- By default destroyed rooms can't be removed. If you would like the game to
+            -- give you the option of removing a destroyed room change this option to true.
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"remove_destroyed_rooms = {Lua(RemoveDestroyedRooms)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------

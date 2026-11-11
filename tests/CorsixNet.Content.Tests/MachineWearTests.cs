@@ -27,6 +27,37 @@ public class MachineWearTests
     }
 
     [Fact]
+    public void AWreckedRoomCanOnlyBeClearedAwayForAFee()
+    {
+        var simulation = NewStaffedHospital(InflationTests.Rules());
+        var room = InflationTests.BuildInflation(simulation);
+        var hospital = simulation.Hospitals[0];
+        for (var tick = 0; tick < 12 * 31 * GameDate.HoursPerDay && !room.IsCrashed; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(room.IsCrashed);
+        simulation.Step();
+
+        // Taking it down as an unfinished room does nothing.
+        Run(simulation, new CancelRoomCommand(room.Id));
+        Assert.Same(room, simulation.FindEntity(room.Id));
+
+        // Twice the room's cost less 40 % of the inflator as scrap.
+        var definition = simulation.Content.FindRoom("inflation")!;
+        var expected = (RoomPurchases.BuildCost(simulation, hospital, definition) * 2) - (int)Math.Floor(hospital.Research.ObjectCost(simulation.Rules, "inflator") * 0.4m);
+        Assert.Equal(expected, RemoveDestroyedRoomCommand.RemovalCost(simulation, room, 0));
+        var balance = hospital.Balance;
+        Run(simulation, new RemoveDestroyedRoomCommand(room.Id));
+
+        Assert.Null(simulation.FindEntity(room.Id));
+        Assert.Contains(hospital.Transactions, t => t.Kind == TransactionKind.RemoveRoom && t.Amount == -expected);
+        Assert.True(hospital.Balance <= balance - expected);
+        Assert.Equal(0, simulation.Map[room.Area.X + 1, room.Area.Y + 1].RoomId);
+    }
+
+    [Fact]
     public void WithTheInvulnerableMachinesCheatOnlyTheTotalUsageCounts()
     {
         var simulation = NewStaffedHospital(InflationTests.Rules());

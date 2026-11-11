@@ -54,6 +54,7 @@ internal static class MoneyPanels
         TransactionKind.Cheat => "Cheat",
         TransactionKind.Severance => $"Severance pay: {transaction.Subject}",
         TransactionKind.PersonalBonus => $"Staff bonus: {transaction.Subject}",
+        TransactionKind.RemoveRoom => "Build: Remove destroyed room",
         _ => transaction.Kind.ToString(),
     };
 }

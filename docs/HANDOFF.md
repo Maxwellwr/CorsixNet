@@ -256,7 +256,9 @@ Next, in this order (2026-11-10):
    machines and repair all machines cheats (`ToggleCheats.InvulnerableMachines`, `Machines.RepairAll`; CorsixTH's repair
    all still cuts strength through `strength_reducible or true`, a bug not copied), the repair announcement
    (`RepairAnnouncer`: machwarn.wav and the room's maint0xx.wav when a machine starts smoking, played as effects). Not
-   yet: the gear icon (4564) drawn over a machine, num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
+   yet: the gear icon (4564) drawn over a machine, num_explosions; a crashed room cannot be taken down as an unfinished one; with config.txt's
+   remove_destroyed_rooms a click on it in edit mode offers to clear it away for twice its cost less 40 % of its
+   needed objects (`RemoveDestroyedRoomCommand`, 2026-11-12). Wall soot is outranked by the
    floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
    (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
    and moved to `FinishSecondaryUsePosition` facing `FinishSecondaryFacing` at the in-use phase. Not yet: the jelly
