@@ -58,7 +58,7 @@ internal sealed class CasebookWindow : UiWindow
                 WindowCell.Number(disease.IsPseudo ? string.Empty : string.Create(CultureInfo.InvariantCulture, $"{entry.CureEffectiveness} %")),
                 disease.IsPseudo
                     ? string.Empty
-                    : WindowCell.Button(concentrated ? "Stop" : "Concentrate", () => host.Submit(new ConcentrateResearchCommand(disease.Id)), highlight: concentrated));
+                    : WindowCell.Button(concentrated ? "Stop" : "Concentrate", () => host.Submit(new ConcentrateResearchCommand(disease.Id)), highlight: concentrated).WithTooltip(OriginalTooltips.Get(host, 147, "Concentrate research on treating this disease")));
         }
     }
 

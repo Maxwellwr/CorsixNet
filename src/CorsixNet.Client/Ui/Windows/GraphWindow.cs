@@ -68,13 +68,13 @@ internal sealed class GraphWindow : UiWindow
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         _values = Values(host.Simulation.Hospitals[host.Player].Statistics, _scale);
-        yield return new WindowRow(Lines.Take(4).Select((line, i) => Toggle(i)).ToList());
-        yield return new WindowRow(Lines.Skip(4).Select((line, i) => Toggle(i + 4)).ToList());
+        yield return new WindowRow(Lines.Take(4).Select((line, i) => Toggle(host, i)).ToList());
+        yield return new WindowRow(Lines.Skip(4).Select((line, i) => Toggle(host, i + 4)).ToList());
         yield return WindowRow.Of(
-            WindowCell.Button("Months", () => _scale = 3, _scale != 3, _scale == 3),
-            WindowCell.Button("Years", () => _scale = 2, _scale != 2, _scale == 2),
-            WindowCell.Button("4 years", () => _scale = 1, _scale != 1, _scale == 1),
-            WindowCell.Button("Figures", () => host.Open(new GraphFiguresWindow())));
+            WindowCell.Button("Months", () => _scale = 3, _scale != 3, _scale == 3).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
+            WindowCell.Button("Years", () => _scale = 2, _scale != 2, _scale == 2).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
+            WindowCell.Button("4 years", () => _scale = 1, _scale != 1, _scale == 1).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
+            WindowCell.Button("Figures", () => host.Open(new GraphFiguresWindow())).WithTooltip("Show the figures behind the graphs"));
         if (_values.Count < 2)
         {
             yield return WindowCell.Line("The graphs start after the first month.", dim: true);
@@ -125,8 +125,10 @@ internal sealed class GraphWindow : UiWindow
         }
     }
 
-    private WindowCell Toggle(int line) =>
-        WindowCell.Button(Lines[line].Name, () => _shown[line] = !_shown[line], highlight: _shown[line]);
+    /// <summary>A line's button; its tooltip is <c>tooltip.graphs</c>' (CorsixTH's English corrects the reputation's).</summary>
+    private WindowCell Toggle(IWindowHost host, int line) =>
+        WindowCell.Button(Lines[line].Name, () => _shown[line] = !_shown[line], highlight: _shown[line])
+            .WithTooltip(line == 7 ? "Toggle reputation" : OriginalTooltips.Get(host, 178 + line, "Toggle " + Lines[line].Name.ToLowerInvariant()));
 
     private static void DrawLine(SpriteBatch batch, Texture2D pixel, Vector2 from, Vector2 to, Color colour)
     {

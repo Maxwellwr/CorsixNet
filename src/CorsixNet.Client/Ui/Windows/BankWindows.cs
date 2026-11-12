@@ -28,11 +28,11 @@ internal sealed class BankManagerWindow : UiWindow
         var canBorrow = hospital.Loan < hospital.MaxLoan;
         var canRepay = hospital.Loan > 0 && hospital.Balance >= Math.Min(Hospital.LoanStep, hospital.Loan);
         yield return WindowRow.Of(
-            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Borrow {MoneyText.Format(Hospital.LoanStep)}"), () => Loan(host, new BorrowCommand(false)), canBorrow),
-            WindowCell.Button("Borrow all allowed", () => Loan(host, new BorrowCommand(true)), canBorrow));
+            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Borrow {MoneyText.Format(Hospital.LoanStep)}"), () => Loan(host, new BorrowCommand(false)), canBorrow).WithTooltip(OriginalTooltips.Get(host, 214, "Borrow $5,000 from the bank")),
+            WindowCell.Button("Borrow all allowed", () => Loan(host, new BorrowCommand(true)), canBorrow).WithTooltip(OriginalTooltips.Get(host, 214, "Borrow $5,000 from the bank")));
         yield return WindowRow.Of(
-            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Repay {MoneyText.Format(Hospital.LoanStep)}"), () => Loan(host, new RepayCommand(false)), canRepay),
-            WindowCell.Button("Repay all you can", () => Loan(host, new RepayCommand(true)), canRepay));
+            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Repay {MoneyText.Format(Hospital.LoanStep)}"), () => Loan(host, new RepayCommand(false)), canRepay).WithTooltip(OriginalTooltips.Get(host, 213, "Repay $5,000 of the loan")),
+            WindowCell.Button("Repay all you can", () => Loan(host, new RepayCommand(true)), canRepay).WithTooltip(OriginalTooltips.Get(host, 213, "Repay $5,000 of the loan")));
         yield return WindowRow.Gap;
         yield return WindowCell.Line("Insurance companies owe", highlight: true);
         for (var company = 1; company <= Hospital.InsuranceCompanies; company++)

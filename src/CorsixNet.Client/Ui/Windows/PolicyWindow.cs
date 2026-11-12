@@ -19,31 +19,31 @@ internal sealed class PolicyWindow : UiWindow
     {
         var policies = host.Simulation.Hospitals[host.Player].Policies;
         yield return WindowCell.Line("Diagnosis", highlight: true);
-        yield return Slider(host, "Send home below", PolicyKind.SendHome, policies.SendHome, Percent(policies.SendHome));
-        yield return Slider(host, "Guess cure from", PolicyKind.GuessCure, policies.GuessCure, Percent(policies.GuessCure));
-        yield return Slider(host, "Stop procedure at", PolicyKind.StopProcedure, policies.StopProcedure, Percent(policies.StopProcedure));
+        yield return Slider(host, "Send home below", PolicyKind.SendHome, policies.SendHome, Percent(policies.SendHome), OriginalTooltips.Get(host, 233, "Patients less certainly diagnosed than this are sent home, those more certain than the guess get the cure"));
+        yield return Slider(host, "Guess cure from", PolicyKind.GuessCure, policies.GuessCure, Percent(policies.GuessCure), OriginalTooltips.Get(host, 233, "Patients less certainly diagnosed than this are sent home, those more certain than the guess get the cure"));
+        yield return Slider(host, "Stop procedure at", PolicyKind.StopProcedure, policies.StopProcedure, Percent(policies.StopProcedure), OriginalTooltips.Get(host, 234, "Diagnosis goes on until the doctors are this certain"));
         yield return WindowRow.Gap;
         yield return WindowCell.Line("Staff", highlight: true);
-        yield return Slider(host, "Staff room when tired", PolicyKind.GoToStaffRoom, policies.GoToStaffRoom, Percent(policies.GoToStaffRoom));
+        yield return Slider(host, "Staff room when tired", PolicyKind.GoToStaffRoom, policies.GoToStaffRoom, Percent(policies.GoToStaffRoom), OriginalTooltips.Get(host, 235, "How tired staff are before they rest in the staff room"));
         yield return WindowRow.Of(
             "Staff leave their rooms",
-            Switch(host, "Allowed", PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: true),
-            Switch(host, "Not allowed", PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: false));
+            Switch(host, "Allowed", PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: true).WithTooltip(OriginalTooltips.Get(host, 231, "Staff may leave their rooms to work where they are needed")),
+            Switch(host, "Not allowed", PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: false).WithTooltip(OriginalTooltips.Get(host, 232, "Staff stay in the rooms you put them in")));
         yield return WindowRow.Of(
             "Raises staff ask for",
-            Switch(host, "Grant", PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: true),
-            Switch(host, "Ask me", PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: false));
+            Switch(host, "Grant", PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: true).WithTooltip("Raises staff ask for are given at once (the options menu's wage requests)"),
+            Switch(host, "Ask me", PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: false).WithTooltip("You are asked about each raise staff ask for"));
     }
 
     private static string Percent(int thousandths) => string.Create(CultureInfo.InvariantCulture, $"{thousandths / 10} %");
 
-    private static WindowRow Slider(IWindowHost host, string label, PolicyKind policy, int value, string shown) => WindowRow.Of(
-        label,
+    private static WindowRow Slider(IWindowHost host, string label, PolicyKind policy, int value, string shown, string tooltip) => WindowRow.Of(
+        new WindowCell(label) { Tooltip = tooltip },
         WindowCell.Number(shown),
-        Step(host, "-10", policy, value - 100),
-        Step(host, "-1", policy, value - 10),
-        Step(host, "+1", policy, value + 10),
-        Step(host, "+10", policy, value + 100));
+        Step(host, "-10", policy, value - 100).WithTooltip(tooltip),
+        Step(host, "-1", policy, value - 10).WithTooltip(tooltip),
+        Step(host, "+1", policy, value + 10).WithTooltip(tooltip),
+        Step(host, "+10", policy, value + 100).WithTooltip(tooltip));
 
     private static WindowCell Step(IWindowHost host, string text, PolicyKind policy, int value) =>
         WindowCell.Button(text, () =>
