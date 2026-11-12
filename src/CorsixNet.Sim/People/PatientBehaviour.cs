@@ -633,7 +633,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                 }
                 else if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
                 {
-                    LeaveRoom(simulation, humanoid);
+                    if (_kingChange)
+                    {
+                        Use = null;
+                        KingChangeStep(simulation, humanoid);
+                    }
+                    else
+                    {
+                        LeaveRoom(simulation, humanoid);
+                    }
                 }
 
                 break;
@@ -655,6 +663,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     GeneralDiagnosisStep(simulation, humanoid);
                 }
 
+                break;
+            case PatientPhase.WalkingBackToScreen when _kingChange:
+            case PatientPhase.Dressing when _kingChange:
+                KingChangeStep(simulation, humanoid);
                 break;
             case PatientPhase.Undressing:
             case PatientPhase.WalkingToTrolley:
@@ -1866,6 +1878,69 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// psych.lua at the end of a session: a diagnosed king complex patient gets off the couch to change at the screen.
+    /// False when the patient is not one, or the room has no screen.
+    /// </summary>
+    internal bool StartKingChange(Simulation simulation, Room room)
+    {
+        if (!IsDiagnosed || Disease?.Id != "king_complex" || RoomVisits.FindObject(simulation, room.Id, "screen") is null)
+        {
+            return false;
+        }
+
+        _kingChange = true;
+        Use?.Interrupt();
+        return true;
+    }
+
+    /// <summary>Whether the patient, done with psychiatry, still has to change out of the King's costume at the screen.</summary>
+    private bool _kingChange;
+
+    /// <summary>
+    /// To the screen, where the King becomes a standard man (use_screen.lua); then psych.lua's
+    /// <c>psych_screen_after_use</c> deals with the patient, who leaves.
+    /// </summary>
+    private void KingChangeStep(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.FindEntity(TargetId) is not Room room)
+        {
+            _kingChange = false;
+            LeaveRoom(simulation, humanoid);
+            return;
+        }
+
+        if (RoomVisits.FindObject(simulation, room.Id, "screen") is not { } screen)
+        {
+            _kingChange = false;
+            RoomVisits.DealtWithPatient(simulation, room);
+            LeaveRoom(simulation, humanoid);
+            return;
+        }
+
+        switch (Phase)
+        {
+            case PatientPhase.UsingObject:
+                WalkBackToScreen(simulation, humanoid, screen);
+                return;
+            case PatientPhase.WalkingBackToScreen:
+                Phase = PatientPhase.Dressing;
+                UseScreen(simulation, humanoid, screen);
+                return;
+            default:
+                if (Use is not null && Use.Update(simulation, humanoid) != ObjectUseEvent.Done)
+                {
+                    return;
+                }
+
+                EndScreenUse(humanoid, screen);
+                _kingChange = false;
+                RoomVisits.DealtWithPatient(simulation, room);
+                LeaveRoom(simulation, humanoid);
+                return;
+        }
+    }
+
+    /// <summary>
     /// <c>action_seek_reception_start</c>: picks the best desk; close to it, the patient joins its queue,
     /// otherwise they walk towards it until they are. Without a desk they wait a while, then go home.
     /// </summary>
@@ -2750,6 +2825,16 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     private void UseScreen(Simulation simulation, Humanoid humanoid, RoomObject screen)
     {
         Use = ObjectUse.Start(simulation, humanoid, screen);
+        if (humanoid.Type == HumanoidType.ElvisPatient)
+        {
+            // use_screen.lua: the King comes out a standard man with head 2, a random jacket and trousers 2.
+            humanoid.Type = HumanoidType.StandardMalePatient;
+            humanoid.SetLayer(0, 2);
+            humanoid.SetLayer(1, (byte)(simulation.Random.NextInclusive(0, 3) * 2));
+            humanoid.SetLayer(2, 2);
+            return;
+        }
+
         humanoid.Type = humanoid.Type switch
         {
             // The surgeon screen: into a surgical gown.
@@ -3070,7 +3155,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     private static bool IsMalePatient(HumanoidType type) => type is HumanoidType.StandardMalePatient or HumanoidType.AlternateMalePatient
         or HumanoidType.SlackMalePatient or HumanoidType.ChewbaccaPatient or HumanoidType.AlienMalePatient or HumanoidType.StrippedMalePatient
         or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 or HumanoidType.GownedMalePatient
-        or HumanoidType.TransparentMalePatient or HumanoidType.InvisiblePatient;
+        or HumanoidType.TransparentMalePatient or HumanoidType.InvisiblePatient or HumanoidType.ElvisPatient;
 
     /// <summary>The grim reaper is in his place: after a pause the patient gets up (die.lua's phase 4).</summary>
     internal void ReaperReady(Humanoid humanoid)
@@ -3293,6 +3378,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteBool(_leaveBench);
         writer.WriteInt32(_nextBench);
         writer.WriteInt32(_benchDrink);
+        writer.WriteBool(_kingChange);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -3425,6 +3511,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (reader.Version is 0 or >= 84)
         {
             patient._benchDrink = reader.ReadInt32();
+        }
+
+        if (reader.Version is 0 or >= 87)
+        {
+            patient._kingChange = reader.ReadBool();
         }
 
         return patient;

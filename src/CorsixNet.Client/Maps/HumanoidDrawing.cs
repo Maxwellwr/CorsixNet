@@ -41,6 +41,7 @@ internal sealed class HumanoidDrawing
         [HumanoidType.TransparentMalePatient] = (1064, 1066, 1072, 1074),
         [HumanoidType.TransparentFemalePatient] = (3012, 3014, 3020, 3022),
         [HumanoidType.InvisiblePatient] = (1642, 1644, 1840, 1842),
+        [HumanoidType.ElvisPatient] = (978, 980, 986, 988),
         [HumanoidType.AlternateMalePatient] = (2704, 2706, 2712, 2714),
         [HumanoidType.AlienMalePatient] = (3598, 3600, 3606, 3608),
         [HumanoidType.AlienFemalePatient] = (3598, 3600, 3606, 3608),
