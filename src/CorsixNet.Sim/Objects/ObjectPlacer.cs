@@ -358,6 +358,12 @@ public static class ObjectPlacer
         }
 
         ReceptionDesks.OnPlaced(simulation, placed);
+        if (definition.Id == "bench" && roomId == 0)
+        {
+            // Patient:notifyNewObject("bench"): patients standing in queues look again for a seat.
+            People.RoomVisits.ArrangeAllQueues(simulation);
+        }
+
         return placed;
     }
 

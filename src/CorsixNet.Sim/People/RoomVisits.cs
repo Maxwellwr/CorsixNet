@@ -139,6 +139,29 @@ public static class RoomVisits
         simulation.Entities.Any(e => e is Humanoid { ActionAnimation: not null } other && other.Id != except.Id && other.HiddenObjectId == placed.Id);
 
     /// <summary>The surgeons of the operating theatre already in scrubs (the screen's white outfits).</summary>
+    /// <summary>Every reception desk's and room door's queue sends its people to their places again, benches included.</summary>
+    internal static void ArrangeAllQueues(Simulation simulation)
+    {
+        var queues = new List<HumanoidQueue>();
+        foreach (var entity in simulation.Entities)
+        {
+            switch (entity)
+            {
+                case RoomObject { Desk: { } desk }:
+                    queues.Add(desk.Queue);
+                    break;
+                case Room { DoorQueue: { } doorQueue }:
+                    queues.Add(doorQueue);
+                    break;
+            }
+        }
+
+        foreach (var queue in queues)
+        {
+            queue.Arrange(simulation);
+        }
+    }
+
     internal static int SurgeonsInScrubs(Simulation simulation, Room room) =>
         simulation.Entities.Count(e => e is Humanoid { Type: HumanoidType.Surgeon, Behaviour: DoctorBehaviour doctor } && doctor.RoomId == room.Id);
 

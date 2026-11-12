@@ -147,8 +147,8 @@ internal static class Feelings
                 ChangeHappiness(simulation, humanoid, 0.0002m);
             }
 
-            // Sitting makes happy, standing and walking do not; there are no benches yet.
-            ChangeHappiness(simulation, humanoid, -0.00002m);
+            // Sitting makes happy, standing and walking do not (goingToUseObject("bench")).
+            ChangeHappiness(simulation, humanoid, patient.BenchId != 0 ? 0.00002m : -0.00002m);
 
             // Seeing litter makes unhappy, pee and puke more so, and they may make you sick.
             var vomitInducing = SeeLitter(simulation, humanoid);

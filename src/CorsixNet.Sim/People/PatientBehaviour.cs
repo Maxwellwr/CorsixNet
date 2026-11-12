@@ -392,7 +392,24 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// Whether the patient is away from what they were doing: getting a drink or doing something on the spot. Their
     /// <see cref="Phase"/> keeps what they go back to.
     /// </summary>
-    public bool IsSidetracked => DrinksMachineId != 0 || SpotAction != PatientSpotAction.None;
+    public bool IsSidetracked => DrinksMachineId != 0 || SpotAction != PatientSpotAction.None || BenchId != 0;
+
+    /// <summary>The bench the patient queueing sits on or goes to (<c>bench.reserved_for</c>, <c>user_of</c>), or 0.</summary>
+    public int BenchId { get; private set; }
+
+    /// <summary>The patient's use of their bench, once there.</summary>
+    private ObjectUse? _benchUse;
+
+    /// <summary>
+    /// The bench's path distance from the queue's goal (<c>action.current_bench_distance</c>), or −1 while standing.
+    /// </summary>
+    internal int BenchDistance { get; private set; } = -1;
+
+    /// <summary>Whether the patient gets up from the bench as soon as they are sitting.</summary>
+    private bool _leaveBench;
+
+    /// <summary>A bench nearer the goal to move to once up, or 0.</summary>
+    private int _nextBench;
 
     /// <summary>Whether the patient shows the thirsty mood (CorsixTH's <c>setMood("thirsty", "activate")</c>).</summary>
     public bool IsThirsty { get; internal set; }
@@ -472,6 +489,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (DrinksMachineId != 0)
         {
             GetDrink(simulation, humanoid);
+            return;
+        }
+
+        if (BenchId != 0)
+        {
+            SitOnBench(simulation, humanoid);
             return;
         }
 
@@ -978,6 +1001,135 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
     }
 
+    /// <summary>
+    /// <c>action_queue_on_change_position</c>'s bench: the patient walks to <paramref name="bench"/>'s use position and sits
+    /// down there; sitting on another bench, they get up first.
+    /// </summary>
+    internal void GoToBench(Simulation simulation, Humanoid humanoid, RoomObject bench, int distance)
+    {
+        BenchDistance = distance;
+        if (BenchId != 0)
+        {
+            if (_benchUse is null)
+            {
+                BenchId = bench.Id;
+                humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, bench));
+            }
+            else
+            {
+                _nextBench = bench.Id;
+                _leaveBench = true;
+            }
+
+            return;
+        }
+
+        if (DrinksMachineId != 0 || SpotAction != PatientSpotAction.None)
+        {
+            return;
+        }
+
+        BenchId = bench.Id;
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, bench));
+    }
+
+    /// <summary>
+    /// The patient must stand (at the front of a toilets queue, called in, sent home, the bench taken away): they get up
+    /// from their bench, or stop going to it.
+    /// </summary>
+    internal void LeaveBench(Simulation simulation, Humanoid humanoid)
+    {
+        BenchDistance = -1;
+        _nextBench = 0;
+        if (BenchId == 0)
+        {
+            return;
+        }
+
+        if (_benchUse is null)
+        {
+            BenchId = 0;
+            ResumeAfterBench(simulation, humanoid);
+            return;
+        }
+
+        _leaveBench = true;
+    }
+
+    /// <summary>On the way to the bench, sitting down, sitting (the in-use frame repeats) or getting up.</summary>
+    private void SitOnBench(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.FindEntity(BenchId) is not RoomObject bench)
+        {
+            if (_benchUse is { Phase: not ObjectUsePhase.Done } use)
+            {
+                humanoid.ClearActionAnimation();
+                humanoid.PlaceAt(use.OldTile);
+            }
+
+            EndBench(simulation, humanoid);
+            return;
+        }
+
+        if (_benchUse is null)
+        {
+            if (_leaveBench || humanoid.Tile != RoomVisits.UseTile(simulation, bench))
+            {
+                EndBench(simulation, humanoid);
+                return;
+            }
+
+            _benchUse = ObjectUse.Start(simulation, humanoid, bench, alwaysProlonged: true);
+            return;
+        }
+
+        if (_leaveBench && _benchUse.Phase == ObjectUsePhase.InUse && !_benchUse.StopRequested)
+        {
+            _benchUse.Interrupt();
+        }
+
+        if (_benchUse.Update(simulation, humanoid) == ObjectUseEvent.Done)
+        {
+            EndBench(simulation, humanoid);
+        }
+    }
+
+    private void EndBench(Simulation simulation, Humanoid humanoid)
+    {
+        BenchId = 0;
+        _benchUse = null;
+        _leaveBench = false;
+        if (_nextBench != 0 && simulation.FindEntity(_nextBench) is RoomObject next && Phase is PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue)
+        {
+            BenchId = next.Id;
+            _nextBench = 0;
+            humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, next));
+            return;
+        }
+
+        _nextBench = 0;
+        BenchDistance = -1;
+        ResumeAfterBench(simulation, humanoid);
+    }
+
+    /// <summary>Up from the bench: to their place in the queue, into the room that called them, or home.</summary>
+    private void ResumeAfterBench(Simulation simulation, Humanoid humanoid)
+    {
+        switch (Phase)
+        {
+            case PatientPhase.GoingHome:
+                if (!humanoid.WalkTo(simulation, HomeTile))
+                {
+                    HomeTile = humanoid.Tile;
+                }
+
+                break;
+            default:
+                CarryOn(simulation, humanoid);
+                break;
+        }
+    }
+
     /// <summary>The room lets the patient in from its queue.</summary>
     internal void LetIn(Simulation simulation, Humanoid humanoid, Room room, RoomDoor door)
     {
@@ -986,6 +1138,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Next = AfterRoom.GoHome;
         Phase = PatientPhase.EnteringRoom;
         TargetId = room.Id;
+
+        // Called in from a bench, they get up first (action_queue_leave_bench).
+        if (BenchId != 0)
+        {
+            LeaveBench(simulation, humanoid);
+            return;
+        }
 
         // A patient called in while getting a drink comes in with the can, as CorsixTH's queued actions run in turn.
         if (!IsSidetracked)
@@ -2570,6 +2729,16 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             humanoid.ClearActionAnimation();
         }
 
+        if (BenchId != 0)
+        {
+            BenchId = 0;
+            _benchUse = null;
+            _leaveBench = false;
+            _nextBench = 0;
+            BenchDistance = -1;
+            humanoid.ClearActionAnimation();
+        }
+
         var hospital = simulation.Hospitals[humanoid.HospitalPlayer];
         PatientCare.RecordDeath(simulation, hospital, Disease is { } disease ? hospital.CaseOf(disease, simulation.Rules.Diseases) : null);
         if (EmergencyIndex > 0)
@@ -2616,6 +2785,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         // use is must_happen), and the walk home starts after. So does a patient being sick or doing it on the floor.
         if ((DrinksMachineId != 0 && _drinkUse is not null) || SpotAction != PatientSpotAction.None)
         {
+            return;
+        }
+
+        if (BenchId != 0)
+        {
+            // Up from the bench first, then home.
+            LeaveBench(simulation, humanoid);
             return;
         }
 
@@ -2699,6 +2875,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             writer.WriteByte((byte)entry.Kind);
             writer.WriteString(entry.Id);
         }
+
+        writer.WriteInt32(BenchId);
+        ObjectUse.WriteOptional(writer, _benchUse);
+        writer.WriteInt32(BenchDistance);
+        writer.WriteBool(_leaveBench);
+        writer.WriteInt32(_nextBench);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -2798,6 +2980,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             patient._treatmentHistory.Add(new TreatmentHistoryEntry(
                 kind <= (byte)TreatmentHistoryKind.Cured ? (TreatmentHistoryKind)kind : throw new InvalidDataException($"Unknown treatment history line {kind}."),
                 reader.ReadString()));
+        }
+
+        if (reader.Version is 0 or >= 83)
+        {
+            patient.BenchId = reader.ReadInt32();
+            patient._benchUse = ObjectUse.ReadOptional(reader);
+            patient.BenchDistance = reader.ReadInt32();
+            patient._leaveBench = reader.ReadBool();
+            patient._nextBench = reader.ReadInt32();
         }
 
         return patient;

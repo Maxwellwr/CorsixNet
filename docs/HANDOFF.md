@@ -212,6 +212,15 @@ Done and committed:
   with required staff, doors that do not swing, nobody queueing or inside; knock_east animations are one frame in the
   original. The crash trolley is drawn split over two tiles (ObjectDrawing.Split, AnimationRenderer.SetColumnClip,
   thdf_crop), its examination too. The waiting patients' watch/yawn/foot animations were checked against the game data.
+  Benches (2026-11-12, MSI, seen live; save format 83): HumanoidQueue.Arrange sits patients on free corridor benches as
+  action_queue_on_change_position (keep a bench within 4 tiles of the goal, look within 10 standing, 2/3 of the distance
+  sitting; reception desks and toilets keep 3 standing, aliens stand), PatientBehaviour.BenchId/GoToBench/LeaveBench
+  (bench.lua's use animations, prolonged; called in, sent home or the bench gone, they get up first), a new bench makes
+  queues look again, sitting cheers, the VIP and the adviser count sitters (_adviseBenches on day 12 from the sitting
+  ratio every second day). The bench facing north is drawn split over three tiles. Not yet: getting a drink or being
+  sick while seated (a seated patient is sidetracked), vaccinating patients on benches.
+  Surgeons change back into doctors at the screen when they leave (PR #264, format 82); the death animations, grim reaper
+  and earthquake falls had been merged only into stacked branches and came to main with PR #262 (format 81).
   Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/
   Machines More buttons (IncreaseHandymanPriorityCommand), per-handyman thousandths in HandymanBehaviour; the first
   change makes the adviser say handyman_adjust (Hospital.HandymanPrioritiesChanged).
