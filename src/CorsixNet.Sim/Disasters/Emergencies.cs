@@ -201,6 +201,15 @@ public sealed class HospitalEmergencies
     /// <summary>The emergency's disease, for the helicopter's patients.</summary>
     public string HelicopterDisease { get; internal set; } = string.Empty;
 
+    /// <summary>
+    /// The last emergency's result (<c>PlayerHospital:makeEmergencyEndFax</c>), kept for the fax until it expires 25
+    /// days after the emergency ended, or null.
+    /// </summary>
+    public EmergencyReport? Report { get; internal set; }
+
+    /// <summary>Days the result's fax stays (<c>queueMessage</c>'s timeout).</summary>
+    public const int ReportDays = 25;
+
     internal void Write(SimWriter writer)
     {
         writer.WriteInt32(NextNumber);
@@ -214,6 +223,15 @@ public sealed class HospitalEmergencies
         writer.WriteInt32(HelicopterSpawned);
         writer.WriteInt32(HelicopterVictims);
         writer.WriteString(HelicopterDisease);
+        writer.WriteBool(Report is not null);
+        if (Report is { } report)
+        {
+            writer.WriteInt32(report.Rescued);
+            writer.WriteInt32(report.Total);
+            writer.WriteInt32(report.MaxBonus);
+            writer.WriteInt32(report.Earned);
+            writer.WriteInt64(report.Expires);
+        }
     }
 
     internal static HospitalEmergencies Read(SimReader reader)
@@ -232,6 +250,11 @@ public sealed class HospitalEmergencies
         emergencies.HelicopterSpawned = reader.ReadInt32();
         emergencies.HelicopterVictims = reader.ReadInt32();
         emergencies.HelicopterDisease = reader.ReadString();
+        if ((reader.Version is 0 or >= 80) && reader.ReadBool())
+        {
+            emergencies.Report = new EmergencyReport(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt64());
+        }
+
         return emergencies;
     }
 }
@@ -447,6 +470,11 @@ public static class Emergencies
     internal static void Tick(Simulation simulation, Hospital hospital)
     {
         var state = hospital.Emergencies;
+        if (state.Report is { } report && simulation.Tick >= report.Expires)
+        {
+            state.Report = null;
+        }
+
         TickHelicopter(simulation, hospital, state);
         if (state.Current is not { } emergency)
         {
@@ -527,10 +555,11 @@ public static class Emergencies
 
         var success = emergency.Cured * 100 >= emergency.Percentage * emergency.Victims;
         var entry = hospital.CaseOf(DiseaseCatalog.Find(emergency.DiseaseId)!, simulation.Rules.Diseases);
+        var earned = success ? emergency.Bonus * emergency.Cured : 0;
+        state.Report = new EmergencyReport(emergency.Cured, emergency.Victims, emergency.Bonus * emergency.Victims, earned, simulation.Tick + (HospitalEmergencies.ReportDays * GameDate.HoursPerDay));
         if (success)
         {
             hospital.ChangeReputation(simulation.Random, SuccessReputation, entry);
-            var earned = emergency.Bonus * emergency.Cured;
             if (earned != 0)
             {
                 hospital.Receive(simulation.Hours, earned, TransactionKind.EmergencyBonus, string.Empty);
@@ -652,3 +681,7 @@ public static class Emergencies
         return null;
     }
 }
+
+/// <summary>An emergency's result: patients saved of how many, the bonus there was to earn, what was earned, and when the fax expires.</summary>
+public readonly record struct EmergencyReport(int Rescued, int Total, int MaxBonus, int Earned, long Expires);
+

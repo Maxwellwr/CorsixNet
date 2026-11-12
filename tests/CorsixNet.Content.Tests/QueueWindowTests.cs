@@ -89,7 +89,9 @@ public class QueueWindowTests
         var simulation = NewStaffedHospital();
         var first = simulation.Entities.OfType<Room>().Single();
         var queue = first.DoorQueue!;
-        for (var hour = 0; hour < 300 * GameDate.HoursPerDay && queue.Count < 3; hour++)
+        // Nobody may stand where the second office goes (the pharmacy's area and its walls), or it cannot be built.
+        bool InTheWay() => simulation.Entities.OfType<Humanoid>().Any(h => h.Tile.X is >= 11 and <= 16 && h.Tile.Y is >= 4 and <= 9);
+        for (var hour = 0; hour < 300 * GameDate.HoursPerDay && (queue.Count < 3 || InTheWay()); hour++)
         {
             simulation.Step();
         }

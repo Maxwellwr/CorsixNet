@@ -111,6 +111,9 @@ public enum PatientSpotAction : byte
 
     /// <summary>Looking at the watch while waiting (<c>CheckWatchAction</c>).</summary>
     CheckWatch,
+
+    /// <summary>Knocking on the door of a room with staff before going in or queueing (<c>KnockDoorAction</c>).</summary>
+    Knock,
 }
 
 /// <summary>Where a patient stands with the toilet (CorsixTH's <c>going_to_toilet</c>).</summary>
@@ -1379,6 +1382,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     private void DoSpotAction(Simulation simulation, Humanoid humanoid)
     {
+        if (SpotAction == PatientSpotAction.Knock)
+        {
+            Knock(simulation, humanoid);
+            return;
+        }
+
         var animations = simulation.Content.FindPatientAnimations(humanoid.Type);
         var animation = SpotAction switch
         {
@@ -1419,6 +1428,49 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
         SpotAction = PatientSpotAction.None;
         CarryOn(simulation, humanoid);
+    }
+
+    /// <summary>
+    /// <c>KnockDoorAction</c>: facing the door from outside, <c>knock_north</c> for a door to the north or (mirrored) west,
+    /// <c>knock_east</c> for one to the east or (mirrored) south, played once with the door still drawn; nobody else goes
+    /// through the door meanwhile (<c>door:setUser</c>). Then the patient joins the queue, or goes in if the room is ready.
+    /// </summary>
+    private void Knock(Simulation simulation, Humanoid humanoid)
+    {
+        if (_spotTimer < 0)
+        {
+            var animations = simulation.Content.FindDoorAnimations(humanoid.Type);
+            if (simulation.FindEntity(TargetId) is not Room room || simulation.FindEntity(room.DoorId) is not RoomDoor door
+                || Humanoid.DirectionTo(humanoid.Tile, door.InsideTile(room.Area)) is not { } direction
+                || (direction is Direction.North or Direction.West ? animations?.KnockNorth : animations?.KnockEast) is not { } knock)
+            {
+                SpotAction = PatientSpotAction.None;
+                CarryOn(simulation, humanoid);
+                return;
+            }
+
+            humanoid.Face(direction);
+            humanoid.SetActionAnimation(simulation, knock, direction is Direction.West or Direction.South, humanoid.Tile, humanoid.Tile, 0);
+            _spotTimer = knock.Length;
+            return;
+        }
+
+        _spotTimer--;
+        if (_spotTimer > 0)
+        {
+            return;
+        }
+
+        humanoid.ClearActionAnimation();
+        SpotAction = PatientSpotAction.None;
+        if (Phase == PatientPhase.WalkingToRoom)
+        {
+            ArriveAtRoom(simulation, humanoid, knocked: true);
+        }
+        else
+        {
+            CarryOn(simulation, humanoid);
+        }
     }
 
     /// <summary>
@@ -1675,7 +1727,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
     }
 
-    private void ArriveAtRoom(Simulation simulation, Humanoid humanoid)
+    private void ArriveAtRoom(Simulation simulation, Humanoid humanoid, bool knocked = false)
     {
         if (simulation.FindEntity(TargetId) is not Room { IsActive: true, DoorQueue: { } queue } room
             || simulation.FindEntity(room.DoorId) is not RoomDoor door)
@@ -1691,9 +1743,34 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             return;
         }
 
+        if (!knocked && ShouldKnock(simulation, humanoid, room, door, queue))
+        {
+            StartSpotAction(humanoid, PatientSpotAction.Knock);
+            return;
+        }
+
         Phase = PatientPhase.InDoorQueue;
         queue.Push(simulation, humanoid);
     }
+
+    /// <summary>
+    /// <c>action_walk_tick_door</c>: a patient (<c>should_knock_on_doors</c>) knocks before going into a room with
+    /// <c>required_staff</c> (not the toilets) through a door that does not swing, when nobody queues, no patient is inside
+    /// and nobody is going through the door. Here every patient joins the door queue, which lets them straight in when the
+    /// room is ready, so the knock comes before joining it: CorsixTH's knock before queueing and its knock before going
+    /// straight in both happen in that state.
+    /// </summary>
+    private static bool ShouldKnock(Simulation simulation, Humanoid humanoid, Room room, RoomDoor door, HumanoidQueue queue) =>
+        queue.Count == 0
+        && room.PatientId == 0
+        && !door.IsSwing
+        && !string.Equals(room.RoomType, RoomVisits.ToiletsRoom, StringComparison.Ordinal)
+        && simulation.Content.FindDoorAnimations(humanoid.Type) is { KnockNorth: not null, KnockEast: not null }
+        && !Humanoid.IsDoorBusy(simulation, door, humanoid.Id);
+
+    /// <summary>The room door the patient is knocking on, or 0.</summary>
+    internal int KnockingOn(Simulation simulation) =>
+        SpotAction == PatientSpotAction.Knock && simulation.FindEntity(TargetId) is Room room ? room.DoorId : 0;
 
     /// <summary>
     /// Through the door: walk to the room's object, the GP's chair (<c>GPRoom:commandEnteringPatient</c>) or the
@@ -2683,7 +2760,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.DrinksMachineId = reader.ReadInt32();
         patient._drinkUse = ObjectUse.ReadOptional(reader);
         var spot = reader.ReadByte();
-        patient.SpotAction = spot <= (byte)PatientSpotAction.CheckWatch ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
+        patient.SpotAction = spot <= (byte)PatientSpotAction.Knock ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
         patient._spotTimer = reader.ReadInt32();
         patient._spotSouth = reader.ReadBool();
         patient.HasVomited = reader.ReadBool();

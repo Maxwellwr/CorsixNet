@@ -2,6 +2,7 @@ using System.Globalization;
 using CorsixNet.Client.Maps;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
@@ -35,6 +36,16 @@ internal sealed class FaxWindow : UiWindow
             yield return $"vip:{hospital.Vips.InvitationExpires}";
         }
 
+        if (hospital.Vips.Report is { } report)
+        {
+            yield return $"vipreport:{report.Expires}";
+        }
+
+        if (hospital.Emergencies.Report is { } result)
+        {
+            yield return $"emergencyreport:{result.Expires}";
+        }
+
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
         {
             yield return $"emergency:{offer.OfferExpires}";
@@ -64,6 +75,24 @@ internal sealed class FaxWindow : UiWindow
                 $"{name} would like to visit your hospital.",
                 WindowCell.Button("Invite", () => host.Submit(new AnswerVipCommand(true))).WithTooltip("Invite the VIP to visit your hospital"),
                 WindowCell.Button("Refuse", () => host.Submit(new AnswerVipCommand(false))).WithTooltip("Turn the VIP down"));
+        }
+
+        if (hospital.Vips.Report is { } report)
+        {
+            any = true;
+            foreach (var line in VipReportLines(host, report))
+            {
+                yield return WindowCell.Line(line);
+            }
+        }
+
+        if (hospital.Emergencies.Report is { } result)
+        {
+            any = true;
+            foreach (var line in EmergencyReportLines(host, result))
+            {
+                yield return WindowCell.Line(line);
+            }
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
@@ -126,6 +155,65 @@ internal sealed class FaxWindow : UiWindow
             WindowCell.Button("Correct", () => _code = _code[..^1], _code.Length > 0).WithTooltip("Delete the last digit"),
             WindowCell.Button("Validate", () => Validate(host), _code.Length > 0).WithTooltip("Send the code"));
     }
+
+    /// <summary>
+    /// <c>PlayerHospital:makeVipEndFax</c>: who remarked, their remark for the rating, and for a pleased VIP the
+    /// reputation boost and the grant, for a displeased one the loss; in free build mode one of three remarks of its
+    /// own. The original's strings (section 44) are used when loaded; the English stand-ins are ours, except free build's.
+    /// </summary>
+    internal static IEnumerable<string> VipReportLines(IWindowHost host, VipReport report)
+    {
+        var name = host.Texts?.VipName(report.Name) ?? string.Create(CultureInfo.InvariantCulture, $"VIP {report.Name}");
+        yield return new Advice(44, 192, "%s has made a report on your hospital:").Text(host.Texts, name);
+        if (host.Simulation.Rules.FreeBuild)
+        {
+            // CorsixTH picks one at random; this one stays the same for the visit.
+            yield return FreeBuildRemarks[(int)(report.Expires % FreeBuildRemarks.Length)];
+            yield break;
+        }
+
+        yield return new Advice(44, 195 + report.Rating, Remark(report.Rating)).Text(host.Texts);
+        if (report.Rating <= VipBehaviour.PleasedRating)
+        {
+            yield return new Advice(44, 194, "Your reputation has gone up.").Text(host.Texts);
+            yield return new Advice(44, 193, "You have been given a grant of %d.").Text(host.Texts, report.CashReward);
+        }
+        else if (report.Rating >= 11)
+        {
+            yield return new Advice(44, 195, "Your reputation has gone down.").Text(host.Texts);
+        }
+    }
+
+    /// <summary>
+    /// <c>PlayerHospital:makeEmergencyEndFax</c>: how many of the emergency's patients were saved, and, outside free
+    /// build mode, the bonus there was and what was earned. The original's strings (section 44) are used when loaded;
+    /// the English stand-ins are ours.
+    /// </summary>
+    internal static IEnumerable<string> EmergencyReportLines(IWindowHost host, EmergencyReport report)
+    {
+        yield return new Advice(44, 41, "You saved %d of the %d people in the emergency.").Text(host.Texts, report.Rescued, report.Total);
+        if (!host.Simulation.Rules.FreeBuild)
+        {
+            yield return new Advice(44, 40, "The most you could have earned was %d. You earned %d.").Text(host.Texts, report.MaxBonus, report.Earned);
+        }
+    }
+
+    /// <summary><c>fax.vip_visit_result.remarks.free_build</c> (english.lua).</summary>
+    private static readonly string[] FreeBuildRemarks =
+    [
+        "It is a very nice hospital you have there! Not very hard to get it working without money limitations though, eh?",
+        "I'm no economist, but I think I could run this hospital too if you know what I mean...",
+        "A very well run hospital. Watch out for the recession though! Right... you don't have to worry about that.",
+    ];
+
+    /// <summary>Our stand-ins for the original's fifteen remarks, best to worst.</summary>
+    private static string Remark(int rating) => rating switch
+    {
+        <= 3 => "A superb hospital. I was most impressed.",
+        <= 7 => "A good hospital, well run.",
+        <= 10 => "An average hospital. It could do better.",
+        _ => "A poor hospital. Things must improve.",
+    };
 
     private WindowCell Key(string digit) => WindowCell.Button(digit, () => _code += digit, _code.Length < 10).WithTooltip($"Type {digit}");
 

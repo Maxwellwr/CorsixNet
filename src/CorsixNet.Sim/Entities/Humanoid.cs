@@ -689,7 +689,13 @@ public sealed class Humanoid : Entity
     }
 
     /// <summary>Whether another humanoid is going through <paramref name="door"/>.</summary>
-    private bool IsDoorInUse(Simulation simulation, RoomDoor door)
+    private bool IsDoorInUse(Simulation simulation, RoomDoor door) => IsDoorBusy(simulation, door, Id);
+
+    /// <summary>
+    /// Whether anyone but <paramref name="exceptId"/> uses <paramref name="door"/> (CorsixTH's <c>door.user</c>): going
+    /// through it, swinging it, or knocking on it.
+    /// </summary>
+    internal static bool IsDoorBusy(Simulation simulation, RoomDoor door, int exceptId)
     {
         if (door.IsSwingBusy(simulation.Tick, simulation.Content.SwingDoor))
         {
@@ -698,7 +704,13 @@ public sealed class Humanoid : Entity
 
         foreach (var entity in simulation.Entities)
         {
-            if (entity is Humanoid { IsCrossingDoor: true } other && other.Id != Id && other.HiddenObjectId == door.Id)
+            if (entity is not Humanoid other || other.Id == exceptId)
+            {
+                continue;
+            }
+
+            if ((other.IsCrossingDoor && other.HiddenObjectId == door.Id)
+                || (other.Behaviour is PatientBehaviour patient && patient.KnockingOn(simulation) == door.Id))
             {
                 return true;
             }
@@ -1004,7 +1016,7 @@ public sealed class Humanoid : Entity
         };
     }
 
-    private static Direction? DirectionTo(TilePosition from, TilePosition to)
+    internal static Direction? DirectionTo(TilePosition from, TilePosition to)
     {
         return (to.X - from.X, to.Y - from.Y) switch
         {

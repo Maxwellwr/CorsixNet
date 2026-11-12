@@ -109,18 +109,21 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
   (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers
   (`PatientBehaviour.Question`, `AnswerPatientCommand`; K, Shift+K and Ctrl+K in the client) are done.
-- Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting (`world.lua`,
-  `objects/helicopter.lua`). The planned and random emergencies, the fax offer, helicopter, watch, bonus and
-  reputation are done (`Emergencies`).
+- Emergencies: the end-of-emergency announcements, the helicopter's sound and depth sorting (`world.lua`,
+  `objects/helicopter.lua`). The planned and random emergencies, the fax offer, helicopter, watch, bonus,
+  reputation and the result on the fax window (`HospitalEmergencies.Report`, `makeEmergencyEndFax`) are done
+  (`Emergencies`).
 - Epidemics: clicking patients to vaccinate them (J picks every infected patient for now) and the vaccination
   cursor, vaccinating patients on benches, the infected mood icons, the result fax, the adviser's warnings, the
   announcements and the inspector's, and showing the infected by cheat (`epidemic.lua`,
   `entities/humanoids/inspector.lua`). Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
   the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
   evacuation are done (`Epidemics`, `InspectorBehaviour`).
-- VIP visits: the faxes asking and reporting, the arrival announcement and judging machines
-  (`entities/humanoids/vip.lua`). The visit, the rating (with the litter seen), its grant and reputation and
-  the year's trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
+- VIP visits: the arrival announcement and judging machines (`entities/humanoids/vip.lua`); the original's look of
+  the asking and reporting faxes. The visit, the rating (with the litter seen), its grant and reputation, the year's
+  trophy, the invitation and the report on the fax window (`VipVisits.Report`, `FaxWindow.VipReportLines`,
+  `makeVipEndFax`; our English stand-ins for the fifteen remarks without the game's strings) are done (`VipVisits`,
+  `VipBehaviour`; V and Shift+V answer the invitation).
 - Earthquakes knocking patients over (`earthquake.lua`, the falling animation); planning, the warning and main
   quakes, the screen shake and the rounds of damage wearing machines are done (`Earthquakes`, `Machines.EarthquakeImpact`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
