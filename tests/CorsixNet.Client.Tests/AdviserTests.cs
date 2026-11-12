@@ -4,6 +4,7 @@ using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 
@@ -108,6 +109,40 @@ public class AdviserTests
         machine.Machine!.TimesUsed = 5;
         checks.Observe(host.Simulation, 0, null, 0);
         Assert.Equal(AdviserChecks.MachineryDamaged2.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void TheFirstPuddleTheHelicopterAndTheInspectorAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var hospital = host.Simulation.Hospitals[0];
+        hospital.Emergencies.HelicopterPhase = 59;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        hospital.DidItOnFloor = true;
+        hospital.Emergencies.HelicopterPhase = 60;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.PeopleDidItOnTheFloor.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.EmergencyArrived.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void ADeskBoughtWithoutAReceptionistAsksForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.AddEntity(id => new RoomObject(id, ReceptionDesks.ObjectId, new TilePosition(5, 5), Direction.North, 0));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.ReceptionNeedReceptionist.Fallback, host.Adviser.Current);
     }
 
     [Fact]

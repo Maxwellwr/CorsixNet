@@ -1304,7 +1304,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Feelings.ChangeHappiness(simulation, humanoid, -0.02m);
     }
 
-    /// <summary><c>Patient:pee</c>: at a fully empty tile the patient does it on the floor, and is sad about it.</summary>
+    /// <summary>
+    /// <c>Patient:pee</c>: at a fully empty tile the patient does it on the floor, and is sad about it; the hospital
+    /// remembers the first time, for the adviser (<c>did_it_on_floor</c>).
+    /// </summary>
     internal void Pee(Simulation simulation, Humanoid humanoid)
     {
         if (!IsAtFullyEmptyTile(simulation, humanoid))
@@ -1315,6 +1318,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         StartSpotAction(humanoid, PatientSpotAction.Pee);
         IsNeedingToilet = false;
         Feelings.ChangeHappiness(simulation, humanoid, -0.02m);
+        if (humanoid.HospitalPlayer >= 0 && humanoid.HospitalPlayer < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[humanoid.HospitalPlayer].DidItOnFloor = true;
+        }
     }
 
     /// <summary>

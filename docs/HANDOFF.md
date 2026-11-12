@@ -203,6 +203,12 @@ Done and committed:
   change makes the adviser say handyman_adjust (Hospital.HandymanPrioritiesChanged).
   Tooltips (#74): OriginalTooltips.Get(host, index, fallback) reads section 32 (original_strings.lua's tooltip.*);
   most text windows' buttons have them now (TooltipTests lists the windows checked).
+  More advice (#72; save format 79): long queues on day 10 (getRandomBusyRoom: queues_too_long, or for a doctor's room
+  queue_too_long_send_doctor/need_doctors), plants_thirsty once a plant, people_did_it_on_the_floor
+  (Hospital.DidItOnFloor), fax_received (first fax in a campaign level; client-side flag, not saved),
+  information.emergency at helicopter phase 60, epidemic_health_inspector, reception_need_receptionist / no_desk_5 on
+  buying a desk. Not yet: benches (sitting ratios need seated patients), doctor_crazy_overwork (no crazy doctors yet),
+  msgMultiReceptionDesks, the tutorial.
   Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
   format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
   machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).
