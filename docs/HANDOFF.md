@@ -330,7 +330,7 @@ Next, in this order (2026-11-10):
    `HumanoidMoods` picks the highest-priority active mood of humanoid.lua's table and `HumanoidDrawing` draws it 96 px
    up (setMoodInfo): dead, cured, exit, sad_money (`PatientBehaviour.HomeMood`, save format 88), emergency, the
    cover-up's epidemic statuses, dying1-5 by health, sad2, patient_wait (no room), poo, thirsty; staff exit, pay_rise,
-   tired. Not yet: staff_wait (the moment a patient walks from the queue to the door), the GP's idea3/reflexion, the
+   tired; the icon follows the frame markers CorsixTH sets on animations (`MoodMarkers`, generated from the Lua's set{Patient,Staff}Marker calls). Not yet: staff_wait (the moment a patient walks from the queue to the door), the GP's idea3/reflexion, the
    queue mood while dragging in the queue window, cold/hot on hover. Left out:
    meander.lua's idle staff going back to any `last_room` that needs staff (rooms here call staff themselves).
 2. Looks of visual diseases: Slack Male/Female done (PR #212: slack tongues and bald heads, with the GP chair, drinks
