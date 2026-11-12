@@ -67,13 +67,13 @@ internal sealed class PatientWindow(int patientId) : UiWindow
         var canGuess = !patient.IsDiagnosed && patient.Disease is { } known && hospital.PeekCase(known, simulation.Rules.Diseases).Discovered;
         var coverUp = hospital.Epidemics.Current is { IsCoverUp: true, IsWatchRunning: true };
         yield return WindowRow.Of(
-            _confirmHome
+            (_confirmHome
                 ? WindowCell.Button("Sure? Send home", () => host.Submit(new SendPatientHomeCommand(humanoid.Id)))
-                : WindowCell.Button("Send home", () => _confirmHome = true),
-            WindowCell.Button("Guess cure", () => host.Submit(new GuessPatientCureCommand(humanoid.Id)), canGuess),
-            WindowCell.Button("Vaccinate", () => host.Submit(new VaccinateCommand(humanoid.Id)), coverUp && patient.IsInfected && !patient.IsVaccinated && !patient.IsMarkedForVaccination),
-            WindowCell.Button("Show", () => host.CenterOn(humanoid.Tile)),
-            WindowCell.Button("Queue", () => host.Open(new QueueWindow(patient.TargetId)), QueueWindow.QueueOf(simulation, patient.TargetId) is not null));
+                : WindowCell.Button("Send home", () => _confirmHome = true)).WithTooltip(OriginalTooltips.Get(host, 94, "Send the patient home")),
+            WindowCell.Button("Guess cure", () => host.Submit(new GuessPatientCureCommand(humanoid.Id)), canGuess).WithTooltip(OriginalTooltips.Get(host, 96, "Stop diagnosing and guess the cure")),
+            WindowCell.Button("Vaccinate", () => host.Submit(new VaccinateCommand(humanoid.Id)), coverUp && patient.IsInfected && !patient.IsVaccinated && !patient.IsMarkedForVaccination).WithTooltip("Have a nurse vaccinate this patient during the epidemic"),
+            WindowCell.Button("Show", () => host.CenterOn(humanoid.Tile)).WithTooltip(OriginalTooltips.Get(host, 95, "Show the patient in the hospital")),
+            WindowCell.Button("Queue", () => host.Open(new QueueWindow(patient.TargetId)), QueueWindow.QueueOf(simulation, patient.TargetId) is not null).WithTooltip(OriginalTooltips.Get(host, 97, "Show the queue the patient is in")));
     }
 
     private static string History(Simulation simulation, IWindowHost host, TreatmentHistoryEntry entry) => entry.Kind switch
@@ -130,10 +130,10 @@ internal sealed class QueueWindow(int ownerId) : UiWindow
         yield return WindowRow.Of(
             "Queue size",
             WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{queue.Count} of {queue.MaxSize}")),
-            WindowCell.Button("-5", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, -5)), queue.MaxSize > 0),
-            WindowCell.Button("-1", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, -1)), queue.MaxSize > 0),
-            WindowCell.Button("+1", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, 1)), queue.MaxSize < HumanoidQueue.MaxMaxSize),
-            WindowCell.Button("+5", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, 5)), queue.MaxSize < HumanoidQueue.MaxMaxSize));
+            WindowCell.Button("-5", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, -5)), queue.MaxSize > 0).WithTooltip(OriginalTooltips.Get(host, 75, "Make the queue shorter")),
+            WindowCell.Button("-1", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, -1)), queue.MaxSize > 0).WithTooltip(OriginalTooltips.Get(host, 75, "Make the queue shorter")),
+            WindowCell.Button("+1", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, 1)), queue.MaxSize < HumanoidQueue.MaxMaxSize).WithTooltip(OriginalTooltips.Get(host, 76, "Make the queue longer")),
+            WindowCell.Button("+5", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, 5)), queue.MaxSize < HumanoidQueue.MaxMaxSize).WithTooltip(OriginalTooltips.Get(host, 76, "Make the queue longer")));
         if (owner is Room withStaff && simulation.FindEntity(withStaff.StaffId) is Humanoid { Profile: not null } staff)
         {
             yield return WindowRow.Of("Staff", StaffLabels.Name(host, staff));
@@ -161,10 +161,10 @@ internal sealed class QueueWindow(int ownerId) : UiWindow
             var cells = new List<WindowCell>
             {
                 WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{i + 1}.")),
-                WindowCell.Button(patient.IsDiagnosed ? host.Texts?.DiseaseName(patient.DiseaseId) ?? patient.DiseaseId : string.Create(CultureInfo.InvariantCulture, $"Patient {member.Id}"), () => host.Open(new PatientWindow(member.Id))),
+                WindowCell.Button(patient.IsDiagnosed ? host.Texts?.DiseaseName(patient.DiseaseId) ?? patient.DiseaseId : string.Create(CultureInfo.InvariantCulture, $"Patient {member.Id}"), () => host.Open(new PatientWindow(member.Id))).WithTooltip(OriginalTooltips.Get(host, 80, "Open the patient's window")),
                 WindowCell.Number(StaffLabels.Percent(patient.Health)),
-                WindowCell.Button("Front", () => host.Submit(new MoveInQueueCommand(id, 0)), position > 0),
-                WindowCell.Button("Back", () => host.Submit(new MoveInQueueCommand(id, queue.Count - 1)), position < queue.Count - 1),
+                WindowCell.Button("Front", () => host.Submit(new MoveInQueueCommand(id, 0)), position > 0).WithTooltip(OriginalTooltips.Get(host, 77, "Move the patient to the front of the queue")),
+                WindowCell.Button("Back", () => host.Submit(new MoveInQueueCommand(id, queue.Count - 1)), position < queue.Count - 1).WithTooltip(OriginalTooltips.Get(host, 78, "Move the patient to the end of the queue")),
             };
             foreach (var other in others.Take(2))
             {

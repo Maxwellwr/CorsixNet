@@ -136,28 +136,28 @@ internal sealed class StaffManagementWindow : UiWindow
             {
                 host.Submit(new PayBonusCommand(chosen.Id));
                 host.PlaySound("cashreg.wav");
-            }, hospital.Balance > bonus),
+            }, hospital.Balance > bonus).WithTooltip(OriginalTooltips.Get(host, 57, "Pay a bonus of a tenth of the salary")),
             WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Raise salary {MoneyText.Format(chosen.Profile.Wage / 10)}"), () =>
             {
                 host.Submit(new IncreaseSalaryCommand(chosen.Id));
                 host.PlaySound("bonusal2.wav");
-            }, !atMaximum),
-            WindowCell.Button("Staff window", () => host.Open(new StaffWindow(chosen.Id))),
-            WindowCell.Button("Show", () => host.CenterOn(chosen.Tile)),
-            _confirmFire == chosen.Id
+            }, !atMaximum).WithTooltip(OriginalTooltips.Get(host, 59, "Raise the salary by a tenth")),
+            WindowCell.Button("Staff window", () => host.Open(new StaffWindow(chosen.Id))).WithTooltip(OriginalTooltips.Get(host, 62, "Open this person's window")),
+            WindowCell.Button("Show", () => host.CenterOn(chosen.Tile)).WithTooltip(OriginalTooltips.Get(host, 63, "Show this person in the hospital")),
+            (_confirmFire == chosen.Id
                 ? WindowCell.Button("Sure? Fire", () =>
                 {
                     host.Submit(new FireStaffCommand(chosen.Id));
                     _confirmFire = null;
                     _selected = null;
                 })
-                : WindowCell.Button("Fire", () => _confirmFire = chosen.Id));
+                : WindowCell.Button("Fire", () => _confirmFire = chosen.Id)).WithTooltip(OriginalTooltips.Get(host, 58, "Sack this person")));
         if (chosen.RaiseRequest > 0)
         {
             yield return WindowRow.Of(
                 $"Asks for a raise of {MoneyText.Format(chosen.RaiseRequest)} or quits",
-                WindowCell.Button("Grant", () => host.Submit(new AnswerRaiseCommand(chosen.Id, true))),
-                WindowCell.Button("Refuse (fires)", () => host.Submit(new AnswerRaiseCommand(chosen.Id, false))));
+                WindowCell.Button("Grant", () => host.Submit(new AnswerRaiseCommand(chosen.Id, true))).WithTooltip(OriginalTooltips.Get(host, 236, "Give the pay rise")),
+                WindowCell.Button("Refuse (fires)", () => host.Submit(new AnswerRaiseCommand(chosen.Id, false))).WithTooltip(OriginalTooltips.Get(host, 237, "Refuse the pay rise: the person leaves")));
         }
     }
 
@@ -250,16 +250,18 @@ internal sealed class StaffWindow(int staffId) : UiWindow
                 {
                     var next = parcels.FirstOrDefault(parcel => parcel > handyman.Parcel);
                     host.Submit(new SetHandymanParcelCommand(staff.Id, next));
-                }, parcels.Count > 0));
+                }, parcels.Count > 0).WithTooltip("The plot where the handyman accepts tasks, click to change setting"));
         }
 
+        // The handyman window has its own strings (handyman_window).
+        var isHandyman = staff.Behaviour is HandymanBehaviour;
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Pick up", () => host.PickUpStaff(staff.Id)),
-            WindowCell.Button("Show", () => host.CenterOn(staff.Tile)),
-            _confirmFire
+            WindowCell.Button("Pick up", () => host.PickUpStaff(staff.Id)).WithTooltip(OriginalTooltips.Get(host, isHandyman ? 131 : 112, "Pick this person up to put them down elsewhere")),
+            WindowCell.Button("Show", () => host.CenterOn(staff.Tile)).WithTooltip(isHandyman ? OriginalTooltips.Get(host, 129, "Show the handyman in the hospital") : "Left click to zoom to staff, right click to cycle through staff members"),
+            (_confirmFire
                 ? WindowCell.Button("Sure? Fire", () => host.Submit(new FireStaffCommand(staff.Id)))
-                : WindowCell.Button("Fire", () => _confirmFire = true));
+                : WindowCell.Button("Fire", () => _confirmFire = true)).WithTooltip(OriginalTooltips.Get(host, isHandyman ? 130 : 111, "Sack this person")));
     }
 
     private Humanoid? Staff(IWindowHost host) =>

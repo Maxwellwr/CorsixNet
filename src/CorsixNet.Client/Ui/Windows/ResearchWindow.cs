@@ -77,10 +77,22 @@ internal sealed class ResearchWindow : UiWindow
         return string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Min(100, done * 100 / required)} %");
     }
 
-    private static WindowCell Adjust(IWindowHost host, string text, ResearchCategory category, int change, bool enabled) =>
-        WindowCell.Button(text, () =>
+    /// <summary>A button changing an area's share; its tooltip is CorsixTH's English <c>tooltip.research</c> text.</summary>
+    private static WindowCell Adjust(IWindowHost host, string text, ResearchCategory category, int change, bool enabled)
+    {
+        var button = WindowCell.Button(text, () =>
         {
             host.Submit(new AdjustResearchCommand(category, change));
             host.PlaySound("selectx.wav");
         }, enabled);
+        var area = category switch
+        {
+            ResearchCategory.Cure => "Cure",
+            ResearchCategory.Diagnosis => "Diagnosis",
+            ResearchCategory.Drugs => "Drugs",
+            ResearchCategory.Improvements => "Improvements",
+            _ => "Specialisation",
+        };
+        return button.WithTooltip($"{(change < 0 ? "Decrease" : "Increase")} {area} research percentage");
+    }
 }
