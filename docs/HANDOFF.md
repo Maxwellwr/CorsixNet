@@ -206,8 +206,11 @@ Done and committed:
   along x, west wall along y), right press during a left drag paints in blocks, right drag copies and goes to paste,
   moving back to the start cancels; red outlines as fillCursorArea; entrance doors drawn from the editor's placements
   (MapEditor.PlaceEntranceDoor, checkObjectSpace). In the editor the right button no longer pans (middle does); Esc
-  reopens the window. `--script` `drag x1 y1 x2 y2 right` drags with the right button. Not yet: the player count
-  (LevelMap.PlayerCount is fixed), the custom parcel number box, objects other than entrance doors.
+  reopens the window. `--script` `drag x1 y1 x2 y2 right` drags with the right button. The player count (LevelMap.SetPlayerCount,
+  PR #263) and the custom parcel number box (MapEditorWindow as IKeyCaptureWindow) are done; CorsixTH's editor and map loading
+  know no objects but entrance doors (Simulation.CreateMapObject ignores the rest), so there is nothing more to place.
+  Seated patients get up for a drink and are vaccinated on the bench (PR #266, format 84); they are not sick while seated,
+  as atFullyEmptyTile.
   Patients knock on a room's door before going in (walk.lua's KnockDoorAction; PatientSpotAction.Knock, 2026-11-12): rooms
   with required staff, doors that do not swing, nobody queueing or inside; knock_east animations are one frame in the
   original. The crash trolley is drawn split over two tiles (ObjectDrawing.Split, AnimationRenderer.SetColumnClip,
@@ -217,8 +220,7 @@ Done and committed:
   sitting; reception desks and toilets keep 3 standing, aliens stand), PatientBehaviour.BenchId/GoToBench/LeaveBench
   (bench.lua's use animations, prolonged; called in, sent home or the bench gone, they get up first), a new bench makes
   queues look again, sitting cheers, the VIP and the adviser count sitters (_adviseBenches on day 12 from the sitting
-  ratio every second day). The bench facing north is drawn split over three tiles. Not yet: getting a drink or being
-  sick while seated (a seated patient is sidetracked), vaccinating patients on benches.
+  ratio every second day). The bench facing north is drawn split over three tiles.
   Surgeons change back into doctors at the screen when they leave (PR #264, format 82); the death animations, grim reaper
   and earthquake falls had been merged only into stacked branches and came to main with PR #262 (format 81).
   Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/

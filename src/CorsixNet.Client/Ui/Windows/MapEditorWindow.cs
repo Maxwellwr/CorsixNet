@@ -15,12 +15,53 @@ namespace CorsixNet.Client.Ui.Windows;
 /// puts it on the cursor), the text pages (paste, delete wall, the players' cameras and heliports, parcels 0 to 9) and
 /// the editor's own menu items (<c>save</c>, <c>load</c>, <c>restart</c> and <c>quit</c> go to <paramref name="action"/>).
 /// </summary>
-internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Action<string> action) : UiWindow
+internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Action<string> action) : UiWindow, IKeyCaptureWindow
 {
     private static readonly Color ButtonColor = new(55, 55, 80);
     private static readonly Color SelectedColor = new(154, 146, 198);
 
     private int _page = -1;
+
+    /// <summary>The custom parcel box's text (<c>parcel_input</c>: numbers only, two at most, 10 at first).</summary>
+    private string _parcelText = "10";
+
+    private bool _typingParcel;
+
+    /// <summary>While the parcel box is being typed in, the game sees no keys.</summary>
+    public bool IsCapturing => _typingParcel;
+
+    /// <summary>
+    /// The parcel box: digits are typed (two at most), Delete takes the last one off, Return sets the parcel and Escape
+    /// leaves the box as it was.
+    /// </summary>
+    public void Capture(CorsixNet.Content.Settings.Hotkey key)
+    {
+        switch (key.Key)
+        {
+            case { Length: 1 } digit when char.IsAsciiDigit(digit[0]):
+                if (_parcelText.Length < 2)
+                {
+                    _parcelText += digit;
+                }
+
+                break;
+            case "delete":
+                _parcelText = _parcelText.Length > 0 ? _parcelText[..^1] : _parcelText;
+                break;
+            case "return":
+                _typingParcel = false;
+                if (int.TryParse(_parcelText, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var parcel))
+                {
+                    // parcel_num: the parcel mode with the number typed; the numbered buttons are raised.
+                    Text(EditorMode.Parcel, parcel);
+                }
+
+                break;
+            case "escape":
+                _typingParcel = false;
+                break;
+        }
+    }
 
     public override string Title => "Map Editor";
 
@@ -64,6 +105,11 @@ internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Ac
                 $"Parcel {parcel}", () => Text(EditorMode.Parcel, parcel),
                 highlight: tool.Mode == EditorMode.Parcel && tool.Number == parcel))]);
         }
+
+        yield return WindowRow.Of(
+            WindowCell.Button(_typingParcel ? $"Parcel: {_parcelText}_" : $"Set parcel: {_parcelText}", () => _typingParcel = !_typingParcel,
+                highlight: _typingParcel || (tool.Mode == EditorMode.Parcel && tool.Number >= 10))
+            with { Tooltip = "Type a parcel number and press Return" });
 
         yield return WindowRow.Of(
             WindowCell.Button("Save map", () => action("save")) with { Tooltip = "Save the map to the maps folder" },
