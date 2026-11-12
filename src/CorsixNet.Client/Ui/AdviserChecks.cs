@@ -197,6 +197,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     private bool _temperatureAdvice;
     private bool _receptionAdvice;
 
+    /// <summary>
+    /// Whether the game was started with the tutorial (CorsixTH's <c>ui.start_tutorial</c>, which stays set for the
+    /// rest of that game): the desk's receptionist advice and the GP's office's doctor advice are left to the tutorial.
+    /// </summary>
+    public bool StartedWithTutorial { get; set; }
+
     /// <summary>Plants the adviser has said are thirsty (<c>plant_announced</c>).</summary>
     private readonly HashSet<int> _announcedPlants = [];
 
@@ -354,6 +360,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             {
                 foreach (var advice in RoomRequirements(simulation, player, room.RoomType))
                 {
+                    // GPRoom:roomFinished says nothing of a doctor while the tutorial asks for one.
+                    if (StartedWithTutorial && advice == GpsOfficeNeedDoctor)
+                    {
+                        continue;
+                    }
+
                     Say(advice);
                 }
             }
@@ -858,12 +870,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
         if (snapshot.Desks > last.Desks)
         {
-            // Hospital:msgReceptionDesk, when a desk is bought.
-            if (snapshot.Receptionists == 0)
+            // Hospital:msgReceptionDesk, when a desk is bought; the tutorial asks for the receptionist itself.
+            if (snapshot.Receptionists == 0 && !StartedWithTutorial)
             {
                 say(ReceptionNeedReceptionist, []);
             }
-            else if (snapshot.Desks == 1 && !_receptionAdvice && simulation.Date.MonthOfGame > 3)
+            else if (snapshot.Receptionists > 0 && snapshot.Desks == 1 && !_receptionAdvice && simulation.Date.MonthOfGame > 3)
             {
                 say(NoDesk5, []);
                 _receptionAdvice = true;

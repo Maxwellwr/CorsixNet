@@ -2391,6 +2391,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
 
             _tutorial?.SayAgain();
+
+            // A game saved during the tutorial comes back without it: its opening watch starts afresh.
+            if (_tutorial is null && Simulation is { } loaded && _session!.Player < loaded.Hospitals.Count && loaded.Hospitals[_session.Player].IsOpeningWatchHeld)
+            {
+                _session.Submit(new HoldOpeningWatchCommand(false));
+            }
+
             _roomsDescribed.Clear();
             if (IsWindowHostReady)
             {
@@ -2409,6 +2416,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (IsWindowHostReady)
         {
             var now = Environment.TickCount64;
+            _adviserChecks.StartedWithTutorial = _tutorialSession is not null && ReferenceEquals(_session, _tutorialSession);
             _adviserChecks.Observe(Simulation!, _session!.Player, _texts, now);
             _adviser.Update(now);
             DescribeNewRooms(Simulation!, _session.Player);
@@ -2695,6 +2703,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _tutorial = new Tutorial(_adviser, () => _texts, FinishTutorial);
         _tutorialSession = _session;
         Tutorial.Current = _tutorial;
+
+        // World:onTick starts no opening watch while the tutorial runs.
+        _session?.Submit(new HoldOpeningWatchCommand(true));
         if (TutorialView() is { } view)
         {
             _tutorial.Start(view);
@@ -2727,6 +2738,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _windows.Open(new InformationWindow(paragraphs));
+
+        // ...and the opening watch, from the start.
+        _session?.Submit(new HoldOpeningWatchCommand(false));
     }
 
     /// <summary>What the tutorial follows this frame, or null without a game of the local player's.</summary>
@@ -3254,7 +3268,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var date = DateText(simulation.Date);
-        if (_session.Player < simulation.Hospitals.Count && simulation.Hospitals[_session.Player] is { IsOpen: false } hospital)
+        if (_session.Player < simulation.Hospitals.Count && simulation.Hospitals[_session.Player] is { IsOpen: false, IsOpeningWatchHeld: false } hospital)
         {
             // Stands in for CorsixTH's opening watch; whole days rounded up.
             var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;

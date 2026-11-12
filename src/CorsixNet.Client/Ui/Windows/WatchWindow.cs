@@ -19,11 +19,11 @@ internal sealed class WatchWindow : UiWindow
     /// <summary>At the left, a little above the bottom, as CorsixTH's <c>UIWatch</c>.</summary>
     public override Vector2? DefaultPosition => new(20, -100);
 
-    /// <summary>Whether a countdown runs for the player.</summary>
+    /// <summary>Whether a countdown runs for the player; the opening watch waits while the tutorial holds it.</summary>
     public static bool IsRunning(Simulation simulation, int player)
     {
         var hospital = simulation.Hospitals[player];
-        return !hospital.IsOpen || hospital.Emergencies.Current is { IsAccepted: true } || hospital.Epidemics.Current is { IsWatchRunning: true };
+        return hospital is { IsOpen: false, IsOpeningWatchHeld: false } || hospital.Emergencies.Current is { IsAccepted: true } || hospital.Epidemics.Current is { IsWatchRunning: true };
     }
 
     public override bool IsDone(IWindowHost host) => !IsRunning(host.Simulation, host.Player);
@@ -32,7 +32,7 @@ internal sealed class WatchWindow : UiWindow
     {
         var simulation = host.Simulation;
         var hospital = simulation.Hospitals[host.Player];
-        if (!hospital.IsOpen)
+        if (hospital is { IsOpen: false, IsOpeningWatchHeld: false })
         {
             var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;
             yield return WindowRow.Of(

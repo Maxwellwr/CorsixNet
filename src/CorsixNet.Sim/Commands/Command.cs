@@ -58,6 +58,7 @@ public enum CommandKind : ushort
     ReturnToBlueprint = 43,
     AbandonRebuild = 44,
     IncreaseHandymanPriority = 45,
+    HoldOpeningWatch = 46,
 }
 
 /// <summary>
@@ -127,6 +128,7 @@ public abstract record Command
             CommandKind.ReturnToBlueprint => new ReturnToBlueprintCommand(reader.ReadInt32()),
             CommandKind.AbandonRebuild => new AbandonRebuildCommand(),
             CommandKind.IncreaseHandymanPriority => new IncreaseHandymanPriorityCommand(reader.ReadInt32(), (HandymanTaskType)reader.ReadByte()),
+            CommandKind.HoldOpeningWatch => new HoldOpeningWatchCommand(reader.ReadBool()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -1118,6 +1120,25 @@ public sealed record IncreaseHandymanPriorityCommand(int HandymanId, HandymanTas
         writer.WriteInt32(HandymanId);
         writer.WriteByte((byte)Task);
     }
+}
+
+/// <summary>
+/// Holds the issuing player's opening watch while the tutorial runs, or lets it go to start afresh when the tutorial
+/// ends (CorsixTH's <c>World:onTick</c> and the tutorial's last chapter, game_ui.lua).
+/// </summary>
+public sealed record HoldOpeningWatchCommand(bool Hold) : Command
+{
+    public override CommandKind Kind => CommandKind.HoldOpeningWatch;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            simulation.Hospitals[player].HoldOpeningWatch(Hold);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteBool(Hold);
 }
 
 /// <summary>
