@@ -358,8 +358,10 @@ Next, in this order (2026-11-10):
    (`MachineMenuWindow`, F10 and a Machines button; machine_menu.lua's columns and sorts as text), the invulnerable
    machines and repair all machines cheats (`ToggleCheats.InvulnerableMachines`, `Machines.RepairAll`; CorsixTH's repair
    all still cuts strength through `strength_reducible or true`, a bug not copied), the repair announcement
-   (`RepairAnnouncer`: machwarn.wav and the room's maint0xx.wav when a machine starts smoking, played as effects). Not
-   yet: the gear icon (4564) drawn over a machine; num_explosions is `Hospital.Explosions` (save format 86; CorsixTH never reads it); a crashed room cannot be taken down as an unfinished one; with config.txt's
+   (`RepairAnnouncer`: machwarn.wav and the room's maint0xx.wav when a machine starts smoking, played as effects). The gear
+   icon (4564) turns over a machine with a repair called (PR #271); num_explosions is `Hospital.Explosions` (save format 86;
+   CorsixTH never reads it). A crashed room cannot be edited, as in CorsixTH (game_ui.lua skips crashed rooms,
+   `EditRoomCommand` refuses them); with config.txt's
    remove_destroyed_rooms a click on it in edit mode offers to clear it away for twice its cost less 40 % of its
    needed objects (`RemoveDestroyedRoomCommand`, 2026-11-12). Wall soot is outranked by the
    floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
