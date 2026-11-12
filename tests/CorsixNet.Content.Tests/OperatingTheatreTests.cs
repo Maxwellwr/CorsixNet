@@ -133,6 +133,51 @@ public class OperatingTheatreTests
         Assert.Equal(new HashSet<int> { 2792, 2790 }, animations);
     }
 
+    [Fact]
+    public void ATiredSurgeonChangesBackAtTheScreenBeforeResting()
+    {
+        var simulation = NewStaffedHospital(Rules());
+        BuildTheatre(simulation);
+        StaffRoomTests.BuildStaffRoom(simulation, new TileRect(2, 13, 6, 6));
+        for (var tick = 0; tick < 31 * GameDate.HoursPerDay && InScrubs(simulation) < 2; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.Equal(2, InScrubs(simulation));
+        var surgeon = simulation.Entities.OfType<Humanoid>().First(h => h.Type == HumanoidType.Surgeon);
+        var screen = simulation.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "surgeon_screen");
+        // Tired enough for the staff room after a little work.
+        Run(simulation, new SetPolicyCommand(PolicyKind.GoToStaffRoom, 2));
+
+        // Staff:goToStaffRoom keeps commandEnteringStaff's must-happen walk to the screen and change back.
+        var changedAtScreen = false;
+        var saved = false;
+        for (var tick = 0; tick < 10 * GameDate.HoursPerDay && surgeon.Behaviour is not RestingBehaviour; tick++)
+        {
+            simulation.Step();
+            if (surgeon.ActionAnimation is not null && surgeon.HiddenObjectId == screen.Id)
+            {
+                changedAtScreen = true;
+                if (!saved)
+                {
+                    saved = true;
+                    using var stream = new MemoryStream();
+                    simulation.Save(stream);
+                    stream.Position = 0;
+                    var loaded = Simulation.Load(stream, BaseGameContent.Create());
+                    StepFor(loaded, 2 * GameDate.HoursPerDay);
+                    StepFor(simulation, 2 * GameDate.HoursPerDay);
+                    Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+                }
+            }
+        }
+
+        Assert.True(changedAtScreen, "The surgeon did not change back at the screen.");
+        Assert.IsType<RestingBehaviour>(surgeon.Behaviour);
+        Assert.Equal(HumanoidType.Doctor, surgeon.Type);
+    }
+
     private static int InScrubs(Simulation simulation) =>
         simulation.Entities.OfType<Humanoid>().Count(h => h is { Type: HumanoidType.Surgeon, Behaviour: DoctorBehaviour { Phase: DoctorPhase.OtReady } });
 
