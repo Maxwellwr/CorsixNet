@@ -243,6 +243,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
     private OriginalTexts? _texts;
     private readonly Adviser _adviser = new();
+
+    /// <summary>The tutorial of the first level, when the new game dialog asked for it.</summary>
+    private Tutorial? _tutorial;
+
+    /// <summary>The game the tutorial was started with.</summary>
+    private IGameSession? _tutorialSession;
     private readonly Random _adviserRandom = new();
     private AdviserChecks _adviserChecks;
     private object? _adviserSession;
@@ -499,6 +505,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         UpdateAdviser();
+        if (_tutorial is { IsActive: true } tutorial && TutorialView() is { } tutorialView)
+        {
+            tutorial.Update(tutorialView);
+        }
 
         // Windows over the map take the mouse while it is over them: the map sees no clicks and no wheel then.
         var realMouse = mouse;
@@ -2367,6 +2377,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _adviserSession = _session;
             _adviser.Clear();
             _adviserChecks = new AdviserChecks(_adviser, _adviserRandom);
+
+            // The tutorial belongs to the game it was started with: another game ends it.
+            if (_tutorial is not null && !ReferenceEquals(_session, _tutorialSession))
+            {
+                _tutorial = null;
+                Tutorial.Current = null;
+            }
+
+            _tutorial?.SayAgain();
             _roomsDescribed.Clear();
             if (IsWindowHostReady)
             {
@@ -2484,7 +2503,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new ReplayListWindow(Path.Combine(_saves.Directory, Replay.Folder), WatchReplay));
                 break;
             case "newgame":
-                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, StartCampaign));
+                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, (difficulty, tutorial) => StartCampaign(difficulty, tutorial)));
                 break;
             case "levels" when _levels.Count > 0:
                 _levelList = true;
@@ -2641,7 +2660,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// The new game dialog's Start (<c>UINewGame:startGame</c>): the original campaign at the difficulty, from its first
     /// level; Page Up/Down, F3 and the next level go through the campaign's levels from then on.
     /// </summary>
-    private void StartCampaign(Difficulty difficulty)
+    private void StartCampaign(Difficulty difficulty, bool tutorial = false)
     {
         if (_session is not null and not LocalSession)
         {
@@ -2659,6 +2678,93 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _levels = levels;
         _levelList = false;
         SelectLevel(0);
+        if (tutorial)
+        {
+            StartTutorial();
+        }
+    }
+
+    /// <summary><c>UINewGame:startGame</c> with the tutorial ticked: <c>GameUI:startTutorial</c>.</summary>
+    private void StartTutorial()
+    {
+        _tutorial = new Tutorial(_adviser, () => _texts, FinishTutorial);
+        _tutorialSession = _session;
+        Tutorial.Current = _tutorial;
+        if (TutorialView() is { } view)
+        {
+            _tutorial.Start(view);
+        }
+    }
+
+    /// <summary>
+    /// The tutorial's last chapter (its begin_callback): the information on what to do next (introduction texts 15 to 17,
+    /// and the level's own off the first level).
+    /// </summary>
+    private void FinishTutorial()
+    {
+        var paragraphs = new List<string>();
+        foreach (var level in new[] { 15, 16, 17 })
+        {
+            if (_texts?.IntroductionText(level) is { } text)
+            {
+                paragraphs.AddRange(text.Split("//", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+            }
+        }
+
+        if (_levelIndex != 0 && _texts?.IntroductionText(1) is { } first)
+        {
+            paragraphs.AddRange(first.Split("//", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        if (paragraphs.Count == 0)
+        {
+            paragraphs.Add("That's the basic mechanics of putting a hospital together. Build diagnosis and treatment rooms, hire staff for them, and keep an eye on your reputation.");
+        }
+
+        _windows.Open(new InformationWindow(paragraphs));
+    }
+
+    /// <summary>What the tutorial follows this frame, or null without a game of the local player's.</summary>
+    private TutorialView? TutorialView()
+    {
+        if (_session is not { Simulation: { } simulation } session || session.Player >= simulation.Hospitals.Count)
+        {
+            return null;
+        }
+
+        var player = session.Player;
+        var owner = player + 1;
+        var map = simulation.Map;
+        bool Ours(TilePosition tile) => map.GetParcelOwner(map[tile.X, tile.Y].Parcel) == owner;
+        var staff = simulation.Entities.OfType<Humanoid>().Where(h => h.Employer == player && h.Profile is not null && !h.IsFired).ToList();
+        var build = _buildTool.TutorialState(simulation, player);
+        bool? hiringValid = null;
+        if (_hiring is { } hiring && _hoveredTile is { } hovered)
+        {
+            var index = simulation.AvailableStaff(hiring.Class).ToList().IndexOf(hiring.Profile);
+            hiringValid = index >= 0 && StaffHiring.Check(simulation, hiring.Class, index, new TilePosition(hovered.X, hovered.Y), player) == StaffHireProblem.None;
+        }
+
+        return new TutorialView
+        {
+            CorridorWindowOpen = _windows.Windows.OfType<FurnishCorridorWindow>().Any(),
+            ReceptionDeskValid = _furnishTool.Ghost is { ObjectType: ReceptionDesks.ObjectId } ghost ? ghost.Tint == Color.White : _furnishTool.IsActive && _furnishTool.PlacingId == ReceptionDesks.ObjectId ? false : null,
+            ReceptionDesks = simulation.Entities.OfType<RoomObject>().Count(o => o.ObjectType == ReceptionDesks.ObjectId && Ours(o.Tile)),
+            HireWindowOpen = _windows.Windows.OfType<HireWindow>().Any(),
+            HireCategory = _windows.Windows.OfType<HireWindow>().FirstOrDefault()?.Category,
+            HiringClass = _hiring?.Class,
+            HiringValid = hiringValid == true,
+            Receptionists = staff.Count(h => h.Profile!.Class == StaffClass.Receptionist),
+            Doctors = staff.Count(h => h.Profile!.Class == StaffClass.Doctor),
+            RoomListOpen = _roomList,
+            BuildStage = build.Stage,
+            BuildRoomType = build.RoomType,
+            Blueprint = build.Blueprint,
+            PlacementValid = build.Valid,
+            MissingObjects = build.Missing,
+            ActiveGpOffices = simulation.Entities.OfType<Room>().Count(r => r is { RoomType: "gp", IsActive: true } && Ours(new TilePosition(r.Area.X, r.Area.Y))),
+            InformationWindowOpen = _windows.Windows.OfType<InformationWindow>().Any(),
+        };
     }
 
     /// <summary>
@@ -2688,7 +2794,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         switch (action)
         {
             case "newgame":
-                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, StartCampaign));
+                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, (difficulty, tutorial) => StartCampaign(difficulty, tutorial)));
                 break;
             case "campaign":
                 _windows.Open(new CustomCampaignWindow(CustomGames.FindCampaigns(GameConfig.UserFolder(_config.Campaigns, saves, "Campaigns")), StartCustomCampaign));
@@ -3294,6 +3400,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (row.Contains(mouse.X, mouse.Y))
             {
                 batch.Draw(_pixel, row, problem is null ? RoomListHover : RoomListHoverBlocked);
+            }
+
+            if (room.Id == "gp" && Tutorial.Lit("room:gp"))
+            {
+                batch.Draw(_pixel, row, RoomListHover);
             }
 
             var tint = problem is null ? Color.White : RoomListBlocked;

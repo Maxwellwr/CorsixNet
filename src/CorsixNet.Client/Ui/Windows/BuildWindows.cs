@@ -60,7 +60,7 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button(tool.IsEditing ? "Confirm" : string.Create(CultureInfo.InvariantCulture, $"Confirm {MoneyText.Format(simulation.Rules.RoomCost(room.Id))}"), () => press(BuildButton.Confirm), tool.CanConfirm(simulation)),
+            WindowCell.Button(tool.IsEditing ? "Confirm" : string.Create(CultureInfo.InvariantCulture, $"Confirm {MoneyText.Format(simulation.Rules.RoomCost(room.Id))}"), () => press(BuildButton.Confirm), tool.CanConfirm(simulation), highlight: Tutorial.Lit("confirm")),
             WindowCell.Button(tool.IsPickingUp ? "Stop picking up" : "Pick up", () => press(BuildButton.PickUp), highlight: tool.IsPickingUp),
             WindowCell.Button("Take down", () => press(BuildButton.Back)));
     }
@@ -90,7 +90,7 @@ internal sealed class FurnishCorridorWindow(Action<ObjectDefinition> buy) : UiWi
                 {
                     host.Close(this);
                     buy(definition);
-                }, balance >= price));
+                }, balance >= price, highlight: Tutorial.Lit("buy:" + definition.Id)));
         }
     }
 
@@ -119,10 +119,10 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
             (action is null ? key : host.HotkeyText(action) ?? key) is { } shown ? $"{text} ({shown})" : text;
         yield return WindowRow.Of(
             new WindowCell(MoneyText.Format(hospital.Balance), Highlight: true) { Tooltip = "Balance" },
-            WindowCell.Button("Build", () => action("rooms")) with { Tooltip = Tip("Build rooms", key: "B") },
-            WindowCell.Button("Corridor", () => action("corridor")) with { Tooltip = Tip("Furnish corridor") },
+            WindowCell.Button("Build", () => action("rooms"), highlight: Tutorial.Lit("build")) with { Tooltip = Tip("Build rooms", key: "B") },
+            WindowCell.Button("Corridor", () => action("corridor"), highlight: Tutorial.Lit("corridor")) with { Tooltip = Tip("Furnish corridor") },
             WindowCell.Button("Edit room", () => action("edit")) with { Tooltip = Tip("Edit rooms/items") },
-            WindowCell.Button("Hire", () => host.Open(new HireWindow())) with { Tooltip = Tip("Hire staff", "ingame_panel_hireStaff") },
+            WindowCell.Button("Hire", () => host.Open(new HireWindow()), highlight: Tutorial.Lit("hire")) with { Tooltip = Tip("Hire staff", "ingame_panel_hireStaff") },
             WindowCell.Button(faxes > 0 ? string.Create(CultureInfo.InvariantCulture, $"Faxes ({faxes})") : "Faxes", () => host.Open(new FaxWindow()), highlight: faxes > 0) with { Tooltip = Tip("Faxes waiting for an answer", "ingame_openFirstMessage") },
             WindowCell.Button("Bank", () => host.Open(new BankManagerWindow())) with { Tooltip = Tip("Bank Manager", "ingame_panel_bankManager") },
             WindowCell.Button("Staff", () => host.Open(new StaffManagementWindow())) with { Tooltip = Tip("Staff management", "ingame_panel_staffManage") },

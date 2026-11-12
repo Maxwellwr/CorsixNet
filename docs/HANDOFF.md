@@ -221,6 +221,13 @@ Done and committed:
   (bench.lua's use animations, prolonged; called in, sent home or the bench gone, they get up first), a new bench makes
   queues look again, sitting cheers, the VIP and the adviser count sitters (_adviseBenches on day 12 from the sitting
   ratio every second day). The bench facing north is drawn split over three tiles.
+  The tutorial (game_ui.lua's tutorial_phases; Ui/Tutorial.cs, 2026-11-12): the new game dialog's Tutorial switch starts it on
+  the first level; it follows the interface each frame (TutorialView from MapViewScreen.TutorialView) instead of CorsixTH's
+  dialog callbacks, says each phase's S[11] text kept up (Adviser.SayAndStay) and lights the button to press
+  (Tutorial.Lit). Phases this UI has no window for are skipped (order/accept, next/previous candidate, room categories).
+  Chapters 1 and 2 were seen live; chapter 3 (the GP's office) and 4 are covered by TutorialTests. The end shows
+  introduction texts 15-17 (OriginalTexts.IntroductionText). Not yet: CorsixTH holding back the reception and GP
+  advice and the opening watch during the tutorial.
   Surgeons change back into doctors at the screen when they leave (PR #264, format 82); the death animations, grim reaper
   and earthquake falls had been merged only into stacked branches and came to main with PR #262 (format 81).
   Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/

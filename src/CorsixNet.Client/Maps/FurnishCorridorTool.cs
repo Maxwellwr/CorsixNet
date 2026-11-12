@@ -31,6 +31,9 @@ internal sealed class FurnishCorridorTool
 
     public bool IsActive => _placing is not null;
 
+    /// <summary>The object on the cursor, or null.</summary>
+    public string? PlacingId => _placing?.Id;
+
     /// <summary>The object to draw at the cursor, if any.</summary>
     public (string ObjectType, TilePosition Tile, Direction Orientation, Color Tint)? Ghost =>
         _placing is not null && _ghostTile is { } tile

@@ -19,7 +19,7 @@ public sealed class TooltipTests
         [
             new BankManagerWindow(), new TownMapWindow(), new GraphWindow(), new ResearchWindow(), new PolicyWindow(), new StaffWindow(nurse.Id), new PatientWindow(patient.Id),
             new HireWindow(), new CasebookWindow(), new InformationWindow(["Hello"]), new ConfirmWindow("Sure?", () => { }), new TipOfTheDayWindow(0),
-            new NewGameWindow([Difficulty.Easy, Difficulty.Medium], "Dr", _ => { }), new FaxWindow(), new CheatsWindow(), new AdviserHistoryWindow(),
+            new NewGameWindow([Difficulty.Easy, Difficulty.Medium], "Dr", (_, _) => { }), new FaxWindow(), new CheatsWindow(), new AdviserHistoryWindow(),
             new LevelEndWindow(),
         ];
 
