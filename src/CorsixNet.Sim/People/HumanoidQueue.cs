@@ -25,7 +25,7 @@ internal interface IQueueMember
 /// </summary>
 /// <remarks>
 /// Of CorsixTH's priorities (people leaving, staff, guests, emergencies, then the other patients) only guests
-/// (VIPs) and emergencies come before other patients yet, as only they queue with them. Benches come later.
+/// (VIPs) and emergencies come before other patients yet, as only they queue with them.
 /// </remarks>
 public sealed class HumanoidQueue
 {
@@ -151,22 +151,139 @@ public sealed class HumanoidQueue
     /// </summary>
     internal void Arrange(Simulation simulation)
     {
+        var threshold = BenchThreshold(simulation);
+        var standing = 0;
         for (var i = 0; i < _members.Count; i++)
         {
-            if (simulation.FindEntity(_members[i]) is not Humanoid { Behaviour: IQueueMember member } humanoid
-                || !simulation.Pathfinder.TryFindIdleTile(simulation.Map, Position, i, out var tile))
+            if (simulation.FindEntity(_members[i]) is not Humanoid { Behaviour: IQueueMember member } humanoid)
             {
                 continue;
             }
 
+            if (member is PatientBehaviour patient)
+            {
+                if (TrySit(simulation, humanoid, patient, i >= threshold))
+                {
+                    continue;
+                }
+
+                patient.LeaveBench(simulation, humanoid);
+            }
+
+            if (!simulation.Pathfinder.TryFindIdleTile(simulation.Map, Position, standing, out var tile))
+            {
+                standing++;
+                continue;
+            }
+
             var face = Face;
-            if (i > 0 && simulation.Pathfinder.TryFindIdleTile(simulation.Map, Position, i - 1, out var ahead))
+            if (standing > 0 && simulation.Pathfinder.TryFindIdleTile(simulation.Map, Position, standing - 1, out var ahead))
             {
                 face = ahead;
             }
 
+            standing++;
             member.TakeQueuePlace(simulation, humanoid, tile, face);
         }
+    }
+
+    /// <summary>Path distance from the goal within which a patient on a bench stays put (<c>DISTANCE_THRESHOLD</c>).</summary>
+    private const int BenchKeepDistance = 4;
+
+    /// <summary>How far from the goal a standing patient looks for a bench (<c>MAX_DISTANCE</c>).</summary>
+    private const int BenchMaxDistance = 10;
+
+    /// <summary>
+    /// <c>action_queue_on_change_position</c>'s benches: a patient who may sit (not an alien, whose disease must_stand,
+    /// and not among the first <c>bench_threshold</c>) keeps a bench within 4 tiles of the goal, or takes a free bench
+    /// nearer the goal: within 10 tiles while standing, within two thirds of their own distance (at least 4) while
+    /// sitting further off.
+    /// </summary>
+    /// <returns>Whether the patient sits or goes to sit, so that they take no standing place.</returns>
+    private bool TrySit(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, bool maySit)
+    {
+        if (!maySit || patient.DiseaseId == "alien_dna" || patient.Phase is not (PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue))
+        {
+            return false;
+        }
+
+        var sitting = patient.BenchId != 0;
+        if (sitting && patient.BenchDistance is >= 0 and <= BenchKeepDistance)
+        {
+            return true;
+        }
+
+        int look;
+        if (sitting)
+        {
+            if (simulation.Pathfinder.FindDistance(simulation.Map, humanoid.StepTarget, Position) is not { } fromGoal)
+            {
+                return true;
+            }
+
+            look = Math.Max((2 * fromGoal + 2) / 3, BenchKeepDistance);
+        }
+        else
+        {
+            look = BenchMaxDistance;
+        }
+
+        if (FreeBench(simulation, look) is { } found)
+        {
+            patient.GoToBench(simulation, humanoid, found.Bench, found.Distance);
+            return true;
+        }
+
+        return sitting;
+    }
+
+    /// <summary>
+    /// <c>World:getFreeBench</c>: the corridor bench nearest the goal by path whose use position is within
+    /// <paramref name="distance"/>, that nobody sits on or goes to.
+    /// </summary>
+    private (RoomObject Bench, int Distance)? FreeBench(Simulation simulation, int distance)
+    {
+        (RoomObject Bench, int Distance)? best = null;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is not RoomObject { ObjectType: "bench", RoomId: 0, IsDestroyed: false } bench)
+            {
+                continue;
+            }
+
+            if (simulation.Entities.Any(e => e is Humanoid { Behaviour: PatientBehaviour other } && other.BenchId == bench.Id))
+            {
+                continue;
+            }
+
+            if (simulation.Pathfinder.FindDistance(simulation.Map, Position, RoomVisits.UseTile(simulation, bench)) is { } found
+                && found <= distance && (best is null || found < best.Value.Distance))
+            {
+                best = (bench, found);
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// <c>Queue:setBenchThreshold</c>: reception desks (reception_desk.lua) and the toilets (<c>ToiletRoom:roomFinished</c>)
+    /// keep their first three in line standing; other rooms' queues none.
+    /// </summary>
+    private int BenchThreshold(Simulation simulation)
+    {
+        foreach (var entity in simulation.Entities)
+        {
+            switch (entity)
+            {
+                case Room room when ReferenceEquals(room.DoorQueue, this):
+                    return room.RoomType == RoomVisits.ToiletsRoom ? 3 : 0;
+                case RoomObject { Desk: { } desk } when ReferenceEquals(desk.Queue, this):
+                    return 3;
+            }
+        }
+
+        return 0;
     }
 
     internal void Write(SimWriter writer)

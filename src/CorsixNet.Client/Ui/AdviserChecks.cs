@@ -93,6 +93,11 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice QueueTooLongSendDoctor = new(11, 132, "The queue for your %s is too long. Send another doctor there.");
     public static readonly Advice NeedDoctors = new(11, 8, "You need more doctors.");
     public static readonly Advice QueuesTooLong = new(11, 12, "Your queues are too long.");
+    public static readonly Advice MoreBenches = new(28, 25, "Think about placing more benches. Sick people resent being forced to stand up.");
+    public static readonly Advice PeopleHaveToStand = new(28, 28, "Suffering folk are having to stand up. Get some more seating down now.");
+    public static readonly Advice ManyBenches = new(11, 76, "Patients have enough seating now. Nice one.");
+    public static readonly Advice PlentyOfBenches = new(28, 26, "There's plenty of seating, so that's not a problem.");
+    public static readonly Advice FewHaveToStand = new(28, 27, "Hardly anyone has to stand in your hospital. The patients will be pleased about that.");
     public static readonly Advice PlantsThirsty = new(11, 91, "You need to look after your plants. They are thirsty.");
     public static readonly Advice PeopleDidItOnTheFloor = new(28, 13, "Some of your patients couldn't hold it. Build more toilets.");
     public static readonly Advice FaxReceived = new(11, 136, "The icon that just popped up on the bottom panel is a fax: click it to read it.");
@@ -393,10 +398,31 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             return;
         }
 
+        // PlayerHospital:dailyAdviceChecks: every second day, how many of the waiting patients sit (with more than ten).
+        if (date.Day % SittingRatioInterval == 0)
+        {
+            var (sitting, standing) = CountSittingStanding(simulation, player);
+            _sittingRatios[_sittingIndex] = sitting + standing > 10 ? sitting / (double)(sitting + standing) : null;
+            _sittingIndex = (_sittingIndex + 1) % _sittingRatios.Length;
+        }
+
         switch (date.Day)
         {
             case 1:
                 AdviseMoney(hospital, date, Give);
+                break;
+            case 12 when _sittingRatios.Any(ratio => ratio is not null):
+                // _adviseBenches: at least 30 % standing asks for benches; more than 90 % sitting is praised about once a year.
+                var averageSitting = _sittingRatios.OfType<double>().Average();
+                if (averageSitting < 0.7)
+                {
+                    Give([MoreBenches, PeopleHaveToStand]);
+                }
+                else if (averageSitting > 0.9)
+                {
+                    Give([ManyBenches, PlentyOfBenches, FewHaveToStand], 1.0 / 12);
+                }
+
                 break;
             case 3 when HasRoomType(simulation, "staff_room") && !HasRoom(simulation, player, "staff_room"):
                 Give([BuildStaffroom, NeedStaffroom, StaffOverworked, StaffTired]);
@@ -477,6 +503,41 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     }
 
     /// <summary><c>_adviseMoney</c>.</summary>
+    /// <summary>How many days apart the sitting ratio is measured (<c>ratio_interval</c>).</summary>
+    private const int SittingRatioInterval = 2;
+
+    /// <summary>The last 15 measurements (<c>num_sitting_ratios</c>), null for days with ten or fewer waiting.</summary>
+    private readonly double?[] _sittingRatios = new double?[15];
+    private int _sittingIndex;
+
+    /// <summary>
+    /// <c>Hospital:countSittingStanding</c>: the player's patients on a bench, and those standing idle outside rooms (here:
+    /// standing at their place in a queue or waiting).
+    /// </summary>
+    private static (int Sitting, int Standing) CountSittingStanding(Simulation simulation, int player)
+    {
+        int sitting = 0, standing = 0;
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is not Humanoid { Behaviour: PatientBehaviour patient } humanoid || humanoid.HospitalPlayer != player)
+            {
+                continue;
+            }
+
+            if (patient.BenchId != 0 && !humanoid.IsMoving)
+            {
+                sitting++;
+            }
+            else if (!humanoid.IsMoving && !patient.IsSidetracked && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0
+                && patient.Phase is PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue or PatientPhase.Waiting)
+            {
+                standing++;
+            }
+        }
+
+        return (sitting, standing);
+    }
+
     private static void AdviseMoney(Sim.Economy.Hospital hospital, GameDate date, Func<Advice[], double, bool> give)
     {
         if (hospital.Balance is < 2000 and >= -500)

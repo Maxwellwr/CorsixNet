@@ -140,7 +140,7 @@ public static class BaseGameContent
 
     /// <summary>
     /// The bench (objects/bench.lua): patients sit on it from the tile in front, which other objects may share.
-    /// CorsixTH draws it split over three tiles facing north; here it is drawn from its own tile.
+    /// Facing north it is drawn split over three tiles, as CorsixTH does (the client's ObjectDrawing.Split).
     /// </summary>
     public static readonly ObjectDefinition Bench = new(
         "bench",
@@ -154,7 +154,30 @@ public static class BaseGameContent
             [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition | Shareable)]),
         },
         CorridorObject: true,
+        UsageNorth: BenchUsage(north: true),
+        UsageEast: BenchUsage(north: false),
         WalkInToUse: true);
+
+    /// <summary>bench.lua's usage animations: sitting down, sitting (one frame, repeated while queueing) and getting up.</summary>
+    private static Dictionary<HumanoidType, UseAnimations> BenchUsage(bool north)
+    {
+        UseAnimations Use(int begin, int inUse, int finish) => new(new(begin, 2), [new(inUse, 1)], new(finish, 2));
+        var male = north ? Use(96, 146, 216) : Use(98, 148, 218);
+        var female = north ? Use(232, 224, 240) : Use(234, 226, 242);
+        return new Dictionary<HumanoidType, UseAnimations>
+        {
+            [HumanoidType.StandardMalePatient] = male,
+            [HumanoidType.StandardFemalePatient] = female,
+            [HumanoidType.SlackFemalePatient] = female,
+            [HumanoidType.SlackMalePatient] = north ? Use(1500, 1508, 1516) : Use(1502, 1510, 1518),
+            [HumanoidType.AlternateMalePatient] = north ? Use(2732, 2724, 2740) : Use(2734, 2726, 2742),
+            [HumanoidType.ChewbaccaPatient] = north ? Use(3744, 3760, 3752) : Use(3746, 3762, 3754),
+
+            // The aliens borrow the standard patients' (marked TEMP in bench.lua).
+            [HumanoidType.AlienMalePatient] = male,
+            [HumanoidType.AlienFemalePatient] = female,
+        };
+    }
 
     /// <summary>The drinks machine (objects/drinks_machine.lua), used from the tile in front.</summary>
     public static readonly ObjectDefinition DrinksMachine = new(

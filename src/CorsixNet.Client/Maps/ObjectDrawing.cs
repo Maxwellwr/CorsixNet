@@ -112,6 +112,9 @@ internal sealed class ObjectDrawing
     {
         // crash_trolley.lua: north { {0, 0}, {-1, 1} }, east { {0, 0}, {1, -1} }.
         ["crash_trolley"] = new() { [N] = [(0, 0), (-1, 1)], [E] = [(0, 0), (1, -1)] },
+
+        // bench.lua: north { {0, 0}, {-1, 0}, {0, -1} }; the other facings are drawn from the bench's own tile.
+        ["bench"] = new() { [N] = [(0, 0), (-1, 0), (0, -1)] },
     };
 
     private readonly AnimationRenderer _renderer;

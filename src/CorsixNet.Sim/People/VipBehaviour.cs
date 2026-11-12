@@ -495,7 +495,7 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
                 Rating += 3;
             }
 
-            // Nobody sits yet: there are no benches.
+            // Patients sitting on benches do not count as standing.
             var standing = Standing(simulation, patients);
             if (standing != 0)
             {
