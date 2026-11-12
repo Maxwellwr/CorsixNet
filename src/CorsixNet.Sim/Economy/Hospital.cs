@@ -472,6 +472,9 @@ public sealed class Hospital
     /// </summary>
     public int AutopsiesDiscovered { get; internal set; }
 
+    /// <summary>Machines that have exploded and wrecked their room (CorsixTH's <c>num_explosions</c>, kept but never read there).</summary>
+    public int Explosions { get; internal set; }
+
     /// <summary>Whether a patient has dropped litter in the hospital yet (CorsixTH's <c>hospital_littered</c>).</summary>
     public bool Littered { get; internal set; }
 
@@ -1478,6 +1481,7 @@ public sealed class Hospital
         writer.WriteBool(HandymanPrioritiesChanged);
         writer.WriteBool(DidItOnFloor);
         writer.WriteBool(IsOpeningWatchHeld);
+        writer.WriteInt32(Explosions);
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1614,6 +1618,7 @@ public sealed class Hospital
         hospital.HandymanPrioritiesChanged = reader.Version is 0 or >= 78 ? reader.ReadBool() : false;
         hospital.DidItOnFloor = reader.Version is 0 or >= 79 ? reader.ReadBool() : false;
         hospital.IsOpeningWatchHeld = reader.Version is 0 or >= 85 && reader.ReadBool();
+        hospital.Explosions = reader.Version is 0 or >= 86 ? reader.ReadInt32() : 0;
         return hospital;
     }
 
