@@ -18,6 +18,9 @@ internal sealed class HireWindow : UiWindow
 
     private StaffClass _category = StaffClass.Doctor;
 
+    /// <summary>The class of candidates shown.</summary>
+    public StaffClass Category => _category;
+
     /// <summary>The candidate whose portrait shows, by index in the class's list.</summary>
     private int _selected;
 
@@ -51,7 +54,7 @@ internal sealed class HireWindow : UiWindow
                 _selected = 0;
                 host.PlaySound("selectx.wav");
             },
-            highlight: staffClass == _category).WithTooltip(OriginalTooltips.Get(host, 23 + order, "See the " + Plural(staffClass).ToLowerInvariant() + " looking for work"))).ToList());
+            highlight: staffClass == _category || Tutorial.Lit("staff:" + staffClass)).WithTooltip(OriginalTooltips.Get(host, 23 + order, "See the " + Plural(staffClass).ToLowerInvariant() + " looking for work"))).ToList());
         yield return WindowRow.Gap;
         var candidates = simulation.AvailableStaff(_category);
         _selected = Math.Clamp(_selected, 0, Math.Max(0, candidates.Count - 1));
@@ -84,7 +87,7 @@ internal sealed class HireWindow : UiWindow
                     }
 
                     host.StartHiring(_category, index);
-                }).WithTooltip(OriginalTooltips.Get(host, 29, "Hire this person")));
+                }, highlight: index == _selected && Tutorial.Lit("hire-button")).WithTooltip(OriginalTooltips.Get(host, 29, "Hire this person")));
             if (host.Texts?.Staff.Description(profile) is { Length: > 0 } description)
             {
                 yield return WindowCell.Line("    " + description, dim: true);

@@ -133,6 +133,42 @@ public sealed class OriginalTexts
     public string DiseaseName(string diseaseId) => Disease(diseaseId)?.Name ?? diseaseId;
 
     /// <summary>
+    /// <c>introduction_texts.levelN</c> (original_strings.lua): section 54 from its second string holds each level's
+    /// text after a "." line, its lines joined with spaces, until "..". Null when the level has none.
+    /// </summary>
+    public string? IntroductionText(int level)
+    {
+        var current = 0;
+        var text = new System.Text.StringBuilder();
+        for (var index = 2; index < 4096; index++)
+        {
+            var line = String(54, index);
+            if (line is null || line == "..")
+            {
+                break;
+            }
+
+            if (line == ".")
+            {
+                if (current == level)
+                {
+                    break;
+                }
+
+                current++;
+                continue;
+            }
+
+            if (current == level)
+            {
+                text.Append(text.Length > 0 ? " " : string.Empty).Append(line);
+            }
+        }
+
+        return text.Length > 0 ? text.ToString() : null;
+    }
+
+    /// <summary>
     /// A VIP's name, 1 to 10 (CorsixTH's <c>vip_names[n]</c>, <c>S[42][n + 1]</c>; <c>S[42][1]</c> is the health
     /// minister), or null if missing.
     /// </summary>

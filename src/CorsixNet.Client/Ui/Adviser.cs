@@ -24,6 +24,27 @@ internal sealed class Adviser
     private readonly List<string> _history = [];
     private long _until;
 
+    /// <summary>Whether the current message stays up until the next one (<c>stay_up</c>, the tutorial's texts).</summary>
+    private bool _stayUp;
+
+    /// <summary>
+    /// <c>UIAdviser:say(text, true, true)</c>: says a message at once, dropping the waiting ones, and keeps it up until
+    /// another message or <see cref="EndStayUp"/>.
+    /// </summary>
+    public void SayAndStay(string text, long now)
+    {
+        if (!IsEnabled || string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        Say(text, now, interrupt: true);
+        _stayUp = true;
+    }
+
+    /// <summary>The message kept up goes away in the usual time (<c>stay_up = nil</c>).</summary>
+    public void EndStayUp() => _stayUp = false;
+
     /// <summary>Whether the adviser speaks at all (CorsixTH's <c>adviser_disabled</c> setting, inverted).</summary>
     public bool IsEnabled { get; set; } = true;
 
@@ -70,7 +91,7 @@ internal sealed class Adviser
     /// <summary>Moves on to the next message when the current one has been shown long enough.</summary>
     public void Update(long now)
     {
-        if (Current is not null && now >= _until)
+        if (Current is not null && now >= _until && !_stayUp)
         {
             Next(now);
         }
@@ -86,6 +107,7 @@ internal sealed class Adviser
         else
         {
             Current = null;
+            _stayUp = false;
         }
     }
 
@@ -93,6 +115,7 @@ internal sealed class Adviser
     public void DismissAll()
     {
         Current = null;
+        _stayUp = false;
         foreach (var message in _queue)
         {
             AddToHistory(message);
@@ -114,6 +137,7 @@ internal sealed class Adviser
     public void Clear()
     {
         Current = null;
+        _stayUp = false;
         _queue.Clear();
         _history.Clear();
     }
@@ -126,6 +150,7 @@ internal sealed class Adviser
         Current = _queue[0];
         _queue.RemoveAt(0);
         _until = now + SpeakMilliseconds;
+        _stayUp = false;
         AddToHistory(Current);
     }
 

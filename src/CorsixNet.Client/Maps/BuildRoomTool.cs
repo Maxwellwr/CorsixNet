@@ -264,6 +264,54 @@ internal sealed class BuildRoomTool
     /// The blueprint as the original shows it: while dragging, good tiles blue and bad ones red;
     /// from the door step on, a solid blue floor with the door and windows drawn into the wall.
     /// </summary>
+    /// <summary>
+    /// What the tutorial follows (<c>UIEditRoom</c>'s tutorialStep calls): the stage, the room type, how the blueprint
+    /// looks (too small and over bad tiles are told apart, as CorsixTH's phases 3.5 to 3.8), whether the door, window
+    /// or object shown could go there, and how many needed objects are still to place.
+    /// </summary>
+    public (Ui.TutorialBuildStage Stage, string? RoomType, Ui.TutorialBlueprint Blueprint, bool? Valid, int Missing) TutorialState(Simulation simulation, int player)
+    {
+        var stage = _phase switch
+        {
+            Phase.Blueprint => Ui.TutorialBuildStage.Blueprint,
+            Phase.Door => Ui.TutorialBuildStage.Door,
+            Phase.Windows or Phase.Waiting => Ui.TutorialBuildStage.Windows,
+            Phase.Objects => Ui.TutorialBuildStage.Objects,
+            _ => Ui.TutorialBuildStage.None,
+        };
+        var blueprint = Ui.TutorialBlueprint.NoArea;
+        if (_phase == Phase.Blueprint && _area is { } area && _room is { } room)
+        {
+            var tooSmall = area.Width < room.MinimumSize || area.Height < room.MinimumSize;
+            var invalid = false;
+            for (var x = area.X; x < area.Right && !invalid; x++)
+            {
+                for (var y = area.Y; y < area.Bottom && !invalid; y++)
+                {
+                    invalid = !simulation.Map.Contains(x, y) || RoomBuilder.CheckTile(simulation.Map, area, new TilePosition(x, y), player) != RoomPlanProblem.None;
+                }
+            }
+
+            blueprint = (tooSmall, invalid) switch
+            {
+                (true, true) => Ui.TutorialBlueprint.TooSmallAndInvalid,
+                (true, false) => Ui.TutorialBlueprint.TooSmall,
+                (false, true) => Ui.TutorialBlueprint.Invalid,
+                _ => _problem == RoomPlanProblem.None ? Ui.TutorialBlueprint.Fine : Ui.TutorialBlueprint.Invalid,
+            };
+        }
+
+        bool? valid = _phase switch
+        {
+            Phase.Door => _door is null ? null : _problem == RoomPlanProblem.None,
+            Phase.Windows => _hoverEdge is null || _hoverEdge == _door || _windows.Contains(_hoverEdge.Value) ? null : _problem == RoomPlanProblem.None,
+            Phase.Objects => _placing is null || _ghostTile is null ? null : _placeProblem == ObjectPlacementProblem.None,
+            _ => null,
+        };
+        var missing = _phase == Phase.Objects ? Missing(simulation).Sum(m => m.Count) : 0;
+        return (stage, IsActive ? _room?.Id : null, blueprint, valid, missing);
+    }
+
     private RoomBlueprint? CreateBlueprint(Simulation simulation, int player)
     {
         if (_area is not { } area || _phase is not (Phase.Blueprint or Phase.Door or Phase.Windows or Phase.Waiting))

@@ -8,18 +8,21 @@ using CorsixNet.Sim.Economy;
 namespace CorsixNet.Client.Ui.Windows;
 
 /// <summary>
-/// <c>UINewGame</c>: the player's name, a difficulty and Start, which begins the campaign at its first level. The
-/// tutorial is not offered, as there is none yet.
+/// <c>UINewGame</c>: the player's name, a difficulty, the tutorial (off at first, as <c>start_tutorial = false</c>) and
+/// Start, which begins the campaign at its first level.
 /// </summary>
 /// <param name="available">The difficulties whose level files are installed, easiest first.</param>
 /// <param name="playerName">The player's name from the settings.</param>
-/// <param name="start">Starts the campaign at a difficulty.</param>
-internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string playerName, Action<Difficulty> start) : UiWindow
+/// <param name="start">Starts the campaign at a difficulty, with the tutorial or not.</param>
+internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string playerName, Action<Difficulty, bool> start) : UiWindow
 {
     /// <summary>The difficulty chosen: medium when it is there, as CorsixTH picks.</summary>
     public Difficulty Selected { get; private set; } = available.Contains(Difficulty.Medium) ? Difficulty.Medium : available.FirstOrDefault(Difficulty.Medium);
 
     public override string Title => "Campaign";
+
+    /// <summary>Whether the tutorial starts with the first level (<c>buttonTutorial</c>).</summary>
+    public bool Tutorial { get; private set; }
 
     /// <summary>The name of a difficulty, as the new game dialog shows it.</summary>
     public static string Name(Difficulty difficulty) => difficulty switch
@@ -46,12 +49,16 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
                 .. available.Select(difficulty => WindowCell.Button(Name(difficulty), () => Selected = difficulty, highlight: difficulty == Selected).WithTooltip(Description(difficulty))),
             ]);
         yield return WindowCell.Line(Description(Selected), dim: true);
+        yield return WindowRow.Of(
+            "Tutorial",
+            WindowCell.Button(Tutorial ? "On" : "Off", () => Tutorial = !Tutorial, highlight: Tutorial)
+                .WithTooltip("Click this box if you want some help to get started in the game"));
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
             WindowCell.Button("Start", () =>
             {
                 host.Close(this);
-                start(Selected);
+                start(Selected, Tutorial);
             }, enabled: available.Count > 0).WithTooltip("Start the game with the chosen settings"),
             WindowCell.Button("Cancel", () => host.Close(this)).WithTooltip("Oh, I didn't really mean to start a new game!"));
     }
