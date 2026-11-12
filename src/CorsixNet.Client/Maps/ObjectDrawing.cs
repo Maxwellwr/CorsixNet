@@ -102,6 +102,18 @@ internal sealed class ObjectDrawing
         ["operating_table"] = new() { [N] = (2310, false, (1, -1)), [E] = (2310, true, (-1, 1)) },
     };
 
+    /// <summary>
+    /// Objects drawn split over several tiles (a list of <c>render_attach_position</c>s in CorsixTH's
+    /// <c>objects/*.lua</c>): each tile, relative to the object's, draws the same animation in its own pass, cropped to its
+    /// column (<c>point.column</c>, x − y), 64 pixels wide around that tile (<c>Object:initOrientation</c>,
+    /// <c>thdf_crop</c>). The crash trolley's top part so stays behind the wall in front of it.
+    /// </summary>
+    private static readonly Dictionary<string, Dictionary<Direction, (int X, int Y)[]>> SplitParts = new(StringComparer.Ordinal)
+    {
+        // crash_trolley.lua: north { {0, 0}, {-1, 1} }, east { {0, 0}, {1, -1} }.
+        ["crash_trolley"] = new() { [N] = [(0, 0), (-1, 1)], [E] = [(0, 0), (1, -1)] },
+    };
+
     private readonly AnimationRenderer _renderer;
 
     public ObjectDrawing(AnimationRenderer renderer)
@@ -114,6 +126,25 @@ internal sealed class ObjectDrawing
     {
         var offset = content.FindObject(objectType)?.Orientations.GetValueOrDefault(orientation)?.RenderAttach ?? default;
         return new TilePosition(tile.X + offset.X, tile.Y + offset.Y);
+    }
+
+    /// <summary>
+    /// The parts of an object drawn split over several tiles: each part's tile and the columns it draws, from
+    /// <c>Left</c> to before <c>Right</c> (world coordinates); null for an object drawn whole from one tile.
+    /// </summary>
+    public static IEnumerable<(TilePosition Tile, int Left, int Right)>? Split(string objectType, TilePosition tile, Direction orientation)
+    {
+        if (!SplitParts.TryGetValue(objectType, out var facings) || !facings.TryGetValue(orientation, out var parts))
+        {
+            return null;
+        }
+
+        var anchorX = 32 * (tile.X - tile.Y);
+        return parts.Select(part =>
+        {
+            var left = anchorX + ((part.X - part.Y - 1) * 32);
+            return (new TilePosition(tile.X + part.X, tile.Y + part.Y), left, left + 64);
+        });
     }
 
     /// <summary>The tile whose drawing pass draws an object's second part, or null for an object in one part.</summary>

@@ -20,5 +20,19 @@ public sealed class ObjectDrawingTests
     public void Objects_in_one_part_have_no_second_part()
     {
         Assert.Null(ObjectDrawing.SlaveDrawTile("x_ray", new TilePosition(10, 10), Direction.North));
+        Assert.Null(ObjectDrawing.Split("x_ray", new TilePosition(10, 10), Direction.North));
+    }
+
+    // crash_trolley.lua's render_attach_position { {0, 0}, {-1, 1} } facing north: each tile draws the 64 pixels around
+    // its own column (x - y) of the trolley, which is drawn from the anchor of (10, 12), x = 32 * (10 - 12).
+    [Fact]
+    public void The_crash_trolley_is_drawn_split_over_two_tiles()
+    {
+        var parts = ObjectDrawing.Split("crash_trolley", new TilePosition(10, 12), Direction.North)!.ToList();
+
+        Assert.Equal([(new TilePosition(10, 12), -96, -32), (new TilePosition(9, 13), -160, -96)], parts);
+
+        var east = ObjectDrawing.Split("crash_trolley", new TilePosition(10, 12), Direction.East)!.ToList();
+        Assert.Equal([(new TilePosition(10, 12), -96, -32), (new TilePosition(11, 11), -32, 32)], east);
     }
 }

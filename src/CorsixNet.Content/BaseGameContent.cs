@@ -247,7 +247,7 @@ public static class BaseGameContent
 
     /// <summary>
     /// The crash trolley (objects/crash_trolley.lua). The patient lies on it from its use position while the doctor stands
-    /// at the secondary one. CorsixTH draws it split over two tiles; here it is drawn from its own tile.
+    /// at the secondary one. It is drawn split over two tiles, as CorsixTH's render_attach_position list (the client's ObjectDrawing.Split).
     /// </summary>
     public static readonly ObjectDefinition CrashTrolley = new(
         "crash_trolley",
