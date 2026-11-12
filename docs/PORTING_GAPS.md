@@ -38,9 +38,6 @@ objects from the level file.
   invulnerable and repair-all cheats are done. Strength, wear per use,
   smoking, explosion (room crash), repair by handymen and the machine window's call and replace (`MachineWindow`,
   `CallHandymanCommand`, `ReplaceMachineCommand`) are done (`Machines`, `HandymanBehaviour`).
-- Object state: plants being watered, bins filling (`plant.lua`, `bin.lua`), litter being swept and the
-  "need a handyman" advice. Plants drooping (`PlantState`), radiators heating tiles, litter (`Litter`, its ranks)
-  and patients dropping rubbish (`Littering`) are done.
 - Optional room objects: the "Choose Items" window (counts and prices) and buying them after the furniture step,
   selling objects. Extra objects placed while furnishing are bought and sold back.
 - Object-specific use: benches (sitting while queueing), staff-room

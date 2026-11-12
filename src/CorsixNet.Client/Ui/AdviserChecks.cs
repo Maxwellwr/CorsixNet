@@ -87,6 +87,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
     // plants, drinks
     public static readonly Advice NeedHandymanPlants = new(11, 93, "Hire a handyman to water the plants.");
+
+    // handymen (Patient:tickDay's litter, World:newObject, CallsDispatcher:callForRepair)
+    public static readonly Advice NeedHandymanLitter = new(11, 70, "Patients have started to make a mess of your hospital: hire a handyman to clean up.");
+    public static readonly Advice NeedHandymanMachines = new(11, 94, "Hire a handyman to keep your machines in order.");
+    public static readonly Advice MachinesFallingApart = new(11, 4, "Your machines are falling apart: get your handymen to fix them!");
+    public static readonly Advice MachineryDamaged2 = new(28, 34, "Your machinery is damaged: hire a handyman to repair it.");
     public static readonly Advice PatientsVeryThirsty = new(28, 6, "Patients are very thirsty.");
     public static readonly Advice PatientsThirsty = new(11, 16, "Patients are thirsty: place drinks machines.");
     public static readonly Advice PatientsThirsty2 = new(28, 5, "Patients are getting thirsty.");
@@ -224,6 +230,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         {
             Say(AutopsyDiscovered);
         }
+
+        HandymanAdvice(snapshot, last, Say);
 
         if (snapshot.Deaths > last.Deaths)
         {
@@ -632,6 +640,55 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         Advice Pick(Advice[] messages) => messages[pick(messages.Length)];
     }
 
+    /// <summary>
+    /// The handyman advice: the first litter in a hospital without handymen (<c>need_handyman_litter</c>), a machine placed
+    /// without one (<c>World:newObject</c>, <c>need_handyman_machines</c>), and a machine's call for repair
+    /// (<c>CallsDispatcher:callForRepair</c>): urgent, straight below four uses left, says machines are falling apart;
+    /// otherwise, below six uses left or called from the machine window, it asks for a handyman if there is none.
+    /// </summary>
+    private static void HandymanAdvice(Snapshot snapshot, Snapshot last, Action<Advice, object[]> say)
+    {
+        if (snapshot.Littered && !last.Littered && !snapshot.HasHandyman)
+        {
+            say(NeedHandymanLitter, []);
+        }
+
+        var placed = false;
+        var urgent = false;
+        var damaged = false;
+        foreach (var (id, machine) in snapshot.Machines)
+        {
+            if (!last.Machines.TryGetValue(id, out var before))
+            {
+                placed = true;
+                continue;
+            }
+
+            if (machine.RemainingUses < 4 && before.RemainingUses >= 6)
+            {
+                urgent = true;
+            }
+            else if ((machine.RemainingUses < 6 && before.RemainingUses >= 6) || (machine.IsRepairCalled && !before.IsRepairCalled))
+            {
+                damaged = true;
+            }
+        }
+
+        if (placed && !snapshot.HasHandyman)
+        {
+            say(NeedHandymanMachines, []);
+        }
+
+        if (urgent)
+        {
+            say(MachinesFallingApart, []);
+        }
+        else if (damaged && !snapshot.HasHandyman)
+        {
+            say(MachineryDamaged2, []);
+        }
+    }
+
     private static int CountIn(Simulation simulation, Room room, string objectType) =>
         simulation.Entities.Count(e => e is RoomObject placed && placed.RoomId == room.Id && string.Equals(placed.ObjectType, objectType, StringComparison.Ordinal));
 
@@ -648,7 +705,10 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         bool HasStaffedDesk,
         IReadOnlySet<string> Discovered,
         IReadOnlyDictionary<int, Rank> Ranks,
-        IReadOnlySet<int> ActiveRooms)
+        IReadOnlySet<int> ActiveRooms,
+        bool Littered,
+        bool HasHandyman,
+        IReadOnlyDictionary<int, (int RemainingUses, bool IsRepairCalled)> Machines)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -666,7 +726,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 staff.Any(s => s.Profile!.Class == StaffClass.Receptionist) && Count(simulation, player, ReceptionDesks.ObjectId) > 0,
                 hospital.Research.Objects.Where(pair => pair.Value.Discovered).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal),
                 staff.Where(s => s.Profile!.Class == StaffClass.Doctor).ToDictionary(s => s.Id, s => new Rank(s.Profile!.IsJunior, s.Profile.IsConsultant, s.Profile.IsSurgeon, s.Profile.IsPsychiatrist, s.Profile.IsResearcher)),
-                simulation.Entities.OfType<Room>().Where(room => room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, player)).Select(room => room.Id).ToHashSet());
+                simulation.Entities.OfType<Room>().Where(room => room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, player)).Select(room => room.Id).ToHashSet(),
+                hospital.Littered,
+                staff.Any(s => s.Profile!.Class == StaffClass.Handyman),
+                simulation.Entities.OfType<RoomObject>()
+                    .Where(o => o.Machine is not null && !o.IsDestroyed && IsInHospital(simulation.Map, player, o.Tile))
+                    .ToDictionary(o => o.Id, o => (o.Machine!.RemainingUses, o.Machine.IsRepairCalled)));
         }
     }
 }
