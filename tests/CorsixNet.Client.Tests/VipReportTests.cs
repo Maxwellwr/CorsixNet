@@ -25,7 +25,7 @@ public sealed class VipReportTests
 
         // It goes when its 20 days are up.
         var expires = hospital.Vips.Report!.Value.Expires;
-        while (host.Simulation.Hours <= expires)
+        while (host.Simulation.Tick <= expires)
         {
             host.Simulation.Step();
         }

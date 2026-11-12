@@ -221,14 +221,14 @@ public sealed class VipVisits
             hospital.UnconditionalChangeReputation(vip.ReputationReward);
         }
 
-        hospital.Vips.Report = new VipReport(vip.Name, vip.Rating, vip.CashReward, simulation.Hours + (InvitationDays * GameDate.HoursPerDay));
+        hospital.Vips.Report = new VipReport(vip.Name, vip.Rating, vip.CashReward, simulation.Tick + (InvitationDays * GameDate.HoursPerDay));
         hospital.Vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Hours / GameDate.HoursPerDay);
     }
 
     /// <summary>Forgets the visit's report once its fax has expired.</summary>
     internal static void TickReport(Simulation simulation, Hospital hospital)
     {
-        if (hospital.Vips.Report is { } report && simulation.Hours >= report.Expires)
+        if (hospital.Vips.Report is { } report && simulation.Tick >= report.Expires)
         {
             hospital.Vips.Report = null;
         }
