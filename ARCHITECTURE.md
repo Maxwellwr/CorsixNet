@@ -672,7 +672,9 @@ and `--continue` (the newest autosave) start the client on a saved game. Network
 format, Lua assignments with CorsixTH's names, in `%AppData%/CorsixNet` on Windows and
 `$XDG_CONFIG_HOME/CorsixNet` or `~/.config/CorsixNet` elsewhere (or `CORSIXNET_CONFIG`, or `--config FILE`). A
 missing file is written with the defaults. Only the settings the client acts on are kept: `language` (the
-original's `LANG-n.DAT` for English, French, German, Italian, Spanish or Swedish), `fullscreen`, `width` and
+original's `LANG-n.DAT` for English, French, German, Italian, Spanish or Swedish, with CorsixTH's translation from
+`Languages/*.lua` beside the game laid over it; CorsixTH's other translations whose font is the game's own
+are offered too), `fullscreen`, `width` and
 `height`, `enable_screen_shake`, `autosave_frequency`, `theme_hospital_install` (used when no game folder is given
 and it exists) and `player_name`. Command-line options still win.
 
@@ -765,7 +767,7 @@ Format readers in `CorsixNet.Formats`:
 | `BitmapFont`, `Cp437` | Bitmap fonts: sprite `i` draws character `31 + i` in the game's code page |
 | `LevelConfig` | Level settings (`LEVELS/*.SAM`, CorsixTH `.level` files) as flat keys such as `towns[1].StartCash` |
 | `PaletteRemaps` | Colour remap tables (`QDATA/GHOST*.DAT`), for example the red room blueprint |
-| `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. `StaffTexts` (Content) names and describes staff from them: the simulation keeps no text, so the picks come from the profile's fixed random values; the client shows them for a member of staff under the cursor. `OriginalTexts` adds disease names, causes, symptoms and cures and the VIPs' names, which the client's status line uses |
+| `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. `StaffTexts` (Content) names and describes staff from them: the simulation keeps no text, so the picks come from the profile's fixed random values; the client shows them for a member of staff under the cursor. `OriginalTexts` adds disease names, causes, symptoms and cures and the VIPs' names, which the client's status line uses. `LuaChunk` reads the Lua of CorsixTH's language files (calls, assignments, tables; functions and loops stepped over) and `CorsixLanguages` (Content) evaluates them as CorsixTH's `strings.lua`: assignments merge into dotted names, `Inherit` runs another language first, and original_strings.lua's `S[section][index]` names the original's strings; `OriginalTexts` lays the chosen translation over the original's strings by those names |
 | `SoundArchive` | The original's sound effects and speech (`SOUND/DATA/SOUND-n.DAT`): the table of WAV files by name, looked up in any case of letters, their durations from the WAV headers, and the names a `*` wildcard matches, as CorsixTH's `th_sound.cpp` and `audio.lua`; `ThemeHospitalInstall.LoadSounds` falls back to English as `Audio:initSpeech` does |
 | `Xmi` | The original's music (`SOUND/MIDI/*.XMI`) converted to a type 0 standard MIDI file as CorsixTH's `xmi2mid.cpp` does: times × 100, notes ending with a velocity-0 note-on, the first tempo setting the division; `ThemeHospitalInstall.MusicTracks` lists the tracks titled and ordered by `MIDI.TXT` |
 

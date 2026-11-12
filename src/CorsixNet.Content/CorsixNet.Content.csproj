@@ -9,6 +9,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- CorsixTH's language files (CorsixTH/Lua/languages, MIT), read by CorsixLanguages. -->
+    <None Include="Languages/CorsixTH/*.lua" Link="Languages/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../CorsixNet.Formats/CorsixNet.Formats.csproj" />
     <ProjectReference Include="../CorsixNet.Sim/CorsixNet.Sim.csproj" />
   </ItemGroup>
