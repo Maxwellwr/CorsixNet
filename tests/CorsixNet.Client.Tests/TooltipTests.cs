@@ -43,4 +43,14 @@ public sealed class TooltipTests
         Assert.Contains(cells, cell => cell.Text == "Money in" && cell.Tooltip == "Toggle money in");
         Assert.Contains(cells, cell => cell.Text == "+1" && cell.Tooltip == "Increase Cure research percentage");
     }
+
+    [Theory]
+    [InlineData(EndCriterion.Reputation, false, 600, 450.7, "Your Reputation should not be less than 600. Currently it's 450")]
+    [InlineData(EndCriterion.PercentageKilled, true, 30, 12, "You should kill less than 30% of your patients. Currently you have killed 12%")]
+    [InlineData(EndCriterion.StaffHappiness, false, 70, 65, "Your average staff happiness should be over 70%. Currently it's 65%")]
+    [InlineData(EndCriterion.StaffHappiness, true, 20, 65, "Your average staff happiness should not be less than 20%. Currently it's 65%")]
+    [InlineData(EndCriterion.MonthsPlayed, false, 24, 5, "You need to reach the year 2002. Currently it's the year 2000")]
+    [InlineData(EndCriterion.MonthsPlayed, true, 18, 13, "You need to win by the end of June 2001. Currently it's January 2001")]
+    public void TheProgressReportsGoalsSayWhereTheHospitalStands(EndCriterion criterion, bool isLoseGoal, double target, double now, string expected) =>
+        Assert.Equal(expected, ProgressReportWindow.Tooltip(new WindowTestHost(), criterion, isLoseGoal, (decimal)target, (decimal)now));
 }
