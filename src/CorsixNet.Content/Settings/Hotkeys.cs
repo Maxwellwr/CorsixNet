@@ -109,6 +109,8 @@ public sealed class Hotkeys
         ("ingame_panel_hireStaff", new("y")),
         ("ingame_panel_buildRoom", new("b")),
         ("ingame_openFirstMessage", new("c")),
+        ("ingame_setTransparent", new("x")),
+        ("ingame_toggleTransparent", new("x", Shift: true)),
         ("ingame_toggleAdvisor", new("a", Shift: true)),
         ("ingame_quickSave", new("s", Shift: true, Alt: true)),
         ("ingame_quickLoad", new("l", Shift: true, Alt: true)),

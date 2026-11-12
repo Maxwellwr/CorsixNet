@@ -37,6 +37,12 @@ internal sealed class MapRenderer
         _blocks = blocks;
     }
 
+    /// <summary>
+    /// Whether walls are drawn half transparent, to see behind them (GameUI:setWallsTransparent:
+    /// <c>setWallDrawFlags(4)</c>, th_gfx's thdf_alpha_50 on every wall layer).
+    /// </summary>
+    public bool TransparentWalls { get; set; }
+
     /// <summary>Draws the part of the map inside <paramref name="view"/> (world pixels). The batch must be begun.</summary>
     /// <param name="batch">A begun sprite batch.</param>
     /// <param name="map">The map to draw.</param>
@@ -157,7 +163,7 @@ internal sealed class MapRenderer
         if (height > 0)
         {
             var (left, top) = TileOrigin(x, y);
-            _blocks.Draw(batch, sprite, left, top - height + 32, Color.White);
+            _blocks.Draw(batch, sprite, left, top - height + 32, TransparentWalls ? Color.White * 0.5f : Color.White);
         }
 
         return height;

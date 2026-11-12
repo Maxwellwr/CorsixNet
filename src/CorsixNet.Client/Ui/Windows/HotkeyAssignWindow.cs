@@ -142,6 +142,8 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         "ingame_panel_adviserHistory" => "Adviser History",
         "ingame_panel_buildRoom" => "Build Room",
         "ingame_panel_hireStaff" => "Hire Staff",
+        "ingame_setTransparent" => "Transparent Walls",
+        "ingame_toggleTransparent" => "Toggle Transparent Walls",
         "ingame_toggleAdvisor" => "Advisor",
         _ when action.StartsWith("ingame_storePosition_", StringComparison.Ordinal) || action.StartsWith("ingame_recallPosition_", StringComparison.Ordinal) =>
             action[^1] == '0' ? "10" : action[^1].ToString(),
@@ -159,7 +161,7 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
             ("speed", "Game Speed Keys", "Assign hotkeys to control the game speed", [("Game Speed Keys", ["ingame_pause", "ingame_gamespeed_slowest", "ingame_gamespeed_slower", "ingame_gamespeed_normal", "ingame_gamespeed_max", "ingame_gamespeed_thensome", "ingame_gamespeed_speedup"])]),
             ("scroll", "Scroll Keys", "Assign hotkeys to scroll the screen", [("Scroll Keys", ["ingame_scroll_up", "ingame_scroll_down", "ingame_scroll_left", "ingame_scroll_right"])]),
             ("zoom", "Zoom Keys", "Assign hotkeys to zoom in and out", [("Zoom Keys", ["ingame_zoom_in", "ingame_zoom_in_more", "ingame_zoom_out", "ingame_zoom_out_more", "ingame_reset_zoom"])]),
-            ("toggle", "Toggle Keys", "Assign hotkeys to toggle options", [("Toggle Keys", ["ingame_toggleAdvisor"])]),
+            ("toggle", "Toggle Keys", "Assign hotkeys to toggle options", [("Toggle Keys", ["ingame_setTransparent", "ingame_toggleTransparent", "ingame_toggleAdvisor"])]),
             ("panels", "Panel Keys", "Assign hotkeys to open panels", [("Panel Keys", ["ingame_panel_bankManager", "ingame_panel_bankStats", "ingame_panel_staffManage", "ingame_panel_townMap", "ingame_panel_casebook", "ingame_panel_research", "ingame_panel_status", "ingame_panel_charts", "ingame_panel_policy", "ingame_panel_machineMenu", "ingame_panel_adviserHistory", "ingame_panel_buildRoom", "ingame_panel_hireStaff"])]),
             ("recall", "Recall Position Keys", "Assign hotkeys to save and recall camera positions", [
                 ("Store Position Keys", digits.Select(digit => "ingame_storePosition_" + digit).ToArray()),
