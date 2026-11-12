@@ -74,6 +74,20 @@ public class BaseGameContentTests
     }
 
     [Fact]
+    public void WaitingAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var animations = BaseGameContent.PatientAnimations.Values.SelectMany(a => new[] { a.Yawn, a.TapFoot, a.CheckWatch }).OfType<AnimationRef>().ToList();
+
+        Assert.NotEmpty(animations);
+        foreach (var animation in animations)
+        {
+            Assert.Equal((animation.Id, set.Length(set.FirstFrame(animation.Id))), (animation.Id, animation.Length));
+        }
+    }
+
+    [Fact]
     public void MultiUseAnimationsLastAsLongAsTheOriginalsAnimations()
     {
         var set = AnimationSet.Load(RealGameData.Require());
