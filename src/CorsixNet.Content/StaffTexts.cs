@@ -5,6 +5,7 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Text;
+using CorsixNet.Content.Languages;
 using CorsixNet.Formats;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Staff;
@@ -40,13 +41,31 @@ public sealed class StaffTexts
     /// <summary>Below this skill (CorsixTH's 0.55) the description is a bad one.</summary>
     private const int GoodSkill = 550;
 
-    private readonly StringTable _strings;
+    private readonly IReadOnlyList<string> _nameStarts;
+    private readonly IReadOnlyList<string> _nameEnds;
+    private readonly IReadOnlyList<string> _misc;
+    private readonly IReadOnlyList<string> _good;
+    private readonly IReadOnlyList<string> _bad;
+    private readonly IReadOnlyList<string> _classes;
     private readonly string[] _initials;
 
-    public StaffTexts(StringTable strings)
+    /// <summary>
+    /// The texts from the original's strings, or from CorsixTH's translation where it has its own lists
+    /// (<c>humanoid_name_starts</c>, <c>humanoid_name_ends</c>, <c>staff_descriptions</c>, <c>staff_class</c>).
+    /// </summary>
+    public StaffTexts(StringTable strings, LanguageStrings? language = null)
     {
-        _strings = strings;
-        _initials = Initials(strings);
+        _nameStarts = Choose(language, "humanoid_name_starts", strings, NameStartsSection, int.MaxValue);
+        _nameEnds = Choose(language, "humanoid_name_ends", strings, NameEndsSection, int.MaxValue);
+        _misc = Choose(language, "staff_descriptions.misc", strings, MiscDescriptionsSection, MiscDescriptionCount);
+        _good = Choose(language, "staff_descriptions.good", strings, GoodDescriptionsSection, GoodOrBadDescriptionCount);
+        _bad = Choose(language, "staff_descriptions.bad", strings, BadDescriptionsSection, GoodOrBadDescriptionCount);
+        _classes =
+        [
+            .. new[] { "nurse", "doctor", "handyman", "receptionist" }.Select((key, index) =>
+                language?.Get("staff_class." + key) is { Length: > 0 } named ? named : strings.Get(StaffClassSection, index) ?? string.Empty),
+        ];
+        _initials = Initials([.. _nameStarts, .. _nameEnds]);
     }
 
     /// <summary>The initial (CorsixTH's <c>initial</c>, from <c>name_seed</c>).</summary>
@@ -66,7 +85,7 @@ public sealed class StaffTexts
     public string Name(StaffProfile profile)
     {
         var random = RandomFor(profile);
-        return Pick(_strings, NameStartsSection, int.MaxValue, random) + Pick(_strings, NameEndsSection, int.MaxValue, random);
+        return Pick(_nameStarts, random) + Pick(_nameEnds, random);
     }
 
     /// <summary>The initial and the surname (<c>getFullName</c>).</summary>
@@ -81,11 +100,11 @@ public sealed class StaffTexts
         var random = RandomFor(profile);
 
         // The name's two picks come first, as in randomiseOrganical.
-        Pick(_strings, NameStartsSection, int.MaxValue, random);
-        Pick(_strings, NameEndsSection, int.MaxValue, random);
+        Pick(_nameStarts, random);
+        Pick(_nameEnds, random);
 
-        var first = Pick(_strings, profile.Skill < GoodSkill ? BadDescriptionsSection : GoodDescriptionsSection, GoodOrBadDescriptionCount, random);
-        var second = Pick(_strings, MiscDescriptionsSection, MiscDescriptionCount, random);
+        var first = Pick(profile.Skill < GoodSkill ? _bad : _good, random);
+        var second = Pick(_misc, random);
         if (Encoding.UTF8.GetByteCount(first) + Encoding.UTF8.GetByteCount(second) > MaxDescriptionLength)
         {
             return first;
@@ -95,23 +114,15 @@ public sealed class StaffTexts
     }
 
     /// <summary>The name of a staff class (<c>staff_class</c>, the profession CorsixTH shows for staff).</summary>
-    public string Profession(StaffClass staffClass) => _strings.Get(StaffClassSection, (int)staffClass) ?? staffClass.ToString();
+    public string Profession(StaffClass staffClass) =>
+        (int)staffClass < _classes.Count && _classes[(int)staffClass] is { Length: > 0 } name ? name : staffClass.ToString();
 
     /// <summary>
     /// <c>World:updateInitialsCache</c>: the characters of all name starts and ends joined, less the first 32 bytes.
     /// </summary>
-    private static string[] Initials(StringTable strings)
+    private static string[] Initials(IEnumerable<string> names)
     {
-        var joined = new StringBuilder();
-        foreach (var section in (ReadOnlySpan<int>)[NameStartsSection, NameEndsSection])
-        {
-            for (var i = 0; i < strings.SectionSize(section); i++)
-            {
-                joined.Append(strings[section, i]);
-            }
-        }
-
-        var bytes = Encoding.UTF8.GetBytes(joined.ToString());
+        var bytes = Encoding.UTF8.GetBytes(string.Concat(names));
         var initials = new List<string>();
         var position = Math.Min(32, bytes.Length);
         while (position < bytes.Length)
@@ -134,10 +145,18 @@ public sealed class StaffTexts
         return [.. initials];
     }
 
-    private static string Pick(StringTable strings, int section, int limit, SimRandom random)
+    private static string Pick(IReadOnlyList<string> strings, SimRandom random) =>
+        strings.Count > 0 ? strings[random.Next(strings.Count)] : string.Empty;
+
+    /// <summary>The translation's list by name when it has one, else the first <paramref name="limit"/> strings of a section.</summary>
+    private static IReadOnlyList<string> Choose(LanguageStrings? language, string name, StringTable strings, int section, int limit)
     {
-        var count = Math.Min(strings.SectionSize(section), limit);
-        return count > 0 ? strings[section, random.Next(count)] : string.Empty;
+        if (language?.List(name) is { Count: > 0 } translated)
+        {
+            return translated.Count > limit ? [.. translated.Take(limit)] : translated;
+        }
+
+        return [.. Enumerable.Range(0, Math.Min(strings.SectionSize(section), limit)).Select(index => strings[section, index])];
     }
 
     private static SimRandom RandomFor(StaffProfile profile)

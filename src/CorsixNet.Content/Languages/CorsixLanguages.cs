@@ -356,6 +356,18 @@ public sealed class CorsixLanguages
                     }
 
                     break;
+                case null:
+                    // staff_descriptions.misc[38] = nil
+                    strings.Remove(path);
+                    break;
+                case OriginalTable { Strings: { } original, Section: { } section }:
+                    // humanoid_name_starts = S[9]: the whole section as a list.
+                    for (var index = 1; index <= original.SectionSize(section - 1); index++)
+                    {
+                        Merge(path + "." + index.ToString(CultureInfo.InvariantCulture), new OriginalString(section, index, original.Get(section - 1, index - 1)));
+                    }
+
+                    break;
                 case TableValue table:
                     foreach (var (key, entry) in table.Entries)
                     {
@@ -428,6 +440,8 @@ public sealed class LanguageStrings
     }
 
     internal void Set(string name, string text) => _strings[name] = text;
+
+    internal void Remove(string name) => _strings.Remove(name);
 
     internal void MapOriginal(int section, int index, string name) => _originalNames.TryAdd((section, index), name);
 

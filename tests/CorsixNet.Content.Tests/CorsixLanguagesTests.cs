@@ -175,3 +175,69 @@ public class CorsixLanguagesTests
         return StringTable.Parse(data.ToArray());
     }
 }
+
+/// <summary>Staff texts from CorsixTH's translations (humanoid_name_starts/_ends, staff_descriptions, staff_class).</summary>
+public class TranslatedStaffTextsTests
+{
+    [Fact]
+    public void StaffAreNamedAndDescribedFromTheTranslation()
+    {
+        var languages = CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages"));
+        var russian = languages.Load("Russian", _ => null);
+        var texts = new StaffTexts(StringTable.Parse(new byte[] { 0, 0 }), russian);
+        var profile = CorsixNet.Sim.Staff.StaffProfile.Create(CorsixNet.Sim.Staff.StaffClass.Nurse, 900, CorsixNet.Sim.Staff.StaffRules.Default, new CorsixNet.Sim.SimRandom(7));
+
+        Assert.Equal(russian.Get("staff_class.nurse"), texts.Profession(CorsixNet.Sim.Staff.StaffClass.Nurse));
+        Assert.Contains(russian.List("humanoid_name_starts"), start => texts.Name(profile).StartsWith(start, StringComparison.Ordinal));
+        Assert.Contains(russian.List("staff_descriptions.good"), good => texts.Description(profile).Contains(good, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void WholeSectionsAndRemovedItemsAreFollowed()
+    {
+        var languages = new CorsixLanguages(
+        [
+            ("original_strings.lua", """
+                Language("original_strings")
+                local S = LoadStrings("Lang-".. ... ..".dat")
+                humanoid_name_starts = S[9]
+                staff_descriptions.misc = S[46]
+                staff_descriptions.misc[3] = nil
+                """),
+            ("english.lua", """
+                Language("English", "English", "en")
+                Inherit("original_strings", 0)
+                """),
+        ]);
+        var strings = languages.Load("English", _ => Table());
+
+        Assert.Equal(["a", "b", "c"], strings.List("humanoid_name_starts"));
+        Assert.Equal(["x", "y"], strings.List("staff_descriptions.misc"));
+    }
+
+    private static StringTable Table()
+    {
+        var sections = new string[48][];
+        for (var i = 0; i < sections.Length; i++)
+        {
+            sections[i] = [];
+        }
+
+        sections[8] = ["a", "b", "c"];
+        sections[45] = ["x", "y", "."];
+        var data = new List<byte> { (byte)sections.Length, 0 };
+        foreach (var section in sections)
+        {
+            data.Add((byte)section.Length);
+            data.Add(0);
+        }
+
+        foreach (var text in sections.SelectMany(section => section))
+        {
+            data.AddRange(text.Select(c => (byte)c));
+            data.Add(0);
+        }
+
+        return StringTable.Parse(data.ToArray());
+    }
+}
