@@ -178,4 +178,19 @@ public sealed class MapEditorTests : IDisposable
 
         static TileFlags Kind(MapTile tile) => tile.Flags & (TileFlags.Passable | TileFlags.Buildable | TileFlags.Hospital);
     }
+
+    [Fact]
+    public void An_entrance_door_replaces_the_doors_on_its_tiles_with_their_other_halves()
+    {
+        var editor = MapEditor.Blank();
+        editor.PlaceEntranceDoor(new TilePosition(10, 10), west: false);
+        Assert.Equal(2, editor.Objects.Count);
+
+        // A west door whose left half lands on the north door's right half: the north door goes, both halves.
+        editor.PlaceEntranceDoor(new TilePosition(10, 11), west: true);
+
+        Assert.Equal(
+            new[] { (new TilePosition(10, 10), MapEditor.EntranceLeftDoor, (byte)1), (new TilePosition(10, 11), MapEditor.EntranceRightDoor, (byte)1) },
+            editor.Objects.Select(o => (o.Tile, o.ObjectType, o.Direction)).OrderBy(o => o.Tile.Y).ToArray());
+    }
 }

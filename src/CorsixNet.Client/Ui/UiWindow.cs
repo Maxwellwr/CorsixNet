@@ -162,6 +162,11 @@ internal abstract class UiWindow
     /// <summary>The size of a drawing area below the table, such as a chart, or null for none.</summary>
     public virtual Point? CanvasSize => null;
 
+    /// <summary>A click in the drawing area, at <paramref name="local"/> from its top left corner.</summary>
+    public virtual void CanvasClicked(IWindowHost host, Point local)
+    {
+    }
+
     /// <summary>Draws the window's drawing area (see <see cref="CanvasSize"/>) in screen coordinates.</summary>
     public virtual void DrawCanvas(SpriteBatch batch, Rectangle area, Texture2D pixel, TextRenderer text)
     {

@@ -152,6 +152,44 @@ public sealed class MapEditor
         }
     }
 
+    /// <summary>The entrance doors' object types (objects/doors/entrance_left_door.lua and entrance_right_door.lua).</summary>
+    public const byte EntranceLeftDoor = 58;
+
+    /// <inheritdoc cref="EntranceLeftDoor"/>
+    public const byte EntranceRightDoor = 59;
+
+    /// <summary>
+    /// <c>checkObjectSpace</c> and <c>drawObject</c> for an entrance door: the right door on <paramref name="tile"/> and
+    /// the left one west of it in a north wall, or north of it in a west wall; any doors on those two tiles go first,
+    /// with their other halves.
+    /// </summary>
+    public void PlaceEntranceDoor(TilePosition tile, bool west)
+    {
+        var left = west ? new TilePosition(tile.X, tile.Y - 1) : new TilePosition(tile.X - 1, tile.Y);
+        foreach (var position in new[] { tile, left })
+        {
+            if (!_objects.TryGetValue(position, out var placed) || placed.ObjectType is not (EntranceLeftDoor or EntranceRightDoor))
+            {
+                continue;
+            }
+
+            var placedWest = (placed.Direction & 1) != 0;
+            var (dx, dy) = placedWest ? (0, 1) : (1, 0);
+            var other = placed.ObjectType == EntranceRightDoor
+                ? new TilePosition(position.X - dx, position.Y - dy)
+                : new TilePosition(position.X + dx, position.Y + dy);
+            _objects.Remove(position);
+            if (_objects.TryGetValue(other, out var half) && half.ObjectType is EntranceLeftDoor or EntranceRightDoor && half.ObjectType != placed.ObjectType)
+            {
+                _objects.Remove(other);
+            }
+        }
+
+        var direction = west ? (byte)1 : (byte)0;
+        PlaceObject(new MapObjectPlacement(tile, EntranceRightDoor, direction));
+        PlaceObject(new MapObjectPlacement(left, EntranceLeftDoor, direction));
+    }
+
     /// <summary><c>deleteWallsAtArea</c>: the tiles lose their walls and their objects; the floor stays.</summary>
     public void DeleteWalls(IEnumerable<TilePosition> tiles)
     {

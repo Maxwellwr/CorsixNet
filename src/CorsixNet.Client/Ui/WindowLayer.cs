@@ -199,6 +199,11 @@ internal sealed class WindowLayer
 
         var clicked = layout.Cells.FirstOrDefault(cell => cell.Cell.OnClick is not null && cell.Area.Contains(point));
         clicked.Cell?.OnClick?.Invoke();
+        if (layout.Canvas.Contains(point))
+        {
+            hit.Window.CanvasClicked(host, point - layout.Canvas.Location);
+        }
+
         return true;
     }
 
