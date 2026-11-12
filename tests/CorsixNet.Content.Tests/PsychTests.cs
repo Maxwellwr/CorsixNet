@@ -80,6 +80,63 @@ public class PsychTests
     }
 
     [Fact]
+    public void KingComplexPatientsChangeAtTheScreenAfterTheCouch()
+    {
+        var simulation = NewStaffedHospital(Rules(king: true));
+        var room = BuildPsych(simulation, out _);
+        var hospital = simulation.Hospitals[0];
+        var kings = new HashSet<int>();
+        var changed = new HashSet<int>();
+        var animations = new HashSet<int>();
+
+        for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay && changed.Count < 2; tick++)
+        {
+            simulation.Step();
+            foreach (var humanoid in simulation.Entities.OfType<Humanoid>())
+            {
+                if (humanoid.Behaviour is not PatientBehaviour patient)
+                {
+                    continue;
+                }
+
+                if (humanoid.Type == HumanoidType.ElvisPatient)
+                {
+                    kings.Add(humanoid.Id);
+                    if (patient.TargetId == room.Id && humanoid.ActionAnimation is { } animation)
+                    {
+                        animations.Add(animation.Id);
+                    }
+                }
+                else if (kings.Contains(humanoid.Id) && !changed.Contains(humanoid.Id))
+                {
+                    // use_screen.lua: a standard man with head 2 and trousers 2, changed at the psychiatrist's screen.
+                    Assert.Equal(HumanoidType.StandardMalePatient, humanoid.Type);
+                    Assert.Equal(room.Id, patient.TargetId);
+                    Assert.Equal(2, humanoid.Layers[0]);
+                    Assert.Equal(2, humanoid.Layers[2]);
+                    changed.Add(humanoid.Id);
+                    if (humanoid.ActionAnimation is { } change)
+                    {
+                        animations.Add(change.Id);
+                    }
+                }
+            }
+        }
+
+        Assert.True(changed.Count >= 2, $"Only {changed.Count} of {kings.Count} kings changed.");
+        Assert.Contains(1014, animations);
+        Assert.Contains(942, animations);
+        Assert.Contains(946, animations);
+        StepFor(simulation, 2 * GameDate.HoursPerDay);
+        Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.Treatment, Subject: "king_complex" });
+
+        using var stream = new MemoryStream();
+        simulation.Save(stream);
+        stream.Position = 0;
+        Assert.Equal(simulation.ComputeStateHash(), Simulation.Load(stream, BaseGameContent.Create()).ComputeStateHash());
+    }
+
+    [Fact]
     public void ADoctorWhoIsNoPsychiatristIsNotCalled()
     {
         var simulation = NewStaffedHospital(Rules());
@@ -98,16 +155,28 @@ public class PsychTests
         Assert.Equal(0, room.StaffId);
     }
 
-    /// <summary>Infectious laughter the only disease, known and easy to diagnose, so that the GP sends patients straight on.</summary>
-    private static LevelRules Rules()
+    /// <summary>
+    /// Infectious laughter (or the king complex) the only disease, known and easy to diagnose, so that the GP sends
+    /// patients straight on.
+    /// </summary>
+    private static LevelRules Rules(bool king = false)
     {
         var nonVisuals = new int[DiseaseRules.NonVisualsCount];
-        nonVisuals[DiseaseCatalog.Find("infectious_laughter")!.NonVisualsId!.Value] = 1;
+        var visuals = new int[DiseaseRules.VisualsCount];
+        if (king)
+        {
+            visuals[DiseaseCatalog.Find("king_complex")!.VisualsId!.Value] = 1;
+        }
+        else
+        {
+            nonVisuals[DiseaseCatalog.Find("infectious_laughter")!.NonVisualsId!.Value] = 1;
+        }
+
         var diseases = new DiseaseRules(
             Enumerable.Repeat(100, DiseaseRules.ExpertiseCount + 1).ToArray(),
             Enumerable.Repeat(true, DiseaseRules.ExpertiseCount + 1).ToArray(),
             new int[DiseaseRules.ExpertiseCount + 1],
-            new int[DiseaseRules.VisualsCount],
+            visuals,
             nonVisuals,
             new int[DiseaseRules.VisualsCount],
             new int[DiseaseRules.NonVisualsCount],

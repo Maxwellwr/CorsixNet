@@ -98,6 +98,7 @@ public static class BaseGameContent
             [HumanoidType.TransparentMalePatient] = new(new(4360, 2), [new(4344, 1)], new(4368, 2)),
             [HumanoidType.TransparentFemalePatient] = new(new(4816, 2), [new(4808, 1)], new(4824, 2)),
             [HumanoidType.InvisiblePatient] = new(new(4228, 2), [new(4236, 1)], new(4244, 2)),
+            [HumanoidType.ElvisPatient] = new(new(1054, 2), [new(1038, 1)], new(4070, 2)),
         },
         UsageEast: new Dictionary<HumanoidType, UseAnimations>
         {
@@ -112,6 +113,7 @@ public static class BaseGameContent
             [HumanoidType.TransparentMalePatient] = new(new(4362, 2), ChairTalk(new(4378, 1), new(4346, 2), new(4354, 27)), new(4370, 2)),
             [HumanoidType.TransparentFemalePatient] = new(new(4818, 2), ChairTalk(new(4810, 1), new(4842, 2), new(4834, 13)), new(4826, 2)),
             [HumanoidType.InvisiblePatient] = new(new(4230, 2), [.. Enumerable.Repeat(new AnimationRef(4238, 1), 16), new(4250, 39)], new(4246, 2)),
+            [HumanoidType.ElvisPatient] = new(new(1056, 2), [.. Enumerable.Repeat(new AnimationRef(1040, 1), 16), new(4080, 40)], new(4072, 2)),
         },
         WalkInToUse: true);
 
@@ -183,6 +185,7 @@ public static class BaseGameContent
                 ? new(new(3028, 2), [new(3036, 2)], new(3044, 2))
                 : new(new(3030, 2), [new(3038, 1)], new(3046, 2)),
             [HumanoidType.InvisiblePatient] = north ? Use(1812, 1820, 1828) : Use(1814, 1822, 1830),
+            [HumanoidType.ElvisPatient] = north ? Use(3642, 4110, 4102) : Use(3644, 4112, 4104),
 
             // The aliens borrow the standard patients' (marked TEMP in bench.lua).
             [HumanoidType.AlienMalePatient] = male,
@@ -203,9 +206,9 @@ public static class BaseGameContent
             [Direction.West] = new([new(0, 0, CompleteCell), new(-1, 0, UsePosition)]),
         },
         CorridorObject: true,
-        UsageEast: With(WithChewbacca(WithSlackMale(DrinksMachineUse(196, 14, 256, 11), new(null, [new(1538, 14)], null)), new(null, [new(3774, 14)], null)), HumanoidType.AlternateMalePatient, new(null, [new(2762, 14)], null)).WithSeeThrough(new(1118, 14), new(3066, 11), new(1810, 14)),
-        UsageSouth: With(WithChewbacca(WithSlackMale(DrinksMachineUse(190, 14, 250, 11), new(null, [new(1532, 14)], null)), new(null, [new(3768, 14)], null)), HumanoidType.AlternateMalePatient, new(null, [new(2756, 14)], null)).WithSeeThrough(new(1112, 14), new(3060, 11), new(1804, 14)),
-        UsageWest: With(WithChewbacca(WithSlackMale(DrinksMachineUse(192, 11, 252, 10), new(null, [new(1534, 11)], null)), new(null, [new(3770, 11)], null)), HumanoidType.AlternateMalePatient, new(null, [new(2758, 11)], null)).WithSeeThrough(new(1114, 11), new(3062, 9), new(1806, 11)));
+        UsageEast: With(WithChewbacca(WithSlackMale(DrinksMachineUse(196, 14, 256, 11), new(null, [new(1538, 14)], null)), new(null, [new(3774, 14)], null)), HumanoidType.AlternateMalePatient, new(null, [new(2762, 14)], null)).WithSeeThrough(new(1118, 14), new(3066, 11), new(1810, 14)).WithElvis(new(204, 14)),
+        UsageSouth: With(WithChewbacca(WithSlackMale(DrinksMachineUse(190, 14, 250, 11), new(null, [new(1532, 14)], null)), new(null, [new(3768, 14)], null)), HumanoidType.AlternateMalePatient, new(null, [new(2756, 14)], null)).WithSeeThrough(new(1112, 14), new(3060, 11), new(1804, 14)).WithElvis(new(198, 14)),
+        UsageWest: With(WithChewbacca(WithSlackMale(DrinksMachineUse(192, 11, 252, 10), new(null, [new(1534, 11)], null)), new(null, [new(3770, 11)], null)), HumanoidType.AlternateMalePatient, new(null, [new(2758, 11)], null)).WithSeeThrough(new(1114, 11), new(3062, 9), new(1806, 11)).WithElvis(new(200, 11)));
 
     /// <summary>The fire extinguisher (objects/fire_extinguisher.lua), a side object.</summary>
     public static readonly ObjectDefinition FireExtinguisher = new("extinguisher", "Fire Extinguisher", ObjectType: 43, SideOrientations(Direction.North, Direction.East, Direction.South, Direction.West), CorridorObject: true);
@@ -277,6 +280,9 @@ public static class BaseGameContent
             [HumanoidType.StrippedFemalePatient] = new(null, [new(2844, 29)], null),
             [HumanoidType.StrippedFemalePatient2] = new(null, [new(2844, 29)], null),
             [HumanoidType.StrippedFemalePatient3] = new(null, [new(2844, 29)], null),
+
+            // use_screen.lua: the King changes into a standard man's clothes in one go.
+            [HumanoidType.ElvisPatient] = new(null, [new(946, 44)], null),
         });
 
     /// <summary>
@@ -1325,6 +1331,7 @@ public static class BaseGameContent
         [HumanoidType.TransparentMalePatient] = new(Entering: new(1106, 10), Leaving: new(1104, 12), KnockNorth: new(1120, 9), KnockEast: new(1074, 1)),
         [HumanoidType.TransparentFemalePatient] = new(Entering: new(3054, 10), Leaving: new(3052, 12), KnockNorth: new(3068, 7), KnockEast: new(3070, 1)),
         [HumanoidType.InvisiblePatient] = new(Entering: new(1798, 10), Leaving: new(1796, 12), KnockNorth: new(4192, 1), KnockEast: new(4194, 1)),
+        [HumanoidType.ElvisPatient] = new(Entering: new(3636, 10), Leaving: new(3634, 12), KnockNorth: new(4868, 9), KnockEast: new(4870, 1)),
         [HumanoidType.ChewbaccaPatient] = new(Entering: new(3528, 10), Leaving: new(3526, 12), KnockNorth: new(4150, 18), KnockEast: new(4152, 1)),
         [HumanoidType.AlternateMalePatient] = new(Entering: new(2750, 10), Leaving: new(2748, 12), KnockNorth: new(2764, 9), KnockEast: new(2766, 1)),
 
@@ -1370,6 +1377,7 @@ public static class BaseGameContent
         [HumanoidType.TransparentMalePatient] = MaleDeath(new(4412, 15), new(384, 11)) with { Extra = new(4416, 13) },
         [HumanoidType.TransparentFemalePatient] = FemaleDeath(new(4420, 16)) with { Extra = new(4428, 13) },
         [HumanoidType.InvisiblePatient] = MaleDeath(new(4200, 23), new(384, 11)),
+        [HumanoidType.ElvisPatient] = MaleDeath(new(974, 15), new(384, 11)) with { Extra = new(4186, 30) },
     };
 
     private static DeathAnimations MaleDeath(AnimationRef fall, AnimationRef riseHell) =>
@@ -1394,6 +1402,7 @@ public static class BaseGameContent
         [HumanoidType.TransparentMalePatient] = new(Vomit: new(4384, 27), Pee: new(4848, 8)),
         [HumanoidType.TransparentFemalePatient] = new(Vomit: new(4452, 9), Pee: new(4852, 8)),
         [HumanoidType.InvisiblePatient] = new(Vomit: new(4204, 14), Pee: new(4208, 9)),
+        [HumanoidType.ElvisPatient] = new(Vomit: new(1034, 18), Pee: new(970, 7)),
         [HumanoidType.AlternateMalePatient] = new(Vomit: new(4476, 27), Pee: new(4472, 8), TapFoot: new(360, 12), CheckWatch: new(364, 22)),
     };
 
@@ -1473,6 +1482,7 @@ public static class BaseGameContent
     {
         [HumanoidType.StandardMalePatient] = new(new(2528, 15), [new(2536, 1)], new(2532, 8)),
         [HumanoidType.StandardFemalePatient] = new(new(3180, 12), [new(3330, 1)], new(3326, 7)),
+        [HumanoidType.ElvisPatient] = new(new(1014, 16), [new(942, 1)], new(938, 7)),
     };
 
     /// <summary>comfortable_chair.lua's doctor: two animations to sit down, sitting, getting up.</summary>
@@ -1573,6 +1583,7 @@ public static class BaseGameContent
             [(HumanoidType.Doctor, HumanoidType.TransparentMalePatient)] = Use(new(4460, 8), new(4856, 13), new(4456, 12), new(4626, 9)),
             [(HumanoidType.Doctor, HumanoidType.TransparentFemalePatient)] = Use(new(4860, 8), new(4804, 4), new(4796, 12), new(4800, 10)),
             [(HumanoidType.Doctor, HumanoidType.InvisiblePatient)] = Use(new(4212, 8), new(4224, 2), new(4216, 12), new(4220, 10)),
+            [(HumanoidType.Doctor, HumanoidType.ElvisPatient)] = Use(new(4086, 16), new(4090, 13), new(4094, 12), new(4098, 10)),
         };
         return new() { [Direction.North] = north, [Direction.South] = north };
     }
@@ -1616,6 +1627,7 @@ public static class BaseGameContent
         [HumanoidType.TransparentMalePatient] = ScannerSet(874, 878, 882, 886),
         [HumanoidType.TransparentFemalePatient] = ScannerSet(4926, 4930, 4934, 4938),
         [HumanoidType.InvisiblePatient] = ScannerSet(4942, 4946, 4950, 4954),
+        [HumanoidType.ElvisPatient] = ScannerSet(4914, 4916, 4918, 4922),
         [HumanoidType.SlackMalePatient] = new(new(4974, 1), [], new(4974, 1), Begin2: new(4974, 1), Finish2: new(4978, 5))
         {
             More = new(Begin3: new(4978, 5), Begin4: new(4986, 1), Begin5: new(4982, 5), Finish3: new(4986, 1), Finish4: new(4982, 5), Finish5: new(4974, 1)),
@@ -1763,6 +1775,7 @@ public static class BaseGameContent
         [HumanoidType.StandardMalePatient] = new(new(1964, 27), [new(1960, 2)], new(1992, 16)),
         [HumanoidType.StandardFemalePatient] = new(new(2948, 27), [new(2952, 2)], new(2956, 16)),
         [HumanoidType.InvisiblePatient] = new(new(614, 27), [new(5140, 2)], new(618, 16)),
+        [HumanoidType.ElvisPatient] = new(new(5120, 27), [new(5128, 2)], new(5124, 16)),
     };
 
     /// <summary>radiation_shield.lua's doctor: sits down, pulls the handle, sits idle or pushes buttons, stands up.</summary>
@@ -1810,6 +1823,7 @@ public static class BaseGameContent
         [HumanoidType.TransparentMalePatient] = new(new(4388, 15), [new(4400, 45)], new(4404, 21), Begin2: new(4392, 25), Finish2: new(4408, 18)),
         [HumanoidType.TransparentFemalePatient] = new(new(4432, 18), [new(4440, 1)], new(4444, 26), Begin2: new(4436, 25), Finish2: new(4448, 18)),
         [HumanoidType.InvisiblePatient] = new(new(4256, 15), [new(4272, 32)], new(4280, 27), Begin2: new(4260, 25), Finish2: new(4284, 18)),
+        [HumanoidType.ElvisPatient] = new(new(950, 15), [new(962, 45)], new(966, 27), Begin2: new(954, 25), Finish2: new(1158, 18)),
     };
 
     /// <summary>sink.lua's animations for the standard patients.</summary>
@@ -1880,6 +1894,13 @@ internal static class SeeThroughUsage
         table[HumanoidType.TransparentMalePatient] = new(null, [transparentMale], null);
         table[HumanoidType.TransparentFemalePatient] = new(null, [transparentFemale], null);
         table[HumanoidType.InvisiblePatient] = new(null, [invisible], null);
+        return table;
+    }
+
+    /// <summary>A usage table with the King's in-use animation added (diseases/king_complex.lua).</summary>
+    public static Dictionary<HumanoidType, UseAnimations> WithElvis(this Dictionary<HumanoidType, UseAnimations> table, AnimationRef elvis)
+    {
+        table[HumanoidType.ElvisPatient] = new(null, [elvis], null);
         return table;
     }
 }

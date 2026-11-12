@@ -103,6 +103,9 @@ public enum HumanoidType : byte
 
     /// <summary>CorsixTH's "Invisible Patient": only clothes show (diseases/invisibility.lua) until the pharmacy.</summary>
     InvisiblePatient = 27,
+
+    /// <summary>CorsixTH's "Elvis Patient": dressed as the King (diseases/king_complex.lua) until psychiatry.</summary>
+    ElvisPatient = 28,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -921,6 +924,13 @@ public sealed class Humanoid : Entity
             layers[4] = (byte)((first == 0 && second == 0 ? 1 : third) * 2);
             layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
             return new Humanoid(id, tile, HumanoidType.AlternateMalePatient, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
+        if (look == PatientLook.Elvis)
+        {
+            // king_complex.lua: one of three heads in layer 0, the rest bare.
+            layers[0] = (byte)(random.NextInclusive(1, 3) * 2);
+            return new Humanoid(id, tile, HumanoidType.ElvisPatient, layers) { HospitalPlayer = hospitalPlayer };
         }
 
         if (look == PatientLook.Invisible)

@@ -332,10 +332,12 @@ Next, in this order (2026-11-10):
    with electrolysis (PR #215). Alternate Male done with the fracture clinic (PR #216; women are off, CorsixTH's disable_fractured_bones_females default). Transparent and Invisible done (2026-11-12, MSI, seen live: TransparentMale/FemalePatient, InvisiblePatient with their walking,
    doors, knocking, vomiting, peeing, dying, the GP's chair, bench, loo, drinks machine, X-ray (invisible), scanner and autopsy;
    the pharmacy's drink morphs them into standard patients, MultiUsePhase.SecondaryMorph, NurseBehaviour.BecomeStandard; the
-   invisible man's cured_layers are picked at the cure). Next: Elvis, Alien
-   (walk_anims in entities/humanoid.lua) with their animations in every object they use on the way (GP chair, drinks
-   machine, loo, sink, screen, bench, the diagnosis machines). Then the rooms that need them: slack tongue, hair
-   restoration, electrolysis, fracture clinic, DNA fixer, jelly vat; and psychiatry's king complex change.
+   invisible man's cured_layers are picked at the cure). Elvis done (2026-11-12, MSI, seen live: ElvisPatient with walking,
+   doors, knocking, vomiting, peeing, dying, GP chair, bench, loo, drinks machine, X-ray, scanner (dressed), autopsy and the
+   couch; psych.lua's king complex change: at the end of the session PatientBehaviour.StartKingChange sends him to the
+   screen (KingChangeStep, anim 946, use_screen.lua's layers 2/random/2) and he is dealt with after it; save format 87).
+   Next: Alien (walk_anims in entities/humanoid.lua) with their animations in every object they use on the way. Then the
+   rooms that need them: slack tongue, hair restoration, electrolysis, fracture clinic, DNA fixer, jelly vat.
 3. Machine wear and repairs done (save format 68): `MachineState` on every machine `RoomObject` (strength from the
    research, times used), `Machines.Used` at the end of each use by anyone but a handyman (ObjectUse/MultiObjectUse
    report no Done when it explodes), `Machines.Crash` (crashRoom: everyone inside dies, other objects go at the end of

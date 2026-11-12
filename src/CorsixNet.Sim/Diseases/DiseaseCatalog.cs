@@ -185,6 +185,7 @@ public static class DiseaseCatalog
         },
         new("king_complex", 4, 1600)
         {
+            Look = PatientLook.Elvis,
             EmergencyNumber = 18,
             VisualsId = 2,
             DiagnosisRooms = ["x_ray", "scanner"],

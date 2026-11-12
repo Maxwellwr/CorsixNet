@@ -32,6 +32,9 @@ public enum PatientLook : byte
 
     /// <summary>A patient of whom only the clothes show (<c>diseases/invisibility.lua</c>).</summary>
     Invisible,
+
+    /// <summary>A man dressed as the King (<c>diseases/king_complex.lua</c>).</summary>
+    Elvis,
 }
 
 /// <summary>

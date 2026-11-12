@@ -53,8 +53,8 @@ public class ScannerTests
         Assert.True(scanned.Count >= 2, $"Only {scanned.Count} patients were scanned.");
         Assert.Contains(animations, id => id is 1426 or 1434 or 1466 or 1474 or 1406 or 1446);
         Assert.Contains(animations, id => id is 798 or 806 or 810 or 814);
-        // Only standard patients undress for the scanner (do_change); slack ones go in dressed.
-        Assert.All(kinds, kind => Assert.True(kind.ToString().Contains("Stripped", StringComparison.Ordinal) || kind.ToString().StartsWith("Slack", StringComparison.Ordinal), kind.ToString()));
+        // Only standard patients undress for the scanner (do_change); slack ones and the King go in dressed.
+        Assert.All(kinds, kind => Assert.True(kind.ToString().Contains("Stripped", StringComparison.Ordinal) || kind.ToString().StartsWith("Slack", StringComparison.Ordinal) || kind == HumanoidType.ElvisPatient, kind.ToString()));
         Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.Treatment, Subject: "diag_scanner" });
         Assert.DoesNotContain(simulation.Entities.OfType<Humanoid>(), h => h.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome } && h.Type.ToString().Contains("Stripped", StringComparison.Ordinal));
 

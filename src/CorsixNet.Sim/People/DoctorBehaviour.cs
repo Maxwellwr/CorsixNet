@@ -912,9 +912,14 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
 
         if (_psychDuration == 0)
         {
-            // King complex patients would change at the screen first; they look like everyone else here.
             EndSession(simulation, humanoid, room);
-            RoomVisits.DealtWithPatient(simulation, room);
+
+            // psych.lua: a diagnosed king complex patient changes out of the costume at the screen first, and is dealt
+            // with after that (psych_screen_after_use).
+            if (!patient.StartKingChange(simulation, room))
+            {
+                RoomVisits.DealtWithPatient(simulation, room);
+            }
             return;
         }
 
