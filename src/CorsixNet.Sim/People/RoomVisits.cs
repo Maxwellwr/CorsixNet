@@ -1051,7 +1051,10 @@ public static class RoomVisits
     /// <summary>
     /// <c>CallsDispatcher:callForStaff</c> and <c>answerCall</c>: of the free staff of the kind the room needs, the one
     /// with the best score for it (<see cref="CallScore"/>) goes, unless another room waiting for staff scores better
-    /// for them; that room takes them when it calls, as CorsixTH's free staff answer the most urgent call.
+    /// for them; that room takes them when it calls, as CorsixTH's free staff answer the most urgent call. With the
+    /// <c>staff_allowed_to_move</c> policy, staff idle in a room nobody is waiting for may be called away too
+    /// (<c>verifyStaffForRoom</c>, <c>Staff:isIdle</c>); as rooms here keep calling while without staff, that is only
+    /// for a room with patients waiting, so that two empty rooms do not pass a doctor back and forth.
     /// </summary>
     private static void CallStaff(Simulation simulation, Room room)
     {
@@ -1066,7 +1069,9 @@ public static class RoomVisits
         var bestScore = 0m;
         foreach (var entity in simulation.Entities)
         {
-            if (entity is not Humanoid { Behaviour: { } behaviour } staff || !IsFreeFor(staff, rules.Staff, owner) || !IsQualifiedFor(room.RoomType, staff))
+            if (entity is not Humanoid { Behaviour: { } behaviour } staff
+                || !(IsFreeFor(staff, rules.Staff, owner) || CanBeCalledAway(simulation, staff, rules.Staff, owner, room))
+                || !IsQualifiedFor(room.RoomType, staff))
             {
                 continue;
             }
@@ -1083,8 +1088,35 @@ public static class RoomVisits
             return;
         }
 
+        if (best.Behaviour is IRoomStaff { RoomId: not 0 } && best.Profile is { } profile)
+        {
+            // CallsDispatcher.sendStaffToRoom from another room: they leave it as free staff.
+            StaffEmployment.Detach(simulation, best);
+            best.Behaviour = StaffHiring.NewBehaviour(profile.Class);
+        }
+
         room.StaffId = best.Id;
         ((IRoomStaff)best.Behaviour!).GoToRoom(simulation, best, room, target);
+    }
+
+    /// <summary>
+    /// <c>verifyStaffForRoom</c> for staff in another room: the policy lets staff move, the room calling has patients
+    /// waiting, and theirs is an ordinary room (not the staff room, research or training) where they are the staff, no
+    /// patient is in or on the way, and nobody queues (<c>Staff:isIdle</c>, <c>Room:isRoomInDemand</c>).
+    /// </summary>
+    private static bool CanBeCalledAway(Simulation simulation, Humanoid staff, BehaviourKind kind, int owner, Room calling)
+    {
+        if (staff.Behaviour is not IRoomStaff { RoomId: var roomId and not 0 } || roomId == calling.Id || staff.Behaviour.Kind != kind
+            || staff.Employer != owner || owner < 0 || owner >= simulation.Hospitals.Count || !simulation.Hospitals[owner].Policies.StaffAllowedToMove
+            || calling.DoorQueue is not { Count: > 0 }
+            || simulation.FindEntity(roomId) is not Room { IsActive: true, PatientId: 0, StaffPresent: true } current || current.StaffId != staff.Id
+            || current.RoomType is ResearchRoom or "training" or "staff_room" || !Rules.ContainsKey(current.RoomType)
+            || current.DoorQueue is { Count: > 0 })
+        {
+            return false;
+        }
+
+        return !simulation.Entities.Any(e => e is Humanoid { Behaviour: PatientBehaviour patient } && patient.TargetId == current.Id);
     }
 
     /// <summary><c>CallsDispatcher.verifyStaffForRoom</c>: idle staff of the kind, of the room's hospital, not in a room.</summary>
@@ -1095,8 +1127,8 @@ public static class RoomVisits
     /// <summary>
     /// <c>CallsDispatcher.getPriorityForRoom</c>, smaller is more urgent: the path to the room, less five for each patient
     /// waiting and a great deal for an emergency patient among them, less forty times the staff's fatigue (the tired go
-    /// first, so that they do not all rest at once) and fifty for staff not in a room; null if they cannot get there.
-    /// The specialists' bonus is left out until rooms need them.
+    /// first, so that they do not all rest at once) and fifty for staff not in a room, and a hundred thousand for a room
+    /// that needs a researcher, psychiatrist or surgeon, so that specialists go there first; null if they cannot get there.
     /// </summary>
     internal static decimal? CallScore(Simulation simulation, Room room, TilePosition entrance, Humanoid staff)
     {
@@ -1119,6 +1151,11 @@ public static class RoomVisits
         if (staff.Behaviour is IRoomStaff { RoomId: 0 })
         {
             score -= 50;
+        }
+
+        if (NeedsSpecialist(room.RoomType))
+        {
+            score -= 100_000;
         }
 
         return score;

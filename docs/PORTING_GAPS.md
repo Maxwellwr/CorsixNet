@@ -64,9 +64,9 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
   partial: a room without staff calls the free member of staff with the best `getPriorityForRoom` score (path,
-  waiting patients, emergencies, fatigue), unless another waiting room scores better for them; there is no call
-  queue object, specialists' bonus, calling staff out of other rooms (`staff_allowed_to_move`) or dispatching of
-  handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
+  waiting patients, emergencies, fatigue, specialist rooms first), unless another waiting room scores better for them;
+  with `staff_allowed_to_move`, staff idle in a room nobody waits for are called to a room with patients waiting.
+  There is no call queue object or dispatching of handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Handyman: the staff window's task priorities (`entities/humanoids/staff/handyman.lua`); sweeping, watering and
   repairing machines are done.
 - Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
@@ -202,9 +202,6 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 
 - Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
   (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`).
-- Remaining level settings:
-  research settings, `#gbv`
-  values beyond the ones read now.
 - Playing a campaign through, the original's (12 levels in order) or a CorsixTH one (the fax offering the next level,
   `world.lua`'s winning letter, `fax.lua`), choosing a custom level or campaign in a menu, briefings shown (`app.lua`,
   `Campaigns/`, `Levels/`). Loading a custom level (`.level` + `.map`, with overlays) and reading a campaign file are
