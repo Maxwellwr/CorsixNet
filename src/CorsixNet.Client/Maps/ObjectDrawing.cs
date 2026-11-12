@@ -205,7 +205,7 @@ internal sealed class ObjectDrawing
     /// For a plant, its state: CorsixTH draws it still, as the idle animation's first frame plus the state
     /// (<c>Plant:setNextState</c>). Null animates the object as usual.
     /// </param>
-    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint, byte? hangingClothes = null, int? frameOffset = null)
+    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint, byte? hangingClothes = null, int? frameOffset = null, byte[]? layers = null)
     {
         var anchorX = 32 * (tile.X - tile.Y);
         var anchorY = 16 * (tile.X + tile.Y);
@@ -233,7 +233,7 @@ internal sealed class ObjectDrawing
             flip = true;
         }
 
-        var layers = NoLayers;
+        layers ??= NoLayers;
         if (hangingClothes is { } clothes)
         {
             animation = ScreenWithClothes;
