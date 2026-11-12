@@ -65,6 +65,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The surgeon screen with two green outfits (2772), one green and one white (2776), or two white (2774).</summary>
     private const int SurgeonScreenGreens = 2772;
+
+    /// <summary>The gear icon over a machine waiting for its repair (machine.lua, the only icon for machinery).</summary>
+    private const int RepairGearIcon = 4564;
     private const int SurgeonScreenBoth = 2776;
     private const int SurgeonScreenWhites = 2774;
 
@@ -2118,6 +2121,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 if (machine is not null)
                 {
                     _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);
+                    if (placed.Machine.IsRepairCalled)
+                    {
+                        // Machine:setRepairingStatus: the gear icon (4564) turns above the machine (setMoodInfo, 96 pixels up)
+                        // until the repair is done.
+                        var gearFirst = _animations.Animations.FirstFrame(RepairGearIcon);
+                        var gearFrame = _animations.Animations.Advance(gearFirst, (int)(simulation.Tick % _animations.Animations.Length(gearFirst)));
+                        _animations.DrawFrame(batch, gearFrame, (32 * (placed.Tile.X - placed.Tile.Y)) - 1, (16 * (placed.Tile.X + placed.Tile.Y)) - 96, NoLayers, flipHorizontally: false);
+                    }
                 }
 
                 break;
