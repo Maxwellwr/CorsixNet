@@ -108,7 +108,7 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
 /// are kept in a draft until Apply, which saves <c>config.txt</c> and uses them at once; the screen size takes effect on
 /// the next start.
 /// </summary>
-internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null) : UiWindow
+internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null) : UiWindow
 {
     private readonly IReadOnlyList<string> _languages = languages ?? [];
 
@@ -132,6 +132,17 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return _languages.Count > 1
             ? Stepper("Language", _draft.Language, () => StepLanguage(-1), () => StepLanguage(+1))
             : WindowRow.Of("Language", _draft.Language);
+        if (hotkeys is not null)
+        {
+            // buttonHotkey: the options close for the hotkey assignment dialog, which opens them again.
+            var assign = WindowCell.Button("Assign", () =>
+            {
+                host.Close(this);
+                hotkeys();
+            });
+            yield return WindowRow.Of("Hotkeys", assign with { Tooltip = "Change keyboard hotkeys." });
+        }
+
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
             WindowCell.Button("Apply", () =>

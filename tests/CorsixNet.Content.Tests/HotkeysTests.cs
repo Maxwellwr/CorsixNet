@@ -48,6 +48,48 @@ public sealed class HotkeysTests : IDisposable
     }
 
     [Fact]
+    public void AssigningAKeyAnotherActionHasSwapsTheirKeys()
+    {
+        var hotkeys = new Hotkeys();
+
+        Assert.True(hotkeys.Assign("ingame_panel_bankManager", new Hotkey("f2")));
+
+        Assert.Equal(new Hotkey("f2"), hotkeys["ingame_panel_bankManager"]);
+        Assert.Equal(new Hotkey("f1"), hotkeys["ingame_panel_bankStats"]);
+        Assert.True(hotkeys.Assign("ingame_panel_bankManager", new Hotkey("g", Ctrl: true)));
+        Assert.Equal(new Hotkey("g", Ctrl: true), hotkeys["ingame_panel_bankManager"]);
+        Assert.Equal(new Hotkey("f1"), hotkeys["ingame_panel_bankStats"]);
+    }
+
+    [Fact]
+    public void EscapeAndReturnAloneAreRefusedAndScrollKeysLoseTheirModifiers()
+    {
+        var hotkeys = new Hotkeys();
+
+        Assert.False(hotkeys.Assign("ingame_pause", new Hotkey("escape")));
+        Assert.False(hotkeys.Assign("ingame_pause", new Hotkey("return")));
+        Assert.True(hotkeys.Assign("ingame_pause", new Hotkey("return", Ctrl: true)));
+        Assert.Equal(new Hotkey("return", Ctrl: true), hotkeys["ingame_pause"]);
+
+        Assert.True(hotkeys.Assign("ingame_scroll_up", new Hotkey("i", Shift: true)));
+        Assert.Equal(new Hotkey("i"), hotkeys["ingame_scroll_up"]);
+        Assert.Throws<ArgumentException>(() => hotkeys.Assign("ingame_poopLog", new Hotkey("q")));
+    }
+
+    [Fact]
+    public void ACopyChangesApart()
+    {
+        var hotkeys = new Hotkeys();
+        var copy = hotkeys.Copy();
+        Assert.True(copy.SameAs(hotkeys));
+
+        copy.Assign("ingame_pause", new Hotkey("q"));
+
+        Assert.False(copy.SameAs(hotkeys));
+        Assert.Equal(new Hotkey("p"), hotkeys["ingame_pause"]);
+    }
+
+    [Fact]
     public void RejectsTextThatIsNotAHotkeysFile() =>
         Assert.Throws<InvalidDataException>(() => Hotkeys.Parse("print('hello')"));
 

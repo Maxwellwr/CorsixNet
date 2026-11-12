@@ -1,5 +1,6 @@
 // The hotkeys file, after CorsixTH CorsixTH/Lua/config_finder.lua (hotkeys.txt: load_hotkeys, save_hotkeys,
-// new_hotkeys_defaults). The names are CorsixTH's; the default keys are this game's own where it differs.
+// new_hotkeys_defaults) and dialogs/resizables/hotkey_assign.lua (hotkey_input). The names are CorsixTH's; the default
+// keys are this game's own where it differs.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Collections.Frozen;
@@ -147,6 +148,49 @@ public sealed class Hotkeys
 
     /// <summary>The key for an action, or null for an action that has none.</summary>
     public Hotkey? this[string action] => _keys.GetValueOrDefault(action);
+
+    /// <summary>A copy to change, such as the hotkey assignment dialog's.</summary>
+    public Hotkeys Copy() => new(new Dictionary<string, Hotkey>(_keys, StringComparer.Ordinal));
+
+    /// <summary>Whether two sets give every action the same key.</summary>
+    public bool SameAs(Hotkeys other) => _keys.All(pair => other._keys.TryGetValue(pair.Key, out var key) && key == pair.Value);
+
+    /// <summary>
+    /// <c>hotkey_input</c>: gives an action a key. Escape and Return on their own are kept for closing and confirming,
+    /// and are refused; the scroll keys lose their modifiers. An action that had the key already gets this action's old
+    /// one, so no key does two things.
+    /// </summary>
+    /// <returns>False when the key is refused and nothing changed.</returns>
+    /// <exception cref="ArgumentException">The action is not one that takes a key.</exception>
+    public bool Assign(string action, Hotkey key)
+    {
+        if (!_keys.TryGetValue(action, out var old))
+        {
+            throw new ArgumentException($"There is no hotkey action {action}.", nameof(action));
+        }
+
+        if (!key.Ctrl && !key.Shift && !key.Alt && key.Key is "escape" or "return")
+        {
+            return false;
+        }
+
+        if (action.StartsWith("ingame_scroll_", StringComparison.Ordinal))
+        {
+            key = new Hotkey(key.Key);
+        }
+
+        foreach (var (other, otherKey) in _keys)
+        {
+            if (other != action && otherKey == key)
+            {
+                _keys[other] = old;
+                break;
+            }
+        }
+
+        _keys[action] = key;
+        return true;
+    }
 
     /// <summary>
     /// <c>load_hotkeys</c>: reads the hotkeys file, writing one with the defaults first if there is none.

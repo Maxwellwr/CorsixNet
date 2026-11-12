@@ -191,6 +191,9 @@ Done and committed:
   when missing): the dialogs, Ctrl+H the adviser's history, Shift+A the adviser on or off (saved),
   pause, speed up, quick save/load, the speeds 1-5, scrolling (arrows; WASD stays too), zoom (=, -,
   Shift for five times, 0), Alt/Ctrl+digit views and B the room list. Speed 6 and the stand-in keys stay fixed.
+  Options, Hotkeys, Assign opens the hotkey assignment dialog (hotkey_assign.lua; HotkeyAssignWindow): panes of
+  the actions above, click a key then press the new one (Esc/Return alone refused, a key in use swaps), Accept
+  saves hotkeys.txt and uses the keys at once. While it waits for a key the game sees no keyboard (IKeyCaptureWindow).
   Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
   format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
   machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).
