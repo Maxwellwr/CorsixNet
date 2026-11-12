@@ -61,6 +61,10 @@ public readonly record struct FootprintTile(int X, int Y, FootprintFlags Flags =
 /// Where the other user of a use together ends up, if not the secondary use position (<c>finish_use_position_secondary</c>).
 /// </param>
 /// <param name="FinishSecondaryFacing">Which way the other user then faces (<c>finish_use_orientation_secondary</c>).</param>
+/// <param name="EarlyList">
+/// Whether the object, and whoever uses it, is drawn with its tile's north wall rather than its west wall (CorsixTH's
+/// <c>early_list</c>, <c>DrawFlags.EarlyList</c>), so that it goes behind what stands on the tiles to its left.
+/// </param>
 public sealed record ObjectOrientation(
     IReadOnlyList<FootprintTile> Footprint,
     (int X, int Y) RenderAttach = default,
@@ -69,7 +73,8 @@ public sealed record ObjectOrientation(
     (int X, int Y)? FinishUsePosition = null,
     bool AnimateFromUsePosition = false,
     (int X, int Y)? FinishSecondaryUsePosition = null,
-    Direction? FinishSecondaryFacing = null)
+    Direction? FinishSecondaryFacing = null,
+    bool EarlyList = false)
 {
     /// <summary>The use position relative to the placement tile.</summary>
     public (int X, int Y) Use => UsePosition ?? Footprint.Where(part => part.IsUsePosition).Select(part => (part.X, part.Y)).FirstOrDefault();

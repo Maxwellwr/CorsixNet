@@ -48,7 +48,11 @@ internal sealed class MapRenderer
     /// <param name="isAnimated">
     /// Whether a tile holds an animation (CorsixTH's <c>is_multiple_frame_animation_fn</c>), for the redrawing above.
     /// </param>
-    public void Draw(SpriteBatch batch, LevelMap map, Rectangle view, Action<TilePosition, int, int>? drawEntities = null, Func<TilePosition, bool>? isAnimated = null)
+    /// <param name="drawEarlyEntities">
+    /// Called for each tile after its north wall, to draw its early entities (CorsixTH's <c>oEarlyEntities</c>).
+    /// </param>
+    /// <param name="hasEarly">Whether a tile has early entities, which makes it one to draw again like a north wall.</param>
+    public void Draw(SpriteBatch batch, LevelMap map, Rectangle view, Action<TilePosition, int, int>? drawEntities = null, Func<TilePosition, bool>? isAnimated = null, Action<TilePosition, int, int>? drawEarlyEntities = null, Func<TilePosition, bool>? hasEarly = null)
     {
         var (firstScanline, lastScanline) = VisibleScanlines(map, view);
 
@@ -66,7 +70,9 @@ internal sealed class MapRenderer
             var (firstX, lastX) = VisibleColumns(map, view, s);
             for (var x = lastX; x >= firstX; x--)
             {
-                DrawNorthWall(batch, map, x, s - x);
+                var y = s - x;
+                DrawNorthWall(batch, map, x, y);
+                drawEarlyEntities?.Invoke(new TilePosition(x, y), 32 * (x - y), 16 * (x + y));
             }
 
             var previousNeedsRedraw = false;
@@ -82,10 +88,11 @@ internal sealed class MapRenderer
                 {
                     var (px, py) = (x - 1, y + 1);
                     DrawNorthWall(batch, map, px, py);
+                    drawEarlyEntities?.Invoke(new TilePosition(px, py), 32 * (px - py), 16 * (px + py));
                     drawEntities?.Invoke(new TilePosition(px, py), 32 * (px - py), 16 * (px + py));
                 }
 
-                previousNeedsRedraw = map[x, y].NorthWall != 0;
+                previousNeedsRedraw = map[x, y].NorthWall != 0 || (hasEarly?.Invoke(new TilePosition(x, y)) ?? false);
             }
         }
     }
