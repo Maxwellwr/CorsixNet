@@ -40,7 +40,7 @@ internal static class Littering
             return;
         }
 
-        if (humanoid.HospitalPlayer < 0 || patient.Phase == PatientPhase.GoingHome)
+        if (humanoid.HospitalPlayer < 0 || patient.Phase is PatientPhase.GoingHome or PatientPhase.Dying)
         {
             return;
         }

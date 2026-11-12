@@ -1,6 +1,7 @@
 using CorsixNet.Formats;
 using CorsixNet.Formats.Tests;
 using CorsixNet.Sim.Definitions;
+using CorsixNet.Sim.People;
 
 namespace CorsixNet.Content.Tests;
 
@@ -43,6 +44,21 @@ public class BaseGameContentTests
     }
 
     [Fact]
+    public void DeathAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var animations = BaseGameContent.DeathAnimations.Values
+            .SelectMany(death => new[] { death.Fall, death.Rise, death.RiseHell, death.Wings, death.Hands, death.Fly }.Concat(death.Extra is { } extra ? [extra] : []))
+            .Distinct()
+            .ToList();
+        foreach (var animation in animations.Concat([GrimReaperBehaviour.HoleIdle, GrimReaperBehaviour.HoleClosing, GrimReaperBehaviour.FallingIn, GrimReaperBehaviour.Spawn, GrimReaperBehaviour.Swipe, GrimReaperBehaviour.Leave]))
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+    }
+
+    [Fact]
     public void DoorAnimationsLastAsLongAsTheOriginalsAnimations()
     {
         var set = AnimationSet.Load(RealGameData.Require());
@@ -69,6 +85,17 @@ public class BaseGameContentTests
         // A vomit and a pee animation for each kind of patient with them.
         Assert.Equal(2 * BaseGameContent.PatientAnimations.Count, animations.Count);
         foreach (var animation in animations)
+        {
+            Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+
+        // Yawning, tapping a foot, looking at the watch, falling, lying, getting up and shaking a fist, where there are.
+        var others = BaseGameContent.PatientAnimations.Values
+            .SelectMany(a => new[] { a.Yawn, a.TapFoot, a.CheckWatch, a.Falling, a.OnGround, a.GetUp, a.ShakeFist })
+            .OfType<AnimationRef>()
+            .ToList();
+        Assert.NotEmpty(others);
+        foreach (var animation in others)
         {
             Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
         }

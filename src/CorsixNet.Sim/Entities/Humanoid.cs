@@ -91,6 +91,9 @@ public enum HumanoidType : byte
 
     /// <summary>CorsixTH's "Alien Female Patient": walks like the alien man, a standard woman's animations elsewhere.</summary>
     AlienFemalePatient = 23,
+
+    /// <summary>The grim reaper, who takes dead men to hell (entities/humanoids/grim_reaper.lua).</summary>
+    GrimReaper = 24,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>

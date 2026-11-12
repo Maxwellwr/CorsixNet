@@ -82,6 +82,60 @@ public class OperatingTheatreTests
         Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
     }
 
+    [Fact]
+    public void SurgeonsLeavingChangeBackIntoDoctorsAtTheScreen()
+    {
+        var simulation = NewStaffedHospital(Rules());
+        var theatre = BuildTheatre(simulation);
+        for (var tick = 0; tick < 31 * GameDate.HoursPerDay && InScrubs(simulation) < 2; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.Equal(2, InScrubs(simulation));
+        var surgeons = simulation.Entities.OfType<Humanoid>().Where(h => h.Type == HumanoidType.Surgeon).ToList();
+
+        // Editing the room sends its staff out (commandEnteringStaff's last actions: to the screen, and change back).
+        Run(simulation, new EditRoomCommand(theatre.Id));
+        var animations = new HashSet<int>();
+        var screen = simulation.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "surgeon_screen");
+        for (var tick = 0; tick < 10 * GameDate.HoursPerDay && surgeons.Any(s => s.Type == HumanoidType.Surgeon || s.ActionAnimation is not null); tick++)
+        {
+            simulation.Step();
+            foreach (var surgeon in surgeons)
+            {
+                if (surgeon.ActionAnimation is { } animation && surgeon.HiddenObjectId == screen.Id)
+                {
+                    if (animations.Count == 0)
+                    {
+                        using var stream = new MemoryStream();
+                        simulation.Save(stream);
+                        stream.Position = 0;
+                        var loaded = Simulation.Load(stream, BaseGameContent.Create());
+                        StepFor(loaded, 3);
+                        var copy = new MemoryStream();
+                        simulation.Save(copy);
+                        copy.Position = 0;
+                        var again = Simulation.Load(copy, BaseGameContent.Create());
+                        StepFor(again, 3);
+                        Assert.Equal(again.ComputeStateHash(), loaded.ComputeStateHash());
+                    }
+
+                    animations.Add(animation.Id);
+                    Assert.True(theatre.Area.Contains(surgeon.Tile));
+                }
+            }
+        }
+
+        Assert.All(surgeons, s => Assert.Equal(HumanoidType.Doctor, s.Type));
+
+        // use_screen.lua: the first back hangs scrubs on a screen with no greens (2792), the second on one with a green (2790).
+        Assert.Equal(new HashSet<int> { 2792, 2790 }, animations);
+    }
+
+    private static int InScrubs(Simulation simulation) =>
+        simulation.Entities.OfType<Humanoid>().Count(h => h is { Type: HumanoidType.Surgeon, Behaviour: DoctorBehaviour { Phase: DoctorPhase.OtReady } });
+
     /// <summary>Kidney beans the only disease, known and easy to diagnose: the ward, then the operating theatre.</summary>
     private static LevelRules Rules()
     {
