@@ -1310,16 +1310,42 @@ public static class BaseGameContent
     {
         // swing_door_right.lua: the left door swings in 2032 or out 2034, the right one in 2048 or out 2052.
         SwingDoor = new SwingDoorAnimations(SlaveIn: new(2032, 27), SlaveOut: new(2034, 22), MasterIn: new(2048, 19), MasterOut: new(2052, 17)),
+        DeathAnimations = DeathAnimations,
     };
 
     /// <summary>
-    /// humanoid.lua's <c>vomit_anim</c>, <c>pee_anim</c>, <c>yawn_anim</c>, <c>tap_foot_anim</c> and <c>check_watch_anim</c> for
-    /// the patients there are.
+    /// humanoid.lua's <c>die_anims</c> for the patients there are: fall, rise, rise to hell, wings, hands, fly (lengths from
+    /// VSTART-1/VFRA-1). The Chewbacca patient's fall is cut after 21 frames, where it goes wrong, and ends with the
+    /// standard man's (die.lua's <c>action_die_start</c>).
+    /// </summary>
+    public static readonly IReadOnlyDictionary<HumanoidType, DeathAnimations> DeathAnimations = new Dictionary<HumanoidType, DeathAnimations>
+    {
+        [HumanoidType.StandardMalePatient] = MaleDeath(new(1682, 15), new(384, 11)),
+        [HumanoidType.AlternateMalePatient] = MaleDeath(new(1682, 15), new(3404, 11)),
+        [HumanoidType.SlackMalePatient] = MaleDeath(new(1682, 15), new(384, 11)),
+        [HumanoidType.ChewbaccaPatient] = MaleDeath(new(4182, 37), new(384, 11)) with { Extra = new(1682, 15), FallLength = 21 },
+        [HumanoidType.AlienMalePatient] = MaleDeath(new(4882, 23), new(384, 11)),
+        [HumanoidType.StandardFemalePatient] = FemaleDeath(new(3116, 16)),
+        [HumanoidType.SlackFemalePatient] = FemaleDeath(new(4288, 16)),
+        [HumanoidType.AlienFemalePatient] = FemaleDeath(new(4886, 23)),
+    };
+
+    private static DeathAnimations MaleDeath(AnimationRef fall, AnimationRef riseHell) =>
+        new(fall, Rise: new(2434, 11), riseHell, Wings: new(2438, 11), Hands: new(2446, 17), Fly: new(2450, 2));
+
+    private static DeathAnimations FemaleDeath(AnimationRef fall) =>
+        new(fall, Rise: new(3208, 13), RiseHell: new(580, 13), Wings: new(3212, 11), Hands: new(3216, 17), Fly: new(3220, 2));
+
+    /// <summary>
+    /// humanoid.lua's <c>vomit_anim</c>, <c>pee_anim</c>, <c>yawn_anim</c>, <c>tap_foot_anim</c>, <c>check_watch_anim</c>,
+    /// <c>falling_anim</c>, <c>on_ground_anim</c>, <c>get_up_anim</c> and <c>shake_fist_anim</c> for the patients there are.
     /// </summary>
     public static readonly IReadOnlyDictionary<HumanoidType, PatientAnimations> PatientAnimations = new Dictionary<HumanoidType, PatientAnimations>
     {
-        [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8), Yawn: new(368, 21), TapFoot: new(2960, 12), CheckWatch: new(2964, 22)),
-        [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8), Yawn: new(4864, 26), TapFoot: new(4464, 2), CheckWatch: new(4468, 16)),
+        [HumanoidType.StandardMalePatient] = new(Vomit: new(2056, 27), Pee: new(2244, 8), Yawn: new(368, 21), TapFoot: new(2960, 12), CheckWatch: new(2964, 22),
+            Falling: new(1682, 15), OnGround: new(1258, 1), GetUp: new(384, 11), ShakeFist: new(392, 6)),
+        [HumanoidType.StandardFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8), Yawn: new(4864, 26), TapFoot: new(4464, 2), CheckWatch: new(4468, 16),
+            Falling: new(3116, 16), OnGround: new(1764, 1), GetUp: new(580, 13)),
         [HumanoidType.SlackFemalePatient] = new(Vomit: new(3184, 9), Pee: new(4744, 8)),
         [HumanoidType.SlackMalePatient] = new(Vomit: new(4324, 9), Pee: new(4328, 8), CheckWatch: new(4060, 22)),
         [HumanoidType.ChewbaccaPatient] = new(Vomit: new(4138, 15), Pee: new(4178, 9)),

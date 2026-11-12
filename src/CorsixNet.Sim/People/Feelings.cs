@@ -67,10 +67,11 @@ internal static class Feelings
         if (humanoid.Behaviour is PatientBehaviour sadOrNot)
         {
             sadOrNot.IsSad = humanoid.Happiness < 0.3m;
+            sadOrNot.OnEndDayFall();
         }
 
         // No use for those going home.
-        if (humanoid.IsDespawning || humanoid.IsFired || humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome })
+        if (humanoid.IsDespawning || humanoid.IsFired || humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome or PatientPhase.Dying })
         {
             return;
         }

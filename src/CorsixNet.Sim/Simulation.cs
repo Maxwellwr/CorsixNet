@@ -237,6 +237,16 @@ public sealed class Simulation
         if (Earthquakes.Tick(Rules.Earthquakes, Random))
         {
             Objects.Machines.EarthquakeImpact(this);
+
+            // Earthquake:tick: a patient out of a room might fall over, one time in two.
+            foreach (var humanoid in Entities.OfType<Humanoid>().ToList())
+            {
+                if (humanoid.Behaviour is PatientBehaviour patient && humanoid.HospitalPlayer >= 0 && Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0
+                    && Content.FindPatientAnimations(humanoid.Type)?.Falling is not null && Random.NextInclusive(1, 2) == 2)
+                {
+                    patient.Fall(this, humanoid);
+                }
+            }
         }
 
         if (Date.Day != GameDate.FromHours(Hours + 1).Day)

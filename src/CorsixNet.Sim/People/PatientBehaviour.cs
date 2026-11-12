@@ -90,6 +90,52 @@ public enum PatientPhase : byte
     /// home (CorsixTH's <c>waiting</c>).
     /// </summary>
     Waiting,
+
+    /// <summary>Dead: a step aside, then falling down and the trip to heaven (<see cref="DyingStage"/>).</summary>
+    Dying,
+}
+
+/// <summary>Where a dead patient is on the way out (die.lua's phases).</summary>
+public enum DyingStage : byte
+{
+    /// <summary>Not dying.</summary>
+    None,
+
+    /// <summary>The one step aside before falling (Patient:die's <c>MeanderAction():setCount(1)</c>).</summary>
+    SteppingAside,
+
+    /// <summary>Falling down (<c>fall_east</c>).</summary>
+    Falling,
+
+    /// <summary>The transformation or ending of the fall some patients have (<c>extra_east</c>).</summary>
+    Extra,
+
+    /// <summary>Rising from the body as a ghost (<c>rise_east</c>, 11 ticks).</summary>
+    Rising,
+
+    /// <summary>Growing wings (<c>wings_east</c>, 11 ticks).</summary>
+    Wings,
+
+    /// <summary>Hands together (<c>hands_east</c>, 15 ticks).</summary>
+    Hands,
+
+    /// <summary>Flying up, 4 pixels a tick for 30 ticks (<c>fly_east</c>); then the patient is gone.</summary>
+    Flying,
+
+    /// <summary>On the way to hell: lying on the ground until the grim reaper is in his place.</summary>
+    OnGround,
+
+    /// <summary>A pause of 20 ticks before getting up.</summary>
+    AwaitingRise,
+
+    /// <summary>Standing up for the walk to hell (<c>rise_hell_east</c>).</summary>
+    RisingToHell,
+
+    /// <summary>Walking to the gates to hell and into them.</summary>
+    WalkingToHole,
+
+    /// <summary>Falling into the gates to hell; then the patient is gone.</summary>
+    FallingIn,
 }
 
 /// <summary>Something a patient does on the spot, interrupting what they were doing.</summary>
@@ -114,6 +160,17 @@ public enum PatientSpotAction : byte
 
     /// <summary>Knocking on the door of a room with staff before going in or queueing (<c>KnockDoorAction</c>).</summary>
     Knock,
+    /// <summary>Knocked over by an earthquake (<c>FallingAction</c>).</summary>
+    Falling,
+
+    /// <summary>Lying on the ground after the fall (<c>OnGroundAction</c>).</summary>
+    OnGround,
+
+    /// <summary>Getting up again (<c>GetUpAction</c>).</summary>
+    GettingUp,
+
+    /// <summary>Shaking a fist after getting up, one time in five (<c>ShakeFistAction</c>).</summary>
+    ShakingFist,
 }
 
 /// <summary>Where a patient stands with the toilet (CorsixTH's <c>going_to_toilet</c>).</summary>
@@ -358,6 +415,30 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>What the patient does on the spot, interrupting what they were doing, or none.</summary>
     public PatientSpotAction SpotAction { get; private set; }
 
+    /// <summary>Where a dead patient is on the way out; <see cref="DyingStage.None"/> while alive.</summary>
+    public DyingStage DyingStage { get; private set; }
+
+    /// <summary>Ticks the current stage of dying has been going for.</summary>
+    public int DyingTicks { get; private set; }
+
+    /// <summary>Whether the dead patient fell towards the south (mirrored) rather than the east.</summary>
+    private bool _dieSouth;
+
+    /// <summary>
+    /// CorsixTH's <c>has_fallen</c>: 1 when the patient may fall, 2 on the day of a fall and 3 the day after, so that
+    /// nobody falls twice in a row.
+    /// </summary>
+    public byte HasFallen { get; private set; } = 1;
+
+    /// <summary>Whether the fallen patient shakes a fist once up again.</summary>
+    private bool _shakeFist;
+
+    /// <summary>Whether the dead patient goes to hell with the grim reaper (die.lua's <c>action_die_tick_reaper</c>).</summary>
+    private bool _toHell;
+
+    /// <summary>The grim reaper come for the dead patient, or 0.</summary>
+    public int ReaperId { get; private set; }
+
     /// <summary>Ticks left of the spot action's animation, or −1 until the patient stands still to start it.</summary>
     private int _spotTimer;
 
@@ -449,6 +530,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
+        if (Phase == PatientPhase.Dying)
+        {
+            UpdateDying(simulation, humanoid);
+            return;
+        }
+
         // Patient:tick: out of rooms and doorways, a patient whose health ran out dies.
         if (IsSetToDie && !IsInRoom && simulation.Map[humanoid.Tile.X, humanoid.Tile.Y].RoomId == 0)
         {
@@ -573,9 +660,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                         break;
                     case AfterRoom.Die:
-                        // Dying (falling down, and the trip to heaven or hell) is not animated yet: the patient is gone.
-                        TargetId = 0;
-                        humanoid.IsDespawning = true;
+                        StartDying(simulation, humanoid);
                         break;
                     default:
                         GoHome(simulation, humanoid);
@@ -799,7 +884,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// Whether the patient is going home or to die, so that another room must not take them from a queue
     /// (<c>tryMovePatient</c> in room.lua; there are no toilets yet to be going to).
     /// </summary>
-    internal bool IsGoingHomeOrToDie => Phase == PatientPhase.GoingHome || IsSetToDie || Next == AfterRoom.Die;
+    internal bool IsGoingHomeOrToDie => Phase is PatientPhase.GoingHome or PatientPhase.Dying || IsSetToDie || Next == AfterRoom.Die;
 
     /// <summary>
     /// <c>UIQueue:onMouseUp</c>: a patient on their way to a room, or queueing at its door, is dropped on another active
@@ -1353,6 +1438,32 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>Patient:falling</c>, for an earthquake: a patient with a falling animation, standing or walking in a corridor of
+    /// their own hospital (<c>atFullyEmptyTile</c>) and not fallen in the last two days falls, lies, gets up and, one time
+    /// in five if they can, shakes a fist; it makes them a lot less happy.
+    /// </summary>
+    internal void Fall(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.Content.FindPatientAnimations(humanoid.Type)?.Falling is null || HasFallen != 1 || !IsAtFullyEmptyTile(simulation, humanoid))
+        {
+            return;
+        }
+
+        HasFallen = 2;
+        _shakeFist = simulation.Random.NextInclusive(1, 5) == 3 && simulation.Content.FindPatientAnimations(humanoid.Type)?.ShakeFist is not null;
+        StartSpotAction(humanoid, PatientSpotAction.Falling);
+        Feelings.ChangeHappiness(simulation, humanoid, -0.05m);
+    }
+
+    /// <summary><c>Patient:tickDay</c>: the day after a fall the patient may not fall yet; the day after that they may.</summary>
+    internal void OnEndDayFall() => HasFallen = HasFallen switch
+    {
+        3 => 1,
+        2 => 3,
+        _ => HasFallen,
+    };
+
+    /// <summary>
     /// <c>Patient:tickDay</c>: a patient with sleeping illness (<c>disease.yawn</c>) yawns one day in ten, while standing.
     /// </summary>
     internal void MaybeYawn(Simulation simulation, Humanoid humanoid)
@@ -1395,13 +1506,21 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             PatientSpotAction.Pee => animations?.Pee,
             PatientSpotAction.Yawn => animations?.Yawn,
             PatientSpotAction.TapFoot => animations?.TapFoot,
+            PatientSpotAction.Falling => animations?.Falling,
+            PatientSpotAction.OnGround => animations?.OnGround,
+            PatientSpotAction.GettingUp => animations?.GetUp,
+            PatientSpotAction.ShakingFist => animations?.ShakeFist,
             _ => animations?.CheckWatch,
         };
         var fidget = SpotAction is PatientSpotAction.Yawn or PatientSpotAction.TapFoot or PatientSpotAction.CheckWatch;
+        var fall = SpotAction is PatientSpotAction.Falling or PatientSpotAction.OnGround or PatientSpotAction.GettingUp or PatientSpotAction.ShakingFist;
         if (_spotTimer < 0)
         {
-            // Yawning and the like face the way the patient last moved: mirrored unless east.
-            _spotSouth = fidget ? humanoid.Facing != Direction.East : simulation.Random.NextInclusive(0, 1) != 1;
+            // Yawning and the like face the way the patient last moved: mirrored unless east. A fall is east or south at
+            // random, and lying, getting up and shaking a fist keep that way.
+            _spotSouth = fidget ? humanoid.Facing != Direction.East
+                : fall && SpotAction != PatientSpotAction.Falling ? _spotSouth
+                : simulation.Random.NextInclusive(0, 1) != 1;
             if (animation is not { } start)
             {
                 SpotAction = PatientSpotAction.None;
@@ -1421,6 +1540,28 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
 
         humanoid.ClearActionAnimation();
+        if (fall)
+        {
+            // falling, on_ground, get_up and, one time in five, shake_fist, queued one after the other.
+            var next = SpotAction switch
+            {
+                PatientSpotAction.Falling => PatientSpotAction.OnGround,
+                PatientSpotAction.OnGround => PatientSpotAction.GettingUp,
+                PatientSpotAction.GettingUp when _shakeFist => PatientSpotAction.ShakingFist,
+                _ => PatientSpotAction.None,
+            };
+            if (next != PatientSpotAction.None)
+            {
+                SpotAction = next;
+                _spotTimer = -1;
+                return;
+            }
+
+            SpotAction = PatientSpotAction.None;
+            CarryOn(simulation, humanoid);
+            return;
+        }
+
         if (humanoid.HospitalPlayer >= 0 && !fidget)
         {
             Litter.Drop(simulation, humanoid.HospitalPlayer, SpotAction == PatientSpotAction.Vomit ? LitterType.Puke : LitterType.Pee, humanoid.Tile, isMirrored: !_spotSouth);
@@ -2559,7 +2700,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary><c>Patient:die</c>: the death counts, and the patient is gone.</summary>
-    internal void Die(Simulation simulation, Humanoid humanoid)
+    internal void Die(Simulation simulation, Humanoid humanoid, bool animated = true)
     {
         IsSetToDie = false;
         DrinksMachineId = 0;
@@ -2578,11 +2719,241 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         }
 
         LeaveQueue(simulation, humanoid);
+        if (animated)
+        {
+            StartDying(simulation, humanoid);
+            return;
+        }
 
-        // Falling down and the trip to heaven or hell are not animated yet: the patient is gone.
+        // Room:crashRoom: those killed in an explosion are simply gone.
         TargetId = 0;
         humanoid.StopWalking();
         humanoid.IsDespawning = true;
+    }
+
+    /// <summary>
+    /// <c>Patient:die</c>'s actions out of a room: one step aside (<c>MeanderAction():setCount(1)</c>) to one of the 24
+    /// nearest idle tiles, then the <c>DieAction</c>.
+    /// </summary>
+    private void StartDying(Simulation simulation, Humanoid humanoid)
+    {
+        Phase = PatientPhase.Dying;
+        TargetId = 0;
+        IsSetToDie = false;
+        DyingTicks = 0;
+        humanoid.StopWalking();
+        humanoid.ClearActionAnimation();
+        DyingStage = DyingStage.SteppingAside;
+        if (simulation.Pathfinder.TryFindIdleTile(simulation.Map, humanoid.Tile, simulation.Random.NextInclusive(1, 24), out var tile)
+            && tile != humanoid.Tile)
+        {
+            humanoid.WalkTo(simulation, tile);
+        }
+    }
+
+    /// <summary>
+    /// die.lua's <c>action_die_start</c> and <c>action_die_tick</c>: the patient falls east or south at random, rises as a
+    /// ghost, grows wings, puts the hands together and flies up out of sight.
+    /// </summary>
+    /// <remarks>
+    /// 65 percent of the men, bloaty heads excepted (they have no animations of turning into a standard man and falling into
+    /// the hole), go to hell instead (<c>action_die_tick_reaper</c>): they lie as a standard man until the grim reaper has
+    /// come, get up, walk into the gates to hell and fall in. Without a place for the hole they go to heaven after all,
+    /// from the wings on, as CorsixTH's fallback does.
+    /// </remarks>
+    private void UpdateDying(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.Content.FindDeathAnimations(humanoid.Type) is not { } animations)
+        {
+            humanoid.ClearActionAnimation();
+            humanoid.IsDespawning = true;
+            return;
+        }
+
+        if (DyingStage == DyingStage.SteppingAside)
+        {
+            if (humanoid.IsMoving)
+            {
+                return;
+            }
+
+            _dieSouth = simulation.Random.NextInclusive(0, 1) != 1;
+
+            // So that a bald patient's head does not swell up instead of growing its hair back.
+            if (DiseaseId == "baldness")
+            {
+                humanoid.SetLayer(0, 2);
+            }
+
+            _toHell = IsMalePatient(humanoid.Type) && DiseaseId != "bloaty_head" && simulation.Random.NextInclusive(1, 100) <= 65;
+            Enter(DyingStage.Falling, animations.Fall);
+            return;
+        }
+
+        if (UpdateHell(simulation, humanoid))
+        {
+            return;
+        }
+
+        DyingTicks++;
+        var length = DyingStage switch
+        {
+            DyingStage.Falling => animations.FallLength ?? animations.Fall.Length,
+            DyingStage.Extra => animations.Extra?.Length ?? 0,
+            DyingStage.Rising or DyingStage.Wings => 11,
+            DyingStage.Hands => 15,
+            _ => 30,
+        };
+        if (DyingTicks < length)
+        {
+            return;
+        }
+
+        switch (DyingStage)
+        {
+            case DyingStage.Falling when animations.Extra is { } extra:
+                Enter(DyingStage.Extra, extra);
+                break;
+            case DyingStage.Falling or DyingStage.Extra when _toHell:
+                // Phases 1 and 2: lying as a standard man, while the grim reaper and the gates to hell appear.
+                humanoid.Type = HumanoidType.StandardMalePatient;
+                if (GrimReaperBehaviour.TrySpawn(simulation, humanoid) is { } reaper)
+                {
+                    ReaperId = reaper.Id;
+                    Enter(DyingStage.OnGround, OnGroundMale);
+                }
+                else
+                {
+                    _toHell = false;
+                    Enter(DyingStage.Wings, simulation.Content.FindDeathAnimations(HumanoidType.StandardMalePatient)?.Wings ?? animations.Wings);
+                }
+
+                break;
+            case DyingStage.Falling:
+            case DyingStage.Extra:
+                Enter(DyingStage.Rising, animations.Rise);
+                break;
+            case DyingStage.Rising:
+                // The slack woman's head layer is missing from the wings on: the standard head takes its place.
+                if (humanoid.Type == HumanoidType.SlackFemalePatient && humanoid.Layers[0] >= 8)
+                {
+                    humanoid.SetLayer(0, (byte)(humanoid.Layers[0] - 8));
+                }
+
+                Enter(DyingStage.Wings, animations.Wings);
+                break;
+            case DyingStage.Wings:
+                Enter(DyingStage.Hands, animations.Hands);
+                break;
+            case DyingStage.Hands:
+                Enter(DyingStage.Flying, animations.Fly);
+                break;
+            default:
+                humanoid.ClearActionAnimation();
+                humanoid.IsDespawning = true;
+                break;
+        }
+
+        void Enter(DyingStage stage, Definitions.AnimationRef animation)
+        {
+            DyingStage = stage;
+            DyingTicks = 0;
+            humanoid.SetActionAnimation(simulation, animation, _dieSouth, humanoid.Tile, humanoid.Tile, 0);
+        }
+    }
+
+    /// <summary>A standard man lying on the ground (humanoid.lua's <c>on_ground_anim</c>).</summary>
+    private static readonly Definitions.AnimationRef OnGroundMale = new(1258, 1);
+
+    /// <summary><c>Humanoid:isMalePatient</c>: a patient whose type is not a woman's.</summary>
+    private static bool IsMalePatient(HumanoidType type) => type is HumanoidType.StandardMalePatient or HumanoidType.AlternateMalePatient
+        or HumanoidType.SlackMalePatient or HumanoidType.ChewbaccaPatient or HumanoidType.AlienMalePatient or HumanoidType.StrippedMalePatient
+        or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 or HumanoidType.GownedMalePatient;
+
+    /// <summary>The grim reaper is in his place: after a pause the patient gets up (die.lua's phase 4).</summary>
+    internal void ReaperReady(Humanoid humanoid)
+    {
+        if (DyingStage == DyingStage.OnGround)
+        {
+            DyingStage = DyingStage.AwaitingRise;
+            DyingTicks = 0;
+        }
+    }
+
+    /// <summary>
+    /// die.lua's phases 4 to 6 on the way to hell: a pause, standing up, the walk to the gates to hell and into them, and the
+    /// fall. False when the patient is not on the way to hell.
+    /// </summary>
+    private bool UpdateHell(Simulation simulation, Humanoid humanoid)
+    {
+        var reaper = simulation.FindEntity(ReaperId) as Humanoid;
+        switch (DyingStage)
+        {
+            case DyingStage.OnGround:
+                if (reaper?.Behaviour is not GrimReaperBehaviour)
+                {
+                    humanoid.ClearActionAnimation();
+                    humanoid.IsDespawning = true;
+                }
+
+                return true;
+            case DyingStage.AwaitingRise:
+                if (++DyingTicks >= 20)
+                {
+                    var riseHell = simulation.Content.FindDeathAnimations(HumanoidType.StandardMalePatient)!.RiseHell;
+                    DyingStage = DyingStage.RisingToHell;
+                    DyingTicks = 0;
+                    humanoid.SetActionAnimation(simulation, riseHell, _dieSouth, humanoid.Tile, humanoid.Tile, 0);
+                }
+
+                return true;
+            case DyingStage.RisingToHell:
+                if (++DyingTicks >= simulation.Content.FindDeathAnimations(HumanoidType.StandardMalePatient)!.RiseHell.Length)
+                {
+                    humanoid.ClearActionAnimation();
+                    DyingStage = DyingStage.WalkingToHole;
+                    DyingTicks = 0;
+                }
+
+                return true;
+            case DyingStage.WalkingToHole:
+                if (humanoid.IsMoving)
+                {
+                    return true;
+                }
+
+                if (reaper?.Behaviour is not GrimReaperBehaviour grim)
+                {
+                    humanoid.IsDespawning = true;
+                    return true;
+                }
+
+                // To the tile beside the hole, then into it (gates_to_hell's walk_in_to_use).
+                var next = humanoid.Tile == grim.PatientUseTile || humanoid.Tile == grim.HoleTile ? grim.HoleTile : grim.PatientUseTile;
+                if (humanoid.Tile == grim.HoleTile)
+                {
+                    DyingStage = DyingStage.FallingIn;
+                    DyingTicks = 0;
+                    humanoid.SetActionAnimation(simulation, GrimReaperBehaviour.FallingIn, false, grim.HoleTile, grim.HoleTile, 0);
+                    grim.PatientFell(simulation, reaper);
+                }
+                else if (!humanoid.WalkTo(simulation, next))
+                {
+                    humanoid.RawStepTo(next);
+                }
+
+                return true;
+            case DyingStage.FallingIn:
+                if (++DyingTicks >= GrimReaperBehaviour.FallingIn.Length)
+                {
+                    humanoid.ClearActionAnimation();
+                    humanoid.IsDespawning = true;
+                }
+
+                return true;
+            default:
+                return false;
+        }
     }
 
     /// <summary>Leaves the reception or door queue the patient stands in, if any.</summary>
@@ -2673,6 +3044,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteByte((byte)SpotAction);
         writer.WriteInt32(_spotTimer);
         writer.WriteBool(_spotSouth);
+        writer.WriteByte((byte)DyingStage);
+        writer.WriteInt32(DyingTicks);
+        writer.WriteBool(_dieSouth);
+        writer.WriteBool(_toHell);
+        writer.WriteInt32(ReaperId);
+        writer.WriteByte(HasFallen);
+        writer.WriteBool(_shakeFist);
         writer.WriteBool(HasVomited);
         writer.WriteBool(IsNeedingToilet);
         writer.WriteByte((byte)GoingToToilet);
@@ -2760,9 +3138,28 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         patient.DrinksMachineId = reader.ReadInt32();
         patient._drinkUse = ObjectUse.ReadOptional(reader);
         var spot = reader.ReadByte();
-        patient.SpotAction = spot <= (byte)PatientSpotAction.Knock ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
+        patient.SpotAction = spot <= (byte)PatientSpotAction.ShakingFist ? (PatientSpotAction)spot : throw new InvalidDataException($"Unknown spot action {spot}.");
         patient._spotTimer = reader.ReadInt32();
         patient._spotSouth = reader.ReadBool();
+        if (reader.Version is 0 or >= 81)
+        {
+            var stage = reader.ReadByte();
+            patient.DyingStage = stage <= (byte)DyingStage.FallingIn ? (DyingStage)stage : throw new InvalidDataException($"Unknown dying stage {stage}.");
+            patient.DyingTicks = reader.ReadInt32();
+            patient._dieSouth = reader.ReadBool();
+        }
+
+        if (reader.Version is 0 or >= 81)
+        {
+            patient._toHell = reader.ReadBool();
+            patient.ReaperId = reader.ReadInt32();
+        }
+
+        if (reader.Version is 0 or >= 81)
+        {
+            patient.HasFallen = reader.ReadByte() is var fallen and >= 1 and <= 3 ? fallen : throw new InvalidDataException("Bad has_fallen.");
+            patient._shakeFist = reader.ReadBool();
+        }
         patient.HasVomited = reader.ReadBool();
         patient.IsNeedingToilet = reader.ReadBool();
         var toilet = reader.ReadByte();

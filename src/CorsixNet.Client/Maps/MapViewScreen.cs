@@ -1871,6 +1871,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 slaves.Add(master);
             }
 
+            // The gates to hell the grim reaper opened are drawn in their own tile's pass, under the patient falling in.
+            if (entity is Humanoid { Behaviour: GrimReaperBehaviour grim })
+            {
+                if (!_entitiesByTile.TryGetValue(grim.HoleTile, out var holeList))
+                {
+                    holeList = [];
+                    _entitiesByTile[grim.HoleTile] = holeList;
+                }
+
+                holeList.Insert(0, entity);
+            }
+
             // Litter lies on the floor, under whatever else is on its tile (CorsixTH's DrawingLayers.Litter).
             if (entity is Litter)
             {
@@ -2060,6 +2072,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             case EntranceDoor door:
                 _doors.Draw(batch, door, anchorX, anchorY, simulation.Tick);
+                break;
+            case Humanoid { Behaviour: GrimReaperBehaviour grim } when tile == grim.HoleTile:
+                // gates_to_hell.lua: open (1602) until the grim reaper has gone, then closing (2552).
+                var hole = grim.Phase == GrimReaperPhase.Closing ? GrimReaperBehaviour.HoleClosing : GrimReaperBehaviour.HoleIdle;
+                var holeFirst = _animations.Animations.FirstFrame(hole.Id);
+                var holeTicks = simulation.Tick - (grim.Phase == GrimReaperPhase.Closing ? grim.PhaseStart : 0);
+                _animations.DrawFrame(batch, _animations.Animations.Advance(holeFirst, (int)(holeTicks % hole.Length)), anchorX, anchorY, NoLayers, flipHorizontally: false);
+                break;
+            case Humanoid { Behaviour: GrimReaperBehaviour { Phase: GrimReaperPhase.Closing } }:
                 break;
             case Humanoid humanoid:
                 _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);

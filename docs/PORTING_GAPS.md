@@ -95,8 +95,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 - Patient needs: a patient getting fed up near death leaves from any room but the one that cures them in CorsixTH,
   here only from outside rooms (`PatientBehaviour.OnEndDayHealth`; `entities/humanoids/patient.lua`). The rest
   (warmth, thirst, toilets, happiness, prices, waiting, vomiting) is done (`Needs`, `Feelings`).
-- Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
-  icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
+- Health and death: the dying mood icons and the death sounds; the gates to hell blocking their tile and CorsixTH's check
+  that they leave a way round. Health running down, the step aside, the fall, the trip to heaven and, for 65 % of the men,
+  the trip to hell with the grim reaper and the gates to hell are done (`PatientBehaviour.UpdateDying`, `DeathAnimations`,
+  `GrimReaperBehaviour`); those killed when a room crashes simply vanish, as in CorsixTH.
 - Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,
   the inspector and emergency patients, rooms taking patients from other rooms' queues (`TryToFindNearbyPatients`), and
   the window's size buttons, moving patients in the queue and sending a patient to another room of the same type as
@@ -124,8 +126,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   trophy, the invitation and the report on the fax window (`VipVisits.Report`, `FaxWindow.VipReportLines`,
   `makeVipEndFax`; our English stand-ins for the fifteen remarks without the game's strings) are done (`VipVisits`,
   `VipBehaviour`; V and Shift+V answer the invitation).
-- Earthquakes knocking patients over (`earthquake.lua`, the falling animation); planning, the warning and main
-  quakes, the screen shake and the rounds of damage wearing machines are done (`Earthquakes`, `Machines.EarthquakeImpact`).
+- Earthquakes: planning, the warning and main quakes, the screen shake, the rounds of damage wearing machines and knocking
+  patients over are done (`Earthquakes`, `Machines.EarthquakeImpact`, `PatientBehaviour.Fall`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
   patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
