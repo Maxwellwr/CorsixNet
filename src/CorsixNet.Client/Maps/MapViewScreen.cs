@@ -63,6 +63,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private static readonly Color PickUpTint = new(150, 200, 255);
     private static readonly Color CellOutlineColor = new(232, 0, 0);
 
+    /// <summary>The surgeon screen with two green outfits (2772), one green and one white (2776), or two white (2774).</summary>
+    private const int SurgeonScreenGreens = 2772;
+    private const int SurgeonScreenBoth = 2776;
+    private const int SurgeonScreenWhites = 2774;
+
     /// <summary>Colour of the status bar and the frame around the map while building, the blue of the blueprints.</summary>
     private static readonly Color BuildModeColor = new(0, 48, 144);
 
@@ -2086,6 +2091,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 if (machine is not null && simulation.FindEntity(placed.RoomId) is Room { IsCrashed: true })
                 {
                     _objects.DrawCrashed(batch, machine.Crashed.Id, placed.Tile, tint);
+                    break;
+                }
+
+                if (placed.ObjectType == "surgeon_screen")
+                {
+                    // use_screen.lua's surgical_state: the outfits hanging on the screen, green scrubs and white coats.
+                    var whites = simulation.Entities.Count(e => e is Humanoid { Type: HumanoidType.Surgeon } surgeon
+                        && simulation.Map[surgeon.Tile.X, surgeon.Tile.Y].RoomId == placed.RoomId);
+                    var screenAnimation = whites < 2 ? (whites > 0 ? SurgeonScreenBoth : SurgeonScreenGreens) : SurgeonScreenWhites;
+                    _animations.DrawFrame(batch, _animations.Animations.FirstFrame(screenAnimation), 32 * (placed.Tile.X - placed.Tile.Y), 16 * (placed.Tile.X + placed.Tile.Y), NoLayers, flipHorizontally: false, tint);
                     break;
                 }
 
