@@ -251,6 +251,11 @@ internal sealed class StaffWindow(int staffId) : UiWindow
                     var next = parcels.FirstOrDefault(parcel => parcel > handyman.Parcel);
                     host.Submit(new SetHandymanParcelCommand(staff.Id, next));
                 }, parcels.Count > 0).WithTooltip("The plot where the handyman accepts tasks, click to change setting"));
+
+            // The priority buttons (UIStaff:doMoreCleaning, doMoreWatering, doMoreRepairing), with their bars as shares.
+            yield return Priority(host, staff, handyman, HandymanTaskType.Cleaning, "Litter", 125, "Sweep up more litter");
+            yield return Priority(host, staff, handyman, HandymanTaskType.Watering, "Plants", 126, "Water the plants more");
+            yield return Priority(host, staff, handyman, HandymanTaskType.Repairing, "Machines", 127, "Repair the machines more");
         }
 
         // The handyman window has its own strings (handyman_window).
@@ -263,6 +268,21 @@ internal sealed class StaffWindow(int staffId) : UiWindow
                 ? WindowCell.Button("Sure? Fire", () => host.Submit(new FireStaffCommand(staff.Id)))
                 : WindowCell.Button("Fire", () => _confirmFire = true)).WithTooltip(OriginalTooltips.Get(host, isHandyman ? 130 : 111, "Sack this person")));
     }
+
+    private static WindowRow Priority(IWindowHost host, Humanoid staff, HandymanBehaviour handyman, HandymanTaskType task, string label, int tooltip, string fallback) =>
+        WindowRow.Of(
+            label,
+            WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{handyman.Priority(task) / 10} %")),
+            WindowCell.Button("More", () =>
+            {
+                // UIStaff:changeHandymanAttributes: the first time, the adviser explains the priorities.
+                if (!host.Simulation.Hospitals[host.Player].HandymanPrioritiesChanged)
+                {
+                    host.Adviser.Say(AdviserChecks.HandymanAdjust.Text(host.Texts), Environment.TickCount64);
+                }
+
+                host.Submit(new IncreaseHandymanPriorityCommand(staff.Id, task));
+            }, handyman.Priority(task) < 1000).WithTooltip(OriginalTooltips.Get(host, tooltip, fallback)));
 
     private Humanoid? Staff(IWindowHost host) =>
         host.Simulation.FindEntity(StaffId) is Humanoid { Profile: not null, IsFired: false, IsDespawning: false } staff && staff.Employer == host.Player ? staff : null;

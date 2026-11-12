@@ -1,3 +1,4 @@
+using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
@@ -67,5 +68,35 @@ public class StaffWindowTests
         host.Click(window, "Sure? Fire");
         Assert.True(window.IsDone(host));
         Assert.Contains(host.Simulation.Hospitals[0].Transactions, t => t.Kind == TransactionKind.Severance);
+    }
+
+    [Fact]
+    public void TheHandymansPriorityButtonsShareOutHisTimeAndTheAdviserExplainsThemOnce()
+    {
+        var host = new WindowTestHost();
+        var handyman = host.Hire(StaffClass.Handyman);
+        var behaviour = Assert.IsType<HandymanBehaviour>(handyman.Behaviour);
+        var window = new StaffWindow(handyman.Id);
+        Assert.Contains("Litter|33 %|More", host.Lines(window));
+
+        host.Click(window, "More");
+
+        Assert.Equal(433, behaviour.CleaningPriority);
+        Assert.Equal(283, behaviour.WateringPriority);
+        Assert.Equal(283, behaviour.RepairingPriority);
+        Assert.Contains("Litter|43 %|More", host.Lines(window));
+        Assert.True(host.Simulation.Hospitals[0].HandymanPrioritiesChanged);
+        Assert.Equal(AdviserChecks.HandymanAdjust.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Null(host.Adviser.Current);
+
+        for (var i = 0; i < 20 && behaviour.RepairingPriority < 1000; i++)
+        {
+            host.Click(window, "More", skip: 2);
+        }
+
+        Assert.Equal(1000, behaviour.RepairingPriority);
+        Assert.Equal(0, behaviour.CleaningPriority + behaviour.WateringPriority);
+        Assert.Null(host.Adviser.Current);
     }
 }

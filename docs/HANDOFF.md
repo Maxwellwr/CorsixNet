@@ -198,6 +198,11 @@ Done and committed:
   LevelMap loaded with LevelMapLoader.Load(file, editing: true) (no parcel owners): PaintFloor (outside/road/hospital
   flags), walls, DeleteWalls, SetParcel, camera/heliport, Copy/Paste, ToMapFile/Save. MapFile.Create/ToBytes write
   the format. Still needed: the editor's window with the sprite pages (drawing, on MSI) and the menu button.
+  Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/
+  Machines More buttons (IncreaseHandymanPriorityCommand), per-handyman thousandths in HandymanBehaviour; the first
+  change makes the adviser say handyman_adjust (Hospital.HandymanPrioritiesChanged).
+  Tooltips (#74): OriginalTooltips.Get(host, index, fallback) reads section 32 (original_strings.lua's tooltip.*);
+  most text windows' buttons have them now (TooltipTests lists the windows checked).
   Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
   format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
   machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).

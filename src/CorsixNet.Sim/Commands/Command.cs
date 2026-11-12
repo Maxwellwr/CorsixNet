@@ -57,6 +57,7 @@ public enum CommandKind : ushort
     RemoveDestroyedRoom = 42,
     ReturnToBlueprint = 43,
     AbandonRebuild = 44,
+    IncreaseHandymanPriority = 45,
 }
 
 /// <summary>
@@ -125,6 +126,7 @@ public abstract record Command
             CommandKind.RemoveDestroyedRoom => new RemoveDestroyedRoomCommand(reader.ReadInt32()),
             CommandKind.ReturnToBlueprint => new ReturnToBlueprintCommand(reader.ReadInt32()),
             CommandKind.AbandonRebuild => new AbandonRebuildCommand(),
+            CommandKind.IncreaseHandymanPriority => new IncreaseHandymanPriorityCommand(reader.ReadInt32(), (HandymanTaskType)reader.ReadByte()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -1088,6 +1090,33 @@ public sealed record SetHandymanParcelCommand(int HandymanId, int Parcel) : Comm
     {
         writer.WriteInt32(HandymanId);
         writer.WriteInt32(Parcel);
+    }
+}
+
+/// <summary>
+/// Gives a handyman of the issuing player more of one kind of work (the staff window's priority buttons,
+/// <c>UIStaff:doMoreCleaning</c>, <c>doMoreWatering</c> and <c>doMoreRepairing</c>); the hospital remembers that the
+/// priorities have been changed (<c>handyman_popup</c>).
+/// </summary>
+public sealed record IncreaseHandymanPriorityCommand(int HandymanId, HandymanTaskType Task) : Command
+{
+    public override CommandKind Kind => CommandKind.IncreaseHandymanPriority;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(HandymanId) is Humanoid { Behaviour: HandymanBehaviour handyman, IsDespawning: false } humanoid
+            && humanoid.Employer == player
+            && Enum.IsDefined(Task))
+        {
+            handyman.IncreasePriority(Task);
+            simulation.Hospitals[player].HandymanPrioritiesChanged = true;
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(HandymanId);
+        writer.WriteByte((byte)Task);
     }
 }
 
