@@ -130,10 +130,15 @@ public sealed record MoreUseAnimations(
 /// One phase of two people using an object together: the animation of the one who uses it, and the animation the
 /// other one plays meanwhile, or null when they are hidden because the first animation shows them too.
 /// </summary>
-public readonly record struct MultiUsePhase(AnimationRef Primary, AnimationRef? Secondary = null)
+public readonly record struct MultiUsePhase(AnimationRef Primary, AnimationRef? Secondary = null, AnimationRef? SecondaryMorph = null)
 {
-    /// <summary>How long the phase lasts: the longer of the two animations, as CorsixTH's multi-use action.</summary>
-    public int Length => Secondary is { } secondary ? Math.Max(Primary.Length, secondary.Length) : Primary.Length;
+    /// <summary>
+    /// How long the phase lasts: the longer of the two animations, as CorsixTH's multi-use action; a secondary morph
+    /// lasts the shorter of its two animations' frames.
+    /// </summary>
+    public int Length => Secondary is { } secondary
+        ? Math.Max(Primary.Length, SecondaryMorph is { } into ? Math.Min(secondary.Length, into.Length) : secondary.Length)
+        : Primary.Length;
 }
 
 /// <summary>

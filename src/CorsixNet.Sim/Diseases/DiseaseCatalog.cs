@@ -154,6 +154,7 @@ public static class DiseaseCatalog
         },
         new("invisibility", 5, 1400)
         {
+            Look = PatientLook.Invisible,
             EmergencyNumber = 18,
             VisualsId = 3,
             DiagnosisRooms = ["x_ray", "scanner"],
@@ -263,6 +264,7 @@ public static class DiseaseCatalog
         },
         new("transparency", 15, 800)
         {
+            Look = PatientLook.Transparent,
             EmergencyNumber = 12,
             VisualsId = 13,
             DiagnosisRooms = ["scanner"],
