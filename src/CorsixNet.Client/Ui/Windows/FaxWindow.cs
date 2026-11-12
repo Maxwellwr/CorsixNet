@@ -2,6 +2,7 @@ using System.Globalization;
 using CorsixNet.Client.Maps;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 
@@ -15,7 +16,13 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class FaxWindow : UiWindow
 {
+    /// <summary>The code typed on the fax's keypad (<c>UIFax.code</c>).</summary>
+    private string _code = string.Empty;
+
     public override string Title => "Faxes";
+
+    /// <summary>The code typed so far.</summary>
+    internal string Code => _code;
 
     public override string? Hotkey => "C";
 
@@ -108,10 +115,107 @@ internal sealed class FaxWindow : UiWindow
         {
             yield return WindowCell.Line("No faxes waiting.", dim: true);
         }
+
+        // The keypad (UIFax:appendNumber, cancel, correct, validate): codes typed here can unlock cheats.
+        yield return WindowRow.Gap;
+        yield return WindowRow.Of("Code", _code.Length > 0 ? _code : "-");
+        yield return new WindowRow("12345".Select(digit => Key(digit.ToString())).ToList());
+        yield return new WindowRow("67890".Select(digit => Key(digit.ToString())).ToList());
+        yield return WindowRow.Of(
+            WindowCell.Button("Cancel", () => _code = string.Empty, _code.Length > 0),
+            WindowCell.Button("Correct", () => _code = _code[..^1], _code.Length > 0),
+            WindowCell.Button("Validate", () => Validate(host), _code.Length > 0));
+    }
+
+    private WindowCell Key(string digit) => WindowCell.Button(digit, () => _code += digit, _code.Length < 10);
+
+    /// <summary>
+    /// <c>UIFax:validate</c>: 24328, the original game's code, opens the cheats; 112 is a friendly hello; the other codes
+    /// are checked against the toggle cheats' (<c>Cheats:processCheatCode</c>). A code that does nothing buzzes.
+    /// </summary>
+    private void Validate(IWindowHost host)
+    {
+        var code = _code;
+        _code = string.Empty;
+        switch (FaxCodes.Check(code))
+        {
+            case FaxCode.Cheats:
+                host.Adviser.Say("Congratulations, you have unlocked cheats!", Environment.TickCount64);
+                host.Open(new CheatsWindow());
+                break;
+            case FaxCode.Hello:
+                break;
+            case FaxCode.Toggle when FaxCodes.ToggleCheat(code) is { } toggle:
+                var wasOn = host.Simulation.Hospitals[host.Player].ActiveCheats.HasFlag(toggle.Flag);
+                host.Submit(new CheatCommand(toggle.Cheat));
+                host.Adviser.Say(wasOn ? toggle.Off : toggle.On, Environment.TickCount64);
+                break;
+            default:
+                host.PlaySound("fax_no.wav");
+                return;
+        }
+
+        host.PlaySound("fax_yes.wav");
     }
 
     private static IEnumerable<Humanoid> Asking(Simulation simulation, int player) =>
         simulation.Entities.OfType<Humanoid>().Where(humanoid => humanoid is { Behaviour: PatientBehaviour { Question: not PatientQuestion.None }, IsDespawning: false } && humanoid.HospitalPlayer == player);
 
     private static string DiseaseName(IWindowHost host, string diseaseId) => host.Texts?.DiseaseName(diseaseId) ?? diseaseId;
+}
+
+/// <summary>What a code typed on the fax does.</summary>
+internal enum FaxCode
+{
+    /// <summary>Nothing.</summary>
+    None,
+
+    /// <summary>Opens the cheats (24328).</summary>
+    Cheats,
+
+    /// <summary>The friendly 112: an announcement in CorsixTH.</summary>
+    Hello,
+
+    /// <summary>Turns one of the toggle cheats on or off.</summary>
+    Toggle,
+}
+
+/// <summary>
+/// The fax's codes (CorsixTH's <c>UIFax:validate</c> and the <c>toggle_cheats</c> list of <c>cheats.lua</c>): the
+/// toggle cheats' codes are hidden behind the same sum CorsixTH checks, not written out.
+/// </summary>
+internal static class FaxCodes
+{
+    /// <summary>The toggle cheats: the window between which the code's value must fall, and the adviser's words.</summary>
+    private static readonly (double Lower, double Upper, CheatKind Cheat, ToggleCheats Flag, string On, string Off)[] Toggles =
+    [
+        (27868.3, 27868.4, CheatKind.ToggleSpawnRate, ToggleCheats.SpawnRate, "Roujin's challenge activated! Good luck in the coming months...", "Roujin's challenge deactivated. Everything will be back to normal soon."),
+        (185.5, 185.6, CheatKind.ToggleNoRest, ToggleCheats.NoRest, "Oh no! It appears your staff have consumed too much caffeine and no longer feel a need to rest.", "Phew! Looks like that buzz finally wore off. Your staff will now rest properly."),
+        (200.5, 200.6, CheatKind.ToggleQueueJump, ToggleCheats.QueueJump, "Your patients know how to queue. They let nearly dead patients go to the front of the line.", "People have turned selfish and are no longer letting nearly dead patients jump the queues."),
+        (301.5, 301.6, CheatKind.ToggleSuperDoctor, ToggleCheats.SuperDoctor, "A superb medical school has recommended you to their graduates! Check the staff for hire.", "The medical school chief no longer recommends you to their graduates."),
+    ];
+
+    /// <summary>What the code does.</summary>
+    public static FaxCode Check(string code) => code switch
+    {
+        "24328" => FaxCode.Cheats,
+        "112" => FaxCode.Hello,
+        _ => ToggleCheat(code) is not null ? FaxCode.Toggle : FaxCode.None,
+    };
+
+    /// <summary>The toggle cheat a code turns on or off, or null.</summary>
+    public static (CheatKind Cheat, ToggleCheats Flag, string On, string Off)? ToggleCheat(string code)
+    {
+        var number = double.TryParse(code, System.Globalization.NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) ? parsed / 1e5 : 0;
+        var value = Math.Abs(((Math.Pow(number, 5.00001) - Math.Pow(number, 5)) * 1e5) - Math.Pow(number, 5));
+        foreach (var (lower, upper, cheat, flag, on, off) in Toggles)
+        {
+            if (lower < value && upper > value)
+            {
+                return (cheat, flag, on, off);
+            }
+        }
+
+        return null;
+    }
 }

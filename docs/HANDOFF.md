@@ -209,6 +209,9 @@ Done and committed:
   information.emergency at helicopter phase 60, epidemic_health_inspector, reception_need_receptionist / no_desk_5 on
   buying a desk. Not yet: benches (sitting ratios need seated patients), doctor_crazy_overwork (no crazy doctors yet),
   msgMultiReceptionDesks, the tutorial.
+  Fax keypad (fax.lua UIFax:validate, cheats.lua processCheatCode): digits, Cancel, Correct and Validate in the fax
+  window; 24328 opens the cheats window, 112 is accepted, the four toggle codes (FaxCodes.ToggleCheat, CorsixTH's
+  n^5.00001 formula) send CheatCommand; fax_yes/fax_no sounds.
   Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
   format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
   machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).
