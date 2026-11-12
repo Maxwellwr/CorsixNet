@@ -139,6 +139,7 @@ public class MachineWearTests
         // (Litter.resolveTileRank).
         Assert.DoesNotContain(simulation.Entities.OfType<Litter>(), l => l.Type is LitterType.SootWall or LitterType.SootWindow);
         Assert.True(hospital.Value < valueBefore);
+        Assert.Equal(1, hospital.Explosions);
         Assert.Contains(simulation.Entities.OfType<RoomObject>(), o => o.Id == inflator.Id);
 
         using var stream = new MemoryStream();
@@ -147,6 +148,7 @@ public class MachineWearTests
         var loaded = Simulation.Load(stream, BaseGameContent.Create());
         Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
         Assert.True(loaded.Entities.OfType<Room>().Single(r => r.Id == room.Id).IsCrashed);
+        Assert.Equal(1, loaded.Hospitals[0].Explosions);
 
         // The wreck cannot be furnished or opened again, only taken down.
         Assert.False(RoomBuilder.CanConfirm(simulation, room, 0));

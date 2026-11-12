@@ -308,6 +308,7 @@ internal static class Machines
         if (owner >= 0 && owner < simulation.Hospitals.Count)
         {
             var hospital = simulation.Hospitals[owner];
+            hospital.Explosions++;
             if (simulation.Content.FindRoom(room.RoomType) is { } definition)
             {
                 hospital.ChangeValue(-RoomPurchases.BuildCost(simulation, hospital, definition));
