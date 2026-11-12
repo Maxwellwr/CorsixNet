@@ -14,4 +14,7 @@ internal interface IScreen : IDisposable
     void Update(GameTime gameTime, bool hasFocus);
 
     void Draw(SpriteBatch batch);
+
+    /// <summary>Whether the screen draws its own mouse cursor, so the system's is hidden.</summary>
+    bool DrawsCursor => false;
 }
