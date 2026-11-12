@@ -1,11 +1,12 @@
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.People;
 
 namespace CorsixNet.Client.Tests;
 
-/// <summary>The VIP's report on their visit, on the fax (<c>PlayerHospital:makeVipEndFax</c>).</summary>
+/// <summary>The VIP's report and an emergency's result on the fax (<c>makeVipEndFax</c>, <c>makeEmergencyEndFax</c>).</summary>
 public sealed class VipReportTests
 {
     [Fact]
@@ -48,5 +49,14 @@ public sealed class VipReportTests
         stream.Position = 0;
         var restored = Simulation.Load(stream, host.Simulation.Content);
         Assert.Equal(hospital.Vips.Report, restored.Hospitals[0].Vips.Report);
+    }
+
+    [Fact]
+    public void AnEmergencysResultTellsOfThePeopleSavedAndTheBonus()
+    {
+        var host = new WindowTestHost();
+        var report = new EmergencyReport(3, 5, 5000, 3000, 100);
+
+        Assert.Equal(["You saved 3 of the 5 people in the emergency.", "The most you could have earned was 5000. You earned 3000."], FaxWindow.EmergencyReportLines(host, report));
     }
 }

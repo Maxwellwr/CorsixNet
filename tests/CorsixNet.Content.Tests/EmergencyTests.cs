@@ -79,6 +79,12 @@ public class EmergencyTests
 
         Assert.True(emergency.Cured > 0, "Nobody was cured at the pharmacy.");
         Assert.NotEqual(reputation, hospital.Reputation);
+
+        // The result's fax (makeEmergencyEndFax), until it expires.
+        var report = Assert.IsType<EmergencyReport>(hospital.Emergencies.Report);
+        Assert.Equal((emergency.Cured, emergency.Victims, emergency.Bonus * emergency.Victims, success ? emergency.Bonus * emergency.Cured : 0), (report.Rescued, report.Total, report.MaxBonus, report.Earned));
+        StepFor(simulation, (int)(report.Expires - simulation.Tick) + 1);
+        Assert.Null(hospital.Emergencies.Report);
     }
 
     [Fact]

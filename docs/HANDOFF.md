@@ -217,6 +217,8 @@ Done and committed:
   n^5.00001 formula) send CheatCommand; fax_yes/fax_no sounds.
   VIP report fax (makeVipEndFax; save format 80): VipVisits.Report keeps the name, rating and grant for 20 days and
   the fax window shows it; the remarks are section 44, 196-210, with our stand-ins without the game's strings.
+  Emergency result fax (makeEmergencyEndFax; save format 80): HospitalEmergencies.Report (saved, total, bonus there
+  was, earned) for 25 days, section 44 strings 40 and 41.
   Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
   format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
   machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).
