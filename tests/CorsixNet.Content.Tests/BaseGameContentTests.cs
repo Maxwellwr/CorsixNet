@@ -47,7 +47,8 @@ public class BaseGameContentTests
     {
         var set = AnimationSet.Load(RealGameData.Require());
 
-        var animations = BaseGameContent.DoorAnimations.Values.SelectMany(door => new[] { door.Entering, door.Leaving }).ToList();
+        var animations = BaseGameContent.DoorAnimations.Values
+            .SelectMany(door => new[] { door.Entering, door.Leaving, door.KnockNorth, door.KnockEast }).OfType<AnimationRef>().ToList();
 
         // operating_table.lua shortens its in-use animations to one frame (anim_mgr:setAnimLength).
         var shortened = new HashSet<int> { 2348, 2938 };
