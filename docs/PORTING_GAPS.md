@@ -178,10 +178,10 @@ fonts, faces) and the details listed.
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
-- Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips for the fax, report and adviser history
-  windows and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
+- Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips for the progress and annual reports'
+  figures and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
   cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
-  information, confirm, tip of the day and new game buttons have CorsixTH's `tooltip.*` texts, from the original's strings when
+  information, confirm, tip of the day, new game, fax, cheats, adviser history and level end buttons have CorsixTH's `tooltip.*` texts, from the original's strings when
   loaded, `OriginalTooltips`); object and humanoid highlighting on hover; hover info.
 - Strings and languages: CorsixTH's language files and their mapping of the original strings, translations, and
   showing them in windows (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`), and

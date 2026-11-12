@@ -62,8 +62,8 @@ internal sealed class FaxWindow : UiWindow
             var name = host.Texts?.VipName(hospital.Vips.InvitedName) ?? string.Create(CultureInfo.InvariantCulture, $"VIP {hospital.Vips.InvitedName}");
             yield return WindowRow.Of(
                 $"{name} would like to visit your hospital.",
-                WindowCell.Button("Invite", () => host.Submit(new AnswerVipCommand(true))),
-                WindowCell.Button("Refuse", () => host.Submit(new AnswerVipCommand(false))));
+                WindowCell.Button("Invite", () => host.Submit(new AnswerVipCommand(true))).WithTooltip("Invite the VIP to visit your hospital"),
+                WindowCell.Button("Refuse", () => host.Submit(new AnswerVipCommand(false))).WithTooltip("Turn the VIP down"));
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
@@ -71,8 +71,8 @@ internal sealed class FaxWindow : UiWindow
             any = true;
             yield return WindowRow.Of(
                 string.Create(CultureInfo.InvariantCulture, $"Emergency: {offer.Victims} patients with {DiseaseName(host, offer.DiseaseId)}, cure {offer.Percentage} % for {MoneyText.Format(offer.Bonus)} each."),
-                WindowCell.Button("Accept", () => host.Submit(new AnswerEmergencyCommand(true))),
-                WindowCell.Button("Refuse", () => host.Submit(new AnswerEmergencyCommand(false))));
+                WindowCell.Button("Accept", () => host.Submit(new AnswerEmergencyCommand(true))).WithTooltip("Take the emergency in"),
+                WindowCell.Button("Refuse", () => host.Submit(new AnswerEmergencyCommand(false))).WithTooltip("Send the emergency elsewhere"));
         }
 
         if (hospital.Epidemics.Current is { FaxExpires: > 0 } epidemic)
@@ -80,8 +80,8 @@ internal sealed class FaxWindow : UiWindow
             any = true;
             yield return WindowRow.Of(
                 $"Epidemic of {DiseaseName(host, epidemic.DiseaseId)}: declare it and pay {MoneyText.Format(epidemic.DeclareFine)}, or try to cover it up.",
-                WindowCell.Button("Declare", () => host.Submit(new AnswerEpidemicCommand(false))),
-                WindowCell.Button("Cover up", () => host.Submit(new AnswerEpidemicCommand(true))));
+                WindowCell.Button("Declare", () => host.Submit(new AnswerEpidemicCommand(false))).WithTooltip("Declare the epidemic and pay the fine"),
+                WindowCell.Button("Cover up", () => host.Submit(new AnswerEpidemicCommand(true))).WithTooltip("Try to cure every infected patient before the health inspector comes"));
         }
 
         foreach (var humanoid in Asking(simulation, host.Player))
@@ -95,19 +95,19 @@ internal sealed class FaxWindow : UiWindow
             var cells = new List<WindowCell>
             {
                 text,
-                WindowCell.Button("Wait", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Wait))),
-                WindowCell.Button("Send home", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.SendHome))),
+                WindowCell.Button("Wait", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Wait))).WithTooltip("Ask the patient to wait in the hospital"),
+                WindowCell.Button("Send home", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.SendHome))).WithTooltip("Send the patient home"),
             };
             if (noDiagnosis)
             {
-                cells.Add(WindowCell.Button("Guess cure", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.GuessCure))));
+                cells.Add(WindowCell.Button("Guess cure", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.GuessCure))).WithTooltip("Treat the patient for the likeliest disease"));
             }
             else if (PatientBehaviour.CanGoToResearch(simulation, humanoid))
             {
-                cells.Add(WindowCell.Button("Research", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Research))));
+                cells.Add(WindowCell.Button("Research", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Research))).WithTooltip("Send the patient to the research department"));
             }
 
-            cells.Add(WindowCell.Button("Patient", () => host.Open(new PatientWindow(humanoid.Id))));
+            cells.Add(WindowCell.Button("Patient", () => host.Open(new PatientWindow(humanoid.Id))).WithTooltip("Look at the patient"));
             yield return new WindowRow(cells);
         }
 
@@ -122,12 +122,12 @@ internal sealed class FaxWindow : UiWindow
         yield return new WindowRow("12345".Select(digit => Key(digit.ToString())).ToList());
         yield return new WindowRow("67890".Select(digit => Key(digit.ToString())).ToList());
         yield return WindowRow.Of(
-            WindowCell.Button("Cancel", () => _code = string.Empty, _code.Length > 0),
-            WindowCell.Button("Correct", () => _code = _code[..^1], _code.Length > 0),
-            WindowCell.Button("Validate", () => Validate(host), _code.Length > 0));
+            WindowCell.Button("Cancel", () => _code = string.Empty, _code.Length > 0).WithTooltip("Clear the code"),
+            WindowCell.Button("Correct", () => _code = _code[..^1], _code.Length > 0).WithTooltip("Delete the last digit"),
+            WindowCell.Button("Validate", () => Validate(host), _code.Length > 0).WithTooltip("Send the code"));
     }
 
-    private WindowCell Key(string digit) => WindowCell.Button(digit, () => _code += digit, _code.Length < 10);
+    private WindowCell Key(string digit) => WindowCell.Button(digit, () => _code += digit, _code.Length < 10).WithTooltip($"Type {digit}");
 
     /// <summary>
     /// <c>UIFax:validate</c>: 24328, the original game's code, opens the cheats; 112 is a friendly hello; the other codes

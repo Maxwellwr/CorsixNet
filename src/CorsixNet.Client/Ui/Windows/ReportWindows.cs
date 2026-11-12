@@ -37,15 +37,46 @@ internal sealed class CheatsWindow : UiWindow
             Toggle(host, "Invulnerable machines", CheatKind.ToggleInvulnerableMachines, hospital.ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines)));
     }
 
+    /// <summary>The cheats' tooltips (<c>tooltip.cheats_window.cheats</c>); the fax code toggles have our own.</summary>
+    internal static string Tooltip(CheatKind cheat) => cheat switch
+    {
+        CheatKind.Money => "Adds $10,000 to your bank balance",
+        CheatKind.AllResearch => "Completes all research",
+        CheatKind.Emergency => "Creates an emergency",
+        CheatKind.Vip => "Creates a VIP",
+        CheatKind.ToggleEarthquakes => "Toggle earthquakes",
+        CheatKind.Earthquake => "Creates an earthquake",
+        CheatKind.ToggleEpidemics => "Toggle whether epidemics can happen",
+        CheatKind.Epidemic => "Creates a contagious patient who may cause an epidemic to happen",
+        CheatKind.CreatePatient => "Creates a Patient at the map border",
+        CheatKind.EndMonth => "Jumps to the end of the month",
+        CheatKind.EndYear => "Jumps to the end of the year",
+        CheatKind.LoseLevel => "Lose the current level",
+        CheatKind.WinLevel => "Win the current level",
+        CheatKind.IncreasePrices => "Increase all prices by 50% (max. 200%)",
+        CheatKind.DecreasePrices => "Decrease all prices by 50% (min. 50%)",
+        CheatKind.ResetDeathCount => "Reset the hospital death count to zero",
+        CheatKind.MaxReputation => "Set the hospital reputation to the maximum",
+        CheatKind.RepairAllMachines => "Repairs all machines in the hospital",
+        CheatKind.ToggleInvulnerableMachines => "Toggle whether machines wear down when used",
+        CheatKind.ToggleSpawnRate => "Toggle Roujin's challenge: many more patients arrive",
+        CheatKind.ToggleNoRest => "Toggle whether staff never get tired",
+        CheatKind.ToggleQueueJump => "Toggle whether new patients go to the front of every queue",
+        CheatKind.ToggleSuperDoctor => "Toggle whether doctors have the best skills",
+        _ => cheat.ToString(),
+    };
+
     private static WindowCell Cheat(IWindowHost host, string text, CheatKind cheat) =>
-        WindowCell.Button(text, () =>
-        {
-            host.Submit(new CheatCommand(cheat));
-            host.Notice($"Cheat: {text}");
-        });
+        WindowCell.Button(text, () => Use(host, text, cheat)).WithTooltip(Tooltip(cheat));
+
+    private static void Use(IWindowHost host, string text, CheatKind cheat)
+    {
+        host.Submit(new CheatCommand(cheat));
+        host.Notice($"Cheat: {text}");
+    }
 
     private static WindowCell Toggle(IWindowHost host, string text, CheatKind cheat, bool on) =>
-        WindowCell.Button(on ? $"{text}: on" : $"{text}: off", () => host.Submit(new CheatCommand(cheat)), highlight: on);
+        WindowCell.Button(on ? $"{text}: on" : $"{text}: off", () => host.Submit(new CheatCommand(cheat)), highlight: on).WithTooltip(Tooltip(cheat));
 }
 
 /// <summary>
@@ -185,8 +216,8 @@ internal sealed class LevelEndWindow : UiWindow
                 }
 
                 yield return WindowRow.Of(
-                    WindowCell.Button("Next level", () => host.StartLevel(next: true), host.HasNextLevel),
-                    WindowCell.Button("Stay here", () => host.Close(this)));
+                    WindowCell.Button("Next level", () => host.StartLevel(next: true), host.HasNextLevel).WithTooltip("Go on to the next level"),
+                    WindowCell.Button("Stay here", () => host.Close(this)).WithTooltip("Keep playing this level"));
                 break;
             case EndOutcome.Lost:
                 yield return WindowCell.Line("You have lost this level.", highlight: true);
@@ -195,7 +226,7 @@ internal sealed class LevelEndWindow : UiWindow
                     yield return WindowRow.Of("Because of", ProgressReportWindow.Name(goal.Criterion));
                 }
 
-                yield return WindowRow.Of(WindowCell.Button("Restart the level", () => host.StartLevel(next: false)));
+                yield return WindowRow.Of(WindowCell.Button("Restart the level", () => host.StartLevel(next: false)).WithTooltip("Play this level again from the start"));
                 break;
             default:
                 yield return WindowCell.Line("The level goes on.", dim: true);

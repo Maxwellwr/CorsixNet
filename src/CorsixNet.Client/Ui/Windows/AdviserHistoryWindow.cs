@@ -1,5 +1,6 @@
 // The adviser's message history, ported from CorsixTH CorsixTH/Lua/dialogs/resizables/adviser_history.lua
-// (newest first, a bin for each message and one for all).
+// (newest first, a bin for each message and one for all) and its tooltips
+// (english.lua tooltip.adviser_history).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 namespace CorsixNet.Client.Ui.Windows;
@@ -22,7 +23,7 @@ internal sealed class AdviserHistoryWindow : UiWindow
         {
             var index = i;
             var lines = BottomPanel.Wrap(adviser.History[i], BottomPanel.WrapLength);
-            yield return WindowRow.Of(WindowCell.Button("Delete", () => adviser.RemoveFromHistory(index)), WindowCell.Line(lines[0]));
+            yield return WindowRow.Of(WindowCell.Button("Delete", () => adviser.RemoveFromHistory(index)).WithTooltip("Click to dismiss this message"), WindowCell.Line(lines[0]));
             foreach (var line in lines.Skip(1))
             {
                 yield return WindowRow.Of(new WindowCell(string.Empty), WindowCell.Line(line));
@@ -30,6 +31,6 @@ internal sealed class AdviserHistoryWindow : UiWindow
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of(WindowCell.Button("Delete all", adviser.ClearHistory));
+        yield return WindowRow.Of(WindowCell.Button("Delete all", adviser.ClearHistory).WithTooltip("Click to delete all messages"));
     }
 }
