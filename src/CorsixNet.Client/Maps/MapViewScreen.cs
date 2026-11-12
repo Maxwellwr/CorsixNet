@@ -65,11 +65,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The surgeon screen with two green outfits (2772), one green and one white (2776), or two white (2774).</summary>
     private const int SurgeonScreenGreens = 2772;
+    private const int SurgeonScreenBoth = 2776;
+    private const int SurgeonScreenWhites = 2774;
 
     /// <summary>The gear icon over a machine waiting for its repair (machine.lua, the only icon for machinery).</summary>
     private const int RepairGearIcon = 4564;
-    private const int SurgeonScreenBoth = 2776;
-    private const int SurgeonScreenWhites = 2774;
+
+    /// <summary>The X-ray viewer's layers while lit: layer 11 shows its second variant (<c>setLayer(11, 2)</c>).</summary>
+    private static readonly byte[] XRayViewerLit = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2];
 
     /// <summary>Colour of the status bar and the frame around the map while building, the blue of the blueprints.</summary>
     private static readonly Color BuildModeColor = new(0, 48, 144);
@@ -2117,7 +2120,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     break;
                 }
 
-                _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
+                // OperatingTheatreRoom:setXRayOn: the viewer lights up (layer 11 set to 2) while a patient is in the theatre.
+                var lit = placed.ObjectType == "x_ray_viewer" && simulation.FindEntity(placed.RoomId) is Room { PatientId: not 0 };
+                _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State, lit ? XRayViewerLit : null);
                 if (machine is not null)
                 {
                     _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);
