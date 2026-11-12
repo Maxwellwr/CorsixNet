@@ -187,6 +187,12 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     private int _changeScreen;
     private TilePosition? _changeResume;
 
+    /// <summary>Whether, once changed back, the surgeon goes to the staff room (Staff:goToStaffRoom kept the walk to the screen).</summary>
+    private bool _restAfterChange;
+
+    /// <summary>Whether the surgeon is on the way to the screen or changing back into a doctor there.</summary>
+    internal bool IsChangingBack => _changeBack != ChangeBack.None;
+
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         Meander.Reset();
@@ -1165,6 +1171,29 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         }
 
         _changeResume = null;
+        if (_restAfterChange)
+        {
+            _restAfterChange = false;
+            Tiredness.WantStaffRoom(simulation, humanoid);
+        }
+    }
+
+    /// <summary>
+    /// <c>Staff:goToStaffRoom</c> for a surgeon in the operating theatre: <c>setNextAction</c> keeps the must-happen walk to
+    /// the surgeon screen and the change back into a doctor (commandEnteringStaff), so they change first and go to rest
+    /// after.
+    /// </summary>
+    /// <returns>Whether they are changing back first; otherwise they are a doctor already.</returns>
+    internal bool ChangeBackBeforeRest(Simulation simulation, Humanoid humanoid)
+    {
+        if (_changeBack == ChangeBack.None && !StartChangingBack(simulation, humanoid, null))
+        {
+            return false;
+        }
+
+        _changeResume = null;
+        _restAfterChange = true;
+        return true;
     }
 
     /// <summary>The first surgeon (the room's) to the table's patient side, the second to the far side (operating_table_b).</summary>
@@ -1316,6 +1345,8 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         {
             writer.WriteTile(resume);
         }
+
+        writer.WriteBool(_restAfterChange);
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
@@ -1360,6 +1391,11 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
             doctor._changeTimer = reader.ReadInt32();
             doctor._changeScreen = reader.ReadInt32();
             doctor._changeResume = reader.ReadBool() ? reader.ReadTile() : null;
+        }
+
+        if (reader.Version is 0 or >= 89)
+        {
+            doctor._restAfterChange = reader.ReadBool();
         }
 
         return doctor;

@@ -232,7 +232,8 @@ Done and committed:
   tutorial never gets reception_need_receptionist or gps_office_need_doctor (AdviserChecks.StartedWithTutorial), and its
   opening watch is held (HoldOpeningWatchCommand, Hospital.IsOpeningWatchHeld, save format 85) until the last chapter
   starts it afresh; a game saved during the tutorial starts its watch afresh when loaded (2026-11-12, cloud).
-  Surgeons change back into doctors at the screen when they leave (PR #264, format 82); the death animations, grim reaper
+  Surgeons change back into doctors at the screen when they leave (PR #264, format 82), also when they go to rest
+  (2026-11-12: `DoctorBehaviour.ChangeBackBeforeRest`, then `Tiredness.WantStaffRoom`; format 89); the death animations, grim reaper
   and earthquake falls had been merged only into stacked branches and came to main with PR #262 (format 81).
   Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/
   Machines More buttons (IncreaseHandymanPriorityCommand), per-handyman thousandths in HandymanBehaviour; the first
@@ -285,8 +286,9 @@ Done and committed:
   The psychiatric room (rooms/psych.lua; couch, comfortable chair, bookcase, skeleton) diagnoses and treats with a
   psychiatrist only (`RoomVisits.IsQualifiedFor`): between patients they read at the bookcase and meander 2 to 8
   rounds; a session is 16 to 72 rounds of the chair counted while the patient lies on the couch, with trips to the
-  bookcase. Save format 60. Objects against a room's front wall draw their user over the wall (seen with the
-  chair); a drawing-order matter for later.
+  bookcase. Save format 60. Users of objects against a room's front wall are covered by it again since the port of
+  level_map::draw's redraw (checked live 2026-11-12 with the chair and the couch; a few pixels of a hand at the corner
+  remain, as in CorsixTH's algorithm).
   The ward (rooms/ward.lua, bed.lua; save format 61) takes as many patients as beds and calls as many nurses as desks
   (`RoomVisits.UpdateWard`, kept out of the single-patient `Room.PatientId` as the toilets are). Nurses meander 4 to
   10 rounds and write at a free desk 7 to 14 rounds; patients lie in a free bed until 150 to 600 of work is done, each

@@ -171,6 +171,12 @@ internal static class Tiredness
             Feelings.ChangeHappiness(simulation, humanoid, -0.0002m);
         }
 
+        WantStaffRoom(simulation, humanoid);
+    }
+
+    /// <summary>The rest of <c>checkIfNeedRest</c>: a tired member of staff outside a staff room goes to one if they may.</summary>
+    internal static void WantStaffRoom(Simulation simulation, Humanoid humanoid)
+    {
         if (humanoid.Fatigue < GoToStaffRoom(simulation, humanoid) || RoomOf(simulation, humanoid) is { RoomType: StaffRoomType })
         {
             return;
@@ -201,6 +207,13 @@ internal static class Tiredness
         var returnRoom = humanoid.Behaviour is DoctorBehaviour doctor && simulation.FindEntity(doctor.RoomId) is Room { RoomType: RoomVisits.ResearchRoom or Training.RoomType } working
             ? working.Id
             : 0;
+        // A surgeon changes back into a doctor at the theatre's screen first (operating_theatre.lua's must-happen actions).
+        if (humanoid.Behaviour is DoctorBehaviour { IsChangingBack: true }
+            || (humanoid.Type == HumanoidType.Surgeon && humanoid.Behaviour is DoctorBehaviour surgeon && surgeon.ChangeBackBeforeRest(simulation, humanoid)))
+        {
+            return;
+        }
+
         StaffEmployment.Detach(simulation, humanoid);
         if (humanoid.Type == HumanoidType.Surgeon)
         {
