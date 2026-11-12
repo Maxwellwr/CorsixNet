@@ -396,7 +396,8 @@ Next, in this order (2026-11-10):
    Seen live with `--load` + `--script`. Early list done (2026-11-12, MSI): `ObjectOrientation.EarlyList` (dna fixer and
    autopsy north, bed north and east, lecture chair north, X-ray viewer, cast remover and slicer east) and their users are
    drawn with the tile's north wall (`MapRenderer`'s `drawEarlyEntities`, level_map::draw's oEarlyEntities), so a patient
-   at the north fixer's use position stands in front of its base. Not yet: north room doors in the early list (door.lua).
+   at the north fixer's use position stands in front of its base. North room doors, swing doors included, are in the early list too
+   (door.lua's Door:setAnimation; 2026-11-13).
 
 Rooms' requirements (2026-11-11): when a room of the player's becomes active, `AdviserChecks` says what its
 `roomFinished` says in CorsixTH: a doctor for the GP, a nurse for the pharmacy or ward, a psychiatrist, a consultant

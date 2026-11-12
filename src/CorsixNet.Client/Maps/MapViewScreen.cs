@@ -1880,17 +1880,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 continue;
             }
 
-            // DrawFlags.EarlyList: an object of the early list, and whoever uses it (use_object.lua), with the north wall.
+            // DrawFlags.EarlyList: an object of the early list, and whoever uses it (use_object.lua), with the north wall;
+            // so is a door in a north wall (Door:setAnimation), both halves of a swing door included.
             if ((entity is RoomObject earlyObject && IsEarlyObject(simulation, earlyObject))
-                || (entity is Humanoid { ActionAnimation: not null } user && _earlyObjectTiles.Contains(user.ActionAnimationTile)))
+                || (entity is Humanoid { ActionAnimation: not null } user && _earlyObjectTiles.Contains(user.ActionAnimationTile))
+                || entity is RoomDoor { Edge: EdgeOrientation.North })
             {
-                if (!_earlyByTile.TryGetValue(position, out var earlyList))
+                AddEarly(position, entity);
+                if (entity is RoomDoor { IsSwing: true } earlySwing)
                 {
-                    earlyList = [];
-                    _earlyByTile[position] = earlyList;
+                    AddEarly(earlySwing.SlaveTile, entity);
                 }
 
-                earlyList.Add(entity);
                 continue;
             }
 
@@ -2100,6 +2101,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         DrawSlaveParts(batch, tile);
         DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
+    }
+
+    private void AddEarly(TilePosition tile, Entity entity)
+    {
+        if (!_earlyByTile.TryGetValue(tile, out var list))
+        {
+            list = [];
+            _earlyByTile[tile] = list;
+        }
+
+        list.Add(entity);
     }
 
     /// <summary>Whether a placed object facing its way is of the early list (<c>early_list</c>).</summary>
