@@ -99,6 +99,35 @@ public class HumanoidMoodsTests
         Assert.Null(HumanoidMoods.Icon(simulation, doctor));
     }
 
+    [Fact]
+    public void TheCursorShowsColdAndHotAndTheQueueOfTheRoomUnderIt()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var area = new TileRect(4, 4, 4, 4);
+        host.Submit(new BuildRoomCommand(new RoomPlan("gp", area, new DoorPlacement(new(5, 4), EdgeOrientation.North))));
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+        var humanoid = simulation.AddEntity(id => Humanoid.CreatePatient(id, new TilePosition(5, 2), simulation.Random, PatientLook.Standard, 0));
+        var patient = new PatientBehaviour { IsThirsty = true };
+        patient.SetDisease(DiseaseCatalog.Find("uncommon_cold")!, 0, simulation.Random);
+        humanoid.Behaviour = patient;
+
+        // Humanoid:checkWarmth's cold and hot show only under the cursor (on_hover), over any other mood.
+        humanoid.Warmth = 0.1m;
+        Assert.Equal(3986, HumanoidMoods.Icon(simulation, humanoid));
+        Assert.Equal(3994, HumanoidMoods.Icon(simulation, humanoid, hovered: true));
+        humanoid.Warmth = 0.5m;
+        Assert.Equal(3988, HumanoidMoods.Icon(simulation, humanoid, hovered: true));
+        humanoid.Warmth = 0.3m;
+        Assert.Equal(3986, HumanoidMoods.Icon(simulation, humanoid, hovered: true));
+
+        // GameUI: the cursor over the room shows the queue mood over its queueing patients.
+        room.DoorQueue ??= new HumanoidQueue(new TilePosition(5, 3), new TilePosition(5, 4), 6);
+        room.DoorQueue.Push(simulation, humanoid);
+        Assert.Equal(4568, HumanoidMoods.Icon(simulation, humanoid, queueRoomId: room.Id));
+        Assert.Equal(3986, HumanoidMoods.Icon(simulation, humanoid));
+    }
+
     private static void Place(WindowTestHost host, string type, TileRect area)
     {
         for (var y = area.Bottom - 1; y >= area.Y; y--)
