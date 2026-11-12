@@ -724,6 +724,12 @@ public static class Epidemics
     /// <summary><c>getBestVaccinationTile</c>: of the tiles next to the patient with nobody and nothing on them, the nearest the nurse can reach.</summary>
     private static TilePosition? BestVaccinationTile(Simulation simulation, Humanoid nurse, Humanoid patient)
     {
+        // A patient on a bench is vaccinated from the tile in front of them.
+        if (patient.Behaviour is PatientBehaviour seated && seated.SeatedBench(simulation) is { } bench)
+        {
+            return People.RoomVisits.UseTile(simulation, bench);
+        }
+
         var map = simulation.Map;
         var x = patient.Tile.X;
         var y = patient.Tile.Y;

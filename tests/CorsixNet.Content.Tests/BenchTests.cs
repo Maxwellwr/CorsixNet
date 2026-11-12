@@ -77,6 +77,61 @@ public class BenchTests
         Assert.Contains(animations, id => id is 216 or 240);
     }
 
+    [Fact]
+    public void AThirstyPatientGetsUpFromTheBenchForACanAndSitsAgain()
+    {
+        var simulation = NewStaffedHospital();
+        var benches = PlaceBenches(simulation, 3);
+        var machinePlaced = false;
+        for (var y = 12; y < 16 && !machinePlaced; y++)
+        {
+            for (var x = 4; x < 10 && !machinePlaced; x++)
+            {
+                if (ObjectPlacer.Check(simulation, "drinks_machine", new TilePosition(x, y), Direction.North, 0) == ObjectPlacementProblem.None)
+                {
+                    Run(simulation, new PlaceObjectCommand("drinks_machine", new TilePosition(x, y), Direction.North));
+                    machinePlaced = true;
+                }
+            }
+        }
+
+        Assert.True(machinePlaced);
+        Humanoid? sitter = null;
+        for (var tick = 0; tick < 2 * 31 * GameDate.HoursPerDay && sitter is null; tick++)
+        {
+            simulation.Step();
+            sitter = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Behaviour is PatientBehaviour { BenchId: not 0 } && h.ActionAnimation is { Id: 146 or 224 });
+        }
+
+        Assert.NotNull(sitter);
+        var patient = (PatientBehaviour)sitter.Behaviour!;
+        typeof(PatientBehaviour).GetProperty(nameof(PatientBehaviour.Thirst))!.SetValue(patient, 0.9m);
+        typeof(PatientBehaviour).GetProperty(nameof(PatientBehaviour.DrinkTimeout))!.SetValue(patient, 0);
+        var drank = false;
+        var satAgain = false;
+        for (var tick = 0; tick < 20 * GameDate.HoursPerDay && !satAgain && simulation.FindEntity(sitter.Id) is not null; tick++)
+        {
+            simulation.Step();
+            if (patient.DrinksMachineId != 0)
+            {
+                Assert.Equal(0, patient.BenchId);
+                drank = true;
+            }
+            else if (drank && patient.BenchId != 0 && benches.Contains(patient.BenchId))
+            {
+                satAgain = true;
+            }
+
+            if (patient.Phase is not (PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue))
+            {
+                break;
+            }
+        }
+
+        Assert.True(drank, "The seated patient did not get up for a can.");
+        Assert.True(patient.Thirst < 0.9m);
+    }
+
     private static byte[] SaveBytes(Simulation simulation)
     {
         using var stream = new MemoryStream();
