@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 76;
+    private const int FormatVersion = 81;
 
     /// <summary>
     /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
@@ -269,6 +269,7 @@ public sealed class Simulation
         {
             hospital.TickOpeningWatch();
             VipVisits.TickInvitation(this, hospital);
+            VipVisits.TickReport(this, hospital);
             Emergencies.Tick(this, hospital);
             Epidemics.Tick(this, hospital);
         }

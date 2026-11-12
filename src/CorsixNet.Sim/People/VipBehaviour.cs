@@ -354,11 +354,19 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
 
     /// <summary>
     /// <c>Vip:evaluateRoom</c>: a fire extinguisher and a bin count a point each, plants one point together, plus if
-    /// most are healthy and minus if most are dying. Then on to the next room.
+    /// most are healthy and minus if most are dying, and each machine a point, minus if it smokes; a research department
+    /// with a patient in it (for an autopsy) worsens the rating by 6. Then on to the next room.
     /// </summary>
     private void EvaluateRoom(Simulation simulation, Humanoid humanoid, Room room)
     {
         VisitedRooms++;
+
+        // A player about to kill a live patient for research is punished hard.
+        if (string.Equals(room.RoomType, RoomVisits.ResearchRoom, StringComparison.Ordinal) && room.PatientId != 0)
+        {
+            Rating += 6;
+        }
+
         var extinguisher = false;
         var bin = false;
         var plants = 0;
@@ -381,6 +389,10 @@ public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
                 case "bin" when !bin:
                     RoomEvaluation++;
                     bin = true;
+                    break;
+                case var _ when placed.Machine is { } machine:
+                    // A smoking machine counts against the room, any other for it.
+                    RoomEvaluation += machine.IsBreaking ? -1 : 1;
                     break;
             }
         }

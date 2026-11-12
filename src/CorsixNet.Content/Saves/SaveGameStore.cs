@@ -112,6 +112,15 @@ public sealed class SaveGameStore
         return new SavedGame(levelName, Simulation.Load(stream, content));
     }
 
+    /// <summary>
+    /// The newest saved game in the saves folder or its autosaves, or null when there is none (the main menu's Continue
+    /// Game: <c>getMostRecentlyModifiedChildFile(".sav")</c>).
+    /// </summary>
+    public string? MostRecentSave() =>
+        System.IO.Directory.Exists(Directory)
+            ? System.IO.Directory.EnumerateFiles(Directory, "*.sav", SearchOption.AllDirectories).OrderByDescending(File.GetLastWriteTimeUtc).FirstOrDefault()
+            : null;
+
     /// <summary>The newest autosave, or null when there is none (CorsixTH's <c>--continue</c>).</summary>
     public string? MostRecentAutosave()
     {

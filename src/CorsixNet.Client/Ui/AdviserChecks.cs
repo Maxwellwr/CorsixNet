@@ -2,7 +2,8 @@
 // (dailyAdviceChecks, _adviseMoney, _adviseStaffRoom, _adviseToilets, _adviseHeatingForPatients,
 // _adviseHeatingForStaff, _adviseDrinksMachines, advisePlants, checkReceptionAdvice, giveAdvice, msgCured, msgKilled,
 // onEndDay's VIP announcement), staff/staff.lua (the once-only pay rise advice), hospital.lua (boiler) and
-// disasters/earthquake.lua. Message keys as in CorsixTH/Lua/languages/original_strings.lua; the no_desk messages
+// disasters/earthquake.lua; room.lua (onHumanoidEnter's desk warnings) and the staff classes'
+// adviseWrongPersonForThisRoom. Message keys as in CorsixTH/Lua/languages/original_strings.lua; the no_desk messages
 // are CorsixTH's own (languages/english.lua).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -10,6 +11,7 @@ using System.Globalization;
 using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Calendar;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.People;
@@ -86,6 +88,29 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
     // plants, drinks
     public static readonly Advice NeedHandymanPlants = new(11, 93, "Hire a handyman to water the plants.");
+
+    // handymen (Patient:tickDay's litter, World:newObject, CallsDispatcher:callForRepair)
+    public static readonly Advice QueueTooLongSendDoctor = new(11, 132, "The queue for your %s is too long. Send another doctor there.");
+    public static readonly Advice NeedDoctors = new(11, 8, "You need more doctors.");
+    public static readonly Advice QueuesTooLong = new(11, 12, "Your queues are too long.");
+    public static readonly Advice PlantsThirsty = new(11, 91, "You need to look after your plants. They are thirsty.");
+    public static readonly Advice PeopleDidItOnTheFloor = new(28, 13, "Some of your patients couldn't hold it. Build more toilets.");
+    public static readonly Advice FaxReceived = new(11, 136, "The icon that just popped up on the bottom panel is a fax: click it to read it.");
+    public static readonly Advice EmergencyArrived = new(11, 22, "The emergency patients have arrived. Treat them quickly.");
+    public static readonly Advice EpidemicHealthInspector = new(21, 10, "The Health Inspector has heard about your epidemic and is on the way.");
+    public static readonly Advice ReceptionNeedReceptionist = new(11, 106, "You need to hire a receptionist to greet your patients.");
+    public static readonly Advice ReceptionBottleneck = new(11, 134, "There is a bottleneck at Reception. Hire another Receptionist.");
+    public static readonly Advice QueueTooLongAtReception = new(11, 133, "You have too many patients waiting at Reception desks. Place another Reception desk and hire another Receptionist.");
+    public static readonly Advice AnotherDesk = new(0, 0, "You'll need to build another desk for that new receptionist.");
+    public static readonly Advice NoDesk5 = new(0, 0, "Well it's about time, you should start to see some patients arriving soon!");
+
+    /// <summary>Said the first time a handyman's priorities are changed (<c>handyman_adjust</c>, once only).</summary>
+    public static readonly Advice HandymanAdjust = new(11, 71, "You can make handymen clean better by setting their priorities.");
+
+    public static readonly Advice NeedHandymanLitter = new(11, 70, "Patients have started to make a mess of your hospital: hire a handyman to clean up.");
+    public static readonly Advice NeedHandymanMachines = new(11, 94, "Hire a handyman to keep your machines in order.");
+    public static readonly Advice MachinesFallingApart = new(11, 4, "Your machines are falling apart: get your handymen to fix them!");
+    public static readonly Advice MachineryDamaged2 = new(28, 34, "Your machinery is damaged: hire a handyman to repair it.");
     public static readonly Advice PatientsVeryThirsty = new(28, 6, "Patients are very thirsty.");
     public static readonly Advice PatientsThirsty = new(11, 16, "Patients are thirsty: place drinks machines.");
     public static readonly Advice PatientsThirsty2 = new(28, 5, "Patients are getting thirsty.");
@@ -106,6 +131,40 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     // earthquakes, research
     public static readonly Advice EarthquakeAlert = new(11, 107, "An earthquake is coming!");
     public static readonly Advice EarthquakeEnded = new(11, 78, "The earthquake is over. It measured %d on the Richter scale.");
+    // research.lua's commandEnteringPatient: an autopsy came out
+    public static readonly Advice AutopsyDiscovered = new(11, 123, "Your Automatic Autopsy Machine has been discovered. Expect an adverse reaction from the public.");
+
+    // doctor.lua's updateSkill: promotions from training or on the job
+    public static readonly Advice PromotionToDoctor = new(11, 23, "One of your junior doctors has become a doctor.");
+    public static readonly Advice PromotionToSpecialist = new(11, 69, "One of your doctors has become a %s.");
+    public static readonly Advice PromotionToConsultant = new(11, 138, "One of your doctors has become a consultant.");
+
+    /// <summary>training.lua: a student placed in the training room finds no lecture chair (CorsixTH's own text).</summary>
+    public static readonly Advice NotEnoughLectureChairs = new(0, 0, "Each student doctor needs a lecture chair to sit in!");
+
+    // staff_place_advice: someone put into a room they cannot work in (Staff/Doctor/Nurse:adviseWrongPersonForThisRoom)
+    public static readonly Advice OnlyResearchers = new(11, 124, "Only doctors with a research qualification can work in the research department.");
+    public static readonly Advice OnlySurgeons = new(11, 125, "Only doctors with a surgeon qualification can work in the operating theatre.");
+    public static readonly Advice OnlyPsychiatrists = new(11, 126, "Only doctors with a psychiatry qualification can work in psychiatry.");
+    public static readonly Advice OnlyNursesInRoom = new(11, 127, "Only nurses can work in the %s.");
+    public static readonly Advice DoctorsCannotWorkInRoom = new(11, 128, "Doctors cannot work in the %s.");
+    public static readonly Advice NursesCannotWorkInRoom = new(11, 129, "Nurses cannot work in the %s.");
+    public static readonly Advice OnlyDoctorsInRoom = new(11, 130, "Only doctors can work in the %s.");
+
+    // room.lua's Room:onHumanoidEnter: a researcher or a ward nurse put into a room full of them (CorsixTH's own texts)
+    public static readonly Advice[] ResearcherNeedsDesk =
+    [
+        new(0, 0, "A Researcher needs to have a desk to work at."),
+        new(0, 0, "Your Researcher is pleased that you have allowed him to have a break. If you were intending to have more staff researching, then you need to provide them each with a desk to work from."),
+        new(0, 0, "Each Researcher needs to have his own desk to work from."),
+    ];
+
+    public static readonly Advice[] NurseNeedsDesk =
+    [
+        new(0, 0, "Each Nurse needs to have her own desk to work from."),
+        new(0, 0, "Your Nurse is pleased that you have allowed her to have a break. If you were intending to have more than one working in the ward, then you need to provide them each with a desk to work from."),
+    ];
+
     // room_requirements, said when a room is finished (Room:roomFinished in rooms/*.lua)
     public static readonly Advice PsychiatryNeedPsychiatrist = new(11, 79, "You need to employ a psychiatrist for the psychiatric room.");
     public static readonly Advice PharmacyNeedNurse = new(11, 80, "You need to employ a nurse for the pharmacy.");
@@ -132,6 +191,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     private Snapshot? _last;
     private bool _temperatureAdvice;
     private bool _receptionAdvice;
+
+    /// <summary>Plants the adviser has said are thirsty (<c>plant_announced</c>).</summary>
+    private readonly HashSet<int> _announcedPlants = [];
+
+    /// <summary>Whether the first fax has been explained (<c>message_popup</c>).</summary>
+    private bool _faxAdvised;
     private bool _curedDiedMessage;
     private bool _payRiseAdvised;
     private int _vipsAnnounced;
@@ -185,6 +250,14 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             }
         }
 
+        if (snapshot.AutopsiesDiscovered > last.AutopsiesDiscovered)
+        {
+            Say(AutopsyDiscovered);
+        }
+
+        HandymanAdvice(snapshot, last, Say);
+        OneOffAdvice(simulation, player, snapshot, last, Say);
+
         if (snapshot.Deaths > last.Deaths)
         {
             if (last.Deaths == 0)
@@ -235,6 +308,37 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             if (research.Discovered && !last.Discovered.Contains(id))
             {
                 Say(NewMachineResearched, simulation.Content.FindObject(id)?.Name ?? id);
+            }
+        }
+
+        // Doctor:updateSkill: a doctor who becomes a specialist, a doctor or a consultant.
+        foreach (var (id, rank) in snapshot.Ranks)
+        {
+            if (!last.Ranks.TryGetValue(id, out var before))
+            {
+                continue;
+            }
+
+            foreach (var (gained, title, fallback) in new[]
+            {
+                (rank.Surgeon && !before.Surgeon, 6, "surgeon"),
+                (rank.Psychiatrist && !before.Psychiatrist, 7, "psychiatrist"),
+                (rank.Researcher && !before.Researcher, 9, "researcher"),
+            })
+            {
+                if (gained)
+                {
+                    Say(PromotionToSpecialist, texts?.String(34, title) ?? fallback);
+                }
+            }
+
+            if (before.Junior && !rank.Junior)
+            {
+                Say(PromotionToDoctor);
+            }
+            else if (!before.Consultant && rank.Consultant)
+            {
+                Say(PromotionToConsultant);
             }
         }
 
@@ -302,6 +406,26 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 break;
             case 8 when HasRoomType(simulation, "toilets") && !HasRoom(simulation, player, "toilets"):
                 Give([NeedToilets, BuildToilets, BuildToiletNow]);
+                break;
+            case 10 when BusyRoom(simulation, player, random) is { } busy:
+                // _warnForLongQueues: a room needing a doctor (or other staff but a nurse) asks for one two times in three.
+                if (RoomVisits.RequiredStaff(busy.RoomType) is { } required && required != BehaviourKind.Nurse && random.Next(1, 4) > 1)
+                {
+                    var roomName = simulation.Content.FindRoom(busy.RoomType)?.Name ?? busy.RoomType;
+                    if (random.Next(2) == 0)
+                    {
+                        Say(QueueTooLongSendDoctor, roomName);
+                    }
+                    else
+                    {
+                        Say(NeedDoctors);
+                    }
+                }
+                else
+                {
+                    Say(QueuesTooLong);
+                }
+
                 break;
             case 15 when !_temperatureAdvice && !hospital.IsHeatingBroken:
                 var patientWarmth = Average(Patients(simulation, player), h => h.Warmth, 0.3m);
@@ -448,6 +572,24 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         }
     }
 
+    /// <summary>
+    /// <c>Hospital:getRandomBusyRoom</c>: one of the hospital's active rooms with more than seven waiting at the door, at
+    /// random, if its queue is at least one and a half times the rooms' average; otherwise null.
+    /// </summary>
+    internal static Room? BusyRoom(Simulation simulation, int player, Random random)
+    {
+        var rooms = simulation.Entities.OfType<Room>().Where(room => room.IsActive && room.DoorQueue is not null && RoomBuilder.IsOwnedBy(simulation.Map, room, player)).ToList();
+        var busy = rooms.Where(room => room.DoorQueue!.Count > 7).ToList();
+        if (busy.Count == 0)
+        {
+            return null;
+        }
+
+        var threshold = 1.5 * rooms.Sum(room => room.DoorQueue!.Count) / rooms.Count;
+        var chosen = busy[random.Next(busy.Count)];
+        return chosen.DoorQueue!.Count >= threshold ? chosen : null;
+    }
+
     private static bool HasRoom(Simulation simulation, int player, string roomType) =>
         simulation.Entities.OfType<Room>().Any(room => room.RoomType == roomType && RoomBuilder.IsOwnedBy(simulation.Map, room, player));
 
@@ -470,18 +612,261 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     private static bool IsInHospital(LevelMap map, int player, TilePosition tile) =>
         map.Contains(tile.X, tile.Y) && map[tile.X, tile.Y].Has(TileFlags.Hospital) && map.GetParcelOwner(map[tile.X, tile.Y].Parcel) == player + 1;
 
+    /// <summary>A doctor's grade and specialisms, to notice promotions.</summary>
+    private readonly record struct Rank(bool Junior, bool Consultant, bool Surgeon, bool Psychiatrist, bool Researcher);
+
+    /// <summary>
+    /// training.lua's <c>commandEnteringStaff</c>: a student doctor put into a training room whose lecture chairs are all
+    /// taken is told so (and leaves).
+    /// </summary>
+    public static bool LacksLectureChair(Simulation simulation, StaffProfile profile, TilePosition tile, int movingId)
+    {
+        if (profile.Class != StaffClass.Doctor || profile.IsConsultant || !simulation.Map.Contains(tile.X, tile.Y)
+            || simulation.FindEntity(simulation.Map[tile.X, tile.Y].RoomId) is not Room { RoomType: "training", IsActive: true } room)
+        {
+            return false;
+        }
+
+        var students = simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour doctor, IsFired: false } h
+            && doctor.RoomId == room.Id && h.Id != room.StaffId && h.Id != movingId);
+        var chairs = simulation.Entities.Count(e => e is RoomObject { ObjectType: "lecture_chair" } chair && chair.RoomId == room.Id);
+        return students >= chairs;
+    }
+
+    /// <summary>
+    /// What the adviser says when a member of staff is put down in a room (room.lua's <c>Room:onHumanoidEnter</c>): a
+    /// researcher or ward nurse in a room already full of them is told to get a desk of their own (and takes over from
+    /// one who is free), and someone the room cannot use is told who can work there
+    /// (<c>adviseWrongPersonForThisRoom</c> in staff.lua, doctor.lua and nurse.lua). Null when there is nothing to say.
+    /// </summary>
+    /// <param name="simulation">The simulation.</param>
+    /// <param name="profile">Who is put down.</param>
+    /// <param name="tile">Where.</param>
+    /// <param name="movingId">The member of staff being moved, or 0 for one being hired.</param>
+    /// <param name="pick">Picks one of a number of messages: given a count, returns an index below it.</param>
+    public static (Advice Advice, string? Argument)? StaffPlacement(Simulation simulation, StaffProfile profile, TilePosition tile, int movingId, Func<int, int> pick)
+    {
+        if (profile.Class is not (StaffClass.Doctor or StaffClass.Nurse) || !simulation.Map.Contains(tile.X, tile.Y)
+            || simulation.FindEntity(simulation.Map[tile.X, tile.Y].RoomId) is not Room { IsActive: true } room)
+        {
+            return null;
+        }
+
+        var name = simulation.Content.FindRoom(room.RoomType)?.Name ?? room.RoomType;
+        var doctor = profile.Class == StaffClass.Doctor;
+        switch (room.RoomType)
+        {
+            case "staff_room":
+                return null;
+            case "training":
+                // A doctor is a student or the lecturer, or told about the lecture chairs.
+                return doctor ? null : (NursesCannotWorkInRoom, name);
+            case "research" when doctor && profile.IsResearcher:
+                {
+                    var researchers = simulation.Entities.Count(e => e is Humanoid { Behaviour: DoctorBehaviour d, IsFired: false } h && d.RoomId == room.Id && h.Id != movingId);
+                    return room.StaffId != 0 && researchers >= CountIn(simulation, room, "desk") ? (Pick(ResearcherNeedsDesk), null) : null;
+                }
+
+            case "ward" when !doctor:
+                {
+                    var nurses = simulation.Entities.Count(e => e is Humanoid { Behaviour: NurseBehaviour n, IsFired: false } h && n.RoomId == room.Id && h.Id != movingId);
+                    return room.StaffId != 0 && room.StaffId != movingId && nurses >= Math.Max(1, CountIn(simulation, room, "desk")) ? (Pick(NurseNeedsDesk), null) : null;
+                }
+        }
+
+        var required = RoomVisits.RequiredStaff(room.RoomType);
+        if (required is null)
+        {
+            // Rooms without staff: only the toilets say so to a doctor.
+            return doctor ? (room.RoomType == "toilets" ? (DoctorsCannotWorkInRoom, name) : null) : (NursesCannotWorkInRoom, name);
+        }
+
+        if (!doctor)
+        {
+            return required == BehaviourKind.Nurse ? null : (NursesCannotWorkInRoom, name);
+        }
+
+        if (required == BehaviourKind.Doctor && RoomVisits.IsQualifiedFor(room.RoomType, profile))
+        {
+            return null;
+        }
+
+        return required == BehaviourKind.Nurse ? (OnlyNursesInRoom, name)
+            : room.RoomType switch
+            {
+                "operating_theatre" => (OnlySurgeons, null),
+                "research" or "dna_fixer" => (OnlyResearchers, null),
+                "psych" => (OnlyPsychiatrists, null),
+                _ => (OnlyDoctorsInRoom, name),
+            };
+
+        Advice Pick(Advice[] messages) => messages[pick(messages.Length)];
+    }
+
+    /// <summary>
+    /// The handyman advice: the first litter in a hospital without handymen (<c>need_handyman_litter</c>), a machine placed
+    /// without one (<c>World:newObject</c>, <c>need_handyman_machines</c>), and a machine's call for repair
+    /// (<c>CallsDispatcher:callForRepair</c>): urgent, straight below four uses left, says machines are falling apart;
+    /// otherwise, below six uses left or called from the machine window, it asks for a handyman if there is none.
+    /// </summary>
+    private static void HandymanAdvice(Snapshot snapshot, Snapshot last, Action<Advice, object[]> say)
+    {
+        if (snapshot.Littered && !last.Littered && !snapshot.HasHandyman)
+        {
+            say(NeedHandymanLitter, []);
+        }
+
+        var placed = false;
+        var urgent = false;
+        var damaged = false;
+        foreach (var (id, machine) in snapshot.Machines)
+        {
+            if (!last.Machines.TryGetValue(id, out var before))
+            {
+                placed = true;
+                continue;
+            }
+
+            if (machine.RemainingUses < 4 && before.RemainingUses >= 6)
+            {
+                urgent = true;
+            }
+            else if ((machine.RemainingUses < 6 && before.RemainingUses >= 6) || (machine.IsRepairCalled && !before.IsRepairCalled))
+            {
+                damaged = true;
+            }
+        }
+
+        if (placed && !snapshot.HasHandyman)
+        {
+            say(NeedHandymanMachines, []);
+        }
+
+        if (urgent)
+        {
+            say(MachinesFallingApart, []);
+        }
+        else if (damaged && !snapshot.HasHandyman)
+        {
+            say(MachineryDamaged2, []);
+        }
+    }
+
+    /// <summary>
+    /// Advice on things happening: a plant drooping badly for the first time (<c>plants_thirsty</c>, once a plant), the
+    /// first patient to pee on the floor (<c>people_did_it_on_the_floor</c>), the first fax in a campaign level
+    /// (<c>fax_received</c>), the emergency helicopter landing (<c>information.emergency</c>), the health inspector
+    /// setting off (<c>epidemic_health_inspector</c>), a reception desk bought (<c>msgReceptionDesk</c>), and a patient
+    /// setting off for a desk (<c>msgMultiReceptionDesks</c>).
+    /// </summary>
+    private void OneOffAdvice(Simulation simulation, int player, Snapshot snapshot, Snapshot last, Action<Advice, object[]> say)
+    {
+        foreach (var plant in snapshot.ThirstyPlants)
+        {
+            if (_announcedPlants.Add(plant))
+            {
+                say(PlantsThirsty, []);
+            }
+        }
+
+        if (snapshot.DidItOnFloor && !last.DidItOnFloor)
+        {
+            say(PeopleDidItOnTheFloor, []);
+        }
+
+        if (snapshot.Faxes > 0 && last.Faxes == 0 && !_faxAdvised && simulation.Rules.LevelNumber is not null)
+        {
+            _faxAdvised = true;
+            say(FaxReceived, []);
+        }
+
+        if (snapshot.HelicopterPhase >= HospitalEmergencies.HelicopterLanded && last.HelicopterPhase < HospitalEmergencies.HelicopterLanded)
+        {
+            say(EmergencyArrived, []);
+        }
+
+        if (snapshot.InspectorId != 0 && last.InspectorId == 0)
+        {
+            say(EpidemicHealthInspector, []);
+        }
+
+        if (snapshot.SeekingReception.Any(id => !last.SeekingReception.Contains(id)))
+        {
+            MultiReceptionDesks(simulation, player, snapshot, say);
+        }
+
+        if (snapshot.Desks > last.Desks)
+        {
+            // Hospital:msgReceptionDesk, when a desk is bought.
+            if (snapshot.Receptionists == 0)
+            {
+                say(ReceptionNeedReceptionist, []);
+            }
+            else if (snapshot.Desks == 1 && !_receptionAdvice && simulation.Date.MonthOfGame > 3)
+            {
+                say(NoDesk5, []);
+                _receptionAdvice = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// <c>PlayerHospital:msgMultiReceptionDesks</c>, each time a patient sets off for a desk: with more than one
+    /// receptionist or desk, too few receptionists for long queues, long queues, or a receptionist with no desk.
+    /// </summary>
+    private static void MultiReceptionDesks(Simulation simulation, int player, Snapshot snapshot, Action<Advice, object[]> say)
+    {
+        var desks = snapshot.Desks;
+        var receptionists = snapshot.Receptionists;
+        if (!((receptionists > 1 && desks > 0) || (receptionists > 0 && desks > 1)))
+        {
+            return;
+        }
+
+        var queueTotal = ReceptionDesks.OfHospital(simulation, player, staffedOnly: true).Sum(desk => desk.Desk!.Queue.Count);
+        var queueAverage = queueTotal / desks;
+        if (receptionists < desks && queueAverage > 5)
+        {
+            say(ReceptionBottleneck, []);
+        }
+        else if (queueAverage > 4)
+        {
+            say(QueueTooLongAtReception, []);
+        }
+        else if (receptionists > desks)
+        {
+            say(AnotherDesk, []);
+        }
+    }
+
+    private static int CountIn(Simulation simulation, Room room, string objectType) =>
+        simulation.Entities.Count(e => e is RoomObject placed && placed.RoomId == room.Id && string.Equals(placed.ObjectType, objectType, StringComparison.Ordinal));
+
     /// <summary>What the checks compare from one frame to the next.</summary>
     private readonly record struct Snapshot(
         long Hours,
         int Cured,
         int Deaths,
+        int AutopsiesDiscovered,
         int RaiseRequests,
         bool HeatingBroken,
         bool Earthquake,
         int EarthquakeSize,
         bool HasStaffedDesk,
         IReadOnlySet<string> Discovered,
-        IReadOnlySet<int> ActiveRooms)
+        IReadOnlyDictionary<int, Rank> Ranks,
+        IReadOnlySet<int> ActiveRooms,
+        bool Littered,
+        bool HasHandyman,
+        IReadOnlyDictionary<int, (int RemainingUses, bool IsRepairCalled)> Machines,
+        IReadOnlyList<int> ThirstyPlants,
+        bool DidItOnFloor,
+        int Faxes,
+        int HelicopterPhase,
+        int InspectorId,
+        int Desks,
+        int Receptionists,
+        IReadOnlySet<int> SeekingReception)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -491,13 +876,34 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 simulation.Hours,
                 hospital.Cured,
                 hospital.Deaths,
+                hospital.AutopsiesDiscovered,
                 staff.Count(s => s.RaiseRequest > 0),
                 hospital.IsHeatingBroken,
                 simulation.Earthquakes.IsActive,
                 simulation.Earthquakes.Size,
                 staff.Any(s => s.Profile!.Class == StaffClass.Receptionist) && Count(simulation, player, ReceptionDesks.ObjectId) > 0,
                 hospital.Research.Objects.Where(pair => pair.Value.Discovered).Select(pair => pair.Key).ToHashSet(StringComparer.Ordinal),
-                simulation.Entities.OfType<Room>().Where(room => room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, player)).Select(room => room.Id).ToHashSet());
+                staff.Where(s => s.Profile!.Class == StaffClass.Doctor).ToDictionary(s => s.Id, s => new Rank(s.Profile!.IsJunior, s.Profile.IsConsultant, s.Profile.IsSurgeon, s.Profile.IsPsychiatrist, s.Profile.IsResearcher)),
+                simulation.Entities.OfType<Room>().Where(room => room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, player)).Select(room => room.Id).ToHashSet(),
+                hospital.Littered,
+                staff.Any(s => s.Profile!.Class == StaffClass.Handyman),
+                simulation.Entities.OfType<RoomObject>()
+                    .Where(o => o.Machine is not null && !o.IsDestroyed && IsInHospital(simulation.Map, player, o.Tile))
+                    .ToDictionary(o => o.Id, o => (o.Machine!.RemainingUses, o.Machine.IsRepairCalled)),
+                simulation.Entities.OfType<RoomObject>()
+                    .Where(o => o.Plant is { State: > 1 } && IsInHospital(simulation.Map, player, o.Tile))
+                    .Select(o => o.Id)
+                    .ToList(),
+                hospital.DidItOnFloor,
+                Windows.FaxWindow.Pending(simulation, player).Count(),
+                hospital.Emergencies.HelicopterPhase ?? int.MinValue,
+                hospital.Epidemics.Current?.InspectorId ?? 0,
+                Count(simulation, player, ReceptionDesks.ObjectId),
+                staff.Count(s => s.Profile!.Class == StaffClass.Receptionist),
+                simulation.Entities.OfType<Humanoid>()
+                    .Where(h => h.Behaviour is PatientBehaviour { Phase: PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue } && h.HospitalPlayer == player)
+                    .Select(h => h.Id)
+                    .ToHashSet());
         }
     }
 }

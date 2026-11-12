@@ -158,7 +158,8 @@ Done and committed:
   Esc with no window open opens the menu (CorsixTH's menu bar) instead of quitting: save (to a new
   file or over one, after asking), load (manual saves, quick save, autosaves), quick save/load,
   restart, quit, the options (sounds, volume, screen shake, edge scrolling, scroll speeds, autosave;
-  Apply saves config.txt and uses them at once), the levels list, the charts and cheats.
+  the language among the installed LANG-n.DAT, whose texts and speech switch at once; Apply saves
+  config.txt and uses them at once), the levels list, the charts and cheats.
   F8 draws the graphs (graphs.lua): a coloured line per statistic, each scaled to its own range,
   buttons to hide lines, months/years/4-year steps, and Figures for the table.
   The adviser (adviser.lua, player_hospital.lua) speaks over the bottom panel: a queue said in turn
@@ -171,17 +172,74 @@ Done and committed:
   game, a room's description from S[57] the first time one is built (room_information_dialogs), and
   Restart and Quit in the menu ask first.
   Rooms call staff by the dispatcher's score (path, queue x5, emergency, fatigue x40, -50 outside a
-  room) instead of the nearest, and leave staff to a waiting room that scores better for them.
+  room, -100000 for rooms needing a researcher, psychiatrist or surgeon) instead of the nearest, and leave staff
+  to a waiting room that scores better for them. With staff_allowed_to_move (the default), a room with patients
+  queueing calls staff idle in a room nobody waits for (2026-11-12; only then, as rooms here poll for staff).
   Edit room (bottom panel, then click a room): the room stops taking patients, its queue goes to
   other rooms, its staff leave once no patient is inside, then its objects can be moved, bought or
-  sold; Confirm costs nothing again, Take down asks and gives half its cost back (Room.IsPaid,
-  IsClosing; save format 59). Not yet: going back to the blueprint to resize or move the door.
+  sold; Confirm costs nothing again (Room.IsPaid, IsClosing; save format 59). Esc while editing goes
+  back to the door, as CorsixTH's returnToDoorPhase: the room comes down, its objects are sold at full
+  price, it stays paid for (Hospital.Rebuild, RoomRebuild, save format 76), and it can be resized or
+  get its door moved; built again, its needed objects are bought again and a machine placed again
+  keeps its wear. Esc on its blueprint asks (delete_room) and gives half its cost back (abortRoom).
+  Deviation: CorsixTH buys every object back on the list, here extra objects are bought again from
+  the edit panel.
   Replays: a local game records its start and every command (LocalSession.Recording); Menu, Save
   replay writes Replays/*.cnreplay in the saves folder, Watch replay plays one back (ReplaySession,
   the player's commands ignored) and the status line says whether it matched the recorded hash.
   Hotkeys come from hotkeys.txt beside config.txt (CorsixTH's action names, written with the defaults
   when missing): the dialogs, Ctrl+H the adviser's history, Shift+A the adviser on or off (saved),
-  pause, speed up and quick save/load. The camera, speeds and stand-in keys stay fixed.
+  pause, speed up, quick save/load, the speeds 1-5, scrolling (arrows; WASD stays too), zoom (=, -,
+  Shift for five times, 0), Alt/Ctrl+digit views and B the room list. Speed 6 and the stand-in keys stay fixed.
+  Options, Hotkeys, Assign opens the hotkey assignment dialog (hotkey_assign.lua; HotkeyAssignWindow): panes of
+  the actions above, click a key then press the new one (Esc/Return alone refused, a key in use swaps), Accept
+  saves hotkeys.txt and uses the keys at once. While it waits for a key the game sees no keyboard (IKeyCaptureWindow).
+  Map editor model (map_editor.lua, th_map.cpp level_map::save; 2026-11-12): Content/Levels/MapEditor.cs edits a
+  LevelMap loaded with LevelMapLoader.Load(file, editing: true) (no parcel owners): PaintFloor (outside/road/hospital
+  flags), walls, DeleteWalls, SetParcel, camera/heliport, Copy/Paste, ToMapFile/Save. MapFile.Create/ToBytes write
+  the format. The editor's window and cursor (2026-11-12, MSI, seen live): the main menu's Map Editor or `--map-editor`
+  opens a blank map paused (a Simulation on the editor's LevelMap without map objects; MapViewScreen.StartMapEditor) with
+  MapEditorWindow: the nine sprite pages (MapEditorPages, layoutButtons) drawn with the map's block sprites on its canvas
+  (UiWindow.CanvasClicked), paste, delete wall, cameras and heliports 1-4 (players beyond the map's count greyed),
+  parcels 0-9 (the parcels overlay shows), Save map (Levels folder, "Map N.map", playable from Single Scenario), Load
+  map, New map, Quit. MapEditorTool is UIMapEditor's cursor: left drag paints (drag capabilities: floor area, north wall
+  along x, west wall along y), right press during a left drag paints in blocks, right drag copies and goes to paste,
+  moving back to the start cancels; red outlines as fillCursorArea; entrance doors drawn from the editor's placements
+  (MapEditor.PlaceEntranceDoor, checkObjectSpace). In the editor the right button no longer pans (middle does); Esc
+  reopens the window. `--script` `drag x1 y1 x2 y2 right` drags with the right button. Not yet: the player count
+  (LevelMap.PlayerCount is fixed), the custom parcel number box, objects other than entrance doors.
+  Patients knock on a room's door before going in (walk.lua's KnockDoorAction; PatientSpotAction.Knock, 2026-11-12): rooms
+  with required staff, doors that do not swing, nobody queueing or inside; knock_east animations are one frame in the
+  original. The crash trolley is drawn split over two tiles (ObjectDrawing.Split, AnimationRenderer.SetColumnClip,
+  thdf_crop), its examination too. The waiting patients' watch/yawn/foot animations were checked against the game data.
+  Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/
+  Machines More buttons (IncreaseHandymanPriorityCommand), per-handyman thousandths in HandymanBehaviour; the first
+  change makes the adviser say handyman_adjust (Hospital.HandymanPrioritiesChanged).
+  Tooltips (#74): OriginalTooltips.Get(host, index, fallback) reads section 32 (original_strings.lua's tooltip.*);
+  most text windows' buttons have them now, including the fax, cheats, adviser history and level end windows
+  (TooltipTests lists the windows checked). The progress report's goals carry tooltip.status (ProgressReportWindow.Tooltip;
+  section 64 when loaded).
+  More advice (#72; save format 79): long queues on day 10 (getRandomBusyRoom: queues_too_long, or for a doctor's room
+  queue_too_long_send_doctor/need_doctors), plants_thirsty once a plant, people_did_it_on_the_floor
+  (Hospital.DidItOnFloor), fax_received (first fax in a campaign level; client-side flag, not saved),
+  information.emergency at helicopter phase 60, epidemic_health_inspector, reception_need_receptionist / no_desk_5 on
+  buying a desk. Not yet: benches (sitting ratios need seated patients), doctor_crazy_overwork (no crazy doctors yet),
+  the tutorial. msgMultiReceptionDesks (reception_bottleneck, queue_too_long_at_reception, another_desk) runs when a
+  patient sets off for a desk or joins its queue (AdviserChecks.MultiReceptionDesks).
+  Fax keypad (fax.lua UIFax:validate, cheats.lua processCheatCode): digits, Cancel, Correct and Validate in the fax
+  window; 24328 opens the cheats window, 112 is accepted, the four toggle codes (FaxCodes.ToggleCheat, CorsixTH's
+  n^5.00001 formula) send CheatCommand; fax_yes/fax_no sounds.
+  VIP report fax (makeVipEndFax; save format 80): VipVisits.Report keeps the name, rating and grant for 20 days and
+  the fax window shows it; the remarks are section 44, 196-210, with our stand-ins without the game's strings.
+  Emergency result fax (makeEmergencyEndFax; save format 80): HospitalEmergencies.Report (saved, total, bonus there
+  was, earned) for 25 days, section 44 strings 40 and 41.
+  Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
+  format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
+  machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).
+  Main menu (main_menu.lua; 2026-11-12): with no --level/--map/--campaign/--load/--continue/--demo/--script/
+  network option the game opens on it, the first level paused behind: Campaign, Custom Campaign and Single Scenario
+  (the .campaign/.level files under config.txt's campaigns/levels, by default Campaigns/Levels beside the saves
+  folder; CustomGames), Continue Game (newest save, autosaves too), Load Game, Settings, Exit (asks).
   Menu, New game (new_game.lua): the original campaign from level 1 at Junior, Doctor or Consultant
   (the difficulties whose level files are installed); the levels list follows that campaign.
   The bottom panel's buttons have tooltips (CorsixTH's toolbar texts and the hotkeys) above the cursor.
@@ -203,7 +261,8 @@ Done and committed:
   difficulty / 10)). Swing doors (swing_door_left/right.lua; `RoomDefinition.SwingDoors`, save format 62): the right door
   is walked through with the humanoids' swing animations, the left one beside it and the wall beyond get the swing
   wall pieces; the left door swings at once, the right one once the walker is through, and nobody else goes through
-  until it is done. Not yet: the VIP's visit to the ward.
+  until it is done. The VIP's visit to the ward: the ward is a must-visit room, nothing more in CorsixTH (checked
+  2026-11-12; `evaluateRoom` now also counts machines and a patient in the research department, as CorsixTH).
   The blood machine (blood_machine_room.lua; save format 63): the doctor works the machine at its use position with
   the patient hidden in its animations at the other end; `MultiObjectUse.InUseRounds` plays the in-use phase again
   as a prolonged use (2 to 4 more times here).
@@ -228,7 +287,12 @@ Next, in this order (2026-11-10):
 
 1. Done (PR #211): the staff room. `RestingBehaviour` takes over a tired doctor, nurse or handyman (Tiredness.
    CheckIfNeedRest, once their room's patient has gone; ward nurses at once) and gives them back their usual behaviour,
-   free for any room, when rested. Not yet: researchers going back to their room, being on call, the tired icon.
+   free for any room, when rested. Done 2026-11-12 (cloud): researchers and doctors in training go back to their room
+   once rested if it has room for them (`RestingBehaviour.ReturnRoomId`, CorsixTH's `last_room`;
+   `RoomVisits.ReturnToLastRoom`), staff on call (a handyman with a job, a nurse going to vaccinate, staff walking to
+   a room) neither rest nor stop tiring in the staff room, and very tired staff show the tired mood until rested
+   (`Humanoid.IsTiredMoodShown`; text in the staff window, the icon 3990 is not drawn yet). Save format 74. Left out:
+   meander.lua's idle staff going back to any `last_room` that needs staff (rooms here call staff themselves).
 2. Looks of visual diseases: Slack Male/Female done (PR #212: slack tongues and bald heads, with the GP chair, drinks
    machine, loo, X-ray, scanner and blood machine; a slack woman borrows a standard woman's animations,
    `ObjectDefinition.LooksLike`). Still: pregnant patients are women only (not yet: a "pregnant" man was seen). Chewbacca done
@@ -245,9 +309,14 @@ Next, in this order (2026-11-10):
    20 frames/finish) ends. Client: smoke plumes below 4 uses, the crashed animation. The machine window
    (clicking a machine; save format 73) calls a handyman (`CallHandymanCommand`, `MachineState.IsRepairCalled`: an
    urgent task, the room lets no patient in until the repair) and replaces the machine at today's price
-   (`ReplaceMachineCommand`, after a confirmation). Not yet: the gear icon, the
-   machine_menu list, the invulnerable machines cheat, the repair announcement,
-   num_explosions; a crashed room can only be taken down. Wall soot is outranked by the
+   (`ReplaceMachineCommand`, after a confirmation). Done 2026-11-12 (cloud): the machines list
+   (`MachineMenuWindow`, F10 and a Machines button; machine_menu.lua's columns and sorts as text), the invulnerable
+   machines and repair all machines cheats (`ToggleCheats.InvulnerableMachines`, `Machines.RepairAll`; CorsixTH's repair
+   all still cuts strength through `strength_reducible or true`, a bug not copied), the repair announcement
+   (`RepairAnnouncer`: machwarn.wav and the room's maint0xx.wav when a machine starts smoking, played as effects). Not
+   yet: the gear icon (4564) drawn over a machine, num_explosions; a crashed room cannot be taken down as an unfinished one; with config.txt's
+   remove_destroyed_rooms a click on it in edit mode offers to clear it away for twice its cost less 40 % of its
+   needed objects (`RemoveDestroyedRoomCommand`, 2026-11-12). Wall soot is outranked by the
    floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
    (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
    and moved to `FinishSecondaryUsePosition` facing `FinishSecondaryFacing` at the in-use phase. Not yet: the jelly
@@ -257,14 +326,17 @@ Next, in this order (2026-11-10):
    consultant already lecturing; other doctors sit on free lecture chairs or leave. `Training.OnEndDay` is trainSkills:
    skill (with millionths kept in `StaffProfile`) and specialism progress (`SpecialismProgress`, `TrainSpecialism`) from
    `TrainingRules` (gbv.TrainingRate, AbilityThreshold, TrainingValue); a student who becomes a consultant leaves. Not
-   yet: the promotion advice and "not enough lecture chairs" advice, the wage following the
-   promotion, learning on the job, doctors going back to the room after resting. Autopsies done (save format 71): the fax's Research choice
+   yet: the promotion advice and "not enough lecture chairs" advice (both since done). Learning on the job done
+   2026-11-12 (`Training.LearnOnTheJob`: 0.000003 skill an hour using an object outside the training room, staff room
+   and toilets); doctors going back to the room after resting done the same night. No wage change on promotion: CorsixTH
+   has none (`parseSkillLevel` only sets the grade; the fair wage grows, so raise requests follow). Autopsies done (save format 71): the fax's Research choice
    (`PatientAnswer.Research`, `PatientBehaviour.CanGoToResearch`) sends a patient asking for a treatment room to the
    research department (`RoomSeek.Research`; it now has a door queue); the room's first researcher leaves research for
    the autopsy machine and uses it with the patient (a doctor-driven machine like the blood machine); `Autopsied`: the
    last treatment room's first undiscovered object gets AutopsyRschPercent, the autopsy may come out (1 in 3, 2 in 3
    with unhappy staff) for AutopsyRepHitPercent of the reputation, and the patient is gone without counting as a death.
-   Not yet: the advice, the patient's idea mood. Faces done: `StaffFaces` draws drawFace's hair, face and chin from
+   The advice when an autopsy comes out done 2026-11-12 (`Hospital.AutopsiesDiscovered`, S[11][123]; save format 75); CorsixTH
+   has no idea mood for autopsied patients (only debug patients use idea1), so none here. Faces done: `StaffFaces` draws drawFace's hair, face and chin from
    QDATA/FACE01V (65x1350, main palette; greyscale like the original) in the hire window (click a name to pick whose
    portrait shows) and the staff window. The list is done. DNA fixer done (save format 72): aliens
    (`HumanoidType.AlienMalePatient`/`AlienFemalePatient`, `PatientLook.Alien`) walk with their own animations, use a
@@ -281,6 +353,10 @@ Rooms' requirements (2026-11-11): when a room of the player's becomes active, `A
 `roomFinished` says in CorsixTH: a doctor for the GP, a nurse for the pharmacy or ward, a psychiatrist, a consultant
 for training, a researcher for research, a ward and two surgeons for the operating theatre (S[11][79..88], [105]).
 CorsixTH's DNA fixer says nothing, so neither does this.
+Staff put down in a room (2026-11-12): `AdviserChecks.StaffPlacement` says what `Room:onHumanoidEnter` and the staff
+classes' `adviseWrongPersonForThisRoom` say: only researchers (research, DNA fixer), surgeons, psychiatrists, nurses
+or doctors work there, doctors or nurses cannot work in a room (S[11][124..130]), and a researcher or ward nurse put
+into a room full of them needs a desk of their own (CorsixTH's warnings.researcher_needs_desk_*, nurse_needs_desk_*).
 
 Dying (2026-11-11, save format 74): a dead patient (health run out out of a room, or a failed treatment once out of
 the room) takes one step aside, then falls east or south at random and goes to heaven: rise, wings, hands, and flying up

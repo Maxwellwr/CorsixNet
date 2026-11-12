@@ -1,5 +1,6 @@
 // The hotkeys file, after CorsixTH CorsixTH/Lua/config_finder.lua (hotkeys.txt: load_hotkeys, save_hotkeys,
-// new_hotkeys_defaults). The names are CorsixTH's; the default keys are this game's own where it differs.
+// new_hotkeys_defaults) and dialogs/resizables/hotkey_assign.lua (hotkey_input). The names are CorsixTH's; the default
+// keys are this game's own where it differs.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Collections.Frozen;
@@ -79,7 +80,21 @@ public sealed class Hotkeys
     [
         ("ingame_showCheatWindow", new("f11")),
         ("ingame_pause", new("p")),
+        ("ingame_gamespeed_slowest", new("1")),
+        ("ingame_gamespeed_slower", new("2")),
+        ("ingame_gamespeed_normal", new("3")),
+        ("ingame_gamespeed_max", new("4")),
+        ("ingame_gamespeed_thensome", new("5")),
         ("ingame_gamespeed_speedup", new("z")),
+        ("ingame_scroll_up", new("up")),
+        ("ingame_scroll_down", new("down")),
+        ("ingame_scroll_left", new("left")),
+        ("ingame_scroll_right", new("right")),
+        ("ingame_zoom_in", new("=")),
+        ("ingame_zoom_in_more", new("=", Shift: true)),
+        ("ingame_zoom_out", new("-")),
+        ("ingame_zoom_out_more", new("-", Shift: true)),
+        ("ingame_reset_zoom", new("0")),
         ("ingame_panel_bankManager", new("f1")),
         ("ingame_panel_bankStats", new("f2")),
         ("ingame_panel_staffManage", new("f3", Shift: true)),
@@ -89,12 +104,34 @@ public sealed class Hotkeys
         ("ingame_panel_status", new("f7")),
         ("ingame_panel_charts", new("f8")),
         ("ingame_panel_policy", new("f9")),
+        ("ingame_panel_machineMenu", new("f10")),
         ("ingame_panel_adviserHistory", new("h", Ctrl: true)),
         ("ingame_panel_hireStaff", new("y")),
+        ("ingame_panel_buildRoom", new("b")),
         ("ingame_openFirstMessage", new("c")),
         ("ingame_toggleAdvisor", new("a", Shift: true)),
         ("ingame_quickSave", new("s", Shift: true, Alt: true)),
         ("ingame_quickLoad", new("l", Shift: true, Alt: true)),
+        ("ingame_storePosition_1", new("1", Alt: true)),
+        ("ingame_storePosition_2", new("2", Alt: true)),
+        ("ingame_storePosition_3", new("3", Alt: true)),
+        ("ingame_storePosition_4", new("4", Alt: true)),
+        ("ingame_storePosition_5", new("5", Alt: true)),
+        ("ingame_storePosition_6", new("6", Alt: true)),
+        ("ingame_storePosition_7", new("7", Alt: true)),
+        ("ingame_storePosition_8", new("8", Alt: true)),
+        ("ingame_storePosition_9", new("9", Alt: true)),
+        ("ingame_storePosition_0", new("0", Alt: true)),
+        ("ingame_recallPosition_1", new("1", Ctrl: true)),
+        ("ingame_recallPosition_2", new("2", Ctrl: true)),
+        ("ingame_recallPosition_3", new("3", Ctrl: true)),
+        ("ingame_recallPosition_4", new("4", Ctrl: true)),
+        ("ingame_recallPosition_5", new("5", Ctrl: true)),
+        ("ingame_recallPosition_6", new("6", Ctrl: true)),
+        ("ingame_recallPosition_7", new("7", Ctrl: true)),
+        ("ingame_recallPosition_8", new("8", Ctrl: true)),
+        ("ingame_recallPosition_9", new("9", Ctrl: true)),
+        ("ingame_recallPosition_0", new("0", Ctrl: true)),
     ];
 
     private static readonly FrozenDictionary<string, Hotkey> DefaultMap = Defaults.ToFrozenDictionary(pair => pair.Name, pair => pair.Key, StringComparer.Ordinal);
@@ -111,6 +148,49 @@ public sealed class Hotkeys
 
     /// <summary>The key for an action, or null for an action that has none.</summary>
     public Hotkey? this[string action] => _keys.GetValueOrDefault(action);
+
+    /// <summary>A copy to change, such as the hotkey assignment dialog's.</summary>
+    public Hotkeys Copy() => new(new Dictionary<string, Hotkey>(_keys, StringComparer.Ordinal));
+
+    /// <summary>Whether two sets give every action the same key.</summary>
+    public bool SameAs(Hotkeys other) => _keys.All(pair => other._keys.TryGetValue(pair.Key, out var key) && key == pair.Value);
+
+    /// <summary>
+    /// <c>hotkey_input</c>: gives an action a key. Escape and Return on their own are kept for closing and confirming,
+    /// and are refused; the scroll keys lose their modifiers. An action that had the key already gets this action's old
+    /// one, so no key does two things.
+    /// </summary>
+    /// <returns>False when the key is refused and nothing changed.</returns>
+    /// <exception cref="ArgumentException">The action is not one that takes a key.</exception>
+    public bool Assign(string action, Hotkey key)
+    {
+        if (!_keys.TryGetValue(action, out var old))
+        {
+            throw new ArgumentException($"There is no hotkey action {action}.", nameof(action));
+        }
+
+        if (!key.Ctrl && !key.Shift && !key.Alt && key.Key is "escape" or "return")
+        {
+            return false;
+        }
+
+        if (action.StartsWith("ingame_scroll_", StringComparison.Ordinal))
+        {
+            key = new Hotkey(key.Key);
+        }
+
+        foreach (var (other, otherKey) in _keys)
+        {
+            if (other != action && otherKey == key)
+            {
+                _keys[other] = old;
+                break;
+            }
+        }
+
+        _keys[action] = key;
+        return true;
+    }
 
     /// <summary>
     /// <c>load_hotkeys</c>: reads the hotkeys file, writing one with the defaults first if there is none.

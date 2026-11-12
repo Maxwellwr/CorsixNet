@@ -28,7 +28,7 @@ internal sealed class CasebookWindow : UiWindow
         var simulation = host.Simulation;
         var hospital = simulation.Hospitals[host.Player];
         var rules = simulation.Rules.Diseases;
-        yield return WindowCell.Button(_showPercent ? "Show charges" : "Show percent", () => _showPercent = !_showPercent);
+        yield return WindowCell.Button(_showPercent ? "Show charges" : "Show percent", () => _showPercent = !_showPercent).WithTooltip(OriginalTooltips.Get(host, 140, "Show the charge as money or as a percentage"));
         yield return WindowRow.Of("Disease", WindowCell.Number("Rep"), WindowCell.Number("Charge"), "", "", "", "", WindowCell.Number("Earned"), WindowCell.Number("Cured"), WindowCell.Number("Died"), WindowCell.Number("Away"), WindowCell.Number("Cure"), "Research");
         var known = DiseaseCatalog.All
             .Where(disease => hospital.PeekCase(disease, rules).Discovered)
@@ -58,7 +58,7 @@ internal sealed class CasebookWindow : UiWindow
                 WindowCell.Number(disease.IsPseudo ? string.Empty : string.Create(CultureInfo.InvariantCulture, $"{entry.CureEffectiveness} %")),
                 disease.IsPseudo
                     ? string.Empty
-                    : WindowCell.Button(concentrated ? "Stop" : "Concentrate", () => host.Submit(new ConcentrateResearchCommand(disease.Id)), highlight: concentrated));
+                    : WindowCell.Button(concentrated ? "Stop" : "Concentrate", () => host.Submit(new ConcentrateResearchCommand(disease.Id)), highlight: concentrated).WithTooltip(OriginalTooltips.Get(host, 147, "Concentrate research on treating this disease")));
         }
     }
 
@@ -69,5 +69,5 @@ internal sealed class CasebookWindow : UiWindow
             host.PlaySound(percent is < DiseaseCase.MinPrice or > DiseaseCase.MaxPrice ? "Wrong2.wav" : "selectx.wav");
             host.Submit(new SetTreatmentPriceCommand(disease.Id, percent));
             _showPercent = true;
-        });
+        }).WithTooltip(text.StartsWith('-') ? OriginalTooltips.Get(host, 145, "Lower the charge") : OriginalTooltips.Get(host, 146, "Raise the charge"));
 }

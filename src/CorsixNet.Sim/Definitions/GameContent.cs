@@ -8,7 +8,15 @@ namespace CorsixNet.Sim.Definitions;
 /// </summary>
 /// <param name="Entering">Going through towards the camera, east or (mirrored) south.</param>
 /// <param name="Leaving">Going through away from the camera, north or (mirrored) west.</param>
-public sealed record DoorAnimations(AnimationRef Entering, AnimationRef Leaving, AnimationRef? EnteringSwing = null, AnimationRef? LeavingSwing = null);
+/// <param name="KnockNorth">Knocking on a door to the north or (mirrored) west (<c>knock_north</c>); patients only.</param>
+/// <param name="KnockEast">Knocking on a door to the east or (mirrored) south (<c>knock_east</c>).</param>
+public sealed record DoorAnimations(
+    AnimationRef Entering,
+    AnimationRef Leaving,
+    AnimationRef? EnteringSwing = null,
+    AnimationRef? LeavingSwing = null,
+    AnimationRef? KnockNorth = null,
+    AnimationRef? KnockEast = null);
 
 /// <summary>
 /// The swing doors' own animations (objects/doors/swing_door_right.lua): the left door (the slave) swings first, the

@@ -103,6 +103,9 @@ public enum TransactionKind : byte
 
     /// <summary>A machine replaced from the machine window (<c>machine_replacement</c>); the subject is its object type.</summary>
     MachineReplacement = 27,
+
+    /// <summary>Clearing away a room wrecked by an explosion (<c>transactions.remove_room</c>).</summary>
+    RemoveRoom = 28,
 }
 
 /// <summary>
@@ -462,6 +465,27 @@ public sealed class Hospital
 
     /// <summary>Cans sold from the drinks machines this year (<c>sodas_sold</c>).</summary>
     public int SodasSold { get; internal set; }
+
+    /// <summary>
+    /// Autopsies that came out and cost reputation so far, so that the adviser can say so
+    /// (<c>_A.research.autopsy_discovered_rep_loss</c>).
+    /// </summary>
+    public int AutopsiesDiscovered { get; internal set; }
+
+    /// <summary>Whether a patient has dropped litter in the hospital yet (CorsixTH's <c>hospital_littered</c>).</summary>
+    public bool Littered { get; internal set; }
+
+    /// <summary>
+    /// Whether a handyman's priorities have been changed, after which the adviser no longer explains them
+    /// (CorsixTH's <c>handyman_popup</c>).
+    /// </summary>
+    public bool HandymanPrioritiesChanged { get; internal set; }
+
+    /// <summary>Whether a patient has peed on the floor yet, for the adviser (CorsixTH's <c>did_it_on_floor</c>).</summary>
+    public bool DidItOnFloor { get; internal set; }
+
+    /// <summary>A finished room taken back to its blueprint and not built again yet, or null (<see cref="Rooms.RoomRebuild"/>).</summary>
+    public Rooms.RoomRebuild? Rebuild { get; internal set; }
 
     /// <summary>Patients who died so far (CorsixTH's <c>num_deaths</c>).</summary>
     public int Deaths { get; internal set; }
@@ -1422,6 +1446,12 @@ public sealed class Hospital
         }
 
         Research.Write(writer);
+        writer.WriteInt32(AutopsiesDiscovered);
+        writer.WriteBool(Rebuild is not null);
+        Rebuild?.Write(writer);
+        writer.WriteBool(Littered);
+        writer.WriteBool(HandymanPrioritiesChanged);
+        writer.WriteBool(DidItOnFloor);
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1552,6 +1582,11 @@ public sealed class Hospital
         }
 
         hospital.Research = Sim.Research.ResearchDepartment.Read(reader);
+        hospital.AutopsiesDiscovered = reader.Version is 0 or >= 75 ? reader.ReadInt32() : 0;
+        hospital.Rebuild = reader.Version is 0 or >= 76 && reader.ReadBool() ? Rooms.RoomRebuild.Read(reader) : null;
+        hospital.Littered = reader.Version is 0 or >= 77 ? reader.ReadBool() : false;
+        hospital.HandymanPrioritiesChanged = reader.Version is 0 or >= 78 ? reader.ReadBool() : false;
+        hospital.DidItOnFloor = reader.Version is 0 or >= 79 ? reader.ReadBool() : false;
         return hospital;
     }
 

@@ -60,6 +60,11 @@ internal static class Littering
         {
             var trash = (LitterType)simulation.Random.NextInclusive(1, 4);
             Litter.Drop(simulation, humanoid.HospitalPlayer, trash, tile, simulation.Random.NextInclusive(0, 1) == 1);
+            if (humanoid.HospitalPlayer < simulation.Hospitals.Count)
+            {
+                // hospital_littered, for the need_handyman_litter advice.
+                simulation.Hospitals[humanoid.HospitalPlayer].Littered = true;
+            }
         }
 
         // Always give new litter to drop.

@@ -42,6 +42,10 @@ public class LitterDroppingTests
         stream.Position = 0;
         var loaded = Simulation.Load(stream, BaseGameContent.Create());
         Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+
+        // hospital_littered, kept in the save.
+        Assert.True(simulation.Hospitals[0].Littered);
+        Assert.True(loaded.Hospitals[0].Littered);
         StepFor(simulation, 10 * GameDate.HoursPerDay);
         StepFor(loaded, 10 * GameDate.HoursPerDay);
         Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());

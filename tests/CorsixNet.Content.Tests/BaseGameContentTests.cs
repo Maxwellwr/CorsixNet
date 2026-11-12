@@ -63,7 +63,8 @@ public class BaseGameContentTests
     {
         var set = AnimationSet.Load(RealGameData.Require());
 
-        var animations = BaseGameContent.DoorAnimations.Values.SelectMany(door => new[] { door.Entering, door.Leaving }).ToList();
+        var animations = BaseGameContent.DoorAnimations.Values
+            .SelectMany(door => new[] { door.Entering, door.Leaving, door.KnockNorth, door.KnockEast }).OfType<AnimationRef>().ToList();
 
         // operating_table.lua shortens its in-use animations to one frame (anim_mgr:setAnimLength).
         var shortened = new HashSet<int> { 2348, 2938 };
@@ -97,6 +98,20 @@ public class BaseGameContentTests
         foreach (var animation in others)
         {
             Assert.Equal(set.Length(set.FirstFrame(animation.Id)), animation.Length);
+        }
+    }
+
+    [Fact]
+    public void WaitingAnimationsLastAsLongAsTheOriginalsAnimations()
+    {
+        var set = AnimationSet.Load(RealGameData.Require());
+
+        var animations = BaseGameContent.PatientAnimations.Values.SelectMany(a => new[] { a.Yawn, a.TapFoot, a.CheckWatch }).OfType<AnimationRef>().ToList();
+
+        Assert.NotEmpty(animations);
+        foreach (var animation in animations)
+        {
+            Assert.Equal((animation.Id, set.Length(set.FirstFrame(animation.Id))), (animation.Id, animation.Length));
         }
     }
 

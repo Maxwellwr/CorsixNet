@@ -1,4 +1,4 @@
-// Block lookup table and layout ported from CorsixTH CorsixTH/Src/th_map.cpp.
+// Block lookup table and layout ported from CorsixTH CorsixTH/Src/th_map.cpp (load_from_th_file, save).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Buffers.Binary;
@@ -81,6 +81,9 @@ public sealed class MapFile
         0x00, 0x00, 0x00, 0x00,
     ];
 
+    /// <summary>The block code for each sprite number, the other way round from <see cref="BlockSprites"/>.</summary>
+    private static readonly byte[] BlockCodes = ReverseBlockSprites();
+
     private readonly MapFileTile[] _tiles;
     private readonly (int X, int Y)[] _cameras;
     private readonly (int X, int Y)[] _heliports;
@@ -106,6 +109,59 @@ public sealed class MapFile
 
     /// <summary>Sprite number in <c>DATA/VBLK-0</c> for a block code; 0 means no sprite.</summary>
     public static byte BlockSprite(byte blockCode) => BlockSprites[blockCode];
+
+    /// <summary>
+    /// The block code a map file stores for a sprite number (<c>aReverseBlockLUT</c> in <c>level_map::save</c>); 0 for
+    /// sprite 0 and for sprites no block code gives.
+    /// </summary>
+    public static byte BlockCode(byte sprite) => BlockCodes[sprite];
+
+    /// <summary>A map to write: the tiles row by row from the north west, and each player's camera and heliport tile.</summary>
+    /// <exception cref="ArgumentException">The counts do not fit a map.</exception>
+    public static MapFile Create(int playerCount, IReadOnlyList<MapFileTile> tiles, IReadOnlyList<(int X, int Y)> cameras, IReadOnlyList<(int X, int Y)> heliports)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(playerCount, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(playerCount, MaxPlayers);
+        if (tiles.Count != Size * Size || cameras.Count != playerCount || heliports.Count != playerCount)
+        {
+            throw new ArgumentException($"A map has {Size * Size} tiles and a camera and heliport tile per player.");
+        }
+
+        return new MapFile(playerCount, [.. tiles], [.. cameras], [.. heliports]);
+    }
+
+    /// <summary>
+    /// <c>level_map::save</c>: the map file's bytes, uncompressed. As CorsixTH, the header holds only the player count,
+    /// and the two bytes after the parcels are 3 and 0.
+    /// </summary>
+    public byte[] ToBytes()
+    {
+        var data = new byte[MinimumLength];
+        data[0] = (byte)PlayerCount;
+        for (var i = 0; i < _tiles.Length; i++)
+        {
+            var tile = _tiles[i];
+            var raw = data.AsSpan(TileOffset + (i * TileLength), TileLength);
+            raw[0] = tile.ObjectDirection;
+            raw[1] = tile.ObjectType;
+            raw[2] = tile.Floor;
+            raw[3] = tile.NorthWall;
+            raw[4] = tile.WestWall;
+            raw[5] = tile.Flags;
+            raw[6] = tile.Unknown;
+            raw[7] = tile.ExtraFlags;
+            BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(ParcelOffset + (i * 2)), tile.Parcel);
+        }
+
+        data[ParcelOffset + (_tiles.Length * 2)] = 3;
+        for (var player = 0; player < PlayerCount; player++)
+        {
+            WriteTileIndex(data.AsSpan(CameraOffset + (player * 2)), _cameras[player]);
+            WriteTileIndex(data.AsSpan(HeliportOffset + (player * 2)), _heliports[player]);
+        }
+
+        return data;
+    }
 
     /// <summary>Parses decompressed map data.</summary>
     /// <exception cref="InvalidDataException">The data is too short to be a map.</exception>
@@ -135,6 +191,21 @@ public sealed class MapFile
         }
 
         return new MapFile(playerCount, tiles, cameras, heliports);
+    }
+
+    private static void WriteTileIndex(Span<byte> data, (int X, int Y) tile) =>
+        BinaryPrimitives.WriteUInt16LittleEndian(data, (ushort)((tile.Y * Size) + tile.X));
+
+    private static byte[] ReverseBlockSprites()
+    {
+        var codes = new byte[256];
+        for (var code = 0; code < BlockSprites.Length; code++)
+        {
+            codes[BlockSprites[code]] = (byte)code;
+        }
+
+        codes[0] = 0;
+        return codes;
     }
 
     private static (int X, int Y) ReadTileIndex(ReadOnlySpan<byte> data)

@@ -38,7 +38,7 @@ internal sealed class WatchWindow : UiWindow
             yield return WindowRow.Of(
                 string.Create(CultureInfo.InvariantCulture, $"Opening in {days} days"),
                 Segments(hospital.OpenTimer + 1),
-                WindowCell.Button("Open now", () => host.Submit(new OpenHospitalCommand())));
+                WindowCell.Button("Open now", () => host.Submit(new OpenHospitalCommand())).WithTooltip(OriginalTooltips.Get(host, 238, "Open the hospital now")));
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: true } emergency)

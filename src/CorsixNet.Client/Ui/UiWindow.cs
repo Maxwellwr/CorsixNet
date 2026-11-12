@@ -44,6 +44,19 @@ internal sealed record WindowCell(string Text, Action? OnClick = null, bool Dim 
 
     /// <summary>What the cell's tooltip says while the mouse rests on it, or null for none.</summary>
     public string? Tooltip { get; init; }
+
+    /// <summary>The cell with a tooltip.</summary>
+    public WindowCell WithTooltip(string? tooltip) => this with { Tooltip = tooltip };
+}
+
+/// <summary>
+/// The original's tooltips for the windows (CorsixTH's <c>tooltip.*</c> texts, section 32 of the strings, as
+/// <c>languages/original_strings.lua</c> maps them), with English stand-ins when the strings are not loaded.
+/// </summary>
+internal static class OriginalTooltips
+{
+    /// <summary>String <paramref name="index"/> of section 32, or <paramref name="fallback"/> without the game's strings.</summary>
+    public static string Get(IWindowHost host, int index, string fallback) => host.Texts?.String(32, index) ?? fallback;
 }
 
 /// <summary>One row of a window's table.</summary>
@@ -148,6 +161,11 @@ internal abstract class UiWindow
 
     /// <summary>The size of a drawing area below the table, such as a chart, or null for none.</summary>
     public virtual Point? CanvasSize => null;
+
+    /// <summary>A click in the drawing area, at <paramref name="local"/> from its top left corner.</summary>
+    public virtual void CanvasClicked(IWindowHost host, Point local)
+    {
+    }
 
     /// <summary>Draws the window's drawing area (see <see cref="CanvasSize"/>) in screen coordinates.</summary>
     public virtual void DrawCanvas(SpriteBatch batch, Rectangle area, Texture2D pixel, TextRenderer text)

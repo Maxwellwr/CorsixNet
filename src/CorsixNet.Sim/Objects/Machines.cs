@@ -1,6 +1,7 @@
 // Machines wearing out, breaking down and being repaired, ported from CorsixTH CorsixTH/Lua/entities/machine.lua
 // (Machine:Machine, machineUsed, incrementUsageCounts, callHandymanForRepairIfNecessary, calculateIsMachineMustExplode,
-// explodeMachine, machineRepaired, reduceStrengthOnRepair, getRemainingUses) and room.lua (Room:crashRoom).
+// explodeMachine, machineRepaired, reduceStrengthOnRepair, getRemainingUses), cheats.lua (cheatRepairAllMachines,
+// invulnerable_machines) and room.lua (Room:crashRoom).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Economy;
@@ -74,6 +75,7 @@ internal static class Machines
                 ? progress.StartStrength
                 : research.DefaultStrength;
         placed.Machine = new MachineState(strength);
+        Rooms.RoomRebuild.OnMachinePlaced(simulation, placed, player);
     }
 
     /// <summary>
@@ -89,7 +91,38 @@ internal static class Machines
         }
 
         machine.TotalUsage++;
-        Wear(simulation, room, machine);
+
+        // The invulnerable machines cheat: only the total usage counts, and nothing wears or explodes.
+        if (!IsInvulnerable(simulation, room))
+        {
+            Wear(simulation, room, machine);
+        }
+    }
+
+    /// <summary>Whether the room's hospital has the invulnerable machines cheat on.</summary>
+    private static bool IsInvulnerable(Simulation simulation, Room room) =>
+        RoomVisits.Owner(simulation, room) is var owner && owner >= 0 && owner < simulation.Hospitals.Count
+        && (simulation.Hospitals[owner].ActiveCheats & ToggleCheats.InvulnerableMachines) != 0;
+
+    /// <summary>
+    /// <c>Cheats:cheatRepairAllMachines</c>: every machine of the player's hospital (in rooms that have not crashed) is as
+    /// good as new at once.
+    /// </summary>
+    /// <remarks>
+    /// CorsixTH means to repair without reducing strength, but its <c>machineRepaired</c> turns the false it is given into
+    /// true (<c>strength_reducible or true</c>); here the strength is kept, as intended.
+    /// </remarks>
+    internal static void RepairAll(Simulation simulation, int player)
+    {
+        foreach (var entity in simulation.Entities)
+        {
+            if (entity is RoomObject { Machine: { } machine, IsDestroyed: false } placed
+                && simulation.FindEntity(placed.RoomId) is Room { IsCrashed: false } room && RoomVisits.Owner(simulation, room) == player)
+            {
+                machine.TimesUsed = 0;
+                machine.IsRepairCalled = false;
+            }
+        }
     }
 
     /// <summary>
@@ -100,7 +133,7 @@ internal static class Machines
     {
         foreach (var placed in simulation.Entities.OfType<RoomObject>().Where(o => o.Machine is not null && !o.IsDestroyed).ToList())
         {
-            if (simulation.FindEntity(placed.RoomId) is Room { IsCrashed: false } room)
+            if (simulation.FindEntity(placed.RoomId) is Room { IsCrashed: false } room && !IsInvulnerable(simulation, room))
             {
                 Wear(simulation, room, placed.Machine!);
             }

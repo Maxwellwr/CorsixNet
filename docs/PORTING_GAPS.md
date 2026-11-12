@@ -14,10 +14,9 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 
 | Missing | CorsixTH source |
 |---|---|
-| Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); the VIP's visit to the ward; in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
+| Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
 | Treatment rooms: alien death animations (the jelly vat, its patients' wobble and the DNA fixer are done) | `entities/humanoid.lua` |
 | Facilities: (the staff room and training room are done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
-| Editing a finished room back to the blueprint (resize, move the door), destroyed rooms after an explosion (editing objects and taking a room down for half its cost are done) | `dialogs/edit_room.lua`, `room.lua` (`tryToEdit`, `crashRoom`) |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
 | Room-specific rules: doors that can't be used while busy (swing doors of the operating theatre, ward), rooms that need two staff (operating theatre), max patients per room (ward beds) | `rooms/*.lua`, `objects/doors/*` |
 | Room information windows (staff in room, queue length, room "health") | `dialogs/queue_dialog.lua`, `dialogs/information.lua` |
@@ -34,13 +33,11 @@ objects from the level file.
   split over three tiles as CorsixTH does (drawn from its own tile for now).
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
-- Machines: the machines list (`resizables/machine_menu.lua`), the gear icon over a machine a handyman was called to,
-  the repair announcement and the invulnerable machines cheat (`entities/machine.lua`). Strength, wear per use,
+- Machines: the gear icon over a machine a handyman was called to (`setRepairingStatus`, icon 4564; not drawn).
+  The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
+  invulnerable and repair-all cheats are done. Strength, wear per use,
   smoking, explosion (room crash), repair by handymen and the machine window's call and replace (`MachineWindow`,
   `CallHandymanCommand`, `ReplaceMachineCommand`) are done (`Machines`, `HandymanBehaviour`).
-- Object state: plants being watered, bins filling (`plant.lua`, `bin.lua`), litter being swept and the
-  "need a handyman" advice. Plants drooping (`PlantState`), radiators heating tiles, litter (`Litter`, its ranks)
-  and patients dropping rubbish (`Littering`) are done.
 - Optional room objects: the "Choose Items" window (counts and prices) and buying them after the furniture step,
   selling objects. Extra objects placed while furnishing are bought and sold back.
 - Object-specific use: benches (sitting while queueing), staff-room
@@ -64,20 +61,19 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
   partial: a room without staff calls the free member of staff with the best `getPriorityForRoom` score (path,
-  waiting patients, emergencies, fatigue), unless another waiting room scores better for them; there is no call
-  queue object, specialists' bonus, calling staff out of other rooms (`staff_allowed_to_move`) or dispatching of
-  handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
-- Handyman: the staff window's task priorities (`entities/humanoids/staff/handyman.lua`); sweeping, watering and
-  repairing machines are done.
+  waiting patients, emergencies, fatigue, specialist rooms first), unless another waiting room scores better for them;
+  with `staff_allowed_to_move`, staff idle in a room nobody waits for are called to a room with patients waiting.
+  There is no call queue object or dispatching of handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
   policy's automatic raise and quitting are in `StaffEmployment`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
-  for working and waiting for a staff room (`Tiredness`); resting, being on call, the no-rest cheat and the mood
-  icons are not.
+  for working and waiting for a staff room (`Tiredness`); resting (`RestingBehaviour`), being on call in the staff
+  room, the no-rest cheat, the tired mood (`Humanoid.IsTiredMoodShown`, shown as text in the staff window; the icon
+  over the head is not drawn) and researchers and trainees going back to their room after resting are done.
 - Staff room idle actions (`meander.lua`, `use_staffroom.lua`, `seek_staffroom.lua`). Doctors, nurses, receptionists
   and handymen without a job meander (`Meandering`), so do the pharmacy's nurse and the general diagnosis doctor
   between patients, handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).
-- Training: the advice (promotions, a consultant needed, too few chairs), learning on the job (`doctor.lua`); the room, teaching, skill growth and gaining abilities are done (`Training`).
+- Training: learning on the job (`Training.LearnOnTheJob`, `doctor.lua`'s `tick`), the room, teaching, skill growth, gaining abilities and the advice (promotions, a consultant needed, too few lecture chairs; `AdviserChecks`) are done (`Training`).
 - Surgeons, psychiatrists, researchers actually being required by rooms.
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
 - Patients waiting look at the watch, yawn and tap a foot with 30, 20 and 10 days left, and those with sleeping illness yawn one day in ten (`PatientSpotAction`; `humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`). In CorsixTH these are patients' animations only.
@@ -96,9 +92,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: boredom, leaving angry, complaining (warmth and its
-  effect on happiness, prices changing happiness, health dropping, patients giving up, and thirst and the need for
-  the toilet growing (`Needs`), thirsty patients buying a can from the drinks machine, vomiting and peeing on the floor, and going to the toilets, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
+- Patient needs: a patient getting fed up near death leaves from any room but the one that cures them in CorsixTH,
+  here only from outside rooms (`PatientBehaviour.OnEndDayHealth`; `entities/humanoids/patient.lua`). The rest
+  (warmth, thirst, toilets, happiness, prices, waiting, vomiting) is done (`Needs`, `Feelings`).
 - Health and death: the dying mood icons and the death sounds; the gates to hell blocking their tile and CorsixTH's check
   that they leave a way round. Health running down, the step aside, the fall, the trip to heaven and, for 65 % of the men,
   the trip to hell with the grim reaper and the gates to hell are done (`PatientBehaviour.UpdateDying`, `DeathAnimations`,
@@ -115,25 +111,28 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
   (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers
   (`PatientBehaviour.Question`, `AnswerPatientCommand`; K, Shift+K and Ctrl+K in the client) are done.
-- Emergencies: the end-of-emergency fax and announcements, the helicopter's sound and depth sorting (`world.lua`,
-  `objects/helicopter.lua`). The planned and random emergencies, the fax offer, helicopter, watch, bonus and
-  reputation are done (`Emergencies`).
+- Emergencies: the end-of-emergency announcements, the helicopter's sound and depth sorting (`world.lua`,
+  `objects/helicopter.lua`). The planned and random emergencies, the fax offer, helicopter, watch, bonus,
+  reputation and the result on the fax window (`HospitalEmergencies.Report`, `makeEmergencyEndFax`) are done
+  (`Emergencies`).
 - Epidemics: clicking patients to vaccinate them (J picks every infected patient for now) and the vaccination
   cursor, vaccinating patients on benches, the infected mood icons, the result fax, the adviser's warnings, the
   announcements and the inspector's, and showing the infected by cheat (`epidemic.lua`,
   `entities/humanoids/inspector.lua`). Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
   the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
   evacuation are done (`Epidemics`, `InspectorBehaviour`).
-- VIP visits: the faxes asking and reporting, the arrival announcement and judging machines
-  (`entities/humanoids/vip.lua`). The visit, the rating (with the litter seen), its grant and reputation and
-  the year's trophy are done (`VipVisits`, `VipBehaviour`; V and Shift+V answer the invitation).
+- VIP visits: the arrival announcement and judging machines (`entities/humanoids/vip.lua`); the original's look of
+  the asking and reporting faxes. The visit, the rating (with the litter seen), its grant and reputation, the year's
+  trophy, the invitation and the report on the fax window (`VipVisits.Report`, `FaxWindow.VipReportLines`,
+  `makeVipEndFax`; our English stand-ins for the fifteen remarks without the game's strings) are done (`VipVisits`,
+  `VipBehaviour`; V and Shift+V answer the invitation).
 - Earthquakes: planning, the warning and main quakes, the screen shake, the rounds of damage wearing machines and knocking
   patients over are done (`Earthquakes`, `Machines.EarthquakeImpact`, `PatientBehaviour.Fall`).
 - Vomit and pee, soot from explosions, hospital cleanliness (`humanoid_actions/vomit.lua`, `pee.lua`, `room.lua`);
   patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
-- Patients knocked over by the player's click (`Patient:falling(true)` and its announcement). Falling in an earthquake, lying, getting up and shaking a fist are done (`PatientBehaviour.Fall`; `humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
+- Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
 - Floating dollar signs are done for treatments and cans from the drinks machine.
 
 ## 5. Economy, bank, loans, prices
@@ -184,16 +183,16 @@ fonts, faces) and the details listed.
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
-- Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips beyond the bottom panel's
-  (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the cursor; the bottom panel's buttons have
-  CorsixTH's `tooltip.toolbar` texts with the hotkeys file's keys); object and humanoid highlighting on hover; hover
-  info.
+- Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips for the annual report's
+  figures and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
+  cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
+  information, confirm, tip of the day, new game, fax, cheats, adviser history and level end buttons have CorsixTH's `tooltip.*` texts, from the original's strings when
+  loaded, `OriginalTooltips`); object and humanoid highlighting on hover; hover info.
 - Strings and languages: CorsixTH's language files and their mapping of the original strings, translations, and
   showing them in windows (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`), and
   so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor),
   disease texts and VIP names (`OriginalTexts`, in the status line).
 - Subtitles for the announcer (`dialogs/subtitles.lua`).
-- The hotkey assignment dialog (`resizables/hotkey_assign.lua`); the keys themselves come from `hotkeys.txt` (`Hotkeys`).
 
 ## 7. Levels, goals, campaign
 
@@ -203,9 +202,6 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 
 - Win and lose screens and faxes: the letter offering the next level, declining it, the lose movie
   (`world.lua`), and the progress report dialog and its advice (`fullscreen/progress_report.lua`).
-- Remaining level settings:
-  research settings, `#gbv`
-  values beyond the ones read now.
 - Playing a campaign through, the original's (12 levels in order) or a CorsixTH one (the fax offering the next level,
   `world.lua`'s winning letter, `fax.lua`), choosing a custom level or campaign in a menu, briefings shown (`app.lua`,
   `Campaigns/`, `Levels/`). Loading a custom level (`.level` + `.map`, with overlays) and reading a campaign file are
@@ -215,9 +211,10 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   levels outside a campaign, `--free-build` on the server; the client shows no free build texts yet: the progress
   report's and the VIP and emergency faxes' remarks, `progress_report.lua`, `player_hospital.lua`). Sandbox options
   beyond it are not done.
-- Main menu (`resizables/main_menu.lua`): the game still starts straight into the first level. The new game dialog
-  (Menu, New game: player name, the installed difficulties, Start from the campaign's first level, `NewGameWindow`) is
-  done, without the tutorial and the player name's text box (`resizables/new_game.lua`).
+- Main menu (`resizables/main_menu.lua`): done as a window over the paused first level when the command line names
+  nothing to play (`MainMenuWindow`: Campaign, Custom Campaign, Single Scenario with Free Build, Continue Game, Load
+  Game, Settings, Exit; `CustomGames`, `levels`/`campaigns` in `config.txt`). Not yet: the map editor, the menu's own
+  background, the tutorial and the player name's text box in the new game dialog (`resizables/new_game.lua`).
 - AI hospitals (Partial: `computer[n]` opponents take their turns for patients and count them as
   visitors, as CorsixTH's `AIHospital` does; like CorsixTH's, they build nothing and play no part in
   the league, awards or end conditions; `hospitals/ai_hospital.lua`).
@@ -264,7 +261,8 @@ join.
 
 **Has:** command-line options only (`--level`, `--map`, `--zoom`, `--speed`, `--upscale`, ...).
 
-- Options dialog: resolution, fullscreen, language, audio, scroll speed, edge scrolling, zoom, mouse
+- Options dialog: resolution, fullscreen, CorsixTH's own translations (the installed original languages can be
+  chosen), audio, scroll speed, edge scrolling, zoom, mouse
   capture, adviser on/off, ... (`resizables/options.lua`, `graphics_settings.lua`, `customise.lua`).
 - The rest of the config file (`config_finder.lua`): announcements, music, movies, `right_mouse_scrolling` (the
   right and middle buttons both drag), `capture_mouse`, the options dialog's game rules, `config.path.txt`; game
@@ -273,22 +271,29 @@ join.
   (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`) is done
   (`GameConfig`).
 - Hotkeys file (`hotkeys.txt`): read, and written with the defaults when missing, for the dialogs (F1–F9, Shift+F3,
-  Ctrl+H, Y, C, F11), pause, speed up, quick save/load and the adviser toggle (`Hotkeys`, `HotkeyInput`). Still on
-  fixed keys: the camera (zoom, original size, remembering and recalling views, CorsixTH's default keys), scrolling,
-  the speeds, Esc, and this game's stand-in keys; CorsixTH's other actions (sound, music, announcements toggles,
-  screenshots, logs) are not read.
+  Ctrl+H, Y, C, F11), pause, speed up, quick save/load, the adviser toggle, the speeds, scrolling, zoom, remembered
+  views and the room list (`Hotkeys`, `HotkeyInput`), and changed in the hotkey assignment dialog from the options
+  (`HotkeyAssignWindow`). Still on fixed keys: Esc and this game's stand-in keys;
+  CorsixTH's other actions (sound, music, announcements toggles, screenshots, logs, furnish corridor, edit room,
+  rotate object, sell the picked up item) are not read.
 - Update check (`resizables/update.lua`).
 
 ## 12. Map editor and tools
 
 **Has:** sprite viewer (`--sprite-viewer`), map overlays for debugging.
 
-- Map editor: painting floor, walls, parcels, spawn points (`resizables/map_editor.lua`).
+- Map editor: its window, the sprite pages and the cursor drawn over the map, and the main menu's button
+  (`resizables/map_editor.lua`). The editing itself is done (`MapEditor`): the blank map, painting floor and wall
+  sprites with the floor's flags, deleting walls, parcels, the camera and heliport tiles, copying and pasting areas,
+  and saving the map as a map file (`MapFile.ToBytes`, `level_map::save` in `th_map.cpp`); not yet the player
+  count and objects bigger than a tile making room for each other (`checkObjectSpace`).
 - Cheats dialog (`resizables/cheats_dialog.lua`) and the fax code that opens it; the cheats for research,
   showing the infected and machines, and the fax codes themselves (`cheats.lua`). Money, a patient, winning, losing,
   prices, the death count, the reputation, the earthquake, the VIP, the emergency, the epidemic, the epidemics
   toggle, the end of the month and year cheats and the fax code toggles (Roujin's challenge, no rest, queue jump,
-  super doctors) are done (`CheatCommand`), with no key in the client.
+  super doctors) are done (`CheatCommand`). The fax's keypad is done (`FaxWindow`, `UIFax:validate`): 24328 opens the
+  cheats window with the adviser's line, the four toggle codes switch their cheat with its announcement, and a wrong code
+  buzzes; the cheats window does not yet remember being unlocked.
 - Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
   (Partial: debug keys H, Ctrl+1-4).
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.

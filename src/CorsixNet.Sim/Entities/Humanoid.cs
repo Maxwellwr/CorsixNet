@@ -148,6 +148,12 @@ public sealed class Humanoid : Entity
     /// </summary>
     public bool WaitingForStaffRoom { get; internal set; }
 
+    /// <summary>
+    /// Whether the member of staff shows the tired mood: very tired, until they rest (CorsixTH's
+    /// <c>setMood("tired", "activate")</c> in <c>checkIfNeedRest</c>, deactivated in <c>tickDay</c>).
+    /// </summary>
+    public bool IsTiredMoodShown { get; internal set; }
+
     /// <summary>Fired or quit: leaving the hospital and no longer counted as its staff (CorsixTH's <c>fired</c>).</summary>
     public bool IsFired { get; internal set; }
 
@@ -686,7 +692,13 @@ public sealed class Humanoid : Entity
     }
 
     /// <summary>Whether another humanoid is going through <paramref name="door"/>.</summary>
-    private bool IsDoorInUse(Simulation simulation, RoomDoor door)
+    private bool IsDoorInUse(Simulation simulation, RoomDoor door) => IsDoorBusy(simulation, door, Id);
+
+    /// <summary>
+    /// Whether anyone but <paramref name="exceptId"/> uses <paramref name="door"/> (CorsixTH's <c>door.user</c>): going
+    /// through it, swinging it, or knocking on it.
+    /// </summary>
+    internal static bool IsDoorBusy(Simulation simulation, RoomDoor door, int exceptId)
     {
         if (door.IsSwingBusy(simulation.Tick, simulation.Content.SwingDoor))
         {
@@ -695,7 +707,13 @@ public sealed class Humanoid : Entity
 
         foreach (var entity in simulation.Entities)
         {
-            if (entity is Humanoid { IsCrossingDoor: true } other && other.Id != Id && other.HiddenObjectId == door.Id)
+            if (entity is not Humanoid other || other.Id == exceptId)
+            {
+                continue;
+            }
+
+            if ((other.IsCrossingDoor && other.HiddenObjectId == door.Id)
+                || (other.Behaviour is PatientBehaviour patient && patient.KnockingOn(simulation) == door.Id))
             {
                 return true;
             }
@@ -741,6 +759,7 @@ public sealed class Humanoid : Entity
             Happiness = ReadAttribute(reader),
             Fatigue = ReadAttribute(reader),
             WaitingForStaffRoom = reader.ReadBool(),
+            IsTiredMoodShown = reader.Version is 0 or >= 74 && reader.ReadBool(),
             IsFired = reader.ReadBool(),
             RaiseTimer = reader.ReadInt32(),
             RaiseRequest = reader.ReadInt32(),
@@ -804,6 +823,7 @@ public sealed class Humanoid : Entity
         writer.WriteDecimal(Happiness);
         writer.WriteDecimal(Fatigue);
         writer.WriteBool(WaitingForStaffRoom);
+        writer.WriteBool(IsTiredMoodShown);
         writer.WriteBool(IsFired);
         writer.WriteInt32(RaiseTimer);
         writer.WriteInt32(RaiseRequest);
@@ -999,7 +1019,7 @@ public sealed class Humanoid : Entity
         };
     }
 
-    private static Direction? DirectionTo(TilePosition from, TilePosition to)
+    internal static Direction? DirectionTo(TilePosition from, TilePosition to)
     {
         return (to.X - from.X, to.Y - from.Y) switch
         {

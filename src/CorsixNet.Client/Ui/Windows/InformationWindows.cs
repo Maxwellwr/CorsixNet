@@ -39,7 +39,7 @@ internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of(WindowCell.Button("OK", () => host.Close(this)));
+        yield return WindowRow.Of(WindowCell.Button("OK", () => host.Close(this)).WithTooltip("Close the information dialog"));
     }
 
     /// <summary>Characters on a line: CorsixTH's information box is 300 pixels of text wide.</summary>
@@ -69,8 +69,8 @@ internal sealed class ConfirmWindow(string question, Action ok) : UiWindow
             {
                 host.Close(this);
                 ok();
-            }),
-            WindowCell.Button("Cancel", () => host.Close(this)));
+            }).WithTooltip(OriginalTooltips.Get(host, 87, "Confirm")),
+            WindowCell.Button("Cancel", () => host.Close(this)).WithTooltip(OriginalTooltips.Get(host, 86, "Cancel")));
     }
 }
 
@@ -114,7 +114,7 @@ internal sealed class TipOfTheDayWindow(int first) : UiWindow
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Previous tip", () => _tip = (_tip + Tips.Count - 1) % Tips.Count),
-            WindowCell.Button("Next tip", () => _tip = (_tip + 1) % Tips.Count));
+            WindowCell.Button("Previous tip", () => _tip = (_tip + Tips.Count - 1) % Tips.Count).WithTooltip("Display the previous tip"),
+            WindowCell.Button("Next tip", () => _tip = (_tip + 1) % Tips.Count).WithTooltip("Display the next tip"));
     }
 }

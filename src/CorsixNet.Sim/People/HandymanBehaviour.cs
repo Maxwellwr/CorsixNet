@@ -48,6 +48,19 @@ public enum HandymanPhase : byte
     GoingToRepair,
 }
 
+/// <summary>The kinds of work a handyman does, which his priorities share out (<c>cleaning</c>, <c>watering</c>, <c>repairing</c>).</summary>
+public enum HandymanTaskType : byte
+{
+    /// <summary>Sweeping litter.</summary>
+    Cleaning,
+
+    /// <summary>Watering plants.</summary>
+    Watering,
+
+    /// <summary>Repairing machines.</summary>
+    Repairing,
+}
+
 /// <summary>
 /// A handyman. Outside rooms he wanders about, within his assigned parcel (<c>parcelNr</c>) if he has one; at the start of
 /// each round he looks for work: litter to sweep up, plants to water and worn machines to repair, nearest first, the more
@@ -62,11 +75,14 @@ public enum HandymanPhase : byte
 public sealed class HandymanBehaviour : HumanoidBehaviour
 {
     /// <summary>The handyman's default priorities (<c>Handyman:setProfile</c>): a third each, in thousandths.</summary>
-    private const int CleaningPriority = 333;
+    private const int DefaultPriority = 333;
 
-    private const int WateringPriority = 333;
+    /// <summary>A priority button's step up (<c>incr_value</c>), and the most the other two give up if they have it.</summary>
+    private const int PriorityStep = 100;
 
-    private const int RepairingPriority = 333;
+    private const int SmallestDecrease = 50;
+
+    private const int FullPriority = 1000;
 
     /// <summary>A task nearer than this is taken at once (<c>thresholdForStopping</c>).</summary>
     private const int ThresholdForStopping = 3;
@@ -86,17 +102,78 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
 
     private static readonly AnimationRef WaterEast = new(1982, 16);
 
-    private enum TaskType : byte
-    {
-        Cleaning,
-        Watering,
-        Repairing,
-    }
-
     public override BehaviourKind Kind => BehaviourKind.Handyman;
 
     /// <summary>The parcel he keeps to, or 0 for all of them (<c>parcelNr</c>).</summary>
     public int Parcel { get; internal set; }
+
+    /// <summary>How much of his time goes to sweeping litter, in thousandths (the <c>cleaning</c> attribute).</summary>
+    public int CleaningPriority { get; private set; } = DefaultPriority;
+
+    /// <summary>How much of his time goes to watering plants, in thousandths (the <c>watering</c> attribute).</summary>
+    public int WateringPriority { get; private set; } = DefaultPriority;
+
+    /// <summary>How much of his time goes to repairing machines, in thousandths (the <c>repairing</c> attribute).</summary>
+    public int RepairingPriority { get; private set; } = DefaultPriority;
+
+    /// <summary>His priority for a kind of work, in thousandths.</summary>
+    public int Priority(HandymanTaskType type) => type switch
+    {
+        HandymanTaskType.Cleaning => CleaningPriority,
+        HandymanTaskType.Watering => WateringPriority,
+        _ => RepairingPriority,
+    };
+
+    /// <summary>
+    /// <c>UIStaff:changeHandymanAttributes</c>: one kind of work goes up a tenth (to at most all of his time, when the
+    /// others go to nothing); the other two give up that tenth less the smaller of a twentieth and the least of them,
+    /// each at least nothing.
+    /// </summary>
+    internal void IncreasePriority(HandymanTaskType increased)
+    {
+        var step = PriorityStep;
+        var smallest = SmallestDecrease;
+        foreach (var type in Enum.GetValues<HandymanTaskType>())
+        {
+            if (type == increased)
+            {
+                SetPriority(type, Math.Min(FullPriority, Priority(type) + step));
+                if (Priority(type) == FullPriority)
+                {
+                    step = 2 * FullPriority;
+                }
+            }
+            else
+            {
+                smallest = Math.Min(smallest, Priority(type));
+            }
+        }
+
+        var decrease = step - smallest;
+        foreach (var type in Enum.GetValues<HandymanTaskType>())
+        {
+            if (type != increased)
+            {
+                SetPriority(type, Math.Max(0, Priority(type) - decrease));
+            }
+        }
+    }
+
+    private void SetPriority(HandymanTaskType type, int value)
+    {
+        switch (type)
+        {
+            case HandymanTaskType.Cleaning:
+                CleaningPriority = value;
+                break;
+            case HandymanTaskType.Watering:
+                WateringPriority = value;
+                break;
+            default:
+                RepairingPriority = value;
+                break;
+        }
+    }
 
     public HandymanPhase Phase { get; private set; }
 
@@ -465,18 +542,18 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
     private bool SearchForTask(Simulation simulation, Humanoid humanoid)
     {
         var nr = simulation.Random.Next(1000);
-        TaskType first, second, third;
+        HandymanTaskType first, second, third;
         if (nr < CleaningPriority)
         {
-            (first, second, third) = (TaskType.Cleaning, TaskType.Watering, TaskType.Repairing);
+            (first, second, third) = (HandymanTaskType.Cleaning, HandymanTaskType.Watering, HandymanTaskType.Repairing);
         }
         else if (nr < CleaningPriority + WateringPriority)
         {
-            (first, second, third) = (TaskType.Watering, TaskType.Cleaning, TaskType.Repairing);
+            (first, second, third) = (HandymanTaskType.Watering, HandymanTaskType.Cleaning, HandymanTaskType.Repairing);
         }
         else
         {
-            (first, second, third) = (TaskType.Repairing, TaskType.Watering, TaskType.Cleaning);
+            (first, second, third) = (HandymanTaskType.Repairing, HandymanTaskType.Watering, HandymanTaskType.Cleaning);
         }
 
         if (FindTask(simulation, humanoid, first) is { } task)
@@ -503,22 +580,15 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
         return Priority(third) > 0 && FindTask(simulation, humanoid, third) is { } thirdTask && Assign(simulation, humanoid, thirdTask);
     }
 
-    private static int Priority(TaskType type) => type switch
-    {
-        TaskType.Cleaning => CleaningPriority,
-        TaskType.Watering => WateringPriority,
-        _ => RepairingPriority,
-    };
-
     /// <summary>A task: the litter or plant, where he goes to deal with it, and how urgent it is.</summary>
-    private readonly record struct HandymanTask(TaskType Type, Entity Target, TilePosition Tile, int Priority);
+    private readonly record struct HandymanTask(HandymanTaskType Type, Entity Target, TilePosition Tile, int Priority);
 
     /// <summary>
     /// <c>Hospital:searchForHandymanTask</c>: the first reachable task of the type in his parcel, unless another is more
     /// urgent or nearer; one within three tiles is taken at once. A task another handyman is on is his only if he is
     /// more than five tiles nearer to it, counting a consultant's distance as half and a junior's as double.
     /// </summary>
-    private static HandymanTask? FindTask(Simulation simulation, Humanoid humanoid, TaskType type)
+    private static HandymanTask? FindTask(Simulation simulation, Humanoid humanoid, HandymanTaskType type)
     {
         var multiplier = humanoid.Profile switch
         {
@@ -598,21 +668,21 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
     /// same room (<c>getBestUsageTileXY</c>), unless someone waters them already; machines with fewer than 6 uses left, more
     /// urgently below 4, unless a handyman is at them already.
     /// </summary>
-    private static IEnumerable<HandymanTask> Tasks(Simulation simulation, Humanoid humanoid, TaskType type)
+    private static IEnumerable<HandymanTask> Tasks(Simulation simulation, Humanoid humanoid, HandymanTaskType type)
     {
         foreach (var entity in simulation.Entities)
         {
             switch (type)
             {
-                case TaskType.Cleaning when entity is Litter { IsRemoved: false, IsCleanable: true } litter && litter.Player == humanoid.Employer
+                case HandymanTaskType.Cleaning when entity is Litter { IsRemoved: false, IsCleanable: true } litter && litter.Player == humanoid.Employer
                     && !IsBeingSwept(simulation, litter.Id):
                     yield return new HandymanTask(type, litter, litter.Tile, 1);
                     break;
-                case TaskType.Watering when entity is RoomObject { Plant: { NeedsWatering: true } state } plant
+                case HandymanTaskType.Watering when entity is RoomObject { Plant: { NeedsWatering: true } state } plant
                     && Owner(simulation, plant.Tile) == humanoid.Employer && BestUsageTile(simulation, humanoid, plant) is { } tile:
                     yield return new HandymanTask(type, plant, tile, state.State + 1);
                     break;
-                case TaskType.Repairing when entity is RoomObject { Machine: { } wear, IsDestroyed: false } machine
+                case HandymanTaskType.Repairing when entity is RoomObject { Machine: { } wear, IsDestroyed: false } machine
                     && (wear.RemainingUses < 6 || wear.IsRepairCalled)
                     && Owner(simulation, machine.Tile) == humanoid.Employer
                     && simulation.FindEntity(machine.RoomId) is Room { IsActive: true, IsCrashed: false }
@@ -641,8 +711,8 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
         TargetId = task.Target.Id;
         Phase = task.Type switch
         {
-            TaskType.Cleaning => HandymanPhase.WalkingToLitter,
-            TaskType.Watering => HandymanPhase.WalkingToPlant,
+            HandymanTaskType.Cleaning => HandymanPhase.WalkingToLitter,
+            HandymanTaskType.Watering => HandymanPhase.WalkingToPlant,
             _ => HandymanPhase.WalkingToMachine,
         };
         Meander.Reset();
@@ -724,6 +794,9 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
         writer.WriteInt32(_timer);
         writer.WriteInt32(_stage);
         writer.WriteInt32(_rounds);
+        writer.WriteInt32(CleaningPriority);
+        writer.WriteInt32(WateringPriority);
+        writer.WriteInt32(RepairingPriority);
     }
 
     internal static HandymanBehaviour ReadState(SimReader reader)
@@ -740,6 +813,13 @@ public sealed class HandymanBehaviour : HumanoidBehaviour
         if (reader.Version is 0 or >= 68)
         {
             handyman._rounds = reader.ReadInt32();
+        }
+
+        if (reader.Version is 0 or >= 78)
+        {
+            handyman.CleaningPriority = reader.ReadInt32();
+            handyman.WateringPriority = reader.ReadInt32();
+            handyman.RepairingPriority = reader.ReadInt32();
         }
 
         return handyman;

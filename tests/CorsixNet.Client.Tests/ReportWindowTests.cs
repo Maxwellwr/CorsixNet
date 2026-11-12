@@ -24,6 +24,26 @@ public class ReportWindowTests
     }
 
     [Fact]
+    public void TheMachineCheatsAreInTheWindow()
+    {
+        var host = new WindowTestHost();
+        var window = new CheatsWindow();
+
+        host.Click(window, "Invulnerable machines: off");
+        Assert.True(host.Simulation.Hospitals[0].ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines));
+        host.Click(window, "Repair all machines");
+        Assert.Contains(host.Submitted, c => c is CheatCommand { Cheat: CheatKind.RepairAllMachines });
+    }
+
+    [Fact]
+    public void TheMachinesListSaysWhenThereAreNone()
+    {
+        var host = new WindowTestHost();
+
+        Assert.Contains("The hospital has no machines.", host.Lines(new MachineMenuWindow()));
+    }
+
+    [Fact]
     public void TheProgressReportSaysWhenALevelHasNoGoals()
     {
         var host = new WindowTestHost();

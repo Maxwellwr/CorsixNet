@@ -52,8 +52,8 @@ internal sealed class MachineWindow(int machineId) : UiWindow
         yield return WindowRow.Gap;
         var cost = host.Player >= 0 && host.Player < simulation.Hospitals.Count ? simulation.Hospitals[host.Player].Research.ObjectCost(simulation.Rules, machine.ObjectType) : 0;
         yield return WindowRow.Of(
-            WindowCell.Button("Call handyman", () => host.Submit(new CallHandymanCommand(MachineId)), state.TimesUsed != 0 && !state.IsRepairCalled),
-            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Replace ({MoneyText.Format(cost)})"), () => Replace(host, name, cost)));
+            WindowCell.Button("Call handyman", () => host.Submit(new CallHandymanCommand(MachineId)), state.TimesUsed != 0 && !state.IsRepairCalled).WithTooltip(OriginalTooltips.Get(host, 117, "Call a handyman to repair the machine")),
+            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Replace ({MoneyText.Format(cost)})"), () => Replace(host, name, cost)).WithTooltip(OriginalTooltips.Get(host, 118, "Replace the machine")));
     }
 
     /// <summary>

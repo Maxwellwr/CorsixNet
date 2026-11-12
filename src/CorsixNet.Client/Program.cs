@@ -144,7 +144,10 @@ else
             loadPath = new SaveGameStore(SaveGameStore.DefaultDirectory()).MostRecentAutosave();
         }
 
-        var screen = new MapViewScreen(install, device, levels, options.Zoom, options.Overlay, options.Demo, networkSession, options.Upscale, options.Speed, loadPath, config, configPath);
+        // As CorsixTH, the main menu comes first unless the command line says what to play.
+        var mainMenu = networkSession is null && loadPath is null && initialLevel is null && options.MapPath is null
+            && options.CampaignPath is null && !options.Demo && options.ScriptPath is null && options.CapturePath is null;
+        var screen = new MapViewScreen(install, device, levels, options.Zoom, options.Overlay, options.Demo, networkSession, options.Upscale, options.Speed, loadPath, config, configPath, mainMenu, options.MapEditor);
         if (options.CapturePath is not null)
         {
             // Give the demo time to build and furnish its room before capturing.

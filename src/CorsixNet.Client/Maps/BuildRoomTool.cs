@@ -132,6 +132,12 @@ internal sealed class BuildRoomTool
     public int RoomId => _roomId;
 
     /// <summary>
+    /// Esc on the blueprint of a paid room taken back to it: the screen asks first (<c>confirmation.delete_room</c>) and, on
+    /// yes, sends <see cref="AbandonRebuildCommand"/> and calls <see cref="Stop"/>.
+    /// </summary>
+    public Action? AbandonRequested { get; set; }
+
+    /// <summary>
     /// Edits a finished room (CorsixTH's <c>UIEditRoom</c> on an existing room): straight to its objects once the people in
     /// it have left; <paramref name="tick"/> is when the edit command was sent. Taking it down is the screen's to confirm, so Esc does nothing here.
     /// </summary>
@@ -230,7 +236,7 @@ internal sealed class BuildRoomTool
         {
             Phase.Blueprint => _area is null
                 ? $"{name}: drag out the blueprint, at least {_room.MinimumSize} by {_room.MinimumSize}{message}   Esc: cancel"
-                : $"{name}: drag the blueprint's edges to resize it, its middle to move it{Explain(_problem)}{message}   Enter: done   Esc: cancel",
+                : $"{name}: drag the blueprint's edges to resize it, its middle to move it{Explain(_problem)}{message}   Enter: done   Esc: {(simulation is not null && IsRebuilding(simulation, _player) ? "delete the room (half its cost back)" : "cancel")}",
             Phase.Door => $"{name}: place the door{Explain(_problem)}{message}   Esc: back to the blueprint",
             Phase.Windows => $"{name}: place windows if you like, click one again to remove it{Explain(_problem)}{message}   Enter: done   Esc: back to the blueprint",
             Phase.Waiting => simulation is not null && ConstructionSite.Of(simulation, _player) is { IsWaiting: true, Watched.Count: > 0 }
@@ -304,6 +310,13 @@ internal sealed class BuildRoomTool
     {
         if (input.Back)
         {
+            if (IsRebuilding(simulation, player))
+            {
+                // UIEditRoom:cancel in the walls phase of a paid room: delete it, if the player says so.
+                AbandonRequested?.Invoke();
+                return null;
+            }
+
             _phase = Phase.Inactive;
             return null;
         }
@@ -465,7 +478,7 @@ internal sealed class BuildRoomTool
 
     private BuildRoomCommand? Submit(Simulation simulation, int player)
     {
-        if (!RoomPurchases.CanAfford(simulation, _room!, player))
+        if (!IsRebuilding(simulation, player) && !RoomPurchases.CanAfford(simulation, _room!, player))
         {
             _message = $"not enough money: the room costs {MoneyText.Format(simulation.Rules.BuildCost(_room!))}";
             return null;
@@ -477,6 +490,11 @@ internal sealed class BuildRoomTool
         _message = null;
         return new BuildRoomCommand(_sentPlan);
     }
+
+    /// <summary>Whether the player's paid room of this type was taken back to its blueprint and is not built again yet.</summary>
+    private bool IsRebuilding(Simulation simulation, int player) =>
+        player >= 0 && player < simulation.Hospitals.Count
+        && simulation.Hospitals[player].Rebuild is { RoomId: 0 } rebuild && rebuild.RoomType == _room?.Id;
 
     /// <summary>Back from the door or windows to the blueprint: the area is no longer avoided.</summary>
     private UnmarkBlueprintCommand BackToBlueprint()
@@ -513,6 +531,9 @@ internal sealed class BuildRoomTool
             _roomId = room.Id;
             _markedArea = null;
             _phase = Phase.Objects;
+
+            // A room built again from its blueprint is paid for: it is edited, not bought.
+            _editing = room.IsPaid;
             _pending.Clear();
             StopPlacing();
             return null;
@@ -522,7 +543,7 @@ internal sealed class BuildRoomTool
         {
             // Something got there first, for example another player's room, or the money ran out.
             _phase = Phase.Blueprint;
-            _message = RoomPurchases.CanAfford(simulation, _room!, player) ? "the room could not be built there" : "not enough money";
+            _message = IsRebuilding(simulation, player) || RoomPurchases.CanAfford(simulation, _room!, player) ? "the room could not be built there" : "not enough money";
         }
 
         return null;
@@ -553,15 +574,17 @@ internal sealed class BuildRoomTool
                 return null;
             }
 
-            if (_editing)
-            {
-                return null;
-            }
-
-            // As in CorsixTH, cancelling the furnishing takes the room down and goes back to placing its door.
+            // As in CorsixTH (UIEditRoom:cancel, returnToDoorPhase), cancelling the furnishing takes the room down and goes
+            // back to placing its door: a new room sells its objects back, a paid one keeps being paid for.
             _phase = Phase.Door;
+            _area = room.Area;
+            _door = null;
+            _windows.Clear();
+            _markedArea = null;
+            _editing = false;
+            _message = null;
             StopPlacing();
-            return new CancelRoomCommand(room.Id);
+            return room.IsPaid ? new ReturnToBlueprintCommand(room.Id) : new CancelRoomCommand(room.Id);
         }
 
         if (input.PickUp)
@@ -740,7 +763,7 @@ internal sealed class BuildRoomTool
         {
             var missing = Remaining(simulation, room);
             var needs = missing.Count == 0 ? "Enter: confirm" : "place " + string.Join(", ", missing.Select(r => $"{simulation.Content.FindObject(r.ObjectType)?.Name ?? r.ObjectType} {r.Count}"));
-            return $"{name}: editing, move, buy or sell objects   {needs}   P: pick up   Esc: take the room down (half its cost back)";
+            return $"{name}: editing, move, buy or sell objects   {needs}   P: pick up   Esc: back to the blueprint, to resize it or move its door";
         }
 
         var remaining = Remaining(simulation, room);

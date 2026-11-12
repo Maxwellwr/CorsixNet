@@ -62,6 +62,7 @@ internal static class StaffEmployment
         }
 
         Tiredness.UpdateSpeed(simulation, humanoid);
+        Training.LearnOnTheJob(simulation, humanoid);
     }
 
     /// <summary><c>StaffProfile:getRiseAmount</c>: a tenth more, or half-way to the fair wage if that is more.</summary>

@@ -1,7 +1,11 @@
 using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim.Calendar;
+using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
+using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 
@@ -74,6 +78,125 @@ public class AdviserTests
     }
 
     [Fact]
+    public void AnAutopsyComingOutIsAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.Hospitals[0].AutopsiesDiscovered = 1;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.AutopsyDiscovered.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void WithoutHandymenTheFirstLitterAndANewMachineAskForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.Hospitals[0].Littered = true;
+        var machine = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(5, 5), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.NeedHandymanLitter.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.NeedHandymanMachines.Fallback, host.Adviser.Current);
+
+        // Worn below six uses left it calls for repair: with no handyman, the adviser asks for one.
+        host.Adviser.Next(0);
+        machine.Machine!.TimesUsed = 5;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.MachineryDamaged2.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void TheFirstPuddleTheHelicopterAndTheInspectorAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var hospital = host.Simulation.Hospitals[0];
+        hospital.Emergencies.HelicopterPhase = 59;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        hospital.DidItOnFloor = true;
+        hospital.Emergencies.HelicopterPhase = 60;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.PeopleDidItOnTheFloor.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.EmergencyArrived.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void ADeskBoughtWithoutAReceptionistAsksForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.AddEntity(id => new RoomObject(id, ReceptionDesks.ObjectId, new TilePosition(5, 5), Direction.North, 0));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.ReceptionNeedReceptionist.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void APatientSettingOffForReceptionWithAReceptionistTooManyAsksForAnotherDesk()
+    {
+        var host = new WindowTestHost();
+        host.Submit(new PlaceObjectCommand(ReceptionDesks.ObjectId, new TilePosition(8, 8), Direction.South));
+        host.Hire(StaffClass.Receptionist);
+        host.Hire(StaffClass.Receptionist, 7, 7);
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+        while (host.Adviser.Current is not null)
+        {
+            host.Adviser.Next(0);
+        }
+
+        var patient = host.AddPatient(10, 10);
+        for (var i = 0; i < 50 && patient.Behaviour is PatientBehaviour { Phase: PatientPhase.SeekReception }; i++)
+        {
+            host.Simulation.Step();
+        }
+
+        Assert.True(patient.Behaviour is PatientBehaviour { Phase: PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue });
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.AnotherDesk.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AMachineWornStraightBelowFourUsesIsFallingApart()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        host.Hire(StaffClass.Handyman);
+        var machine = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(5, 5), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        // Below six (a handyman is there), then below four after it: no advice.
+        machine.Machine!.TimesUsed = 5;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        machine.Machine.TimesUsed = 7;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        var second = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(6, 6), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+        second.Machine!.TimesUsed = 8;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.MachinesFallingApart.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
     public void TheFirstCureAndTheFirstRaiseRequestAreAnnounced()
     {
         var host = new WindowTestHost();
@@ -97,6 +220,30 @@ public class AdviserTests
         doctor.RaiseRequest = 50;
         checks.Observe(host.Simulation, 0, null, 0);
         Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void PromotionsAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var doctor = host.Hire(StaffClass.Doctor);
+        var profile = doctor.Profile!;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        var specialism = profile.IsSurgeon ? (profile.IsPsychiatrist ? Specialism.Researcher : Specialism.Psychiatrist) : Specialism.Surgeon;
+        Assert.True(profile.TrainSpecialism(specialism, 1m));
+        checks.Observe(host.Simulation, 0, null, 0);
+        var title = specialism switch { Specialism.Surgeon => "surgeon", Specialism.Psychiatrist => "psychiatrist", _ => "researcher" };
+        Assert.Equal(AdviserChecks.PromotionToSpecialist.Text(null, title), host.Adviser.Current);
+        host.Adviser.Next(0);
+
+        if (!profile.IsConsultant)
+        {
+            profile.TrainSkill(1m, host.Simulation.Rules.Staff);
+            checks.Observe(host.Simulation, 0, null, 0);
+            Assert.Contains(host.Adviser.Current, new[] { AdviserChecks.PromotionToDoctor.Fallback, AdviserChecks.PromotionToConsultant.Fallback });
+        }
     }
 
     [Fact]
@@ -146,6 +293,50 @@ public class AdviserTests
         host.Simulation.Step();
         checks.Observe(host.Simulation, 0, null, 0);
         Assert.Contains(AdviserChecks.PlaceRadiators.Fallback, host.Adviser.History);
+    }
+
+    [Fact]
+    public void StaffPutIntoTheWrongRoomAreToldWhoWorksThere()
+    {
+        var host = new WindowTestHost();
+        var doctor = host.Hire(StaffClass.Doctor).Profile!;
+        var nurse = host.Hire(StaffClass.Nurse).Profile!;
+        var handyman = host.Hire(StaffClass.Handyman).Profile!;
+        var x = 2;
+        TilePosition AddRoom(string type)
+        {
+            var room = host.Simulation.AddEntity(id => new Room(id, type, new TileRect(x, 10, 2, 2), new OriginalTile[4]) { IsActive = true });
+            host.Simulation.Map[x, 10].RoomId = room.Id;
+            x += 3;
+            return new TilePosition(x - 3, 10);
+        }
+
+        (Advice, string?)? Say(StaffProfile profile, TilePosition tile) => AdviserChecks.StaffPlacement(host.Simulation, profile, tile, 0, _ => 0);
+
+        var research = AddRoom("research");
+        var theatre = AddRoom("operating_theatre");
+        var pharmacy = AddRoom("pharmacy");
+        var toilets = AddRoom("toilets");
+        var gp = AddRoom("gp");
+        var name = host.Simulation.Content.FindRoom("pharmacy")!.Name;
+
+        Assert.Equal(doctor.IsResearcher ? null : (AdviserChecks.OnlyResearchers, null), Say(doctor, research));
+        Assert.Equal(doctor.IsSurgeon ? null : (AdviserChecks.OnlySurgeons, null), Say(doctor, theatre));
+        Assert.Equal((AdviserChecks.OnlyNursesInRoom, name), Say(doctor, pharmacy));
+        Assert.Null(Say(nurse, pharmacy));
+        Assert.Equal((AdviserChecks.NursesCannotWorkInRoom, host.Simulation.Content.FindRoom("gp")!.Name), Say(nurse, gp));
+        Assert.Null(Say(doctor, gp));
+        Assert.Equal(AdviserChecks.DoctorsCannotWorkInRoom, Say(doctor, toilets)?.Item1);
+        Assert.Null(Say(handyman, toilets));
+        Assert.Null(Say(doctor, new TilePosition(6, 6)));
+
+        // A researcher put into a research department whose desks are all taken is told to give them one each.
+        if (doctor.IsResearcher)
+        {
+            var room = (Room)host.Simulation.FindEntity(host.Simulation.Map[research.X, research.Y].RoomId)!;
+            room.StaffId = 1;
+            Assert.Equal((AdviserChecks.ResearcherNeedsDesk[0], null), Say(doctor, research));
+        }
     }
 
     [Fact]

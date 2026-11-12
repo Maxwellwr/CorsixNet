@@ -33,8 +33,8 @@ internal sealed class TownMapWindow : UiWindow
         yield return WindowCell.Line("Heating", highlight: true);
         yield return WindowRow.Of(
             hospital.IsHeatingBroken ? "The boiler is broken" : string.Create(CultureInfo.InvariantCulture, $"Radiators at {hospital.RadiatorHeat * 10} %"),
-            WindowCell.Button("Colder", () => Heat(host, hospital.RadiatorHeat - 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat > Hospital.MinRadiatorHeat),
-            WindowCell.Button("Warmer", () => Heat(host, hospital.RadiatorHeat + 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat < Hospital.MaxRadiatorHeat));
+            WindowCell.Button("Colder", () => Heat(host, hospital.RadiatorHeat - 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat > Hospital.MinRadiatorHeat).WithTooltip(OriginalTooltips.Get(host, 198, "Turn the heating down")),
+            WindowCell.Button("Warmer", () => Heat(host, hospital.RadiatorHeat + 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat < Hospital.MaxRadiatorHeat).WithTooltip(OriginalTooltips.Get(host, 197, "Turn the heating up")));
         yield return WindowRow.Of("Heating bill so far this month", WindowCell.Number(MoneyText.Format((long)hospital.AccruedHeating)));
         yield return WindowRow.Gap;
 

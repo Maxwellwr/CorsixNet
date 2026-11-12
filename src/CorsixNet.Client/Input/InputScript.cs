@@ -218,17 +218,18 @@ internal sealed class InputScript
                 ];
             case "drag":
                 var (x1, y1, x2, y2) = (Number(0), Number(1), Number(2), Number(3));
+                var rightDrag = words.Length > 4 && words[4].Equals("right", StringComparison.OrdinalIgnoreCase);
                 return
                 [
                     new MoveTo(x1, y1),
                     new Wait(ClickMilliseconds),
-                    new Button(false, true),
+                    new Button(rightDrag, true),
                     new Wait(ClickMilliseconds),
                     new MoveTo((x1 + x2) / 2, (y1 + y2) / 2),
                     new Wait(ClickMilliseconds),
                     new MoveTo(x2, y2),
                     new Wait(ClickMilliseconds),
-                    new Button(false, false),
+                    new Button(rightDrag, false),
                     new Wait(ClickMilliseconds),
                 ];
             case "wheel":

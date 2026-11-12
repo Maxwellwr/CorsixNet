@@ -54,6 +54,10 @@ public enum CommandKind : ushort
     EditRoom = 39,
     CallHandyman = 40,
     ReplaceMachine = 41,
+    RemoveDestroyedRoom = 42,
+    ReturnToBlueprint = 43,
+    AbandonRebuild = 44,
+    IncreaseHandymanPriority = 45,
 }
 
 /// <summary>
@@ -119,6 +123,10 @@ public abstract record Command
             CommandKind.IncreaseSalary => new IncreaseSalaryCommand(reader.ReadInt32()),
             CommandKind.CallHandyman => new CallHandymanCommand(reader.ReadInt32()),
             CommandKind.ReplaceMachine => new ReplaceMachineCommand(reader.ReadInt32()),
+            CommandKind.RemoveDestroyedRoom => new RemoveDestroyedRoomCommand(reader.ReadInt32()),
+            CommandKind.ReturnToBlueprint => new ReturnToBlueprintCommand(reader.ReadInt32()),
+            CommandKind.AbandonRebuild => new AbandonRebuildCommand(),
+            CommandKind.IncreaseHandymanPriority => new IncreaseHandymanPriorityCommand(reader.ReadInt32(), (HandymanTaskType)reader.ReadByte()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -128,7 +136,7 @@ public abstract record Command
     private static CheatKind ReadCheat(SimReader reader)
     {
         var cheat = reader.ReadByte();
-        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.AllResearch ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleInvulnerableMachines ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
     }
 
     private static Research.ResearchCategory ReadResearchCategory(SimReader reader)
@@ -299,10 +307,13 @@ public sealed record BuildRoomCommand(RoomPlan Plan) : Command
 
     public override void Execute(Simulation simulation, int player)
     {
+        // A room taken back to its blueprint is paid for already, as CorsixTH edits a room without a money check.
+        var rebuilding = player >= 0 && player < simulation.Hospitals.Count && simulation.Hospitals[player].Rebuild is { RoomId: 0 } rebuild
+            && rebuild.RoomType == Plan.RoomType;
         if (RoomBuilder.Check(simulation.Map, simulation.Content, Plan, player) != RoomPlanProblem.None
             || simulation.Content.FindRoom(Plan.RoomType) is not { } room
             || !RoomPurchases.CanBuild(simulation, room, player)
-            || !RoomPurchases.CanAfford(simulation, room, player))
+            || (!rebuilding && !RoomPurchases.CanAfford(simulation, room, player)))
         {
             return;
         }
@@ -413,6 +424,7 @@ public sealed record ConfirmRoomCommand(int RoomId) : Command
 
             RoomVisits.OnRoomActivated(simulation, room);
             Tiredness.OnRoomActivated(simulation, room);
+            RoomRebuild.OnRoomFinished(simulation, room, player);
         }
     }
 
@@ -447,12 +459,14 @@ public sealed record CancelRoomCommand(int RoomId) : Command
 
     public override void Execute(Simulation simulation, int player)
     {
-        if (simulation.FindEntity(RoomId) is Room { IsActive: false, IsClosing: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
+        // A room wrecked by an explosion cannot be taken down this way (RemoveDestroyedRoomCommand).
+        if (simulation.FindEntity(RoomId) is Room { IsActive: false, IsClosing: false, IsCrashed: false } room && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
         {
             var definition = simulation.Content.FindRoom(room.RoomType);
             if (room.IsPaid)
             {
                 // UIEditRoom:abortRoom for a room that was paid for: half its cost back, objects included.
+                RoomRebuild.OnRoomFinished(simulation, room, player);
                 RoomBuilder.Remove(simulation, room);
                 if (definition is not null)
                 {
@@ -472,6 +486,84 @@ public sealed record CancelRoomCommand(int RoomId) : Command
             {
                 RoomPurchases.SellNeededObjects(simulation, definition, player);
             }
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>
+/// Takes a finished room being edited, once empty, back to its blueprint (CorsixTH's <c>returnToDoorPhase</c>, Esc while
+/// furnishing it): see <see cref="RoomRebuild"/>.
+/// </summary>
+public sealed record ReturnToBlueprintCommand(int RoomId) : Command
+{
+    public override CommandKind Kind => CommandKind.ReturnToBlueprint;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RoomId) is Room room)
+        {
+            RoomRebuild.Start(simulation, room, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RoomId);
+}
+
+/// <summary>
+/// Gives up a room taken back to its blueprint, for half its cost (CorsixTH's <c>abortRoom</c> after the
+/// <c>delete_room</c> confirmation).
+/// </summary>
+public sealed record AbandonRebuildCommand : Command
+{
+    public override CommandKind Kind => CommandKind.AbandonRebuild;
+
+    public override void Execute(Simulation simulation, int player) => RoomRebuild.Abandon(simulation, player);
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+    }
+}
+
+/// <summary>
+/// Clears away a room wrecked by an explosion, for a fee (CorsixTH's <c>remove_destroyed_rooms</c> option: the confirmation
+/// in <c>GameUI:onMouseUp</c>, <c>UIEditRoom:removeRoom</c> and <c>Room:calculateRemovalCost</c>): twice the room's cost,
+/// less 40 % of each kind of object it needs as scrap. The hospital pays even into the red, as CorsixTH's
+/// <c>spendMoney</c>.
+/// </summary>
+public sealed record RemoveDestroyedRoomCommand(int RoomId) : Command
+{
+    /// <summary>The share of a needed object's price recovered as scrap (<c>COST_RECOVERY</c>).</summary>
+    private const decimal CostRecovery = 0.40m;
+
+    public override CommandKind Kind => CommandKind.RemoveDestroyedRoom;
+
+    /// <summary><c>Room:calculateRemovalCost</c>, or null for a room that is not a wreck of the player's.</summary>
+    public static int? RemovalCost(Simulation simulation, Room room, int player)
+    {
+        if (!room.IsCrashed || !RoomBuilder.IsOwnedBy(simulation.Map, room, player) || player < 0 || player >= simulation.Hospitals.Count
+            || simulation.Content.FindRoom(room.RoomType) is not { } definition)
+        {
+            return null;
+        }
+
+        var hospital = simulation.Hospitals[player];
+        var cost = RoomPurchases.BuildCost(simulation, hospital, definition) * 2;
+        foreach (var (objectId, _) in LevelRules.Needed(definition))
+        {
+            cost -= (int)decimal.Floor(hospital.Research.ObjectCost(simulation.Rules, objectId) * CostRecovery);
+        }
+
+        return cost;
+    }
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(RoomId) is Room room && RemovalCost(simulation, room, player) is { } cost)
+        {
+            RoomBuilder.Remove(simulation, room);
+            simulation.Hospitals[player].Spend(simulation.Hours, cost, TransactionKind.RemoveRoom, room.RoomType);
         }
     }
 
@@ -998,6 +1090,33 @@ public sealed record SetHandymanParcelCommand(int HandymanId, int Parcel) : Comm
     {
         writer.WriteInt32(HandymanId);
         writer.WriteInt32(Parcel);
+    }
+}
+
+/// <summary>
+/// Gives a handyman of the issuing player more of one kind of work (the staff window's priority buttons,
+/// <c>UIStaff:doMoreCleaning</c>, <c>doMoreWatering</c> and <c>doMoreRepairing</c>); the hospital remembers that the
+/// priorities have been changed (<c>handyman_popup</c>).
+/// </summary>
+public sealed record IncreaseHandymanPriorityCommand(int HandymanId, HandymanTaskType Task) : Command
+{
+    public override CommandKind Kind => CommandKind.IncreaseHandymanPriority;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(HandymanId) is Humanoid { Behaviour: HandymanBehaviour handyman, IsDespawning: false } humanoid
+            && humanoid.Employer == player
+            && Enum.IsDefined(Task))
+        {
+            handyman.IncreasePriority(Task);
+            simulation.Hospitals[player].HandymanPrioritiesChanged = true;
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(HandymanId);
+        writer.WriteByte((byte)Task);
     }
 }
 

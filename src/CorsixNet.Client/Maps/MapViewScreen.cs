@@ -40,7 +40,7 @@ internal sealed record LevelSource(string Name, Func<LoadedLevelMap> Load);
 /// the view and Ctrl+digit go back to it, Home reset camera,
 /// F3 list of levels to pick from (local games), O cycle overlay, U cycle sprite upscaling, Esc close the front window or open the menu (save, load, options, quit).
 /// Clicking a member of staff, a patient, a room or a desk opens their window; C faxes, Y hire staff, F4 town map.
-/// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F7 progress report, F11 cheats, F6 research, F8 graphs, F9 policy (windows, see <see cref="WindowLayer"/>).
+/// F1 bank manager, F2 bank statement, Shift+F3 staff management, F5 casebook, F7 progress report, F11 cheats, F6 research, F8 graphs, F9 policy, F10 machines (windows, see <see cref="WindowLayer"/>).
 /// Simulation test controls: H spawn a patient at the cursor, G spawn ten in the hospital,
 /// left click select a patient or send the selected one walking, R toggle random wandering,
 /// Space or P pause, 1 to 5 game speed, Z held speeds up (local games), Ctrl+1 to Ctrl+4 hire staff. B builds a GP's office: blueprint, door, windows, then furniture
@@ -110,6 +110,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private readonly GraphicsDevice _device;
     private IReadOnlyList<LevelSource> _levels;
+    private MainMenuWindow? _mainMenu;
     private readonly SpriteAtlas _blocks;
     private readonly BlueprintDrawing _blueprints;
     private readonly MapRenderer _renderer;
@@ -125,8 +126,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>Objects whose second part (CorsixTH's slave object) is drawn on the tile.</summary>
     private readonly Dictionary<TilePosition, List<RoomObject>> _slavePartsByTile = [];
+
+    /// <summary>Parts of objects drawn split over several tiles, and of their users' animations, by the tile drawing them.</summary>
+    private readonly Dictionary<TilePosition, List<(Entity Entity, int Left, int Right)>> _splitPartsByTile = [];
     private readonly BuildRoomTool _buildTool = new();
     private readonly FurnishCorridorTool _furnishTool = new();
+
+    /// <summary>The map editor's cursor while the editor is open (<c>UIMapEditor</c>), or null.</summary>
+    private MapEditorTool? _editorTool;
+
+    /// <summary>The map file the editor last loaded or saved, or null for a new map.</summary>
+    private string? _editorPath;
     private readonly HashSet<int> _hiddenObjects = [];
     private readonly ObjectDrawing _objects;
     private readonly FloatingDollarDrawing _floatingDollars;
@@ -176,6 +186,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The faxes waiting when last looked, so that a new one opens the faxes window.</summary>
     private HashSet<string> _seenFaxes = new(StringComparer.Ordinal);
 
+    /// <summary>Announces machines that start needing a repair urgently (CorsixTH's <c>announceRepair</c>).</summary>
+    private readonly RepairAnnouncer _repairs = new();
+
+    private object? _repairSession;
+
     /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
     private bool _levelList;
 
@@ -215,13 +230,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly string? _configPath;
 
     /// <summary>The keys for the dialogs and other actions, from <c>hotkeys.txt</c> next to the settings.</summary>
-    private readonly Hotkeys _hotkeys;
+    private Hotkeys _hotkeys;
 
     /// <summary>The game install, for reloading the sounds when the options change.</summary>
     private readonly ThemeHospitalInstall _install;
 
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
-    private readonly OriginalTexts? _texts;
+    private OriginalTexts? _texts;
     private readonly Adviser _adviser = new();
     private readonly Random _adviserRandom = new();
     private AdviserChecks _adviserChecks;
@@ -255,7 +270,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         GameSpeed speed = GameSpeed.Normal,
         string? loadPath = null,
         GameConfig? config = null,
-        string? configPath = null)
+        string? configPath = null,
+        bool mainMenu = false,
+        bool mapEditor = false)
     {
         _config = config ?? new GameConfig();
         _adviser.IsEnabled = !_config.AdviserDisabled;
@@ -287,6 +304,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _sounds = SoundEffects.Load(install, _config);
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
+        _buildTool.AbandonRequested = () => _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
+        {
+            _session?.Submit(new AbandonRebuildCommand());
+            _buildTool.Stop();
+        }));
         _furnishTool.PlaySound = name => _sounds.Play(name);
         _diamond = CreateDiamond(device);
         _cellOutline = CreateCellOutline(device);
@@ -321,6 +343,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         PrepareMapIfReady();
         _camera.ZoomAt(zoom, new Point(ViewSize.X / 2, ViewSize.Y / 2), ViewSize);
+        if (mapEditor)
+        {
+            StartMapEditor(MapEditor.Blank(), null);
+        }
+        else if (mainMenu && _session is LocalSession)
+        {
+            OpenMainMenu();
+        }
     }
 
     public bool ExitRequested { get; private set; }
@@ -382,6 +412,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var viewSize = ViewSize;
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_previousKeys.IsKeyDown(key);
 
+        // A window waiting for a key (the hotkey assignment dialog) takes the keyboard: the game sees no keys then.
+        var realKeys = keys;
+        if (_windows.Windows.OfType<IKeyCaptureWindow>().FirstOrDefault(window => window.IsCapturing) is { } capture)
+        {
+            if (HotkeyInput.Captured(keys, _previousKeys) is { } captured)
+            {
+                capture.Capture(captured);
+            }
+
+            keys = default;
+        }
+
         if (Pressed(Keys.Escape))
         {
             if (_hiring is not null)
@@ -396,6 +438,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             {
                 _windows.CloseTop();
             }
+            else if (_mainMenu is not null)
+            {
+                // esc_closes = false.
+            }
             else if (_levelList)
             {
                 _levelList = false;
@@ -407,6 +453,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             else if (_buildTool.IsActive || _furnishTool.IsActive)
             {
                 _buildBack = true;
+            }
+            else if (_editorTool is not null)
+            {
+                OpenMapEditorWindow();
             }
             else if (IsWindowHostReady)
             {
@@ -438,7 +488,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 }
             }
 
-            _previousKeys = keys;
+            _previousKeys = realKeys;
             _previousMouse = mouse;
             return;
         }
@@ -479,11 +529,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         // CorsixTH's GameUI scrolling: the arrow keys (and WASD) and the screen's edges scroll, faster with Shift and the
         // longer they do; the right or middle button drags; the wheel zooms with momentum, towards the cursor.
-        var keyX = (keys.IsKeyDown(Keys.Right) || keys.IsKeyDown(Keys.D) ? 1 : 0) - (keys.IsKeyDown(Keys.Left) || keys.IsKeyDown(Keys.A) ? 1 : 0);
-        var keyY = (keys.IsKeyDown(Keys.Down) || keys.IsKeyDown(Keys.S) ? 1 : 0) - (keys.IsKeyDown(Keys.Up) || keys.IsKeyDown(Keys.W) ? 1 : 0);
+        var keyX = (ScrollKeyHeld("ingame_scroll_right", keys) || keys.IsKeyDown(Keys.D) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_left", keys) || keys.IsKeyDown(Keys.A) ? 1 : 0);
+        var keyY = (ScrollKeyHeld("ingame_scroll_down", keys) || keys.IsKeyDown(Keys.S) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_up", keys) || keys.IsKeyDown(Keys.W) ? 1 : 0);
         var shiftHeld = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
-        var dragging = mouse.RightButton == ButtonState.Pressed || mouse.MiddleButton == ButtonState.Pressed;
-        var wasDragging = _previousMouse.RightButton == ButtonState.Pressed || _previousMouse.MiddleButton == ButtonState.Pressed;
+        // In the map editor the right button copies an area (UIMapEditor); the middle one still drags the view.
+        var rightPans = _editorTool is null;
+        var dragging = (rightPans && mouse.RightButton == ButtonState.Pressed) || mouse.MiddleButton == ButtonState.Pressed;
+        var wasDragging = (rightPans && _previousMouse.RightButton == ButtonState.Pressed) || _previousMouse.MiddleButton == ButtonState.Pressed;
         if (dragging && wasDragging)
         {
             var (dragX, dragY) = _scrolling.Drag(mouse.X - _previousMouse.X, mouse.Y - _previousMouse.Y, _camera.Zoom);
@@ -527,7 +579,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         UpdateSimulation(gameTime, mouse, keys, Pressed);
 
-        _previousKeys = keys;
+        _previousKeys = realKeys;
         _previousMouse = realMouse;
     }
 
@@ -584,12 +636,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 }
 
                 DrawEntities(batch, tile, anchorX, anchorY);
+                DrawEditorObjects(batch, tile, anchorX, anchorY);
                 if (tile == ghostTile && ghost is { } shown)
                 {
                     _objects.Draw(batch, shown.ObjectType, shown.Tile, shown.Orientation, Simulation!.Tick, shown.Tint);
                 }
             }, tile => _entitiesByTile.TryGetValue(tile, out var here) && here.Any(e => e is Humanoid or Rat));
             DrawOverlay(batch, map, view);
+            if (_editorTool is { } editor && (_hoveredTile is not null || editor.IsDragging))
+            {
+                // UIMapEditor:fillCursorArea: a red outline on each tile the cursor covers.
+                foreach (var (corner, sizeX, sizeY) in editor.Outlines())
+                {
+                    for (var dx = 0; dx < sizeX; dx++)
+                    {
+                        for (var dy = 0; dy < sizeY; dy++)
+                        {
+                            var (cx, cy) = (corner.X + dx, corner.Y + dy);
+                            batch.Draw(_cellOutline, new Vector2((32 * (cx - cy)) - 32, 16 * (cx + cy)), CellOutlineColor);
+                        }
+                    }
+                }
+            }
+
             _buildTool.DrawPreview(batch, _diamond);
             if (_buildTool.IsActive && _hoveredTile is { } cell)
             {
@@ -683,6 +752,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
+        CloseMainMenu();
         _levelIndex = index;
         _lastYearSeen = null;
         _lastOutcome = EndOutcome.None;
@@ -774,7 +844,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return false;
         }
 
-        var speed = _session is { CanChangeSpeed: true } previous ? previous.Speed : _initialSpeed;
+        var speed = _mainMenu is null && _session is { CanChangeSpeed: true } previous ? previous.Speed : _initialSpeed;
+        CloseMainMenu();
         _session?.Dispose();
         var local = new LocalSession(saved.LevelName, saved.Simulation, _saves, _config.AutosaveFrequency);
         local.SetSpeed(speed == GameSpeed.SpeedUp ? GameSpeed.Normal : speed);
@@ -1152,43 +1223,48 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// CorsixTH's camera hotkeys: = and − zoom in and out towards the cursor (five times as far with Shift,
     /// <c>World:adjustZoom</c>), 0 goes back to the original size (<c>World:resetZoom</c>), Alt+digit remembers the view
     /// and Ctrl+digit goes back to it (<c>GameUI:setMapRecallPosition</c>, <c>recallMapPosition</c>). Until the hire window
-    /// exists, Ctrl+1 to Ctrl+4 hire staff instead, so only Ctrl+0 and Ctrl+5 to Ctrl+9 recall.
+    /// exists, Ctrl+1 to Ctrl+4 hire staff instead, so those keys do not recall. All of them are hotkeys
+    /// (<c>ingame_zoom_in</c>, <c>ingame_zoom_in_more</c>, <c>ingame_zoom_out</c>, <c>ingame_zoom_out_more</c>,
+    /// <c>ingame_reset_zoom</c>, <c>ingame_storePosition_N</c>, <c>ingame_recallPosition_N</c>).
     /// </summary>
     private void UpdateCameraKeys(KeyboardState keys, MouseState mouse, Point viewSize, Func<Keys, bool> pressed)
     {
-        var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
-        var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
-        var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
-        var zoomDelta = (pressed(Keys.OemPlus) ? 1 : 0) - (pressed(Keys.OemMinus) ? 1 : 0);
-        if (zoomDelta != 0 && !control && !alt
-            && _scrolling.Zoomed(_camera.Zoom, zoomDelta * (shift ? 5 : 1), _device.Viewport.Width) is { } zoomed)
+        bool hotkey(string action) => HotkeyInput.Pressed(_hotkeys[action], keys, pressed);
+        var zoomDelta = (hotkey("ingame_zoom_in") ? 1 : 0) + (hotkey("ingame_zoom_in_more") ? 5 : 0)
+            - (hotkey("ingame_zoom_out") ? 1 : 0) - (hotkey("ingame_zoom_out_more") ? 5 : 0);
+        if (zoomDelta != 0 && _scrolling.Zoomed(_camera.Zoom, zoomDelta, _device.Viewport.Width) is { } zoomed)
         {
             _camera.ZoomAt((float)zoomed, new Point(mouse.X, mouse.Y - StatusHeight), viewSize);
         }
 
-        if (pressed(Keys.D0) && !control && !alt && !shift)
+        if (hotkey("ingame_reset_zoom"))
         {
             _camera.ZoomAt(1f, new Point(viewSize.X / 2, viewSize.Y / 2), viewSize);
         }
 
         for (var digit = 0; digit <= 9; digit++)
         {
-            if (!pressed(Keys.D0 + digit))
-            {
-                continue;
-            }
-
-            if (alt && !control)
+            var suffix = digit.ToString(CultureInfo.InvariantCulture);
+            if (hotkey("ingame_storePosition_" + suffix))
             {
                 _recallPositions[digit] = (_camera.Center, _camera.Zoom);
             }
-            else if (control && !alt && digit is 0 or >= 5 && _recallPositions[digit] is var (center, zoom))
+            else if (hotkey("ingame_recallPosition_" + suffix) && !IsDebugHireKey(_hotkeys["ingame_recallPosition_" + suffix])
+                && _recallPositions[digit] is var (center, zoom))
             {
                 _camera.ZoomAt(zoom, new Point(viewSize.X / 2, viewSize.Y / 2), viewSize);
                 _camera.Center = center;
             }
         }
     }
+
+    /// <summary>Ctrl+1 to Ctrl+4, which hire staff for now.</summary>
+    private static bool IsDebugHireKey(Hotkey? key) =>
+        key is { Ctrl: true, Shift: false, Alt: false, Key: "1" or "2" or "3" or "4" };
+
+    /// <summary>An <c>ingame_scroll_*</c> key held; Shift (<c>ingame_scroll_shift</c>) only makes it faster, so modifiers do not matter.</summary>
+    private bool ScrollKeyHeld(string action, KeyboardState keys) =>
+        _hotkeys[action] is { } key && HotkeyInput.ToKeys(key.Key) is { } down && keys.IsKeyDown(down);
 
     private void ResetCamera()
     {
@@ -1260,24 +1336,32 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// </summary>
     private void UpdateSpeed(KeyboardState keys, Func<Keys, bool> pressed)
     {
-        if (_session is not { CanChangeSpeed: true } session)
+        // The level behind the main menu stays paused.
+        if (_session is not { CanChangeSpeed: true } session || _mainMenu is not null)
         {
             return;
         }
 
         var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
         var alt = keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt);
-        (Keys Key, GameSpeed Speed)[] speedKeys =
+        (string Action, GameSpeed Speed)[] speedKeys =
         [
-            (Keys.D1, GameSpeed.Slowest), (Keys.D2, GameSpeed.Slower), (Keys.D3, GameSpeed.Normal),
-            (Keys.D4, GameSpeed.MaxSpeed), (Keys.D5, GameSpeed.AndThenSomeMore), (Keys.D6, GameSpeed.Insane),
+            ("ingame_gamespeed_slowest", GameSpeed.Slowest), ("ingame_gamespeed_slower", GameSpeed.Slower),
+            ("ingame_gamespeed_normal", GameSpeed.Normal), ("ingame_gamespeed_max", GameSpeed.MaxSpeed),
+            ("ingame_gamespeed_thensome", GameSpeed.AndThenSomeMore),
         ];
-        foreach (var (key, speed) in speedKeys)
+        foreach (var (action, speed) in speedKeys)
         {
-            if (!control && !alt && pressed(key))
+            if (HotkeyInput.Pressed(_hotkeys[action], keys, pressed))
             {
                 session.SetSpeed(speed);
             }
+        }
+
+        // The insane speed has no hotkey in CorsixTH (only its menu): 6 here.
+        if (!control && !alt && pressed(Keys.D6))
+        {
+            session.SetSpeed(GameSpeed.Insane);
         }
 
         // While building, P is the pick-up key.
@@ -1308,6 +1392,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         AdvanceSession(gameTime);
         if (_session is null || Simulation is not { } simulation)
         {
+            return;
+        }
+
+        if (_editorTool is { } editorTool)
+        {
+            UpdateMapEditor(editorTool, mouse);
             return;
         }
 
@@ -1407,6 +1497,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     var problem = StaffMoving.Check(simulation, carried, hand, _session.Player);
                     if (problem == StaffHireProblem.None)
                     {
+                        AdviseOnPlacement(simulation, held.Profile, hand, carried);
                         _session.Submit(new MoveStaffCommand(carried, hand));
                     }
                     else
@@ -1513,13 +1604,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 return;
             }
 
-            if (pressed(Keys.B))
+            if (HotkeyInput.Pressed(_hotkeys["ingame_panel_buildRoom"], keys, pressed))
             {
                 _roomList = false;
                 return;
             }
         }
-        else if (pressed(Keys.B) && !_buildTool.IsActive && !_furnishTool.IsActive)
+        else if (HotkeyInput.Pressed(_hotkeys["ingame_panel_buildRoom"], keys, pressed) && !_buildTool.IsActive && !_furnishTool.IsActive)
         {
             _roomList = true;
             return;
@@ -1569,7 +1660,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 !leftDown && leftWasDown,
                 rightClicked,
                 pressed(Keys.Enter) || TakeButton(BuildButton.Confirm),
-                TakeDown(simulation, back || TakeButton(BuildButton.Back)),
+                back || TakeButton(BuildButton.Back),
                 pressed(Keys.P) || TakeButton(BuildButton.PickUp));
             var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
             if (tool is { } command)
@@ -1681,6 +1772,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             list.Clear();
         }
 
+        foreach (var list in _splitPartsByTile.Values)
+        {
+            list.Clear();
+        }
+
         if (Simulation is not { } simulation)
         {
             return;
@@ -1722,6 +1818,22 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             };
             if (tile is not { } position)
             {
+                continue;
+            }
+
+            if (SplitParts(simulation, entity) is { } parts)
+            {
+                foreach (var (partTile, left, right) in parts)
+                {
+                    if (!_splitPartsByTile.TryGetValue(partTile, out var partList))
+                    {
+                        partList = [];
+                        _splitPartsByTile[partTile] = partList;
+                    }
+
+                    partList.Add((entity, left, right));
+                }
+
                 continue;
             }
 
@@ -1790,6 +1902,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
     }
+
+    /// <summary>
+    /// The parts of an object drawn split over several tiles (<see cref="ObjectDrawing.Split"/>), or of the animation of
+    /// someone using it from its tile, which shows the object; null for anything drawn whole.
+    /// </summary>
+    private static IEnumerable<(TilePosition Tile, int Left, int Right)>? SplitParts(Simulation simulation, Entity entity) => entity switch
+    {
+        RoomObject placed when simulation.FindEntity(placed.RoomId) is not Room { IsCrashed: true } =>
+            ObjectDrawing.Split(placed.ObjectType, placed.Tile, placed.Orientation),
+        Humanoid { ActionAnimation: not null, HiddenObjectId: not 0 } humanoid
+            when simulation.FindEntity(humanoid.HiddenObjectId) is RoomObject used && humanoid.ActionAnimationTile == used.Tile =>
+            ObjectDrawing.Split(used.ObjectType, used.Tile, used.Orientation),
+        _ => null,
+    };
 
     /// <summary>The first patient of the player's hospital waiting for an answer to their fax, in entity order.</summary>
     private static Humanoid? FirstQuestion(Simulation simulation, int player) =>
@@ -1891,67 +2017,102 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (!_entitiesByTile.TryGetValue(tile, out var list))
         {
+            DrawSplitParts(batch, simulation, tile, anchorX, anchorY);
             DrawSlaveParts(batch, tile);
             DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
             return;
         }
 
+        // Litter lies under everything, split objects included.
+        var splitDrawn = false;
         foreach (var entity in list)
         {
-            switch (entity)
+            if (!splitDrawn && entity is not Litter)
             {
-                case EntranceDoor door:
-                    _doors.Draw(batch, door, anchorX, anchorY, simulation.Tick);
-                    break;
-                case Humanoid { Behaviour: GrimReaperBehaviour grim } when tile == grim.HoleTile:
-                    // gates_to_hell.lua: open (1602) until the grim reaper has gone, then closing (2552).
-                    var hole = grim.Phase == GrimReaperPhase.Closing ? GrimReaperBehaviour.HoleClosing : GrimReaperBehaviour.HoleIdle;
-                    var holeFirst = _animations.Animations.FirstFrame(hole.Id);
-                    var holeTicks = simulation.Tick - (grim.Phase == GrimReaperPhase.Closing ? grim.PhaseStart : 0);
-                    _animations.DrawFrame(batch, _animations.Animations.Advance(holeFirst, (int)(holeTicks % hole.Length)), anchorX, anchorY, NoLayers, flipHorizontally: false);
-                    break;
-                case Humanoid { Behaviour: GrimReaperBehaviour { Phase: GrimReaperPhase.Closing } }:
-                    break;
-                case Humanoid humanoid:
-                    _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
-                    break;
-                case RoomObject placed:
-                    var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
-                    var machine = placed.Machine is null ? null : simulation.Content.FindObject(placed.ObjectType)?.Machine;
-                    if (machine is not null && simulation.FindEntity(placed.RoomId) is Room { IsCrashed: true })
-                    {
-                        _objects.DrawCrashed(batch, machine.Crashed.Id, placed.Tile, tint);
-                        break;
-                    }
-
-                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
-                    if (machine is not null)
-                    {
-                        _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);
-                    }
-
-                    break;
-                case Rat rat:
-                    var (_, ratAnimation, offsetX, offsetY) = RatDrawing(rat);
-                    var ratFirst = _animations.Animations.FirstFrame(ratAnimation);
-                    var ratFrame = _animations.Animations.Advance(ratFirst, (int)(simulation.Tick % _animations.Animations.Length(ratFirst)));
-                    _animations.DrawFrame(batch, ratFrame, anchorX + offsetX, anchorY + offsetY, NoLayers, flipHorizontally: false);
-                    break;
-                case Litter litter:
-                    _animations.DrawFrame(batch, _animations.Animations.FirstFrame(litter.Animation), anchorX, anchorY, NoLayers, flipHorizontally: litter.IsMirrored);
-                    break;
-                case RoomDoor { IsSwing: true } swingDoor:
-                    DrawSwingDoor(batch, simulation, swingDoor, tile, anchorX, anchorY);
-                    break;
-                case RoomDoor roomDoor:
-                    var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
-                    _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
-                    break;
+                DrawSplitParts(batch, simulation, tile, anchorX, anchorY);
+                splitDrawn = true;
             }
+
+            DrawEntity(batch, simulation, entity, tile, anchorX, anchorY);
+        }
+
+        if (!splitDrawn)
+        {
+            DrawSplitParts(batch, simulation, tile, anchorX, anchorY);
         }
 
         DrawSlaveParts(batch, tile);
         DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
+    }
+
+    /// <summary>The parts of split objects, and of their users' animations, that <paramref name="tile"/> draws, each cropped to its column.</summary>
+    private void DrawSplitParts(SpriteBatch batch, Simulation simulation, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (!_splitPartsByTile.TryGetValue(tile, out var parts))
+        {
+            return;
+        }
+
+        foreach (var (entity, left, right) in parts)
+        {
+            _animations.SetColumnClip(left, right);
+            DrawEntity(batch, simulation, entity, tile, anchorX, anchorY);
+            _animations.ClearColumnClip();
+        }
+    }
+
+    private void DrawEntity(SpriteBatch batch, Simulation simulation, Entity entity, TilePosition tile, int anchorX, int anchorY)
+    {
+        switch (entity)
+        {
+            case EntranceDoor door:
+                _doors.Draw(batch, door, anchorX, anchorY, simulation.Tick);
+                break;
+            case Humanoid { Behaviour: GrimReaperBehaviour grim } when tile == grim.HoleTile:
+                // gates_to_hell.lua: open (1602) until the grim reaper has gone, then closing (2552).
+                var hole = grim.Phase == GrimReaperPhase.Closing ? GrimReaperBehaviour.HoleClosing : GrimReaperBehaviour.HoleIdle;
+                var holeFirst = _animations.Animations.FirstFrame(hole.Id);
+                var holeTicks = simulation.Tick - (grim.Phase == GrimReaperPhase.Closing ? grim.PhaseStart : 0);
+                _animations.DrawFrame(batch, _animations.Animations.Advance(holeFirst, (int)(holeTicks % hole.Length)), anchorX, anchorY, NoLayers, flipHorizontally: false);
+                break;
+            case Humanoid { Behaviour: GrimReaperBehaviour { Phase: GrimReaperPhase.Closing } }:
+                break;
+            case Humanoid humanoid:
+                _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
+                break;
+            case RoomObject placed:
+                var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
+                var machine = placed.Machine is null ? null : simulation.Content.FindObject(placed.ObjectType)?.Machine;
+                if (machine is not null && simulation.FindEntity(placed.RoomId) is Room { IsCrashed: true })
+                {
+                    _objects.DrawCrashed(batch, machine.Crashed.Id, placed.Tile, tint);
+                    break;
+                }
+
+                _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
+                if (machine is not null)
+                {
+                    _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);
+                }
+
+                break;
+            case Rat rat:
+                var (_, ratAnimation, offsetX, offsetY) = RatDrawing(rat);
+                var ratFirst = _animations.Animations.FirstFrame(ratAnimation);
+                var ratFrame = _animations.Animations.Advance(ratFirst, (int)(simulation.Tick % _animations.Animations.Length(ratFirst)));
+                _animations.DrawFrame(batch, ratFrame, anchorX + offsetX, anchorY + offsetY, NoLayers, flipHorizontally: false);
+                break;
+            case Litter litter:
+                _animations.DrawFrame(batch, _animations.Animations.FirstFrame(litter.Animation), anchorX, anchorY, NoLayers, flipHorizontally: litter.IsMirrored);
+                break;
+            case RoomDoor { IsSwing: true } swingDoor:
+                DrawSwingDoor(batch, simulation, swingDoor, tile, anchorX, anchorY);
+                break;
+            case RoomDoor roomDoor:
+                var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
+                _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
+                break;
+        }
     }
 
     /// <summary>
@@ -2097,7 +2258,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>
     /// CorsixTH's dialogs' hotkeys, read from <c>hotkeys.txt</c> (see <see cref="Hotkeys"/>): by default F1 bank manager,
-    /// F2 bank statement, F4 town map, F5 casebook, F6 research, F7 progress report, F8 graphs, F9 policy, Ctrl+H the
+    /// F2 bank statement, F4 town map, F5 casebook, F6 research, F7 progress report, F8 graphs, F9 policy, F10 machines, Ctrl+H the
     /// adviser's history, Y hire, C faxes, F11 cheats, each opening its window or closing it again. F3 (staff
     /// management) stays the level list for now; Shift+F3 opens staff management.
     /// </summary>
@@ -2112,6 +2273,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _seenFaxes = faxes;
+        if (!ReferenceEquals(_session, _repairSession))
+        {
+            _repairSession = _session;
+            _repairs.Reset();
+        }
+
+        foreach (var sound in _repairs.Update(Simulation!, _session.Player))
+        {
+            _sounds.Play(sound);
+        }
         if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))
         {
             _windows.Toggle(new FaxWindow());
@@ -2156,6 +2327,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ("ingame_panel_status", () => new ProgressReportWindow()),
             ("ingame_panel_charts", () => new GraphWindow()),
             ("ingame_panel_policy", () => new PolicyWindow()),
+            ("ingame_panel_machineMenu", () => new MachineMenuWindow()),
             ("ingame_panel_adviserHistory", () => new AdviserHistoryWindow()),
             ("ingame_showCheatWindow", () => new CheatsWindow()),
         ];
@@ -2187,7 +2359,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _roomsDescribed.UnionWith(Simulation!.Entities.OfType<Room>().Where(room => room.IsActive).Select(room => room.RoomType));
 
                 // CorsixTH shows a tip with the main menu; here, with the first game.
-                if (!_tipShown)
+                if (!_tipShown && _editorTool is null)
                 {
                     _tipShown = true;
                     _windows.Open(new TipOfTheDayWindow(_adviserRandom.Next(TipOfTheDayWindow.Tips.Count)));
@@ -2288,7 +2460,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new ConfirmWindow(Confirmation(1, "Are you sure you want to quit?"), () => ExitRequested = true));
                 break;
             case "options":
-                _windows.Open(new OptionsWindow(_config, ApplyConfig));
+                _windows.Open(NewOptionsWindow());
                 break;
             case "savereplay":
                 SaveReplay();
@@ -2405,6 +2577,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         ShowNotice(_adviser.IsEnabled ? "The adviser is back" : "The adviser is quiet");
     }
 
+    /// <summary>The options, with the hotkey assignment dialog (<c>UIOptions:buttonHotkey</c>), which goes back to them.</summary>
+    private OptionsWindow NewOptionsWindow() =>
+        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))));
+
+    /// <summary><c>UIHotkeyAssign:buttonAccept</c>: the keys are used at once and saved to <c>hotkeys.txt</c>.</summary>
+    private void SaveHotkeys(Hotkeys hotkeys)
+    {
+        _hotkeys = hotkeys;
+        if (_configPath is null || Path.GetDirectoryName(Path.GetFullPath(_configPath)) is not { } folder)
+        {
+            return;
+        }
+
+        try
+        {
+            hotkeys.Save(Path.Combine(folder, Hotkeys.FileName));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowNotice($"Cannot save the hotkeys: {e.Message}");
+        }
+    }
+
     /// <summary>
     /// The hotkeys from <c>hotkeys.txt</c> beside the settings file (written with the defaults if missing); the defaults
     /// without a settings file or when the file can't be read.
@@ -2451,6 +2646,247 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         SelectLevel(0);
     }
 
+    /// <summary>
+    /// <c>UIMainMenu</c>, when the game starts with nothing to play given: the first level waits paused behind it until
+    /// a game is started or loaded.
+    /// </summary>
+    private void OpenMainMenu()
+    {
+        _session?.SetSpeed(GameSpeed.Pause);
+        _mainMenu = new MainMenuWindow(MainMenuAction, typeof(MapViewScreen).Assembly.GetName().Version?.ToString(3) ?? "?");
+        _windows.Open(_mainMenu);
+    }
+
+    private void CloseMainMenu()
+    {
+        if (_mainMenu is not null)
+        {
+            _windows.Close(_mainMenu);
+            _mainMenu = null;
+        }
+    }
+
+    /// <summary>The main menu's items (<c>UIMainMenu:button*</c>).</summary>
+    private void MainMenuAction(string action)
+    {
+        var saves = _saves.Directory;
+        switch (action)
+        {
+            case "newgame":
+                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, StartCampaign));
+                break;
+            case "campaign":
+                _windows.Open(new CustomCampaignWindow(CustomGames.FindCampaigns(GameConfig.UserFolder(_config.Campaigns, saves, "Campaigns")), StartCustomCampaign));
+                break;
+            case "scenario":
+                _windows.Open(new CustomLevelWindow(CustomGames.FindLevels(GameConfig.UserFolder(_config.Levels, saves, "Levels")), _config.FreeBuildMode, StartCustomLevel));
+                break;
+            case "continue" when _saves.MostRecentSave() is { } latest:
+                LoadGame(latest);
+                break;
+            case "continue":
+                _windows.Open(new InformationWindow(["Error while loading game: There are no saved games."]));
+                break;
+            case "load":
+                _windows.Open(new SaveLoadWindow(_saves, false, SaveGameTo, LoadGame));
+                break;
+            case "options":
+                _windows.Open(NewOptionsWindow());
+                break;
+            case "mapeditor":
+                StartMapEditor(MapEditor.Blank(), null);
+                break;
+            case "exit":
+                _windows.Open(new ConfirmWindow("You are about to quit from CorsixNet. Are you sure this is what you want to do?", () => ExitRequested = true));
+                break;
+        }
+    }
+
+    /// <summary><c>UICustomGame:buttonLoadLevel</c>: the level on its own, with free build if ticked.</summary>
+    private void StartCustomLevel(CustomLevelEntry level, bool freeBuild)
+    {
+        _levels = [new LevelSource(Path.GetFileName(level.Path), () => freeBuild
+            ? LevelMapLoader.LoadFile(level.Path, _install).WithFreeBuild()
+            : LevelMapLoader.LoadFile(level.Path, _install))];
+        _levelList = false;
+        SelectLevel(0);
+    }
+
+    /// <summary><c>UICustomCampaign:startCampaign</c>: the campaign's levels from its first.</summary>
+    private void StartCustomCampaign(CustomCampaignEntry campaign)
+    {
+        IReadOnlyList<string> paths;
+        try
+        {
+            paths = LevelMapLoader.LoadCampaign(campaign.Path).LevelPaths;
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException)
+        {
+            _windows.Open(new InformationWindow([$"Cannot start the campaign: {e.Message}"]));
+            return;
+        }
+
+        _levels = [.. paths.Select(path => new LevelSource(Path.GetFileName(path), () => LevelMapLoader.LoadFile(path, _install)))];
+        _levelList = false;
+        SelectLevel(0);
+    }
+
+    /// <summary>
+    /// <c>UI:showMapEditor</c>: the map is shown paused, with nothing on it but its entrance doors, and the editor's
+    /// window and cursor take the mouse.
+    /// </summary>
+    private void StartMapEditor(MapEditor editor, string? path)
+    {
+        CloseMainMenu();
+        _windows.CloseAll();
+        foreach (var panel in _windows.Windows.OfType<BottomPanel>().ToList())
+        {
+            _windows.Close(panel);
+        }
+
+        _session?.Dispose();
+        var simulation = new Simulation(editor.Map, seed: 1, BaseGameContent.Create(), LevelRules.Free);
+        var local = new LocalSession(path is null ? "Map Editor" : Path.GetFileName(path), simulation, _saves, autosaveFrequency: 0);
+        local.SetSpeed(GameSpeed.Pause);
+        _session = local;
+        _error = null;
+        _editorTool = new MapEditorTool(editor) { Changed = () => { } };
+        _editorPath = path;
+        PrepareMapIfReady();
+        OpenMapEditorWindow();
+    }
+
+    private void OpenMapEditorWindow()
+    {
+        if (_editorTool is { } tool && !_windows.Windows.OfType<MapEditorWindow>().Any())
+        {
+            _windows.Open(new MapEditorWindow(tool, _blocks, MapEditorAction));
+        }
+    }
+
+    /// <summary>The editor's mouse on the map; the parcels' overlay shows while parcels are being set.</summary>
+    private void UpdateMapEditor(MapEditorTool tool, MouseState mouse)
+    {
+        var tile = _hoveredTile is { } point ? new TilePosition(point.X, point.Y) : (TilePosition?)null;
+        tool.Update(
+            tile,
+            mouse.LeftButton == ButtonState.Pressed,
+            mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released,
+            mouse.LeftButton == ButtonState.Released && _previousMouse.LeftButton == ButtonState.Pressed,
+            mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released,
+            mouse.RightButton == ButtonState.Released && _previousMouse.RightButton == ButtonState.Pressed);
+        if (tool.Mode == EditorMode.Parcel)
+        {
+            _overlay = MapOverlay.Parcels;
+        }
+        else if (_overlay == MapOverlay.Parcels)
+        {
+            _overlay = MapOverlay.None;
+        }
+    }
+
+    /// <summary>The entrance doors the edited map places on <paramref name="tile"/>, closed.</summary>
+    private void DrawEditorObjects(SpriteBatch batch, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (_editorTool is not { } tool)
+        {
+            return;
+        }
+
+        foreach (var placement in tool.Editor.Objects)
+        {
+            if (placement.Tile != tile || placement.ObjectType is not (MapEditor.EntranceLeftDoor or MapEditor.EntranceRightDoor))
+            {
+                continue;
+            }
+
+            var west = (placement.Direction & 1) != 0;
+            var animation = (placement.ObjectType == MapEditor.EntranceRightDoor, west) switch
+            {
+                (true, false) => 308,
+                (true, true) => 312,
+                (false, false) => 316,
+                _ => 318,
+            };
+            _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
+        }
+    }
+
+    /// <summary>The editor window's own items: save and load maps in the levels folder, a new blank map, and quitting.</summary>
+    private void MapEditorAction(string action)
+    {
+        if (_editorTool is not { } tool)
+        {
+            return;
+        }
+
+        var folder = GameConfig.UserFolder(_config.Levels, _saves.Directory, "Levels");
+        switch (action)
+        {
+            case "save":
+                var path = _editorPath ?? NewMapPath(folder);
+                try
+                {
+                    tool.Editor.Save(path);
+                    _editorPath = path;
+                    ShowNotice($"Saved the map as {path}");
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    _windows.Open(new InformationWindow([$"Cannot save the map: {e.Message}"]));
+                }
+
+                break;
+            case "load":
+                var maps = Directory.Exists(folder) ? Directory.GetFiles(folder, "*.map").Order(StringComparer.OrdinalIgnoreCase).ToList() : [];
+                _windows.Open(new MapListWindow(maps, LoadEditorMap));
+                break;
+            case "restart":
+                _windows.Open(new ConfirmWindow("Start again with a blank map? Changes not saved are lost.", () => StartMapEditor(MapEditor.Blank(), null)));
+                break;
+            case "quit":
+                _windows.Open(new ConfirmWindow("Leave the map editor? Changes not saved are lost.", QuitMapEditor));
+                break;
+        }
+    }
+
+    /// <summary>A file name in the levels folder that no map has yet.</summary>
+    private static string NewMapPath(string folder)
+    {
+        for (var i = 1; ; i++)
+        {
+            var path = Path.Combine(folder, string.Create(CultureInfo.InvariantCulture, $"Map {i}.map"));
+            if (!File.Exists(path))
+            {
+                return path;
+            }
+        }
+    }
+
+    private void LoadEditorMap(string path)
+    {
+        try
+        {
+            StartMapEditor(MapEditor.Open(MapFile.Parse(File.ReadAllBytes(path))), path);
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            _windows.Open(new InformationWindow([$"Cannot load the map: {e.Message}"]));
+        }
+    }
+
+    /// <summary>Back to the main menu, over the first level as when the game starts.</summary>
+    private void QuitMapEditor()
+    {
+        _editorTool = null;
+        _editorPath = null;
+        _overlay = MapOverlay.None;
+        _windows.CloseAll();
+        _windows.Open(new BottomPanel(BottomPanelAction));
+        SelectLevel(0);
+        OpenMainMenu();
+    }
+
     /// <summary>The options window's Apply: the new settings are saved to <c>config.txt</c> and used at once.</summary>
     private void ApplyConfig(GameConfig config)
     {
@@ -2459,6 +2895,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
         _sounds = SoundEffects.Load(_install, config);
+        _texts = LoadTexts(_install, config);
         if (_configPath is not null)
         {
             try
@@ -2472,7 +2909,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
-        ShowNotice("Settings saved; the screen size and language change on the next start");
+        ShowNotice("Settings saved; the screen size changes on the next start");
     }
 
     /// <summary>Whether the room edit panel's <paramref name="button"/> was pressed; it counts once.</summary>
@@ -2531,6 +2968,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var player = _session!.Player;
+        if (simulation.FindEntity(simulation.Map[target.X, target.Y].RoomId) is Room { IsCrashed: true } wreck)
+        {
+            // GameUI:onMouseUp: a wrecked room can only be cleared away, and only with remove_destroyed_rooms, for a fee.
+            if (_config.RemoveDestroyedRooms && RemoveDestroyedRoomCommand.RemovalCost(simulation, wreck, player) is { } cost)
+            {
+                _pickingRoomToEdit = false;
+                var question = string.Create(CultureInfo.InvariantCulture, $"Would you like to remove the room for ${cost}?");
+                _windows.Open(new ConfirmWindow(question, () => _session.Submit(new RemoveDestroyedRoomCommand(wreck.Id))));
+            }
+
+            return;
+        }
+
         if (simulation.FindEntity(simulation.Map[target.X, target.Y].RoomId) is Room { IsActive: true } room
             && RoomBuilder.IsOwnedBy(simulation.Map, room, player)
             && simulation.Content.FindRoom(room.RoomType) is { } definition)
@@ -2539,29 +2989,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _session.Submit(new EditRoomCommand(room.Id));
             _buildTool.StartEditing(definition, room.Id, simulation.Tick);
         }
-    }
-
-    /// <summary>
-    /// Esc or Take down while editing a finished room: CorsixTH asks first (<c>confirmation.delete_room</c>), then sells
-    /// it for half its cost. While building a new room the build tool deals with it.
-    /// </summary>
-    private bool TakeDown(Simulation simulation, bool back)
-    {
-        if (!back || !_buildTool.IsEditing || _buildTool.IsPickingUp)
-        {
-            return back;
-        }
-
-        if (simulation.FindEntity(_buildTool.RoomId) is Room { IsActive: false, IsClosing: false } room)
-        {
-            _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
-            {
-                _session!.Submit(new CancelRoomCommand(room.Id));
-                _buildTool.Stop();
-            }));
-        }
-
-        return false;
     }
 
     void IWindowHost.StartHiring(StaffClass staffClass, int index)
@@ -2596,6 +3023,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var problem = StaffHiring.Check(simulation, hiring.Class, index, tile, _session!.Player);
             if (problem == StaffHireProblem.None)
             {
+                AdviseOnPlacement(simulation, hiring.Profile, tile, 0);
                 _session.Submit(new HireStaffCommand(hiring.Class, index, tile));
                 _sounds.Play("plac_st2.wav"); // UIPlaceStaff:close
                 _hiring = null;
@@ -2618,6 +3046,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private string StatusLine()
     {
+        if (_editorTool is { } editor)
+        {
+            var name = _editorPath is null ? "new map" : Path.GetFileName(_editorPath);
+            var at = editor.Cursor;
+            var tile = editor.Editor.Map[at.X, at.Y];
+            return string.Create(CultureInfo.InvariantCulture, $"MAP EDITOR   {name}   tile ({at.X}, {at.Y})   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}   Esc: editor window");
+        }
+
         if (_session is null)
         {
             return "No game.";
@@ -2775,6 +3211,24 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _buildTool.Start(roomType);
     }
 
+    /// <summary>What the adviser says when a member of staff is put down: no lecture chair, a desk of their own, or the wrong room.</summary>
+    private void AdviseOnPlacement(Simulation simulation, StaffProfile? profile, TilePosition tile, int movingId)
+    {
+        if (profile is null)
+        {
+            return;
+        }
+
+        if (AdviserChecks.LacksLectureChair(simulation, profile, tile, movingId))
+        {
+            _adviser.Say(AdviserChecks.NotEnoughLectureChairs.Text(_texts), Environment.TickCount64);
+        }
+        else if (AdviserChecks.StaffPlacement(simulation, profile, tile, movingId, Random.Shared.Next) is var (advice, argument))
+        {
+            _adviser.Say(argument is null ? advice.Text(_texts) : advice.Text(_texts, argument), Environment.TickCount64);
+        }
+    }
+
     /// <summary>Why the player cannot start a room now, or null when they can.</summary>
     private string? RoomListProblem(Simulation simulation, RoomDefinition room)
     {
@@ -2848,6 +3302,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private string TileLine()
     {
+        if (_editorTool is not null)
+        {
+            return "Pan: arrows WASD middle drag   Wheel: zoom   Left drag: paint, clear or paste   Right drag: copy an area";
+        }
+
         if (_buildTool.IsActive)
         {
             var reminder = Environment.TickCount64 < _buildReminderUntil ? " (finish or cancel the room to use other keys)" : string.Empty;
@@ -2892,6 +3351,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ? $"   {_texts.Staff.FullName(profile)}, {_texts.Staff.Profession(profile.Class)}: {_texts.Staff.Description(profile)}"
             : string.Empty;
     }
+
+    /// <summary>The names of the original's languages installed, as the settings take them, in their files' order.</summary>
+    private static List<string> InstalledLanguageNames(ThemeHospitalInstall install) =>
+        [.. install.InstalledLanguages().Order().Select(GameConfig.OriginalLanguageName).OfType<string>()];
 
     /// <summary>
     /// The texts in the settings' language if it is installed, else in English, else in the first installed language.
