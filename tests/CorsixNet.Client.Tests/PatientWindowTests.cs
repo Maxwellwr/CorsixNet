@@ -52,6 +52,6 @@ public class PatientWindowTests
         var host = new WindowTestHost();
 
         Assert.Empty(FaxWindow.Pending(host.Simulation, 0));
-        Assert.Equal(["No faxes waiting."], host.Lines(new FaxWindow()));
+        Assert.Equal("No faxes waiting.", host.Lines(new FaxWindow())[0]);
     }
 }

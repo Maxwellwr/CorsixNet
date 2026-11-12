@@ -286,7 +286,9 @@ join.
   showing the infected and machines, and the fax codes themselves (`cheats.lua`). Money, a patient, winning, losing,
   prices, the death count, the reputation, the earthquake, the VIP, the emergency, the epidemic, the epidemics
   toggle, the end of the month and year cheats and the fax code toggles (Roujin's challenge, no rest, queue jump,
-  super doctors) are done (`CheatCommand`), with no key in the client.
+  super doctors) are done (`CheatCommand`). The fax's keypad is done (`FaxWindow`, `UIFax:validate`): 24328 opens the
+  cheats window with the adviser's line, the four toggle codes switch their cheat with its announcement, and a wrong code
+  buzzes; the cheats window does not yet remember being unlocked.
 - Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
   (Partial: debug keys H, Ctrl+1-4).
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.
