@@ -1,0 +1,78 @@
+// Mood icons over humanoids, after CorsixTH CorsixTH/Lua/entities/humanoid.lua (moods, Humanoid:setMood) and
+// entity.lua (Entity:setMoodInfo).
+// Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
+
+using CorsixNet.Sim;
+using CorsixNet.Sim.Entities;
+using CorsixNet.Sim.People;
+
+namespace CorsixNet.Client.Maps;
+
+/// <summary>
+/// The mood icon a humanoid shows: of the moods active for it, the one of the highest priority (<c>Humanoid:setMood</c>),
+/// from humanoid.lua's table of icons and priorities. The moods are worked out from the simulation's state where CorsixTH
+/// switches them on and off.
+/// </summary>
+internal static class HumanoidMoods
+{
+    /// <summary>How far above the humanoid the icon is drawn (<c>mood_info:setPosition(-1, -96)</c>).</summary>
+    public const int OffsetX = -1;
+
+    /// <inheritdoc cref="OffsetX"/>
+    public const int OffsetY = -96;
+
+    /// <summary>The animation of the humanoid's mood icon, or null for none.</summary>
+    public static int? Icon(Simulation simulation, Humanoid humanoid)
+    {
+        var icon = 0;
+        var priority = -1;
+
+        void Offer(bool active, int animation, int moodPriority)
+        {
+            if (active && moodPriority > priority)
+            {
+                icon = animation;
+                priority = moodPriority;
+            }
+        }
+
+        if (humanoid.Behaviour is PatientBehaviour patient)
+        {
+            var dying = patient.Phase == PatientPhase.Dying;
+            var home = patient.Phase == PatientPhase.GoingHome;
+            Offer(dying, 4046, 60); // dead
+            Offer(home && patient.IsCured, 4048, 60); // cured
+            Offer(home && patient.HomeMood == PatientHomeMood.Exit, 4052, 60); // exit
+            Offer(home && patient.HomeMood == PatientHomeMood.SadMoney, 4018, 55); // sad_money
+            Offer(patient.EmergencyIndex != 0, 3914, 50); // emergency
+
+            // Epidemic:startCoverUp shows the infected patients' status: infected, marked, chosen by a nurse, vaccinated.
+            if (patient.IsInfected && humanoid.HospitalPlayer < simulation.Hospitals.Count
+                && simulation.Hospitals[humanoid.HospitalPlayer].Epidemics.Current is { IsCoverUp: true })
+            {
+                var epidemic = patient.IsVaccinated ? 4566 : patient.VaccinatingNurseId != 0 ? 4572 : patient.IsMarkedForVaccination ? 4570 : 4574;
+                Offer(true, epidemic, 55);
+            }
+
+            // Patient:_dailyHealthChecks's health_treshold_rangemap: dying1 to dying5 as health falls below 0.22.
+            if (!patient.IsCured && !dying && patient.Health < 0.22m)
+            {
+                var stage = patient.Health < 0.06m ? 4 : patient.Health < 0.10m ? 3 : patient.Health < 0.14m ? 2 : patient.Health < 0.18m ? 1 : 0;
+                Offer(true, 4000 + (2 * stage), 41 + stage);
+            }
+
+            Offer(patient.IsSad, 4578, 40); // sad2
+            Offer(patient.Phase == PatientPhase.Waiting, 5006, 39); // patient_wait: no room to go to
+            Offer(patient.IsNeedingToilet, 3996, 5); // poo
+            Offer(patient.IsThirsty, 3986, 4); // thirsty
+        }
+        else if (humanoid.Profile is not null)
+        {
+            Offer(humanoid.IsFired, 4052, 60); // exit
+            Offer(humanoid.RaiseRequest > 0, 4576, 40); // pay_rise
+            Offer(humanoid.IsTiredMoodShown, 3990, 30); // tired
+        }
+
+        return priority < 0 ? null : icon;
+    }
+}

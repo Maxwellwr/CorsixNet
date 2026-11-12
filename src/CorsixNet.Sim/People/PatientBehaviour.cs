@@ -95,6 +95,19 @@ public enum PatientPhase : byte
     Dying,
 }
 
+/// <summary>The mood icon of a patient who goes home uncured (<c>Patient:goHome</c>'s reasons).</summary>
+public enum PatientHomeMood : byte
+{
+    /// <summary>Not gone home uncured.</summary>
+    None,
+
+    /// <summary>Kicked out or evacuated (<c>exit</c>).</summary>
+    Exit,
+
+    /// <summary>The treatment cost too much (<c>sad_money</c>).</summary>
+    SadMoney,
+}
+
 /// <summary>Where a dead patient is on the way out (die.lua's phases).</summary>
 public enum DyingStage : byte
 {
@@ -506,6 +519,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     public bool IsSad { get; internal set; }
 
     /// <summary>
+    /// The mood a patient leaves with when not cured (<c>Patient:goHome</c>): <c>exit</c> when kicked out or evacuated,
+    /// <c>sad_money</c> when the treatment cost too much.
+    /// </summary>
+    public PatientHomeMood HomeMood { get; private set; }
+
+    /// <summary>
     /// The patient's health on each of their last <see cref="HealthHistorySize"/> days in the hospital, oldest first, for
     /// the patient window's graph (CorsixTH's <c>health_history</c> ring).
     /// </summary>
@@ -818,6 +837,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
         LeaveQueue(simulation, humanoid);
         Waiting = -1;
+        HomeMood = PatientHomeMood.Exit;
         GoHome(simulation, humanoid);
     }
 
@@ -3263,6 +3283,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (reason is { } why)
         {
             PatientCare.NotCured(simulation, humanoid, this, why);
+            HomeMood = why == ReputationChange.OverPriced ? PatientHomeMood.SadMoney : PatientHomeMood.Exit;
         }
 
         Phase = PatientPhase.GoingHome;
@@ -3379,6 +3400,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteInt32(_nextBench);
         writer.WriteInt32(_benchDrink);
         writer.WriteBool(_kingChange);
+        writer.WriteByte((byte)HomeMood);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -3516,6 +3538,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         if (reader.Version is 0 or >= 87)
         {
             patient._kingChange = reader.ReadBool();
+        }
+
+        if (reader.Version is 0 or >= 88)
+        {
+            var mood = reader.ReadByte();
+            patient.HomeMood = mood <= (byte)PatientHomeMood.SadMoney ? (PatientHomeMood)mood : throw new InvalidDataException($"Unknown home mood {mood}.");
         }
 
         return patient;

@@ -2100,7 +2100,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             case Humanoid { Behaviour: GrimReaperBehaviour { Phase: GrimReaperPhase.Closing } }:
                 break;
             case Humanoid humanoid:
-                _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
+                _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick, HumanoidMoods.Icon(simulation, humanoid));
                 break;
             case RoomObject placed:
                 var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;

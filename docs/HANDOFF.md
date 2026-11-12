@@ -324,7 +324,12 @@ Next, in this order (2026-11-10):
    once rested if it has room for them (`RestingBehaviour.ReturnRoomId`, CorsixTH's `last_room`;
    `RoomVisits.ReturnToLastRoom`), staff on call (a handyman with a job, a nurse going to vaccinate, staff walking to
    a room) neither rest nor stop tiring in the staff room, and very tired staff show the tired mood until rested
-   (`Humanoid.IsTiredMoodShown`; text in the staff window, the icon 3990 is not drawn yet). Save format 74. Left out:
+   (`Humanoid.IsTiredMoodShown`; text in the staff window). Save format 74. Mood icons drawn (2026-11-12, MSI):
+   `HumanoidMoods` picks the highest-priority active mood of humanoid.lua's table and `HumanoidDrawing` draws it 96 px
+   up (setMoodInfo): dead, cured, exit, sad_money (`PatientBehaviour.HomeMood`, save format 88), emergency, the
+   cover-up's epidemic statuses, dying1-5 by health, sad2, patient_wait (no room), poo, thirsty; staff exit, pay_rise,
+   tired. Not yet: staff_wait (the moment a patient walks from the queue to the door), the GP's idea3/reflexion, the
+   queue mood while dragging in the queue window, cold/hot on hover. Left out:
    meander.lua's idle staff going back to any `last_room` that needs staff (rooms here call staff themselves).
 2. Looks of visual diseases: Slack Male/Female done (PR #212: slack tongues and bald heads, with the GP chair, drinks
    machine, loo, X-ray, scanner and blood machine; a slack woman borrows a standard woman's animations,
