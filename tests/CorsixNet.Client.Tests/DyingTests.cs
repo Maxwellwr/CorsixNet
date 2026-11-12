@@ -102,6 +102,12 @@ public class DyingTests
         var grim = Assert.IsType<GrimReaperBehaviour>(reaper.Behaviour);
         Assert.Equal(HumanoidType.GrimReaper, reaper.Type);
         Assert.Equal(HumanoidType.StandardMalePatient, man.Type);
+
+        // The gates to hell block their tile while open, and leave a way round (die.lua, gates_to_hell.lua).
+        var hole = grim.HoleTile;
+        Assert.False(simulation.Map[hole.X, hole.Y].Has(TileFlags.Passable));
+        Assert.False(simulation.Map[hole.X, hole.Y].Has(TileFlags.Buildable));
+        Assert.Equal(4, simulation.Pathfinder.FindDistance(simulation.Map, grim.UseTile, grim.PatientUseTile));
         for (var tick = 0; tick < 3000 && !reaper.IsDespawning; tick++)
         {
             simulation.Step();
@@ -128,6 +134,7 @@ public class DyingTests
 
         Assert.True(man.IsDespawning || simulation.FindEntity(man.Id) is null);
         Assert.True(reaper.IsDespawning);
+        Assert.True(simulation.Map[hole.X, hole.Y].Has(TileFlags.Passable | TileFlags.Buildable));
         Assert.Equal([DyingStage.OnGround, DyingStage.AwaitingRise, DyingStage.RisingToHell, DyingStage.WalkingToHole, DyingStage.FallingIn], stages);
         Assert.Equal([GrimReaperPhase.Spawning, GrimReaperPhase.Standing, GrimReaperPhase.Walking, GrimReaperPhase.Waiting, GrimReaperPhase.Swiping, GrimReaperPhase.Leaving, GrimReaperPhase.Closing], reaperPhases.SkipWhile(p => p == GrimReaperPhase.Spawning).Prepend(GrimReaperPhase.Spawning).ToList());
     }
