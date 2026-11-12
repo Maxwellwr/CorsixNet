@@ -43,15 +43,30 @@ public sealed class LevelMap
         Height = height;
         PlayerCount = playerCount;
         _tiles = new MapTile[width * height];
-        _cameraTiles = new TilePosition[playerCount];
-        _heliportTiles = new TilePosition[playerCount];
+        _cameraTiles = new TilePosition[Math.Max(playerCount, MaxPlayers)];
+        _heliportTiles = new TilePosition[Math.Max(playerCount, MaxPlayers)];
     }
 
     public int Width { get; }
 
     public int Height { get; }
 
-    public int PlayerCount { get; }
+    /// <summary>The most players a map file is for (CorsixTH's <c>max_player_count</c>).</summary>
+    public const int MaxPlayers = 4;
+
+    public int PlayerCount { get; private set; }
+
+    /// <summary>
+    /// <c>level_map::set_player_count</c>, for the map editor: the players' camera and heliport tiles are kept, also for
+    /// players dropped and added again.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">The count is not between 1 and <see cref="MaxPlayers"/>.</exception>
+    public void SetPlayerCount(int count)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(count, Math.Min(MaxPlayers, _cameraTiles.Length));
+        PlayerCount = count;
+    }
 
     /// <summary>Number of land parcels, including parcel 0 (outside every parcel).</summary>
     /// <remarks>Changing it keeps the owners of parcels that still exist; new parcels have no owner.</remarks>
@@ -183,14 +198,21 @@ public sealed class LevelMap
     }
 
     /// <summary>Tile the camera starts on for <paramref name="player"/> (0-based).</summary>
-    public TilePosition GetCameraTile(int player) => _cameraTiles[player];
+    public TilePosition GetCameraTile(int player) => _cameraTiles[CheckPlayer(player)];
 
-    public void SetCameraTile(int player, TilePosition tile) => _cameraTiles[player] = tile;
+    public void SetCameraTile(int player, TilePosition tile) => _cameraTiles[CheckPlayer(player)] = tile;
 
     /// <summary>Tile where the VIP helicopter lands for <paramref name="player"/> (0-based).</summary>
-    public TilePosition GetHeliportTile(int player) => _heliportTiles[player];
+    public TilePosition GetHeliportTile(int player) => _heliportTiles[CheckPlayer(player)];
 
-    public void SetHeliportTile(int player, TilePosition tile) => _heliportTiles[player] = tile;
+    public void SetHeliportTile(int player, TilePosition tile) => _heliportTiles[CheckPlayer(player)] = tile;
+
+    private int CheckPlayer(int player)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(player);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(player, PlayerCount);
+        return player;
+    }
 
     /// <summary>
     /// Recomputes the shadow flags cast by walls. Ported from CorsixTH's <c>level_map::update_shadows</c>.
