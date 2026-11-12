@@ -194,6 +194,10 @@ Done and committed:
   Options, Hotkeys, Assign opens the hotkey assignment dialog (hotkey_assign.lua; HotkeyAssignWindow): panes of
   the actions above, click a key then press the new one (Esc/Return alone refused, a key in use swaps), Accept
   saves hotkeys.txt and uses the keys at once. While it waits for a key the game sees no keyboard (IKeyCaptureWindow).
+  Map editor model (map_editor.lua, th_map.cpp level_map::save; 2026-11-12): Content/Levels/MapEditor.cs edits a
+  LevelMap loaded with LevelMapLoader.Load(file, editing: true) (no parcel owners): PaintFloor (outside/road/hospital
+  flags), walls, DeleteWalls, SetParcel, camera/heliport, Copy/Paste, ToMapFile/Save. MapFile.Create/ToBytes write
+  the format. Still needed: the editor's window with the sprite pages (drawing, on MSI) and the menu button.
   Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
   format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
   machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).

@@ -278,7 +278,11 @@ join.
 
 **Has:** sprite viewer (`--sprite-viewer`), map overlays for debugging.
 
-- Map editor: painting floor, walls, parcels, spawn points (`resizables/map_editor.lua`).
+- Map editor: its window, the sprite pages and the cursor drawn over the map, and the main menu's button
+  (`resizables/map_editor.lua`). The editing itself is done (`MapEditor`): the blank map, painting floor and wall
+  sprites with the floor's flags, deleting walls, parcels, the camera and heliport tiles, copying and pasting areas,
+  and saving the map as a map file (`MapFile.ToBytes`, `level_map::save` in `th_map.cpp`); not yet the player
+  count and objects bigger than a tile making room for each other (`checkObjectSpace`).
 - Cheats dialog (`resizables/cheats_dialog.lua`) and the fax code that opens it; the cheats for research,
   showing the infected and machines, and the fax codes themselves (`cheats.lua`). Money, a patient, winning, losing,
   prices, the death count, the reputation, the earthquake, the VIP, the emergency, the epidemic, the epidemics
