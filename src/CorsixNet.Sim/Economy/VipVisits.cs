@@ -57,6 +57,12 @@ public sealed class VipVisits
     /// <summary>Whether a VIP is asking to visit.</summary>
     public bool IsInvitationPending => InvitedName != 0;
 
+    /// <summary>
+    /// The last visit's report (<c>PlayerHospital:makeVipEndFax</c>), kept for the fax until it expires 20 days after
+    /// the VIP left, or null.
+    /// </summary>
+    public VipReport? Report { get; internal set; }
+
     /// <summary><c>World:nextVip</c>: the next VIP comes some days after <paramref name="today"/>.</summary>
     internal void ScheduleNext(SimRandom random, int mayorLaunch, long today) => NextVipDay = today + DaysUntilNext(random, mayorLaunch);
 
@@ -215,7 +221,17 @@ public sealed class VipVisits
             hospital.UnconditionalChangeReputation(vip.ReputationReward);
         }
 
+        hospital.Vips.Report = new VipReport(vip.Name, vip.Rating, vip.CashReward, simulation.Hours + (InvitationDays * GameDate.HoursPerDay));
         hospital.Vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Hours / GameDate.HoursPerDay);
+    }
+
+    /// <summary>Forgets the visit's report once its fax has expired.</summary>
+    internal static void TickReport(Simulation simulation, Hospital hospital)
+    {
+        if (hospital.Vips.Report is { } report && simulation.Hours >= report.Expires)
+        {
+            hospital.Vips.Report = null;
+        }
     }
 
     /// <summary>The rooms of a hospital, built or not, in the order they were made (CorsixTH's <c>world.rooms</c>).</summary>
@@ -254,6 +270,14 @@ public sealed class VipVisits
         writer.WriteInt32(Count);
         writer.WriteInt32(ThisYear);
         writer.WriteInt32(PleasedThisYear);
+        writer.WriteBool(Report is not null);
+        if (Report is { } report)
+        {
+            writer.WriteInt32(report.Name);
+            writer.WriteInt32(report.Rating);
+            writer.WriteInt32(report.CashReward);
+            writer.WriteInt64(report.Expires);
+        }
     }
 
     internal static VipVisits Read(SimReader reader)
@@ -268,8 +292,17 @@ public sealed class VipVisits
             ThisYear = reader.ReadInt32(),
             PleasedThisYear = reader.ReadInt32(),
         };
+        if ((reader.Version is 0 or >= 80) && reader.ReadBool())
+        {
+            visits.Report = new VipReport(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt64());
+        }
+
         return visits.InvitedName is >= 0 and <= NameCount ? visits : throw new InvalidDataException($"Unknown VIP name {visits.InvitedName}.");
     }
 
     private static bool HasRoom(Simulation simulation, int player) => RoomsOf(simulation, player).Any();
 }
+
+/// <summary>A VIP's report on their visit: who, their rating (1 best to 15 worst), the grant, and when the fax expires.</summary>
+public readonly record struct VipReport(int Name, int Rating, int CashReward, long Expires);
+
