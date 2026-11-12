@@ -79,13 +79,31 @@ internal sealed class HumanoidDrawing
     /// <summary>Forgets animation timing, for example when another level is loaded.</summary>
     public void Reset() => _current.Clear();
 
-    /// <summary>Draws the humanoid relative to the anchor of its <see cref="DrawTile"/>.</summary>
-    public void Draw(SpriteBatch batch, Humanoid humanoid, int anchorX, int anchorY, long tick)
+    /// <summary>
+    /// Draws the humanoid relative to the anchor of its <see cref="DrawTile"/>, with its mood icon above it if it has one
+    /// (<see cref="HumanoidMoods"/>).
+    /// </summary>
+    public void Draw(SpriteBatch batch, Humanoid humanoid, int anchorX, int anchorY, long tick, int? mood = null)
+    {
+        var (x, y) = DrawHumanoid(batch, humanoid, anchorX, anchorY, tick);
+        if (mood is { } icon)
+        {
+            // Entity:setMoodInfo: the icon's animation is a child of the humanoid's, 96 pixels up.
+            var set = _renderer.Animations;
+            var first = set.FirstFrame(icon);
+            var frame = set.Advance(first, (int)(tick % set.Length(first)));
+            _renderer.DrawFrame(batch, frame, x + HumanoidMoods.OffsetX, y + HumanoidMoods.OffsetY, NoLayers, flipHorizontally: false);
+        }
+    }
+
+    private static readonly byte[] NoLayers = new byte[Humanoid.LayerCount];
+
+    /// <summary>Draws the humanoid and returns where: its position on the screen, as its mood icon follows it.</summary>
+    private (int X, int Y) DrawHumanoid(SpriteBatch batch, Humanoid humanoid, int anchorX, int anchorY, long tick)
     {
         if (humanoid.ActionAnimation is { } action)
         {
-            DrawAction(batch, humanoid, action, tick);
-            return;
+            return DrawAction(batch, humanoid, action, tick);
         }
 
         var animations = WalkAnimations.GetValueOrDefault(humanoid.Type, WalkAnimations[HumanoidType.StandardMalePatient]);
@@ -136,13 +154,14 @@ internal sealed class HumanoidDrawing
         }
 
         DrawFrame(batch, humanoid, frame, anchorX + offsetX, anchorY + offsetY, layers, flip, tick);
+        return (anchorX + offsetX, anchorY + offsetY);
     }
 
     /// <summary>
     /// Draws the animation of using an object, from the tile the simulation gives (the object's, or the use
     /// position's), one frame per tick from when it started, as CorsixTH's use object action sets it.
     /// </summary>
-    private void DrawAction(SpriteBatch batch, Humanoid humanoid, AnimationRef action, long tick)
+    private (int X, int Y) DrawAction(SpriteBatch batch, Humanoid humanoid, AnimationRef action, long tick)
     {
         _current.Remove(humanoid.Id);
         var set = _renderer.Animations;
@@ -166,10 +185,11 @@ internal sealed class HumanoidDrawing
         if (humanoid.MorphAnimation is { } into)
         {
             DrawMorph(batch, humanoid, action, into, frame, elapsed, x, y, layers);
-            return;
+            return (x, y);
         }
 
         DrawFrame(batch, humanoid, frame, x, y, layers, humanoid.ActionAnimationFlip, tick);
+        return (x, y);
     }
 
     /// <summary>
