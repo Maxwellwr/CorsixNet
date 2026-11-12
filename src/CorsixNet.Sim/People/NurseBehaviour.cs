@@ -183,12 +183,41 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             case NursePhase.Treating:
                 if (Use is null || Use.Update(simulation, humanoid) == ObjectUseEvent.Done)
                 {
-                    // after_use_pharmacy: the room is done with the patient.
+                    // after_use_pharmacy: the invisible and the transparent become standard patients; the room is done with
+                    // the patient.
                     Use = null;
                     Wait();
+                    if (simulation.FindEntity(room.PatientId) is Humanoid drinker)
+                    {
+                        BecomeStandard(simulation, drinker);
+                    }
+
                     RoomVisits.DealtWithPatient(simulation, room);
                 }
 
+                break;
+        }
+    }
+
+    /// <summary>
+    /// <c>after_use_pharmacy</c>: an invisible or transparent man becomes a standard man, a transparent woman a standard
+    /// woman. The invisible man gets his own head and clothes (invisibility.lua's <c>cured_layers</c>, picked here).
+    /// </summary>
+    private static void BecomeStandard(Simulation simulation, Humanoid patient)
+    {
+        switch (patient.Type)
+        {
+            case HumanoidType.InvisiblePatient:
+                patient.Type = HumanoidType.StandardMalePatient;
+                patient.SetLayer(0, (byte)(simulation.Random.NextInclusive(1, 5) * 2));
+                patient.SetLayer(1, (byte)(simulation.Random.NextInclusive(0, 3) * 2));
+                patient.SetLayer(2, 4);
+                break;
+            case HumanoidType.TransparentMalePatient:
+                patient.Type = HumanoidType.StandardMalePatient;
+                break;
+            case HumanoidType.TransparentFemalePatient:
+                patient.Type = HumanoidType.StandardFemalePatient;
                 break;
         }
     }
@@ -216,7 +245,7 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
             return;
         }
 
-        var layer3 = patient.Type == HumanoidType.StandardFemalePatient
+        var layer3 = patient.Type is HumanoidType.StandardFemalePatient or HumanoidType.TransparentFemalePatient
             ? simulation.Random.NextInclusive(0, 1) * 4
             : simulation.Random.NextInclusive(0, 2) * 2;
         Use = MultiObjectUse.Start(simulation, humanoid, cabinet, patient, layer3);

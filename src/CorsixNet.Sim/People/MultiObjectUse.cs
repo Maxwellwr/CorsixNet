@@ -219,6 +219,11 @@ public sealed class MultiObjectUse
         {
             useWith.SetActionAnimation(simulation, secondary, flip, useWith.Tile, useWith.Tile, 0);
             useWith.IsHidden = false;
+            if (current.SecondaryMorph is { } into)
+            {
+                // {"morph", A, B} for the one with the user (pharmacy_cabinet.lua's invisible and transparent patients).
+                useWith.SetMorph(into, flip, 1);
+            }
         }
         else if (InvisiblePhases is var (from, to) && (CorsixPhase(animations, phase) < from || CorsixPhase(animations, phase) > to))
         {

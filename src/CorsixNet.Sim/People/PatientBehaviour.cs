@@ -3069,7 +3069,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary><c>Humanoid:isMalePatient</c>: a patient whose type is not a woman's.</summary>
     private static bool IsMalePatient(HumanoidType type) => type is HumanoidType.StandardMalePatient or HumanoidType.AlternateMalePatient
         or HumanoidType.SlackMalePatient or HumanoidType.ChewbaccaPatient or HumanoidType.AlienMalePatient or HumanoidType.StrippedMalePatient
-        or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 or HumanoidType.GownedMalePatient;
+        or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 or HumanoidType.GownedMalePatient
+        or HumanoidType.TransparentMalePatient or HumanoidType.InvisiblePatient;
 
     /// <summary>The grim reaper is in his place: after a pause the patient gets up (die.lua's phase 4).</summary>
     internal void ReaperReady(Humanoid humanoid)

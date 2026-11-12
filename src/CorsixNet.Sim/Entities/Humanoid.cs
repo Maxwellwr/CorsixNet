@@ -94,6 +94,15 @@ public enum HumanoidType : byte
 
     /// <summary>The grim reaper, who takes dead men to hell (entities/humanoids/grim_reaper.lua).</summary>
     GrimReaper = 24,
+
+    /// <summary>CorsixTH's "Transparent Male Patient": see-through (diseases/transparency.lua) until the pharmacy.</summary>
+    TransparentMalePatient = 25,
+
+    /// <summary>CorsixTH's "Transparent Female Patient".</summary>
+    TransparentFemalePatient = 26,
+
+    /// <summary>CorsixTH's "Invisible Patient": only clothes show (diseases/invisibility.lua) until the pharmacy.</summary>
+    InvisiblePatient = 27,
 }
 
 /// <summary>A person in the world: for now, one who can walk along a path.</summary>
@@ -912,6 +921,34 @@ public sealed class Humanoid : Entity
             layers[4] = (byte)((first == 0 && second == 0 ? 1 : third) * 2);
             layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
             return new Humanoid(id, tile, HumanoidType.AlternateMalePatient, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
+        if (look == PatientLook.Invisible)
+        {
+            // invisibility.lua: the clothes in layers 0 to 2; the man seen once cured (cured_layers) is picked then.
+            layers[0] = 2;
+            layers[2] = 4;
+            return new Humanoid(id, tile, HumanoidType.InvisiblePatient, layers) { HospitalPlayer = hospitalPlayer };
+        }
+
+        if (look == PatientLook.Transparent)
+        {
+            // transparency.lua: a man (heads 1 to 5, layer 2 0 to 2) or a woman (heads 1 to 4).
+            HumanoidType transparent;
+            if (random.NextInclusive(0, 1) == 0)
+            {
+                transparent = HumanoidType.TransparentMalePatient;
+                layers[0] = (byte)(random.NextInclusive(1, 5) * 2);
+                layers[2] = (byte)(random.NextInclusive(0, 2) * 2);
+            }
+            else
+            {
+                transparent = HumanoidType.TransparentFemalePatient;
+                layers[0] = (byte)(random.NextInclusive(1, 4) * 2);
+            }
+
+            layers[1] = (byte)(random.NextInclusive(0, 3) * 2);
+            return new Humanoid(id, tile, transparent, layers) { HospitalPlayer = hospitalPlayer };
         }
 
         if (look == PatientLook.Hairyitis)

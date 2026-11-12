@@ -26,6 +26,12 @@ public enum PatientLook : byte
 
     /// <summary>A standard woman, never a man (<c>diseases/pregnant.lua</c>).</summary>
     Pregnant,
+
+    /// <summary>A see-through man or woman (<c>diseases/transparency.lua</c>).</summary>
+    Transparent,
+
+    /// <summary>A patient of whom only the clothes show (<c>diseases/invisibility.lua</c>).</summary>
+    Invisible,
 }
 
 /// <summary>
