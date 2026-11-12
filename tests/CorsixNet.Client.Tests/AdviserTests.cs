@@ -399,3 +399,36 @@ public class AdviserTests
         Assert.Equal(50, lines.Sum(line => line.Split(' ').Length));
     }
 }
+
+/// <summary>CorsixTH's own adviser messages, named in its language files.</summary>
+public class AdviserNameTests
+{
+    [Fact]
+    public void EveryNamedMessageIsInEnglishAndTranslated()
+    {
+        var languages = CorsixNet.Content.Languages.CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages"));
+        var english = languages.Load("English", _ => null);
+        var german = languages.Load("German", _ => null);
+        var advice = typeof(AdviserChecks).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .SelectMany(field => field.GetValue(null) switch
+            {
+                Advice one => [one],
+                Advice[] many => many,
+                _ => [],
+            })
+            .Where(a => a.Name is not null)
+            .ToList();
+
+        Assert.NotEmpty(advice);
+        foreach (var named in advice)
+        {
+            Assert.NotNull(english.Get(named.Name!));
+            Assert.NotNull(german.Get(named.Name!));
+        }
+
+        var texts = new CorsixNet.Content.OriginalTexts(EmptyStrings(), german);
+        Assert.Equal(german.Get("adviser.warnings.no_desk"), AdviserChecks.NoDesk.Text(texts));
+    }
+
+    private static CorsixNet.Formats.StringTable EmptyStrings() => CorsixNet.Formats.StringTable.Parse(new byte[] { 0, 0 });
+}

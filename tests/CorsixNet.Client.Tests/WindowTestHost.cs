@@ -22,7 +22,7 @@ internal sealed class WindowTestHost : IWindowHost
 
     public int Player => 0;
 
-    public OriginalTexts? Texts => null;
+    public OriginalTexts? Texts { get; set; }
 
     public Adviser Adviser { get; } = new();
 

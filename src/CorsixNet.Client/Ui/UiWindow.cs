@@ -59,6 +59,13 @@ internal static class OriginalTooltips
     public static string Get(IWindowHost host, int index, string fallback) => host.Texts?.String(32, index) ?? fallback;
 }
 
+/// <summary>CorsixTH's own interface strings, by name in its language files (<c>main_menu.new_game</c>).</summary>
+internal static class CorsixText
+{
+    /// <summary>The chosen translation's string by name, or <paramref name="fallback"/> (CorsixTH's English).</summary>
+    public static string Get(IWindowHost host, string name, string fallback) => host.Texts?.Named(name) ?? fallback;
+}
+
 /// <summary>One row of a window's table.</summary>
 internal sealed record WindowRow(IReadOnlyList<WindowCell> Cells)
 {

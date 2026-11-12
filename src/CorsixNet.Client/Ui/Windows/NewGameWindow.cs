@@ -42,24 +42,35 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
-        yield return WindowRow.Of("Player name", string.IsNullOrEmpty(playerName) ? "(player_name in config.txt)" : playerName);
+        // new_game_window.* and tooltip.new_game_window.* in CorsixTH's language files.
+        string Text(string key, string fallback) => CorsixText.Get(host, "new_game_window." + key, fallback);
+        string Tip(string key, string fallback) => CorsixText.Get(host, "tooltip.new_game_window." + key, fallback);
+        string Key(Difficulty difficulty) => difficulty switch
+        {
+            Difficulty.Easy => "easy",
+            Difficulty.Hard => "hard",
+            _ => "medium",
+        };
+
+        yield return WindowRow.Of(Text("player_name", "Player name"), string.IsNullOrEmpty(playerName) ? "(player_name in config.txt)" : playerName);
         yield return WindowRow.Of(
             [
-                "Difficulty",
-                .. available.Select(difficulty => WindowCell.Button(Name(difficulty), () => Selected = difficulty, highlight: difficulty == Selected).WithTooltip(Description(difficulty))),
+                Text("difficulty", "Difficulty"),
+                .. available.Select(difficulty => WindowCell.Button(Text(Key(difficulty), Name(difficulty)), () => Selected = difficulty, highlight: difficulty == Selected)
+                    .WithTooltip(Tip(Key(difficulty), Description(difficulty)))),
             ]);
-        yield return WindowCell.Line(Description(Selected), dim: true);
+        yield return WindowCell.Line(Tip(Key(Selected), Description(Selected)), dim: true);
         yield return WindowRow.Of(
-            "Tutorial",
-            WindowCell.Button(Tutorial ? "On" : "Off", () => Tutorial = !Tutorial, highlight: Tutorial)
-                .WithTooltip("Click this box if you want some help to get started in the game"));
+            Text("tutorial", "Tutorial"),
+            WindowCell.Button(Tutorial ? Text("option_on", "On") : Text("option_off", "Off"), () => Tutorial = !Tutorial, highlight: Tutorial)
+                .WithTooltip(Tip("tutorial", "Click this box if you want some help to get started in the game")));
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Start", () =>
+            WindowCell.Button(Text("start", "Start"), () =>
             {
                 host.Close(this);
                 start(Selected, Tutorial);
-            }, enabled: available.Count > 0).WithTooltip("Start the game with the chosen settings"),
-            WindowCell.Button("Cancel", () => host.Close(this)).WithTooltip("Oh, I didn't really mean to start a new game!"));
+            }, enabled: available.Count > 0).WithTooltip(Tip("start", "Start the game with the chosen settings")),
+            WindowCell.Button(Text("cancel", "Cancel"), () => host.Close(this)).WithTooltip(Tip("cancel", "Oh, I didn't really mean to start a new game!")));
     }
 }

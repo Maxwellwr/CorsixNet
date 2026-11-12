@@ -24,19 +24,23 @@ internal sealed class MainMenuWindow(Action<string> action, string version) : Ui
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
-        yield return Item("Campaign", "newgame", "Start the first level on the campaign");
-        yield return Item("Custom Campaign", "campaign", "Play a campaign created by the community");
-        yield return Item("Single Scenario", "scenario", "Build your hospital in a single scenario");
-        yield return Item("Continue Game", "continue", "Continue your latest saved game");
-        yield return Item("Load Game", "load", "Load a saved game");
-        yield return Item("Settings", "options", "Tweak various settings");
-        yield return Item("Map Editor", "mapeditor", "Create a custom map");
-        yield return Item("Exit", "exit", "No, no, please don't leave!");
+        yield return Item("new_game", "Campaign", "newgame", "Start the first level on the campaign");
+        yield return Item("custom_campaign", "Custom Campaign", "campaign", "Play a campaign created by the community");
+        yield return Item("custom_level", "Single Scenario", "scenario", "Build your hospital in a single scenario");
+        yield return Item("continue", "Continue Game", "continue", "Continue your latest saved game");
+        yield return Item("load_game", "Load Game", "load", "Load a saved game");
+        yield return Item("options", "Settings", "options", "Tweak various settings");
+        yield return Item("map_edit", "Map Editor", "mapeditor", "Create a custom map");
+        yield return Item("exit", "Exit", "exit", "No, no, please don't leave!");
         yield return WindowRow.Gap;
-        yield return WindowCell.Line("Version: " + version, dim: true);
+        yield return WindowCell.Line(CorsixText.Get(host, "main_menu.version", "Version: ") + version, dim: true);
 
-        WindowRow Item(string text, string name, string tooltip) =>
-            WindowRow.Of(WindowCell.Button(text, () => action(name)) with { Tooltip = tooltip });
+        // main_menu.* and tooltip.main_menu.* in CorsixTH's language files.
+        WindowRow Item(string key, string text, string name, string tooltip) =>
+            WindowRow.Of(WindowCell.Button(CorsixText.Get(host, "main_menu." + key, text), () => action(name)) with
+            {
+                Tooltip = CorsixText.Get(host, "tooltip.main_menu." + key, tooltip),
+            });
     }
 }
 
