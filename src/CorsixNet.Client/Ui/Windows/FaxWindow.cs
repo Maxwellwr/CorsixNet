@@ -2,6 +2,7 @@ using System.Globalization;
 using CorsixNet.Client.Maps;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
@@ -40,6 +41,11 @@ internal sealed class FaxWindow : UiWindow
             yield return $"vipreport:{report.Expires}";
         }
 
+        if (hospital.Emergencies.Report is { } result)
+        {
+            yield return $"emergencyreport:{result.Expires}";
+        }
+
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
         {
             yield return $"emergency:{offer.OfferExpires}";
@@ -75,6 +81,15 @@ internal sealed class FaxWindow : UiWindow
         {
             any = true;
             foreach (var line in VipReportLines(host, report))
+            {
+                yield return WindowCell.Line(line);
+            }
+        }
+
+        if (hospital.Emergencies.Report is { } result)
+        {
+            any = true;
+            foreach (var line in EmergencyReportLines(host, result))
             {
                 yield return WindowCell.Line(line);
             }
@@ -166,6 +181,20 @@ internal sealed class FaxWindow : UiWindow
         else if (report.Rating >= 11)
         {
             yield return new Advice(44, 195, "Your reputation has gone down.").Text(host.Texts);
+        }
+    }
+
+    /// <summary>
+    /// <c>PlayerHospital:makeEmergencyEndFax</c>: how many of the emergency's patients were saved, and, outside free
+    /// build mode, the bonus there was and what was earned. The original's strings (section 44) are used when loaded;
+    /// the English stand-ins are ours.
+    /// </summary>
+    internal static IEnumerable<string> EmergencyReportLines(IWindowHost host, EmergencyReport report)
+    {
+        yield return new Advice(44, 41, "You saved %d of the %d people in the emergency.").Text(host.Texts, report.Rescued, report.Total);
+        if (!host.Simulation.Rules.FreeBuild)
+        {
+            yield return new Advice(44, 40, "The most you could have earned was %d. You earned %d.").Text(host.Texts, report.MaxBonus, report.Earned);
         }
     }
 
