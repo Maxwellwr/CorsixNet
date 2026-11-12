@@ -2316,6 +2316,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         {
             // UltrascanRoom:commandEnteringPatient: the doctor walks to the machine's other end and waits there.
             Phase = PatientPhase.AtTrolley;
+            if (string.Equals(room.RoomType, RoomVisits.JellyVatRoom, StringComparison.Ordinal))
+            {
+                // JellyVatRoom:commandEnteringPatient: the patient waits facing the moulder (IdleAction west of one facing
+                // north, otherwise north).
+                humanoid.Face(placed.Orientation == Direction.North ? Direction.West : Direction.North);
+            }
+
             if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour doctor } staff)
             {
                 doctor.OnPatientUndressed(simulation, staff, room);
@@ -2561,6 +2568,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     LeaveRoom(simulation, humanoid);
                     return;
                 }
+
 
                 if (string.Equals(room.RoomType, RoomVisits.FractureClinicRoom, StringComparison.Ordinal))
                 {
