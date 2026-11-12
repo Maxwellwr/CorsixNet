@@ -95,7 +95,7 @@ public sealed class OriginalTexts
     {
         _strings = strings;
         _language = language;
-        Staff = new StaffTexts(strings);
+        Staff = new StaffTexts(strings, language);
     }
 
     /// <summary>CorsixTH's translation laid over the original's strings, or null.</summary>
