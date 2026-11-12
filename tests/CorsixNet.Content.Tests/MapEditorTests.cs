@@ -193,4 +193,23 @@ public sealed class MapEditorTests : IDisposable
             new[] { (new TilePosition(10, 10), MapEditor.EntranceLeftDoor, (byte)1), (new TilePosition(10, 11), MapEditor.EntranceRightDoor, (byte)1) },
             editor.Objects.Select(o => (o.Tile, o.ObjectType, o.Direction)).OrderBy(o => o.Tile.Y).ToArray());
     }
+
+    [Fact]
+    public void ThePlayerCountChangesAndKeepsTheCameras()
+    {
+        var editor = MapEditor.Blank();
+        editor.Map.SetPlayerCount(3);
+        editor.SetCamera(2, new TilePosition(40, 41));
+        editor.SetHeliport(2, new TilePosition(42, 43));
+        editor.Map.SetPlayerCount(2);
+        Assert.Throws<ArgumentOutOfRangeException>(() => editor.Map.GetCameraTile(2));
+        editor.Map.SetPlayerCount(3);
+        Assert.Throws<ArgumentOutOfRangeException>(() => editor.Map.SetPlayerCount(5));
+
+        var loaded = LevelMapLoader.Load(MapFile.Parse(editor.ToMapFile().ToBytes()), editing: true).Map;
+
+        Assert.Equal(3, loaded.PlayerCount);
+        Assert.Equal(new TilePosition(40, 41), loaded.GetCameraTile(2));
+        Assert.Equal(new TilePosition(42, 43), loaded.GetHeliportTile(2));
+    }
 }

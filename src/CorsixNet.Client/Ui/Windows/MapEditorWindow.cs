@@ -45,6 +45,10 @@ internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Ac
         }
 
         var players = tool.Editor.Map.PlayerCount;
+
+        // The editor menu's player count (menu.lua, map:setPlayerCount).
+        yield return new WindowRow([.. Enumerable.Range(1, 4).Select(count => WindowCell.Button(
+            count == 1 ? "1 player" : $"{count} players", () => tool.Editor.Map.SetPlayerCount(count), highlight: players == count))]);
         yield return WindowRow.Of(
             WindowCell.Button("Paste", () => Text(EditorMode.Paste), enabled: tool.Clip is not null, highlight: tool.Mode == EditorMode.Paste),
             WindowCell.Button("Delete wall", () => Text(EditorMode.DeleteWall), highlight: tool.Mode == EditorMode.DeleteWall));
@@ -144,8 +148,8 @@ internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Ac
         EditorMode.Sprite => "Left drag paints; right press while dragging paints in blocks; right drag copies.",
         EditorMode.DeleteWall => "Left drag removes walls and entrance doors.",
         EditorMode.Parcel => $"Left drag puts tiles into parcel {tool.Number}.",
-        EditorMode.Camera => $"Click the tile where player {tool.Number + 1}'s view starts ({Tile(tool.Editor.Map.GetCameraTile(tool.Number))}).",
-        EditorMode.Heliport => $"Click the tile where player {tool.Number + 1}'s helicopter lands ({Tile(tool.Editor.Map.GetHeliportTile(tool.Number))}).",
+        EditorMode.Camera when tool.Number < tool.Editor.Map.PlayerCount => $"Click the tile where player {tool.Number + 1}'s view starts ({Tile(tool.Editor.Map.GetCameraTile(tool.Number))}).",
+        EditorMode.Heliport when tool.Number < tool.Editor.Map.PlayerCount => $"Click the tile where player {tool.Number + 1}'s helicopter lands ({Tile(tool.Editor.Map.GetHeliportTile(tool.Number))}).",
         EditorMode.Paste => "Left click pastes the copied area; a left drag fills an area with it.",
         _ => "Choose a page; a right drag on the map copies an area.",
     };
