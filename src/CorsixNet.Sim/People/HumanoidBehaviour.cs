@@ -27,6 +27,9 @@ public enum BehaviourKind : byte
 
     /// <summary>A member of staff going to or resting in a staff room.</summary>
     Resting = 9,
+
+    /// <summary>The grim reaper fetching a dead patient.</summary>
+    GrimReaper = 10,
 }
 
 /// <summary>A member of staff whom a room sends for and who works in it.</summary>
@@ -76,6 +79,7 @@ public abstract class HumanoidBehaviour
             BehaviourKind.Inspector => InspectorBehaviour.ReadState(reader),
             BehaviourKind.Handyman => HandymanBehaviour.ReadState(reader),
             BehaviourKind.Resting => RestingBehaviour.ReadState(reader),
+            BehaviourKind.GrimReaper => GrimReaperBehaviour.ReadState(reader),
             _ => throw new InvalidDataException($"Unknown behaviour kind {(byte)kind}."),
         };
     }

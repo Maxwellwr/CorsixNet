@@ -39,8 +39,8 @@ public enum EarthquakeShake : byte
 /// main quake, which does a round of damage every 16 hours until its size is used up.
 /// </summary>
 /// <remarks>
-/// A round of damage wears the machines in every room (<c>Machine:earthquakeImpact</c>, done by the simulation when
-/// <see cref="Tick"/> says so). CorsixTH also knocks over patients in the corridors; the falling animation is not ported.
+/// A round of damage wears the machines in every room (<c>Machine:earthquakeImpact</c>) and may knock over patients out of
+/// rooms, done by the simulation when <see cref="Tick"/> says so.
 /// </remarks>
 public sealed class Earthquakes
 {

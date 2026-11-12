@@ -89,7 +89,15 @@ public sealed record RoomDefinition(
 /// <summary>
 /// What a kind of patient does on the spot (humanoid.lua's <c>vomit_anim</c> and <c>pee_anim</c>); null where it has none.
 /// </summary>
-public sealed record PatientAnimations(AnimationRef? Vomit, AnimationRef? Pee, AnimationRef? Yawn = null, AnimationRef? TapFoot = null, AnimationRef? CheckWatch = null);
+public sealed record PatientAnimations(AnimationRef? Vomit, AnimationRef? Pee, AnimationRef? Yawn = null, AnimationRef? TapFoot = null, AnimationRef? CheckWatch = null, AnimationRef? Falling = null, AnimationRef? OnGround = null, AnimationRef? GetUp = null, AnimationRef? ShakeFist = null);
+
+/// <summary>
+/// How a kind of patient dies (humanoid.lua's <c>die_anims</c>): the fall, then rising as a ghost, growing wings, putting
+/// the hands together and flying up to heaven; <see cref="RiseHell"/> stands up for the trip to hell. <see cref="Extra"/>
+/// plays between the fall and the rise (a transformation, or the Chewbacca patient's ending of the fall);
+/// <see cref="FallLength"/> cuts the fall short where the original's is broken.
+/// </summary>
+public sealed record DeathAnimations(AnimationRef Fall, AnimationRef Rise, AnimationRef RiseHell, AnimationRef Wings, AnimationRef Hands, AnimationRef Fly, AnimationRef? Extra = null, int? FallLength = null);
 
 public sealed class GameContent
 {
@@ -142,6 +150,19 @@ public sealed class GameContent
 
     /// <summary>The swing doors' animations, or null when no room has swing doors.</summary>
     public SwingDoorAnimations? SwingDoor { get; init; }
+
+    /// <summary>How each kind of patient dies, by type (humanoid.lua's <c>die_anims</c>).</summary>
+    public IReadOnlyDictionary<HumanoidType, DeathAnimations> DeathAnimations { get; init; } = new Dictionary<HumanoidType, DeathAnimations>();
+
+    /// <summary>
+    /// How a patient of the type dies: patients undressed or in a gown die as the standard man or woman they are.
+    /// </summary>
+    public DeathAnimations? FindDeathAnimations(HumanoidType type) => DeathAnimations.GetValueOrDefault(type switch
+    {
+        HumanoidType.StrippedMalePatient or HumanoidType.StrippedMalePatient2 or HumanoidType.StrippedMalePatient3 or HumanoidType.GownedMalePatient => HumanoidType.StandardMalePatient,
+        HumanoidType.StrippedFemalePatient or HumanoidType.StrippedFemalePatient2 or HumanoidType.StrippedFemalePatient3 or HumanoidType.GownedFemalePatient => HumanoidType.StandardFemalePatient,
+        _ => type,
+    });
 
     /// <summary>All object types, ordered by id.</summary>
     public IReadOnlyList<ObjectDefinition> Objects { get; }

@@ -86,6 +86,12 @@ public class PatientHealthTests
 
         simulation.Map[2, 2].RoomId = 0;
         patient.Update(simulation, humanoid);
+        Assert.Equal(PatientPhase.Dying, patient.Phase);
+        for (var tick = 0; tick < 1000 && !humanoid.IsDespawning; tick++)
+        {
+            humanoid.Update(simulation);
+        }
+
         Assert.True(humanoid.IsDespawning);
         var hospital = simulation.Hospitals[0];
         Assert.Equal(1, hospital.Deaths);

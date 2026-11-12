@@ -954,7 +954,7 @@ public static class Epidemics
         for (var i = epidemic.InfectedIds.Count - 1; i >= 0; i--)
         {
             var gone = simulation.FindEntity(epidemic.InfectedIds[i]) is not Humanoid { Behaviour: PatientBehaviour patient } humanoid
-                || (humanoid.IsDespawning && patient.Phase != PatientPhase.GoingHome)
+                || (humanoid.IsDespawning && patient.Phase != PatientPhase.GoingHome) || patient.Phase == PatientPhase.Dying
                 || (!epidemic.IsCoverUp && (patient.Phase == PatientPhase.GoingHome || patient.IsSetToDie));
             if (gone)
             {

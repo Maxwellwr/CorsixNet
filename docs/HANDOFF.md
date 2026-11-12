@@ -346,7 +346,8 @@ Next, in this order (2026-11-10):
    they turn into, uses the fixer once. Morphs: `UseAnimations.Morph` (`UseMorph`: into, rounds, mirrored, object
    visible) and `FlipFinish`; `Humanoid.MorphAnimation` is saved; the client draws CorsixTH's draw_morph (a line
    rising from the bottom of both animations; `AnimationRenderer.Extent`, `DrawFrameRows`, `SpriteAtlas.DrawRows`).
-   Seen live with `--load` + `--script`. Not yet: the alien death animations (4882/4886), the fixer's `early_list` draw order, the jelly vat's morph.
+   Seen live with `--load` + `--script`. Not yet: the fixer's `early_list` draw order (the jelly vat has no morph in
+   CorsixTH).
 
 Rooms' requirements (2026-11-11): when a room of the player's becomes active, `AdviserChecks` says what its
 `roomFinished` says in CorsixTH: a doctor for the GP, a nurse for the pharmacy or ward, a psychiatrist, a consultant
@@ -356,6 +357,15 @@ Staff put down in a room (2026-11-12): `AdviserChecks.StaffPlacement` says what 
 classes' `adviseWrongPersonForThisRoom` say: only researchers (research, DNA fixer), surgeons, psychiatrists, nurses
 or doctors work there, doctors or nurses cannot work in a room (S[11][124..130]), and a researcher or ward nurse put
 into a room full of them needs a desk of their own (CorsixTH's warnings.researcher_needs_desk_*, nurse_needs_desk_*).
+
+Dying (2026-11-11, save format 74): a dead patient (health run out out of a room, or a failed treatment once out of
+the room) takes one step aside, then falls east or south at random and goes to heaven: rise, wings, hands, and flying up
+4 pixels a tick for 30 ticks (die.lua's `action_die_tick`; `PatientPhase.Dying`, `DyingStage`, `GameContent.DeathAnimations`,
+aliens included; stripped and gowned patients die as the standard man or woman). The trip to hell (save format 75,
+`GrimReaperBehaviour`, `HumanoidType.GrimReaper`, `BehaviourKind.GrimReaper`): 65 % of the men (bloaty heads excepted) lie
+as a standard man while the grim reaper rises near the gates to hell (drawn from his behaviour, not a placed object),
+walks to his place and waits; the patient gets up, walks in and falls; he swings, leaves and the hole closes. Not yet: the
+hole blocking its tile and the way-round check, the sounds.
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to
