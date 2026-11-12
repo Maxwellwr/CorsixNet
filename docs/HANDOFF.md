@@ -208,7 +208,8 @@ Done and committed:
   (Hospital.DidItOnFloor), fax_received (first fax in a campaign level; client-side flag, not saved),
   information.emergency at helicopter phase 60, epidemic_health_inspector, reception_need_receptionist / no_desk_5 on
   buying a desk. Not yet: benches (sitting ratios need seated patients), doctor_crazy_overwork (no crazy doctors yet),
-  msgMultiReceptionDesks, the tutorial.
+  the tutorial. msgMultiReceptionDesks (reception_bottleneck, queue_too_long_at_reception, another_desk) runs when a
+  patient sets off for a desk or joins its queue (AdviserChecks.MultiReceptionDesks).
   Fax keypad (fax.lua UIFax:validate, cheats.lua processCheatCode): digits, Cancel, Correct and Validate in the fax
   window; 24328 opens the cheats window, 112 is accepted, the four toggle codes (FaxCodes.ToggleCheat, CorsixTH's
   n^5.00001 formula) send CheatCommand; fax_yes/fax_no sounds.

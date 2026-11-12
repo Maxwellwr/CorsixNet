@@ -1,6 +1,7 @@
 using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim.Calendar;
+using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -143,6 +144,31 @@ public class AdviserTests
         checks.Observe(host.Simulation, 0, null, 0);
 
         Assert.Equal(AdviserChecks.ReceptionNeedReceptionist.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void APatientSettingOffForReceptionWithAReceptionistTooManyAsksForAnotherDesk()
+    {
+        var host = new WindowTestHost();
+        host.Submit(new PlaceObjectCommand(ReceptionDesks.ObjectId, new TilePosition(8, 8), Direction.South));
+        host.Hire(StaffClass.Receptionist);
+        host.Hire(StaffClass.Receptionist, 7, 7);
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+        while (host.Adviser.Current is not null)
+        {
+            host.Adviser.Next(0);
+        }
+
+        var patient = host.AddPatient(10, 10);
+        for (var i = 0; i < 50 && patient.Behaviour is PatientBehaviour { Phase: PatientPhase.SeekReception }; i++)
+        {
+            host.Simulation.Step();
+        }
+
+        Assert.True(patient.Behaviour is PatientBehaviour { Phase: PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue });
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.AnotherDesk.Fallback, host.Adviser.Current);
     }
 
     [Fact]

@@ -99,6 +99,9 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice EmergencyArrived = new(11, 22, "The emergency patients have arrived. Treat them quickly.");
     public static readonly Advice EpidemicHealthInspector = new(21, 10, "The Health Inspector has heard about your epidemic and is on the way.");
     public static readonly Advice ReceptionNeedReceptionist = new(11, 106, "You need to hire a receptionist to greet your patients.");
+    public static readonly Advice ReceptionBottleneck = new(11, 134, "There is a bottleneck at Reception. Hire another Receptionist.");
+    public static readonly Advice QueueTooLongAtReception = new(11, 133, "You have too many patients waiting at Reception desks. Place another Reception desk and hire another Receptionist.");
+    public static readonly Advice AnotherDesk = new(0, 0, "You'll need to build another desk for that new receptionist.");
     public static readonly Advice NoDesk5 = new(0, 0, "Well it's about time, you should start to see some patients arriving soon!");
 
     /// <summary>Said the first time a handyman's priorities are changed (<c>handyman_adjust</c>, once only).</summary>
@@ -253,7 +256,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         }
 
         HandymanAdvice(snapshot, last, Say);
-        OneOffAdvice(simulation, snapshot, last, Say);
+        OneOffAdvice(simulation, player, snapshot, last, Say);
 
         if (snapshot.Deaths > last.Deaths)
         {
@@ -753,9 +756,10 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     /// Advice on things happening: a plant drooping badly for the first time (<c>plants_thirsty</c>, once a plant), the
     /// first patient to pee on the floor (<c>people_did_it_on_the_floor</c>), the first fax in a campaign level
     /// (<c>fax_received</c>), the emergency helicopter landing (<c>information.emergency</c>), the health inspector
-    /// setting off (<c>epidemic_health_inspector</c>), and a reception desk bought (<c>msgReceptionDesk</c>).
+    /// setting off (<c>epidemic_health_inspector</c>), a reception desk bought (<c>msgReceptionDesk</c>), and a patient
+    /// setting off for a desk (<c>msgMultiReceptionDesks</c>).
     /// </summary>
-    private void OneOffAdvice(Simulation simulation, Snapshot snapshot, Snapshot last, Action<Advice, object[]> say)
+    private void OneOffAdvice(Simulation simulation, int player, Snapshot snapshot, Snapshot last, Action<Advice, object[]> say)
     {
         foreach (var plant in snapshot.ThirstyPlants)
         {
@@ -786,6 +790,11 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             say(EpidemicHealthInspector, []);
         }
 
+        if (snapshot.SeekingReception.Any(id => !last.SeekingReception.Contains(id)))
+        {
+            MultiReceptionDesks(simulation, player, snapshot, say);
+        }
+
         if (snapshot.Desks > last.Desks)
         {
             // Hospital:msgReceptionDesk, when a desk is bought.
@@ -798,6 +807,35 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 say(NoDesk5, []);
                 _receptionAdvice = true;
             }
+        }
+    }
+
+    /// <summary>
+    /// <c>PlayerHospital:msgMultiReceptionDesks</c>, each time a patient sets off for a desk: with more than one
+    /// receptionist or desk, too few receptionists for long queues, long queues, or a receptionist with no desk.
+    /// </summary>
+    private static void MultiReceptionDesks(Simulation simulation, int player, Snapshot snapshot, Action<Advice, object[]> say)
+    {
+        var desks = snapshot.Desks;
+        var receptionists = snapshot.Receptionists;
+        if (!((receptionists > 1 && desks > 0) || (receptionists > 0 && desks > 1)))
+        {
+            return;
+        }
+
+        var queueTotal = ReceptionDesks.OfHospital(simulation, player, staffedOnly: true).Sum(desk => desk.Desk!.Queue.Count);
+        var queueAverage = queueTotal / desks;
+        if (receptionists < desks && queueAverage > 5)
+        {
+            say(ReceptionBottleneck, []);
+        }
+        else if (queueAverage > 4)
+        {
+            say(QueueTooLongAtReception, []);
+        }
+        else if (receptionists > desks)
+        {
+            say(AnotherDesk, []);
         }
     }
 
@@ -827,7 +865,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         int HelicopterPhase,
         int InspectorId,
         int Desks,
-        int Receptionists)
+        int Receptionists,
+        IReadOnlySet<int> SeekingReception)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -860,7 +899,11 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 hospital.Emergencies.HelicopterPhase ?? int.MinValue,
                 hospital.Epidemics.Current?.InspectorId ?? 0,
                 Count(simulation, player, ReceptionDesks.ObjectId),
-                staff.Count(s => s.Profile!.Class == StaffClass.Receptionist));
+                staff.Count(s => s.Profile!.Class == StaffClass.Receptionist),
+                simulation.Entities.OfType<Humanoid>()
+                    .Where(h => h.Behaviour is PatientBehaviour { Phase: PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue } && h.HospitalPlayer == player)
+                    .Select(h => h.Id)
+                    .ToHashSet());
         }
     }
 }
