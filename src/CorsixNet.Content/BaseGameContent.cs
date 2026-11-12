@@ -1277,22 +1277,24 @@ public static class BaseGameContent
     ];
 
     /// <summary>
-    /// Door animations (DoorE, DoorL) of entities/humanoid.lua's <c>walk_anims</c> table. The receptionist and undressed
+    /// Door animations (DoorE, DoorL, KnockN, KnockE, SwingL, SwingE) of entities/humanoid.lua's <c>walk_anims</c> table.
+    /// The original's knock_east animations are a single frame, and the slack male's is his idle one (1494), as CorsixTH
+    /// has it. The receptionist and undressed
     /// patients have none there; they never go through a room door.
     /// </summary>
     public static readonly IReadOnlyDictionary<HumanoidType, DoorAnimations> DoorAnimations = new Dictionary<HumanoidType, DoorAnimations>
     {
-        [HumanoidType.StandardMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12), EnteringSwing: new(2042, 6), LeavingSwing: new(2040, 9)),
-        [HumanoidType.StandardFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9)),
-        [HumanoidType.SlackFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9)),
-        [HumanoidType.SlackMalePatient] = new(Entering: new(1526, 10), Leaving: new(1524, 12)),
-        [HumanoidType.ChewbaccaPatient] = new(Entering: new(3528, 10), Leaving: new(3526, 12)),
-        [HumanoidType.AlternateMalePatient] = new(Entering: new(2750, 10), Leaving: new(2748, 12)),
+        [HumanoidType.StandardMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12), EnteringSwing: new(2042, 6), LeavingSwing: new(2040, 9), KnockNorth: new(286, 9), KnockEast: new(288, 1)),
+        [HumanoidType.StandardFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9), KnockNorth: new(294, 13), KnockEast: new(296, 1)),
+        [HumanoidType.SlackFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(2866, 6), LeavingSwing: new(2864, 9), KnockNorth: new(294, 13), KnockEast: new(296, 1)),
+        [HumanoidType.SlackMalePatient] = new(Entering: new(1526, 10), Leaving: new(1524, 12), KnockNorth: new(2764, 9), KnockEast: new(1494, 1)),
+        [HumanoidType.ChewbaccaPatient] = new(Entering: new(3528, 10), Leaving: new(3526, 12), KnockNorth: new(4150, 18), KnockEast: new(4152, 1)),
+        [HumanoidType.AlternateMalePatient] = new(Entering: new(2750, 10), Leaving: new(2748, 12), KnockNorth: new(2764, 9), KnockEast: new(2766, 1)),
 
         // Aliens have no door animations: a standard patient's show them going through a door, and they have swing door
         // animations of their own (3628, 3626).
-        [HumanoidType.AlienMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12), EnteringSwing: new(3628, 6), LeavingSwing: new(3626, 9)),
-        [HumanoidType.AlienFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(3628, 6), LeavingSwing: new(3626, 9)),
+        [HumanoidType.AlienMalePatient] = new(Entering: new(184, 10), Leaving: new(182, 12), EnteringSwing: new(3628, 6), LeavingSwing: new(3626, 9), KnockNorth: new(286, 9), KnockEast: new(288, 1)),
+        [HumanoidType.AlienFemalePatient] = new(Entering: new(260, 10), Leaving: new(258, 12), EnteringSwing: new(3628, 6), LeavingSwing: new(3626, 9), KnockNorth: new(294, 13), KnockEast: new(296, 1)),
         [HumanoidType.Doctor] = new(Entering: new(672, 10), Leaving: new(670, 12), EnteringSwing: new(4752, 6), LeavingSwing: new(4750, 5)),
         [HumanoidType.Nurse] = new(Entering: new(3266, 10), Leaving: new(3264, 12), EnteringSwing: new(3274, 6), LeavingSwing: new(3272, 7)),
         [HumanoidType.Handyman] = new(Entering: new(3288, 10), Leaving: new(3286, 12), EnteringSwing: new(3520, 6), LeavingSwing: new(3518, 9)),

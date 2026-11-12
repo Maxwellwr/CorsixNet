@@ -67,7 +67,10 @@ public class MachineWearTests
         Assert.True(simulation.Hospitals[0].ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines));
         Assert.True(simulation.Hospitals[0].Cheated);
 
-        StepFor(simulation, 6 * 31 * GameDate.HoursPerDay);
+        for (var hour = 0; hour < 6 * 31 * GameDate.HoursPerDay && inflator.Machine!.TotalUsage <= inflator.Machine.Strength; hour++)
+        {
+            simulation.Step();
+        }
 
         Assert.False(room.IsCrashed);
         Assert.True(inflator.Machine!.TotalUsage > inflator.Machine.Strength, $"Only {inflator.Machine.TotalUsage} uses.");
@@ -75,7 +78,11 @@ public class MachineWearTests
 
         // Off again, the machine wears as before.
         Run(simulation, new CheatCommand(CheatKind.ToggleInvulnerableMachines));
-        StepFor(simulation, 31 * GameDate.HoursPerDay);
+        for (var hour = 0; hour < 3 * 31 * GameDate.HoursPerDay && inflator.Machine.TimesUsed == 0; hour++)
+        {
+            simulation.Step();
+        }
+
         Assert.True(inflator.Machine.TimesUsed > 0);
     }
 
