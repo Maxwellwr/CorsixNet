@@ -60,6 +60,45 @@ public class HospitalOpeningTests
         Assert.Equal(original.ComputeStateHash(), restored.ComputeStateHash());
     }
 
+    [Fact]
+    public void TheTutorialHoldsTheWatchAndItsEndStartsItAfresh()
+    {
+        // World:onTick starts no "initial_opening" watch with ui.start_tutorial; the last chapter opens a new one.
+        var simulation = NewSimulation();
+        var hospital = simulation.Hospitals[0];
+        simulation.Schedule(0, new HoldOpeningWatchCommand(true));
+        for (var i = 0; i < 6000; i++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(hospital.IsOpeningWatchHeld);
+        Assert.False(hospital.IsOpen);
+
+        using (var stream = new MemoryStream())
+        {
+            simulation.Save(stream);
+            stream.Position = 0;
+            Assert.True(Simulation.Load(stream).Hospitals[0].IsOpeningWatchHeld);
+        }
+
+        simulation.Schedule(0, new HoldOpeningWatchCommand(false));
+        simulation.Step();
+        Assert.False(hospital.IsOpeningWatchHeld);
+        Assert.Equal(Hospital.OpeningSegments, hospital.OpenTimer);
+
+        // The watch's first hour went with the step that let it go.
+        Assert.Equal(5005, hospital.HoursUntilOpen);
+        for (var hour = 5005; hour > 1; hour--)
+        {
+            simulation.Step();
+        }
+
+        Assert.False(hospital.IsOpen);
+        simulation.Step();
+        Assert.True(hospital.IsOpen);
+    }
+
     private static Simulation NewSimulation()
     {
         var map = TestMaps.FromRows(

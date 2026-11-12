@@ -228,8 +228,10 @@ Done and committed:
   The whole tutorial was played live with --script (Esc menu, New game, Tutorial On, Start; then the desk, a
   receptionist, the GP's office from the room list with blueprint, door, windows, objects, Confirm and the help box, a
   doctor) and ends with the introduction texts; TutorialTests cover the phases too. The end shows
-  introduction texts 15-17 (OriginalTexts.IntroductionText). Not yet: CorsixTH holding back the reception and GP
-  advice and the opening watch during the tutorial.
+  introduction texts 15-17 (OriginalTexts.IntroductionText). As CorsixTH's ui.start_tutorial, a game started with the
+  tutorial never gets reception_need_receptionist or gps_office_need_doctor (AdviserChecks.StartedWithTutorial), and its
+  opening watch is held (HoldOpeningWatchCommand, Hospital.IsOpeningWatchHeld, save format 85) until the last chapter
+  starts it afresh; a game saved during the tutorial starts its watch afresh when loaded (2026-11-12, cloud).
   Surgeons change back into doctors at the screen when they leave (PR #264, format 82); the death animations, grim reaper
   and earthquake falls had been merged only into stacked branches and came to main with PR #262 (format 81).
   Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/

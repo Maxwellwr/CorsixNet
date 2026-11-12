@@ -591,6 +591,12 @@ public sealed class Hospital
     /// <summary>Hours left in the current segment of the opening watch (CorsixTH's <c>tick_timer</c>).</summary>
     private int OpenTickTimer { get; set; } = OpeningTickRate;
 
+    /// <summary>
+    /// Whether the opening watch waits for the tutorial: CorsixTH's <c>World:onTick</c> starts no "initial_opening"
+    /// watch while <c>ui.start_tutorial</c> is set, and the tutorial's last chapter starts one afresh.
+    /// </summary>
+    public bool IsOpeningWatchHeld { get; private set; }
+
     /// <summary>Hours until the hospital opens by itself; 0 once open.</summary>
     public int HoursUntilOpen => IsOpen ? 0 : OpenTimer < 0 ? 1 : OpenTickTimer + 1 + (OpenTimer * (OpeningTickRate + 1)) + 1;
 
@@ -1159,12 +1165,31 @@ public sealed class Hospital
     internal void Open() => IsOpen = true;
 
     /// <summary>
+    /// Holds the opening watch for the tutorial, or lets it go: the watch then starts afresh, as the tutorial's last
+    /// chapter opens a new <c>UIWatch</c> (game_ui.lua's tutorial_phases).
+    /// </summary>
+    internal void HoldOpeningWatch(bool hold)
+    {
+        if (IsOpen || hold == IsOpeningWatchHeld)
+        {
+            return;
+        }
+
+        IsOpeningWatchHeld = hold;
+        if (!hold)
+        {
+            OpenTimer = OpeningSegments;
+            OpenTickTimer = OpeningTickRate;
+        }
+    }
+
+    /// <summary>
     /// One hour of the opening watch, as CorsixTH's <c>UIWatch:onWorldTick</c> for "initial_opening": each segment
     /// takes <see cref="OpeningTickRate"/> + 1 hours, and an hour after the last one the hospital opens.
     /// </summary>
     internal void TickOpeningWatch()
     {
-        if (IsOpen)
+        if (IsOpen || IsOpeningWatchHeld)
         {
             return;
         }
@@ -1452,6 +1477,7 @@ public sealed class Hospital
         writer.WriteBool(Littered);
         writer.WriteBool(HandymanPrioritiesChanged);
         writer.WriteBool(DidItOnFloor);
+        writer.WriteBool(IsOpeningWatchHeld);
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1587,6 +1613,7 @@ public sealed class Hospital
         hospital.Littered = reader.Version is 0 or >= 77 ? reader.ReadBool() : false;
         hospital.HandymanPrioritiesChanged = reader.Version is 0 or >= 78 ? reader.ReadBool() : false;
         hospital.DidItOnFloor = reader.Version is 0 or >= 79 ? reader.ReadBool() : false;
+        hospital.IsOpeningWatchHeld = reader.Version is 0 or >= 85 && reader.ReadBool();
         return hospital;
     }
 

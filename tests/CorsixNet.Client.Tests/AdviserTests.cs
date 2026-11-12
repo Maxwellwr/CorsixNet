@@ -147,6 +147,36 @@ public class AdviserTests
     }
 
     [Fact]
+    public void TheTutorialAsksForTheReceptionistAndTheGpsDoctorItself()
+    {
+        // player_hospital.lua msgReceptionDesk and gp.lua roomFinished check ui.start_tutorial.
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1)) { StartedWithTutorial = true };
+        var gp = host.Simulation.AddEntity(id => new Room(id, "gp", new TileRect(2, 2, 4, 4), new OriginalTile[16]));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.AddEntity(id => new RoomObject(id, ReceptionDesks.ObjectId, new TilePosition(8, 8), Direction.North, 0));
+        gp.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AGpsOfficeWithoutADoctorAsksForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var gp = host.Simulation.AddEntity(id => new Room(id, "gp", new TileRect(2, 2, 4, 4), new OriginalTile[16]));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        gp.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.GpsOfficeNeedDoctor.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
     public void APatientSettingOffForReceptionWithAReceptionistTooManyAsksForAnotherDesk()
     {
         var host = new WindowTestHost();
