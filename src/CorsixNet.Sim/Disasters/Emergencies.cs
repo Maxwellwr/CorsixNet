@@ -168,6 +168,9 @@ public sealed class HospitalEmergencies
     /// <summary>The helicopter's phase when it is called: 120 hours before it shows.</summary>
     public const int HelicopterStart = -120;
 
+    /// <summary>The helicopter's phase when it has landed and the adviser says the patients have arrived.</summary>
+    public const int HelicopterLanded = 60;
+
     /// <summary>The number of the next planned emergency to look at (<c>next_emergency_no</c>).</summary>
     public int NextNumber { get; internal set; }
 
