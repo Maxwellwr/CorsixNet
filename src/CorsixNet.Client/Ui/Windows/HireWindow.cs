@@ -42,7 +42,8 @@ internal sealed class HireWindow : UiWindow
     {
         var simulation = host.Simulation;
         var hospital = simulation.Hospitals[host.Player];
-        yield return new WindowRow(StaffClasses.HireOrder.Select(staffClass => WindowCell.Button(
+        // hire_staff_window's doctors, nurses, handymen and receptionists tooltips are strings 23 to 26, in the hire order.
+        yield return new WindowRow(StaffClasses.HireOrder.Select((staffClass, order) => WindowCell.Button(
             string.Create(CultureInfo.InvariantCulture, $"{Plural(staffClass)} ({simulation.AvailableStaff(staffClass).Count})"),
             () =>
             {
@@ -50,7 +51,7 @@ internal sealed class HireWindow : UiWindow
                 _selected = 0;
                 host.PlaySound("selectx.wav");
             },
-            highlight: staffClass == _category)).ToList());
+            highlight: staffClass == _category).WithTooltip(OriginalTooltips.Get(host, 23 + order, "See the " + Plural(staffClass).ToLowerInvariant() + " looking for work"))).ToList());
         yield return WindowRow.Gap;
         var candidates = simulation.AvailableStaff(_category);
         _selected = Math.Clamp(_selected, 0, Math.Max(0, candidates.Count - 1));
@@ -83,7 +84,7 @@ internal sealed class HireWindow : UiWindow
                     }
 
                     host.StartHiring(_category, index);
-                }));
+                }).WithTooltip(OriginalTooltips.Get(host, 29, "Hire this person")));
             if (host.Texts?.Staff.Description(profile) is { Length: > 0 } description)
             {
                 yield return WindowCell.Line("    " + description, dim: true);

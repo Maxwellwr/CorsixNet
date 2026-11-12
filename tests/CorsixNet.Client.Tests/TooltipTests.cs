@@ -1,5 +1,6 @@
 using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Client.Tests;
@@ -13,7 +14,12 @@ public sealed class TooltipTests
         var host = new WindowTestHost();
         var nurse = host.Hire(StaffClass.Nurse);
         var patient = host.AddPatient();
-        UiWindow[] windows = [new BankManagerWindow(), new TownMapWindow(), new GraphWindow(), new ResearchWindow(), new PolicyWindow(), new StaffWindow(nurse.Id), new PatientWindow(patient.Id)];
+        UiWindow[] windows =
+        [
+            new BankManagerWindow(), new TownMapWindow(), new GraphWindow(), new ResearchWindow(), new PolicyWindow(), new StaffWindow(nurse.Id), new PatientWindow(patient.Id),
+            new HireWindow(), new CasebookWindow(), new InformationWindow(["Hello"]), new ConfirmWindow("Sure?", () => { }), new TipOfTheDayWindow(0),
+            new NewGameWindow([Difficulty.Easy, Difficulty.Medium], "Dr", _ => { }),
+        ];
 
         foreach (var window in windows)
         {

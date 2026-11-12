@@ -89,6 +89,9 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice NeedHandymanPlants = new(11, 93, "Hire a handyman to water the plants.");
 
     // handymen (Patient:tickDay's litter, World:newObject, CallsDispatcher:callForRepair)
+    /// <summary>Said the first time a handyman's priorities are changed (<c>handyman_adjust</c>, once only).</summary>
+    public static readonly Advice HandymanAdjust = new(11, 71, "You can make handymen clean better by setting their priorities.");
+
     public static readonly Advice NeedHandymanLitter = new(11, 70, "Patients have started to make a mess of your hospital: hire a handyman to clean up.");
     public static readonly Advice NeedHandymanMachines = new(11, 94, "Hire a handyman to keep your machines in order.");
     public static readonly Advice MachinesFallingApart = new(11, 4, "Your machines are falling apart: get your handymen to fix them!");

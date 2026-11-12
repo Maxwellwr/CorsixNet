@@ -43,7 +43,7 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
         yield return WindowRow.Of(
             [
                 "Difficulty",
-                .. available.Select(difficulty => WindowCell.Button(Name(difficulty), () => Selected = difficulty, highlight: difficulty == Selected)),
+                .. available.Select(difficulty => WindowCell.Button(Name(difficulty), () => Selected = difficulty, highlight: difficulty == Selected).WithTooltip(Description(difficulty))),
             ]);
         yield return WindowCell.Line(Description(Selected), dim: true);
         yield return WindowRow.Gap;
@@ -52,7 +52,7 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
             {
                 host.Close(this);
                 start(Selected);
-            }, enabled: available.Count > 0),
-            WindowCell.Button("Cancel", () => host.Close(this)));
+            }, enabled: available.Count > 0).WithTooltip("Start the game with the chosen settings"),
+            WindowCell.Button("Cancel", () => host.Close(this)).WithTooltip("Oh, I didn't really mean to start a new game!"));
     }
 }

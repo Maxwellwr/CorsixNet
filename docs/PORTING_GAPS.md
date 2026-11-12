@@ -64,8 +64,6 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   waiting patients, emergencies, fatigue, specialist rooms first), unless another waiting room scores better for them;
   with `staff_allowed_to_move`, staff idle in a room nobody waits for are called to a room with patients waiting.
   There is no call queue object or dispatching of handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
-- Handyman: the staff window's task priorities (`entities/humanoids/staff/handyman.lua`); sweeping, watering and
-  repairing machines are done.
 - Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
   policy's automatic raise and quitting are in `StaffEmployment`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
@@ -180,10 +178,10 @@ fonts, faces) and the details listed.
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
-- Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips for the remaining windows
-  (fax, casebook prices, hire, information, reports, new game) and for objects and people on the map (windows' cells
-  can carry one, `WindowCell.Tooltip`, drawn above the cursor; the bottom panel, staff, patient, queue, machine, bank,
-  town map, graphs, research and policy buttons have CorsixTH's `tooltip.*` texts, from the original's strings when
+- Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips for the fax, report and adviser history
+  windows and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
+  cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
+  information, confirm, tip of the day and new game buttons have CorsixTH's `tooltip.*` texts, from the original's strings when
   loaded, `OriginalTooltips`); object and humanoid highlighting on hover; hover info.
 - Strings and languages: CorsixTH's language files and their mapping of the original strings, translations, and
   showing them in windows (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`), and
