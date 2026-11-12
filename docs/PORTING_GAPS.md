@@ -15,7 +15,6 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Missing | CorsixTH source |
 |---|---|
 | Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
-| Treatment rooms: alien death animations (the jelly vat, its patients' wobble and the DNA fixer are done) | `entities/humanoid.lua` |
 | Facilities: (the staff room and training room are done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
 | Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
 | Room-specific rules: doors that can't be used while busy (swing doors of the operating theatre, ward), rooms that need two staff (operating theatre), max patients per room (ward beds) | `rooms/*.lua`, `objects/doors/*` |

@@ -431,7 +431,7 @@ public static class BaseGameContent
                     new(0, -1, CompleteCell), new(0, 0, CompleteCell), new(0, 1, UsePosition),
                 ],
                 UsePosition: (0, 1),
-                SecondaryUsePosition: (-2, 1)),
+                SecondaryUsePosition: (-2, 1), EarlyList: true),
             [Direction.East] = new(
                 [
                     new(-1, -2, CompleteCell), new(-1, -1, CompleteCell), new(-1, 0, CompleteCell),
@@ -632,10 +632,10 @@ public static class BaseGameContent
         {
             [Direction.North] = new(
                 [new(1, -1, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell)],
-                UsePosition: (1, -1)),
+                UsePosition: (1, -1), EarlyList: true),
             [Direction.East] = new(
                 [new(0, 1, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell)],
-                UsePosition: (0, 1)),
+                UsePosition: (0, 1), EarlyList: true),
             [Direction.South] = new(
                 [new(1, 0, UsePosition), new(-1, -1, CompleteCell), new(0, -1, CompleteCell), new(-1, 0, CompleteCell), new(0, 0, CompleteCell)],
                 UsePosition: (1, 0)),
@@ -924,7 +924,7 @@ public static class BaseGameContent
         new Dictionary<Direction, ObjectOrientation>
         {
             [Direction.North] = new([new(0, 0, NeedWestSide)]),
-            [Direction.East] = new([new(0, 0, NeedNorthSide)]),
+            [Direction.East] = new([new(0, 0, NeedNorthSide)], EarlyList: true),
         });
 
     /// <summary>
@@ -1075,7 +1075,7 @@ public static class BaseGameContent
             [Direction.East] = new(
                 [new(-1, -1, UsePosition), new(0, -1), new(1, -1), new(-1, 0, UsePosition), new(0, 0, UsePosition | NeedSouthSide), new(1, 0, UsePosition)],
                 UsePosition: (0, 0),
-                SecondaryUsePosition: (-1, -1)),
+                SecondaryUsePosition: (-1, -1), EarlyList: true),
         },
         MultiUsage: SlicerMultiUsage(),
         Machine: new(new(3400, 1), new(3464, 4), new(null, [new(3490, 41)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(1, -1)], [Direction.East] = [(-1, 1)] }));
@@ -1171,7 +1171,7 @@ public static class BaseGameContent
                     new(-2, -1, CompleteCell), new(-1, -1, CompleteCell), new(0, -1),
                     new(-2, 0, CompleteCell), new(-1, 0), new(0, 0, NeedSouthSide),
                     new(-1, 1, UsePosition),
-                ]),
+                ], EarlyList: true),
             [Direction.East] = new(
                 [
                     new(-1, -2, CompleteCell), new(0, -2, CompleteCell),
@@ -1220,7 +1220,7 @@ public static class BaseGameContent
                     new(-1, 0, UsePosition), new(0, 0, UsePosition | CompleteCell), new(-1, 1, UsePosition),
                 ],
                 UsePosition: (0, 0),
-                SecondaryUsePosition: (-1, 0)),
+                SecondaryUsePosition: (-1, 0), EarlyList: true),
         },
         MultiUsage: CastRemoverMultiUsage(),
         Machine: new(new(3388, 1), new(3468, 4), new(null, [new(3514, 20)], null), HandymanPositions: new Dictionary<Direction, IReadOnlyList<(int X, int Y)>> { [Direction.North] = [(0, -2), (-1, -1)], [Direction.East] = [(-1, -1), (-2, 0)] }));
@@ -1243,7 +1243,7 @@ public static class BaseGameContent
         ObjectType: 36,
         new Dictionary<Direction, ObjectOrientation>
         {
-            [Direction.North] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true),
+            [Direction.North] = new([new(0, 0, CompleteCell), new(1, 0, UsePosition)], AnimateFromUsePosition: true, EarlyList: true),
             [Direction.East] = new([new(0, 0, CompleteCell), new(0, 1, UsePosition)], AnimateFromUsePosition: true),
         },
         UsageNorth: LectureChairUse(),

@@ -136,6 +136,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly EntranceDoorDrawing _doors;
     private readonly Dictionary<TilePosition, List<Entity>> _entitiesByTile = [];
 
+    /// <summary>Entities drawn with their tile's north wall (CorsixTH's early list), by tile.</summary>
+    private readonly Dictionary<TilePosition, List<Entity>> _earlyByTile = [];
+
+    /// <summary>The tiles of placed objects of the early list, whose users are drawn early too.</summary>
+    private readonly HashSet<TilePosition> _earlyObjectTiles = [];
+
     /// <summary>Objects whose second part (CorsixTH's slave object) is drawn on the tile.</summary>
     private readonly Dictionary<TilePosition, List<RoomObject>> _slavePartsByTile = [];
 
@@ -663,7 +669,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 {
                     _objects.Draw(batch, shown.ObjectType, shown.Tile, shown.Orientation, Simulation!.Tick, shown.Tint);
                 }
-            }, tile => _entitiesByTile.TryGetValue(tile, out var here) && here.Any(e => e is Humanoid or Rat));
+            },
+            tile => _entitiesByTile.TryGetValue(tile, out var here) && here.Any(e => e is Humanoid or Rat),
+            (tile, anchorX, anchorY) => DrawEarlyEntities(batch, tile, anchorX, anchorY),
+            tile => _earlyByTile.TryGetValue(tile, out var early) && early.Count > 0);
             DrawOverlay(batch, map, view);
             if (_editorTool is { } editor && (_hoveredTile is not null || editor.IsDragging))
             {
@@ -1789,6 +1798,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             list.Clear();
         }
 
+        foreach (var list in _earlyByTile.Values)
+        {
+            list.Clear();
+        }
+
+        _earlyObjectTiles.Clear();
+
         foreach (var list in _slavePartsByTile.Values)
         {
             list.Clear();
@@ -1811,6 +1827,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (entity is Humanoid { HiddenObjectId: not 0 and var hidden })
             {
                 _hiddenObjects.Add(hidden);
+            }
+
+            if (entity is RoomObject early && IsEarlyObject(simulation, early))
+            {
+                _earlyObjectTiles.Add(early.Tile);
             }
         }
 
@@ -1856,6 +1877,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     partList.Add((entity, left, right));
                 }
 
+                continue;
+            }
+
+            // DrawFlags.EarlyList: an object of the early list, and whoever uses it (use_object.lua), with the north wall.
+            if ((entity is RoomObject earlyObject && IsEarlyObject(simulation, earlyObject))
+                || (entity is Humanoid { ActionAnimation: not null } user && _earlyObjectTiles.Contains(user.ActionAnimationTile)))
+            {
+                if (!_earlyByTile.TryGetValue(position, out var earlyList))
+                {
+                    earlyList = [];
+                    _earlyByTile[position] = earlyList;
+                }
+
+                earlyList.Add(entity);
                 continue;
             }
 
@@ -2065,6 +2100,24 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         DrawSlaveParts(batch, tile);
         DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
+    }
+
+    /// <summary>Whether a placed object facing its way is of the early list (<c>early_list</c>).</summary>
+    private static bool IsEarlyObject(Simulation simulation, RoomObject placed) =>
+        simulation.Content.FindObject(placed.ObjectType)?.Orientations.GetValueOrDefault(placed.Orientation) is { EarlyList: true };
+
+    /// <summary>The early entities of a tile, drawn after its north wall (level_map::draw's oEarlyEntities).</summary>
+    private void DrawEarlyEntities(SpriteBatch batch, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (Simulation is not { } simulation || !_earlyByTile.TryGetValue(tile, out var list))
+        {
+            return;
+        }
+
+        foreach (var entity in list)
+        {
+            DrawEntity(batch, simulation, entity, tile, anchorX, anchorY);
+        }
     }
 
     /// <summary>The parts of split objects, and of their users' animations, that <paramref name="tile"/> draws, each cropped to its column.</summary>
