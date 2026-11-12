@@ -302,7 +302,7 @@ join.
 **Has:** map layers, walls with shadows, windows, doors, objects and humanoids with layers and
 mirroring, blueprint drawing, bitmap fonts, palette remaps.
 
-- Animated map elements. (Transparent walls, X held or Shift+X toggled, are done.)
-- Smoke from broken machines, explosion animations. (Screen shake during earthquakes and the
-  `enable_screen_shake` option are done.)
+- (Done: transparent walls, X held or Shift+X toggled; machines' smoke and their crashed look after an explosion, which
+  is all CorsixTH draws for one (Machine:explodeMachine); screen shake during earthquakes. CorsixTH's level_map draws
+  the map's blocks unanimated, so there are no animated map elements to port.)
 - Video playback (Smacker intro/win/lose movies).
