@@ -203,7 +203,8 @@ Done and committed:
   change makes the adviser say handyman_adjust (Hospital.HandymanPrioritiesChanged).
   Tooltips (#74): OriginalTooltips.Get(host, index, fallback) reads section 32 (original_strings.lua's tooltip.*);
   most text windows' buttons have them now, including the fax, cheats, adviser history and level end windows
-  (TooltipTests lists the windows checked).
+  (TooltipTests lists the windows checked). The progress report's goals carry tooltip.status (ProgressReportWindow.Tooltip;
+  section 64 when loaded).
   More advice (#72; save format 79): long queues on day 10 (getRandomBusyRoom: queues_too_long, or for a doctor's room
   queue_too_long_send_doctor/need_doctors), plants_thirsty once a plant, people_did_it_on_the_floor
   (Hospital.DidItOnFloor), fax_received (first fax in a campaign level; client-side flag, not saved),

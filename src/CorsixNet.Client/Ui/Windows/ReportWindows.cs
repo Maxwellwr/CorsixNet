@@ -107,7 +107,7 @@ internal sealed class ProgressReportWindow : UiWindow
             var now = EndConditions.Measure(simulation, hospital, goal.Criterion);
             var met = now is { } value && (goal.AtLeast ? value >= goal.Value : value <= goal.Value);
             yield return WindowRow.Of(
-                new WindowCell(Name(goal.Criterion), Highlight: entry.IsLoseGoal),
+                new WindowCell(Name(goal.Criterion), Highlight: entry.IsLoseGoal).WithTooltip(Tooltip(host, goal.Criterion, entry.IsLoseGoal, goal.Value, now ?? 0)),
                 WindowCell.Number(now is { } shown ? Format(goal.Criterion, shown) : "-"),
                 WindowCell.Number((entry.IsLoseGoal ? (goal.AtLeast ? "lose above " : "lose below ") : goal.AtLeast ? "at least " : "at most ") + Format(goal.Criterion, goal.Value)),
                 entry.IsLoseGoal ? string.Create(CultureInfo.InvariantCulture, $"warning {(int)((entry.Progress ?? 0) * 100)} %") : met ? "met" : string.Empty);
@@ -130,6 +130,61 @@ internal sealed class ProgressReportWindow : UiWindow
         EndCriterion.PatientHappiness => "Patient happiness",
         _ => "Months played",
     };
+
+    /// <summary>
+    /// A goal's tooltip (<c>UIProgressReport</c>, <c>tooltip.status</c>): the target and where the hospital stands. The
+    /// happiness and months goals say "over" for a goal to win and "under" for one to lose by; months that make whole
+    /// years are told as years. The original's strings are used when loaded (section 64); the stand-ins for those
+    /// english.lua does not correct are ours.
+    /// </summary>
+    internal static string Tooltip(IWindowHost host, EndCriterion criterion, bool isLoseGoal, decimal target, decimal now)
+    {
+        var goal = (long)Math.Floor(target);
+        var current = (long)Math.Floor(now);
+        string Original(int index, string fallback) => string.Format(CultureInfo.InvariantCulture, ToComposite(host.Texts?.String(64, index) ?? fallback), goal, current);
+        var over = !isLoseGoal;
+        return criterion switch
+        {
+            EndCriterion.Reputation => string.Format(CultureInfo.InvariantCulture, "Your Reputation should not be less than {0}. Currently it's {1}", goal, current),
+            EndCriterion.Balance => string.Format(CultureInfo.InvariantCulture, "Your bank balance should not be less than {0}. Currently it's {1}", goal, current),
+            EndCriterion.NumCured => Original(4, "You need to cure %d patients. Currently you have cured %d"),
+            EndCriterion.PercentageKilled => Original(5, "You should kill less than %d% of your patients. Currently you have killed %d%"),
+            EndCriterion.Value => Original(6, "Your hospital should be worth at least %d. Currently it's worth %d"),
+            EndCriterion.PercentageCured => Original(7, "You need to cure %d% of the patients who come to your hospital. Currently you have cured %d%"),
+            EndCriterion.StaffHappiness => string.Format(CultureInfo.InvariantCulture, over ? "Your average staff happiness should be over {0}%. Currently it's {1}%" : "Your average staff happiness should not be less than {0}%. Currently it's {1}%", goal, current),
+            EndCriterion.PatientHappiness => string.Format(CultureInfo.InvariantCulture, over ? "Your average patient happiness should be over {0}%. Currently it's {1}%" : "Your average patient happiness should not be less than {0}%. Currently it's {1}%", goal, current),
+            _ => goal % 12 == 0
+                ? string.Format(CultureInfo.InvariantCulture, "You need to reach the year {0}. Currently it's the year {1}", (goal / 12) + 2000, ((current - 1) / 12) + 2000)
+                : string.Format(CultureInfo.InvariantCulture, over ? "You need to reach the end of {0} {1}. Currently it's {2} {3}" : "You need to win by the end of {0} {1}. Currently it's {2} {3}", Month(host, goal), (goal / 12) + 2000, Month(host, current), ((current - 1) / 12) + 2000),
+        };
+    }
+
+    /// <summary>A Lua <c>%d</c> template as a .NET composite format with two arguments.</summary>
+    private static string ToComposite(string template)
+    {
+        var escaped = template.Replace("{", "{{", StringComparison.Ordinal).Replace("}", "}}", StringComparison.Ordinal);
+        var first = escaped.IndexOf("%d", StringComparison.Ordinal);
+        if (first < 0)
+        {
+            return escaped;
+        }
+
+        escaped = string.Concat(escaped.AsSpan(0, first), "{0}", escaped.AsSpan(first + 2));
+        var second = escaped.IndexOf("%d", StringComparison.Ordinal);
+        return second < 0 ? escaped : string.Concat(escaped.AsSpan(0, second), "{1}", escaped.AsSpan(second + 2));
+    }
+
+    /// <summary><c>get_month_string</c>: the month's name (<c>_S.months</c>, section 6), month 12 for whole years.</summary>
+    private static string Month(IWindowHost host, long months)
+    {
+        var month = (int)(months % 12);
+        if (month <= 0)
+        {
+            month += 12;
+        }
+
+        return host.Texts?.String(6, month) ?? CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month);
+    }
 
     private static string Format(EndCriterion criterion, decimal value) => criterion switch
     {
