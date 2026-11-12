@@ -362,9 +362,9 @@ Next, in this order (2026-11-10):
    needed objects (`RemoveDestroyedRoomCommand`, 2026-11-12). Wall soot is outranked by the
    floor soot on the same tiles, as in CorsixTH. Jelly vat done (save format 69): the doctor uses the jelly moulder with the patient like the blood machine
    (`RoomVisits.DoctorUsesMachine`), the patient visible outside phases −3..4 (`MultiObjectUse` invisible phase span)
-   and moved to `FinishSecondaryUsePosition` facing `FinishSecondaryFacing` at the in-use phase. Not yet: the jelly
-   wobble drawing effect (CorsixTH's AnimationEffect.Jelly, th_gfx_sdl.cpp), the patient facing the moulder while
-   waiting. Training room done (save format 70): the player puts doctors in (`RoomVisits.SettleInTraining`, only when
+   and moved to `FinishSecondaryUsePosition` facing `FinishSecondaryFacing` at the in-use phase. The wobble is drawn
+   (AnimationEffect.Jelly), and the patient waits for the doctor facing the moulder (2026-11-12: west of one facing north,
+   otherwise north, as JellyVatRoom:commandEnteringPatient's IdleAction). Training room done (save format 70): the player puts doctors in (`RoomVisits.SettleInTraining`, only when
    placed): a consultant lectures at the projector and goes to a skeleton or bookcase now and then, replacing any
    consultant already lecturing; other doctors sit on free lecture chairs or leave. `Training.OnEndDay` is trainSkills:
    skill (with millionths kept in `StaffProfile`) and specialism progress (`SpecialismProgress`, `TrainSpecialism`) from

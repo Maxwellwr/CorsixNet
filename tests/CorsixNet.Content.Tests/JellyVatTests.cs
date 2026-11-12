@@ -30,6 +30,8 @@ public class JellyVatTests
         var seenWhileUsed = false;
         var hiddenWhileUsed = false;
         var moulder = simulation.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "jelly_moulder");
+        var waitFacing = moulder.Orientation == Direction.North ? Direction.West : Direction.North;
+        var waited = 0;
 
         for (var tick = 0; tick < 3 * 31 * GameDate.HoursPerDay; tick++)
         {
@@ -47,6 +49,13 @@ public class JellyVatTests
                     }
                 }
 
+                if (humanoid.Behaviour is PatientBehaviour { Phase: PatientPhase.AtTrolley } waiting && waiting.TargetId == room.Id && !humanoid.IsMoving)
+                {
+                    // JellyVatRoom:commandEnteringPatient: waiting for the doctor, facing the moulder.
+                    Assert.Equal(waitFacing, humanoid.Facing);
+                    waited++;
+                }
+
                 if (humanoid.Behaviour is DoctorBehaviour { RoomId: var id } && id == room.Id && humanoid.ActionAnimation is { } doctorAnimation)
                 {
                     doctorAnimations.Add(doctorAnimation.Id);
@@ -55,6 +64,7 @@ public class JellyVatTests
         }
 
         Assert.True(treated.Count >= 2, $"Only {treated.Count} patients were treated.");
+        Assert.True(waited > 0, "Nobody waited for the doctor at the moulder.");
 
         // The doctor's animations show the patient climbing in and stepping out; the patient waits in view at first.
         Assert.Contains(1382, doctorAnimations);
