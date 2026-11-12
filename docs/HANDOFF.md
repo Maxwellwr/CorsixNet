@@ -172,7 +172,9 @@ Done and committed:
   game, a room's description from S[57] the first time one is built (room_information_dialogs), and
   Restart and Quit in the menu ask first.
   Rooms call staff by the dispatcher's score (path, queue x5, emergency, fatigue x40, -50 outside a
-  room) instead of the nearest, and leave staff to a waiting room that scores better for them.
+  room, -100000 for rooms needing a researcher, psychiatrist or surgeon) instead of the nearest, and leave staff
+  to a waiting room that scores better for them. With staff_allowed_to_move (the default), a room with patients
+  queueing calls staff idle in a room nobody waits for (2026-11-12; only then, as rooms here poll for staff).
   Edit room (bottom panel, then click a room): the room stops taking patients, its queue goes to
   other rooms, its staff leave once no patient is inside, then its objects can be moved, bought or
   sold; Confirm costs nothing again (Room.IsPaid, IsClosing; save format 59). Esc while editing goes
