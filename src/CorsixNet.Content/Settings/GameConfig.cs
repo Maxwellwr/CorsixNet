@@ -69,6 +69,12 @@ public sealed record GameConfig
     /// <summary>The Theme Hospital folder; <see cref="PlaceholderInstall"/> or one that is not there means look for it.</summary>
     public string ThemeHospitalInstall { get; init; } = PlaceholderInstall;
 
+    /// <summary>The folder of the player's own levels (CorsixTH's <c>levels</c>); empty for <see cref="UserFolder"/>'s default.</summary>
+    public string Levels { get; init; } = string.Empty;
+
+    /// <summary>The folder of the player's own campaigns (CorsixTH's <c>campaigns</c>); empty for <see cref="UserFolder"/>'s default.</summary>
+    public string Campaigns { get; init; } = string.Empty;
+
     /// <summary>
     /// Whether a level from a map file (not a campaign's) is played without money (CorsixTH's <c>free_build_mode</c>).
     /// </summary>
@@ -177,6 +183,8 @@ public sealed record GameConfig
             RoomInformationDialogs = Bool("room_information_dialogs", defaults.RoomInformationDialogs),
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
+            Levels = Text("levels", defaults.Levels),
+            Campaigns = Text("campaigns", defaults.Campaigns),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
             RemoveDestroyedRooms = Bool("remove_destroyed_rooms", defaults.RemoveDestroyedRooms),
             PlaySounds = Bool("play_sounds", defaults.PlaySounds),
@@ -310,6 +318,16 @@ public sealed record GameConfig
         text.Append("""
 
             -------------------------------------------------------------------------------
+            -- Folders of your own levels and campaigns, listed by the main menu's Single
+            -- Scenario and Custom Campaign. Left empty, they are the Levels and Campaigns
+            -- folders beside the saves folder.
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"levels = {Quote(Levels)}\ncampaigns = {Quote(Campaigns)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
             -- Sounds: By default enabled and set at level 0.5
             --
 
@@ -395,6 +413,15 @@ public sealed record GameConfig
     private static string Lua(bool value) => value ? "true" : "false";
 
     private static string Number(decimal value) => value.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// CorsixTH's <c>user_level_dir</c> and <c>user_campaign_dir</c>: the folder the settings give, or else the folder of
+    /// <paramref name="name"/> (<c>Levels</c> or <c>Campaigns</c>) beside <paramref name="savesFolder"/>.
+    /// </summary>
+    public static string UserFolder(string configured, string savesFolder, string name) =>
+        string.IsNullOrWhiteSpace(configured)
+            ? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(savesFolder)) ?? savesFolder, name)
+            : configured;
 
     /// <summary>A Lua long string, with enough '=' signs that the text can't close it.</summary>
     private static string Quote(string value)

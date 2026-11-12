@@ -110,6 +110,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private readonly GraphicsDevice _device;
     private IReadOnlyList<LevelSource> _levels;
+    private MainMenuWindow? _mainMenu;
     private readonly SpriteAtlas _blocks;
     private readonly BlueprintDrawing _blueprints;
     private readonly MapRenderer _renderer;
@@ -260,7 +261,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         GameSpeed speed = GameSpeed.Normal,
         string? loadPath = null,
         GameConfig? config = null,
-        string? configPath = null)
+        string? configPath = null,
+        bool mainMenu = false)
     {
         _config = config ?? new GameConfig();
         _adviser.IsEnabled = !_config.AdviserDisabled;
@@ -331,6 +333,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         PrepareMapIfReady();
         _camera.ZoomAt(zoom, new Point(ViewSize.X / 2, ViewSize.Y / 2), ViewSize);
+        if (mainMenu && _session is LocalSession)
+        {
+            OpenMainMenu();
+        }
     }
 
     public bool ExitRequested { get; private set; }
@@ -405,6 +411,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             else if (_windows.Any)
             {
                 _windows.CloseTop();
+            }
+            else if (_mainMenu is not null)
+            {
+                // esc_closes = false.
             }
             else if (_levelList)
             {
@@ -693,6 +703,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
+        CloseMainMenu();
         _levelIndex = index;
         _lastYearSeen = null;
         _lastOutcome = EndOutcome.None;
@@ -784,7 +795,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return false;
         }
 
-        var speed = _session is { CanChangeSpeed: true } previous ? previous.Speed : _initialSpeed;
+        var speed = _mainMenu is null && _session is { CanChangeSpeed: true } previous ? previous.Speed : _initialSpeed;
+        CloseMainMenu();
         _session?.Dispose();
         var local = new LocalSession(saved.LevelName, saved.Simulation, _saves, _config.AutosaveFrequency);
         local.SetSpeed(speed == GameSpeed.SpeedUp ? GameSpeed.Normal : speed);
@@ -1275,7 +1287,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// </summary>
     private void UpdateSpeed(KeyboardState keys, Func<Keys, bool> pressed)
     {
-        if (_session is not { CanChangeSpeed: true } session)
+        // The level behind the main menu stays paused.
+        if (_session is not { CanChangeSpeed: true } session || _mainMenu is not null)
         {
             return;
         }
@@ -2460,6 +2473,88 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _levels = levels;
+        _levelList = false;
+        SelectLevel(0);
+    }
+
+    /// <summary>
+    /// <c>UIMainMenu</c>, when the game starts with nothing to play given: the first level waits paused behind it until
+    /// a game is started or loaded.
+    /// </summary>
+    private void OpenMainMenu()
+    {
+        _session?.SetSpeed(GameSpeed.Pause);
+        _mainMenu = new MainMenuWindow(MainMenuAction, typeof(MapViewScreen).Assembly.GetName().Version?.ToString(3) ?? "?");
+        _windows.Open(_mainMenu);
+    }
+
+    private void CloseMainMenu()
+    {
+        if (_mainMenu is not null)
+        {
+            _windows.Close(_mainMenu);
+            _mainMenu = null;
+        }
+    }
+
+    /// <summary>The main menu's items (<c>UIMainMenu:button*</c>).</summary>
+    private void MainMenuAction(string action)
+    {
+        var saves = _saves.Directory;
+        switch (action)
+        {
+            case "newgame":
+                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, StartCampaign));
+                break;
+            case "campaign":
+                _windows.Open(new CustomCampaignWindow(CustomGames.FindCampaigns(GameConfig.UserFolder(_config.Campaigns, saves, "Campaigns")), StartCustomCampaign));
+                break;
+            case "scenario":
+                _windows.Open(new CustomLevelWindow(CustomGames.FindLevels(GameConfig.UserFolder(_config.Levels, saves, "Levels")), _config.FreeBuildMode, StartCustomLevel));
+                break;
+            case "continue" when _saves.MostRecentSave() is { } latest:
+                LoadGame(latest);
+                break;
+            case "continue":
+                _windows.Open(new InformationWindow(["Error while loading game: There are no saved games."]));
+                break;
+            case "load":
+                _windows.Open(new SaveLoadWindow(_saves, false, SaveGameTo, LoadGame));
+                break;
+            case "options":
+                _windows.Open(new OptionsWindow(_config, ApplyConfig, InstalledLanguageNames(_install)));
+                break;
+            case "exit":
+                _windows.Open(new ConfirmWindow("You are about to quit from CorsixNet. Are you sure this is what you want to do?", () => ExitRequested = true));
+                break;
+        }
+    }
+
+    /// <summary><c>UICustomGame:buttonLoadLevel</c>: the level on its own, with free build if ticked.</summary>
+    private void StartCustomLevel(CustomLevelEntry level, bool freeBuild)
+    {
+        _levels = [new LevelSource(Path.GetFileName(level.Path), () => freeBuild
+            ? LevelMapLoader.LoadFile(level.Path, _install).WithFreeBuild()
+            : LevelMapLoader.LoadFile(level.Path, _install))];
+        _levelList = false;
+        SelectLevel(0);
+    }
+
+    /// <summary><c>UICustomCampaign:startCampaign</c>: the campaign's levels from its first.</summary>
+    private void StartCustomCampaign(CustomCampaignEntry campaign)
+    {
+        IReadOnlyList<string> paths;
+        try
+        {
+            paths = LevelMapLoader.LoadCampaign(campaign.Path).LevelPaths;
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException)
+        {
+            _windows.Open(new InformationWindow([$"Cannot start the campaign: {e.Message}"]));
+            return;
+        }
+
+        _levels = [.. paths.Select(path => new LevelSource(Path.GetFileName(path), () => LevelMapLoader.LoadFile(path, _install)))];
         _levelList = false;
         SelectLevel(0);
     }
