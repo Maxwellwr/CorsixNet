@@ -263,9 +263,10 @@ Done and committed:
   evaluates them as strings.lua (merging assignments, Inherit, original_strings' S[s][i] names). `OriginalTexts.String`,
   disease texts, VIP names, introduction texts and room descriptions come from the translation where it has them, so
   english.lua's corrections apply too. The options list CorsixTH's languages drawn with the game's font (cp437);
-  Russian (Font "mik") and the Unicode-font languages are left out until those fonts are drawn. Not yet: staff names
-  and descriptions (StaffTexts reads the StringTable), and the interface's English stand-ins going through string
-  names (`OriginalTexts.Named`).
+  Russian (Font "mik") and the Unicode-font languages are left out until those fonts are drawn. CorsixTH's own adviser
+  messages (no_desk_*, another_desk, *_needs_desk_*, not_enough_lecture_chairs) carry their names (`Advice.Name`), and
+  the main menu and the new game window take main_menu.*, new_game_window.* and their tooltips (`CorsixText.Get`). Not
+  yet: staff names and descriptions (StaffTexts reads the StringTable), and the other windows' English stand-ins.
   Main menu (main_menu.lua; 2026-11-12): with no --level/--map/--campaign/--load/--continue/--demo/--script/
   network option the game opens on it, the first level paused behind: Campaign, Custom Campaign and Single Scenario
   (the .campaign/.level files under config.txt's campaigns/levels, by default Campaigns/Levels beside the saves

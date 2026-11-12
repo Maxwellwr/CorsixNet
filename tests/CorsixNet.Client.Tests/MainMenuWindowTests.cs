@@ -25,6 +25,23 @@ public class MainMenuWindowTests
     }
 
     [Fact]
+    public void TheMainMenuAndTheNewGameWindowSpeakTheChosenTranslation()
+    {
+        var languages = CorsixNet.Content.Languages.CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages"));
+        var german = languages.Load("German", _ => null);
+        var host = new WindowTestHost { Texts = new CorsixNet.Content.OriginalTexts(StringTable.Parse(new byte[] { 0, 0 }), german) };
+        var actions = new List<string>();
+        var menu = new MainMenuWindow(actions.Add, "1.2.3");
+
+        host.Click(menu, german.Get("main_menu.new_game")!);
+        Assert.Equal(["newgame"], actions);
+        Assert.Contains(german.Get("main_menu.version") + "1.2.3", host.Lines(menu));
+
+        var newGame = new NewGameWindow([CorsixNet.Sim.Economy.Difficulty.Medium], "Max", (_, _) => { });
+        Assert.Contains(host.Lines(newGame), line => line.Contains(german.Get("new_game_window.medium")!, StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void ACustomLevelStartsWithFreeBuildIfTicked()
     {
         var host = new WindowTestHost();

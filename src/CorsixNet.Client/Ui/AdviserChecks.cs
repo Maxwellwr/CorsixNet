@@ -21,14 +21,15 @@ using CorsixNet.Sim.Staff;
 namespace CorsixNet.Client.Ui;
 
 /// <summary>
-/// One of the adviser's messages: the original's string (CorsixTH's 1-based <c>S[section][index]</c>) when the game's
-/// texts are loaded, otherwise an English stand-in; <c>%s</c> and <c>%d</c> take the arguments in turn.
+/// One of the adviser's messages: the original's string (CorsixTH's 1-based <c>S[section][index]</c>, through the chosen
+/// translation) when the game's texts are loaded, or for CorsixTH's own messages the translation's string by
+/// <paramref name="Name"/>, otherwise an English stand-in; <c>%s</c> and <c>%d</c> take the arguments in turn.
 /// </summary>
-internal sealed record Advice(int Section, int Index, string Fallback)
+internal sealed record Advice(int Section, int Index, string Fallback, string? Name = null)
 {
     public string Text(OriginalTexts? texts, params object[] arguments)
     {
-        var template = (Section > 0 ? texts?.String(Section, Index) : null) ?? Fallback;
+        var template = (Name is not null ? texts?.Named(Name) : null) ?? (Section > 0 ? texts?.String(Section, Index) : null) ?? Fallback;
         var next = 0;
         var result = new System.Text.StringBuilder(template.Length);
         for (var i = 0; i < template.Length; i++)
@@ -106,8 +107,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice ReceptionNeedReceptionist = new(11, 106, "You need to hire a receptionist to greet your patients.");
     public static readonly Advice ReceptionBottleneck = new(11, 134, "There is a bottleneck at Reception. Hire another Receptionist.");
     public static readonly Advice QueueTooLongAtReception = new(11, 133, "You have too many patients waiting at Reception desks. Place another Reception desk and hire another Receptionist.");
-    public static readonly Advice AnotherDesk = new(0, 0, "You'll need to build another desk for that new receptionist.");
-    public static readonly Advice NoDesk5 = new(0, 0, "Well it's about time, you should start to see some patients arriving soon!");
+    public static readonly Advice AnotherDesk = new(0, 0, "You'll need to build another desk for that new receptionist.", "adviser.warnings.another_desk");
+    public static readonly Advice NoDesk5 = new(0, 0, "Well it's about time, you should start to see some patients arriving soon!", "adviser.warnings.no_desk_5");
 
     /// <summary>Said the first time a handyman's priorities are changed (<c>handyman_adjust</c>, once only).</summary>
     public static readonly Advice HandymanAdjust = new(11, 71, "You can make handymen clean better by setting their priorities.");
@@ -145,7 +146,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice PromotionToConsultant = new(11, 138, "One of your doctors has become a consultant.");
 
     /// <summary>training.lua: a student placed in the training room finds no lecture chair (CorsixTH's own text).</summary>
-    public static readonly Advice NotEnoughLectureChairs = new(0, 0, "Each student doctor needs a lecture chair to sit in!");
+    public static readonly Advice NotEnoughLectureChairs = new(0, 0, "Each student doctor needs a lecture chair to sit in!", "adviser.staff_place_advice.not_enough_lecture_chairs");
 
     // staff_place_advice: someone put into a room they cannot work in (Staff/Doctor/Nurse:adviseWrongPersonForThisRoom)
     public static readonly Advice OnlyResearchers = new(11, 124, "Only doctors with a research qualification can work in the research department.");
@@ -159,15 +160,15 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     // room.lua's Room:onHumanoidEnter: a researcher or a ward nurse put into a room full of them (CorsixTH's own texts)
     public static readonly Advice[] ResearcherNeedsDesk =
     [
-        new(0, 0, "A Researcher needs to have a desk to work at."),
-        new(0, 0, "Your Researcher is pleased that you have allowed him to have a break. If you were intending to have more staff researching, then you need to provide them each with a desk to work from."),
-        new(0, 0, "Each Researcher needs to have his own desk to work from."),
+        new(0, 0, "A Researcher needs to have a desk to work at.", "adviser.warnings.researcher_needs_desk_1"),
+        new(0, 0, "Your Researcher is pleased that you have allowed him to have a break. If you were intending to have more staff researching, then you need to provide them each with a desk to work from.", "adviser.warnings.researcher_needs_desk_2"),
+        new(0, 0, "Each Researcher needs to have his own desk to work from.", "adviser.warnings.researcher_needs_desk_3"),
     ];
 
     public static readonly Advice[] NurseNeedsDesk =
     [
-        new(0, 0, "Each Nurse needs to have her own desk to work from."),
-        new(0, 0, "Your Nurse is pleased that you have allowed her to have a break. If you were intending to have more than one working in the ward, then you need to provide them each with a desk to work from."),
+        new(0, 0, "Each Nurse needs to have her own desk to work from.", "adviser.warnings.nurse_needs_desk_1"),
+        new(0, 0, "Your Nurse is pleased that you have allowed her to have a break. If you were intending to have more than one working in the ward, then you need to provide them each with a desk to work from.", "adviser.warnings.nurse_needs_desk_2"),
     ];
 
     // room_requirements, said when a room is finished (Room:roomFinished in rooms/*.lua)
@@ -186,12 +187,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice ResearchRoomNeedResearcher = new(11, 84, "The research department needs a doctor who is a researcher: nobody else can work there.");
 
     // reception (CorsixTH's own texts)
-    public static readonly Advice NoDesk = new(0, 0, "You should build a reception desk and hire a receptionist at some point!");
-    public static readonly Advice NoDesk1 = new(0, 0, "If you want patients to come to your hospital, you will need to hire a receptionist and build a desk to work at!");
-    public static readonly Advice NoDesk2 = new(0, 0, "Well done, that must be a world record: nearly a year and no patients! If you want to continue as Manager of this hospital, you will need to hire a receptionist and build a reception desk to work from!");
-    public static readonly Advice NoDesk3 = new(0, 0, "That's just brilliant, nearly a year and you don't have a staffed reception! How do you expect to get any patients? Now get it sorted out and stop messing around!");
-    public static readonly Advice NoDesk6 = new(0, 0, "You have a receptionist, so how about building a reception desk to work from?");
-    public static readonly Advice NoDesk7 = new(0, 0, "You've built the reception desk, so how about hiring a receptionist? You won't see any patients until you get this sorted out you know!");
+    public static readonly Advice NoDesk = new(0, 0, "You should build a reception desk and hire a receptionist at some point!", "adviser.warnings.no_desk");
+    public static readonly Advice NoDesk1 = new(0, 0, "If you want patients to come to your hospital, you will need to hire a receptionist and build a desk to work at!", "adviser.warnings.no_desk_1");
+    public static readonly Advice NoDesk2 = new(0, 0, "Well done, that must be a world record: nearly a year and no patients! If you want to continue as Manager of this hospital, you will need to hire a receptionist and build a reception desk to work from!", "adviser.warnings.no_desk_2");
+    public static readonly Advice NoDesk3 = new(0, 0, "That's just brilliant, nearly a year and you don't have a staffed reception! How do you expect to get any patients? Now get it sorted out and stop messing around!", "adviser.warnings.no_desk_3");
+    public static readonly Advice NoDesk6 = new(0, 0, "You have a receptionist, so how about building a reception desk to work from?", "adviser.warnings.no_desk_6");
+    public static readonly Advice NoDesk7 = new(0, 0, "You've built the reception desk, so how about hiring a receptionist? You won't see any patients until you get this sorted out you know!", "adviser.warnings.no_desk_7");
 
     private Snapshot? _last;
     private bool _temperatureAdvice;
