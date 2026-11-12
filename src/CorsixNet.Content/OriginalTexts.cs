@@ -3,6 +3,8 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Collections.Frozen;
+using System.Globalization;
+using CorsixNet.Content.Languages;
 using CorsixNet.Formats;
 
 namespace CorsixNet.Content;
@@ -11,7 +13,9 @@ namespace CorsixNet.Content;
 public sealed record DiseaseText(string Name, string? Cause, string? Symptoms, string? Cure);
 
 /// <summary>
-/// The game's texts in one language, from the original's strings (<c>LANG-n.DAT</c>) as CorsixTH maps them.
+/// The game's texts in one language, from the original's strings (<c>LANG-n.DAT</c>) as CorsixTH maps them, or from
+/// one of CorsixTH's own translations laid over them (<see cref="LanguageStrings"/>): a string the translation names
+/// after an original one (original_strings.lua) is taken from the translation.
 /// </summary>
 public sealed class OriginalTexts
 {
@@ -84,13 +88,21 @@ public sealed class OriginalTexts
     ];
 
     private readonly StringTable _strings;
+    private readonly LanguageStrings? _language;
     private Dictionary<string, IReadOnlyList<string>>? _roomDescriptions;
 
-    public OriginalTexts(StringTable strings)
+    public OriginalTexts(StringTable strings, LanguageStrings? language = null)
     {
         _strings = strings;
+        _language = language;
         Staff = new StaffTexts(strings);
     }
+
+    /// <summary>CorsixTH's translation laid over the original's strings, or null.</summary>
+    public LanguageStrings? Language => _language;
+
+    /// <summary>A string by CorsixTH's name (<c>adviser.tutorial.build_reception</c>) in the translation, or null.</summary>
+    public string? Named(string name) => _language?.Get(name) is { Length: > 0 } text ? text : null;
 
     /// <summary>Names, descriptions and professions of staff.</summary>
     public StaffTexts Staff { get; }
@@ -99,7 +111,9 @@ public sealed class OriginalTexts
     /// A string by CorsixTH's 1-based <c>S[section][index]</c> (<c>languages/original_strings.lua</c>), such as the
     /// adviser's messages in S[11] and S[28], or null if missing or empty.
     /// </summary>
-    public string? String(int section, int index) => _strings.Get(section - 1, index - 1) is { Length: > 0 } text ? text : null;
+    public string? String(int section, int index) =>
+        _language?.Original(section, index) is { Length: > 0 } translated ? translated
+        : _strings.Get(section - 1, index - 1) is { Length: > 0 } text ? text : null;
 
     /// <summary>
     /// A room's description, shown the first time one is built (CorsixTH's <c>room_descriptions</c>): paragraphs
@@ -108,6 +122,15 @@ public sealed class OriginalTexts
     /// </summary>
     public IReadOnlyList<string>? RoomDescription(string roomId)
     {
+        if (_language?.List("room_descriptions." + roomId) is { Count: > 0 } translated)
+        {
+            List<string> paragraphs = [.. translated.Select(text => text.Replace("//", string.Empty, StringComparison.Ordinal).Trim()).Where(text => text.Length > 0)];
+            if (paragraphs.Count > 0)
+            {
+                return paragraphs;
+            }
+        }
+
         _roomDescriptions ??= ParseRoomDescriptions(_strings);
         return _roomDescriptions.GetValueOrDefault(roomId);
     }
@@ -115,7 +138,19 @@ public sealed class OriginalTexts
     /// <summary>The disease's texts, or null for an unknown disease or one missing from the strings.</summary>
     public DiseaseText? Disease(string diseaseId)
     {
-        if (!Diseases.TryGetValue(diseaseId, out var indices) || _strings.Get(DiseaseNamesSection, indices.Name - 1) is not { } name)
+        if (!Diseases.TryGetValue(diseaseId, out var indices))
+        {
+            return null;
+        }
+
+        // original_strings.lua's D(): diseases.<name>.name, .cause, .symptoms and .cure.
+        var key = "diseases." + diseaseId switch
+        {
+            "diag_gp" => "general_practice",
+            "pregnant" => "pregnancy",
+            _ => diseaseId,
+        };
+        if ((Named(key + ".name") ?? _strings.Get(DiseaseNamesSection, indices.Name - 1)) is not { } name)
         {
             return null;
         }
@@ -124,9 +159,9 @@ public sealed class OriginalTexts
             ? new DiseaseText(name, null, null, null)
             : new DiseaseText(
                 name,
-                _strings.Get(FaxesAndDiseasesSection, indices.Cause - 1),
-                _strings.Get(FaxesAndDiseasesSection, indices.Cause),
-                _strings.Get(FaxesAndDiseasesSection, indices.Cause + 1));
+                Named(key + ".cause") ?? _strings.Get(FaxesAndDiseasesSection, indices.Cause - 1),
+                Named(key + ".symptoms") ?? _strings.Get(FaxesAndDiseasesSection, indices.Cause),
+                Named(key + ".cure") ?? _strings.Get(FaxesAndDiseasesSection, indices.Cause + 1));
     }
 
     /// <summary>The disease's name, or its id when it has none.</summary>
@@ -138,6 +173,11 @@ public sealed class OriginalTexts
     /// </summary>
     public string? IntroductionText(int level)
     {
+        if (Named("introduction_texts.level" + level.ToString(CultureInfo.InvariantCulture)) is { } translated)
+        {
+            return translated.Trim();
+        }
+
         var current = 0;
         var text = new System.Text.StringBuilder();
         for (var index = 2; index < 4096; index++)
@@ -172,7 +212,8 @@ public sealed class OriginalTexts
     /// A VIP's name, 1 to 10 (CorsixTH's <c>vip_names[n]</c>, <c>S[42][n + 1]</c>; <c>S[42][1]</c> is the health
     /// minister), or null if missing.
     /// </summary>
-    public string? VipName(int number) => number >= 1 ? _strings.Get(VipNamesSection, number) : null;
+    public string? VipName(int number) =>
+        number < 1 ? null : Named("vip_names." + number.ToString(CultureInfo.InvariantCulture)) ?? _strings.Get(VipNamesSection, number);
 
     private static Dictionary<string, IReadOnlyList<string>> ParseRoomDescriptions(StringTable strings)
     {

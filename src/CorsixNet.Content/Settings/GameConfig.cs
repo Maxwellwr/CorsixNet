@@ -231,8 +231,12 @@ public sealed record GameConfig
             --  Italian  / it / ita
             --  Spanish  / es / spa
             --  Swedish  / sv / swe
-            -- The game's own language files (LANG-n.DAT) are used, so the language must be
-            -- installed; otherwise English, or the first one installed, is used.
+            -- or one of CorsixTH's translations the game's font can draw:
+            --  Brazilian Portuguese / pt_br / br    Danish / da / dk    Dutch / nl / dut
+            --  Finnish / fi / fin    Norwegian / nb / nob    Portuguese / pt
+            -- The game's own language files (LANG-n.DAT) are used where installed, with
+            -- CorsixTH's translation laid over them; otherwise English, or the first one
+            -- installed, is used.
             --
 
             """);

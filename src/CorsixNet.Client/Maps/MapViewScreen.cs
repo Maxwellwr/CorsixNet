@@ -7,6 +7,7 @@ using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Content;
 using CorsixNet.Content.Interface;
+using CorsixNet.Content.Languages;
 using CorsixNet.Content.Levels;
 using CorsixNet.Content.Saves;
 using CorsixNet.Content.Settings;
@@ -3508,12 +3509,33 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             : string.Empty;
     }
 
-    /// <summary>The names of the original's languages installed, as the settings take them, in their files' order.</summary>
-    private static List<string> InstalledLanguageNames(ThemeHospitalInstall install) =>
-        [.. install.InstalledLanguages().Order().Select(GameConfig.OriginalLanguageName).OfType<string>()];
+    /// <summary>CorsixTH's language files beside the game (Languages/*.lua), read once.</summary>
+    private static readonly Lazy<CorsixLanguages> TranslationFiles = new(() => CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")));
 
     /// <summary>
-    /// The texts in the settings' language if it is installed, else in English, else in the first installed language.
+    /// The languages to choose from, as the settings take them: CorsixTH's translations the game's font can draw, by
+    /// English name, then any installed original language none of them names. Translations needing the Russian or a
+    /// Unicode font are left out until those fonts are drawn.
+    /// </summary>
+    private static List<string> InstalledLanguageNames(ThemeHospitalInstall install)
+    {
+        var translations = TranslationFiles.Value;
+        List<string> names = [.. translations.Languages.Where(language => language.UsesGameFont).Select(language => language.EnglishName)];
+        foreach (var original in install.InstalledLanguages().Order().Select(GameConfig.OriginalLanguageName).OfType<string>())
+        {
+            if (translations.Find(original) is not { UsesGameFont: true })
+            {
+                names.Add(original);
+            }
+        }
+
+        return names;
+    }
+
+    /// <summary>
+    /// The texts in the settings' language: the original's strings in that language if installed (or in the one its
+    /// CorsixTH translation inherits), else in English, else in the first installed language, with the translation laid
+    /// over them when the game's font can draw it.
     /// </summary>
     private static OriginalTexts? LoadTexts(ThemeHospitalInstall install, GameConfig config)
     {
@@ -3523,12 +3545,22 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return null;
         }
 
-        var language = config.OriginalLanguageNumber() is { } wanted && languages.Contains(wanted) ? wanted
+        var translations = TranslationFiles.Value;
+        var translation = translations.Find(config.Language) is { UsesGameFont: true } found ? found : null;
+        var wanted = config.OriginalLanguageNumber() ?? (translation is null ? null : translations.OriginalStringsNumber(translation.EnglishName));
+        var language = wanted is { } number && languages.Contains(number) ? number
             : languages.Contains(StringTable.English) ? StringTable.English
             : languages[0];
         try
         {
-            return new OriginalTexts(install.LoadStrings(language));
+            var strings = install.LoadStrings(language);
+
+            // CorsixTH's own translation over the original's strings: Inherit("original_strings", n) takes LANG-n.DAT
+            // where it is installed (the one already loaded is reused).
+            var overlay = translation is null
+                ? null
+                : translations.Load(translation.EnglishName, n => n == language ? strings : languages.Contains(n) ? install.LoadStrings(n) : null);
+            return new OriginalTexts(strings, overlay);
         }
         catch (InvalidDataException)
         {
