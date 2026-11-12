@@ -71,6 +71,22 @@ internal static class HumanoidMoods
             Offer(humanoid.IsFired, 4052, 60); // exit
             Offer(humanoid.RaiseRequest > 0, 4576, 40); // pay_rise
             Offer(humanoid.IsTiredMoodShown, 3990, 30); // tired
+
+            var roomId = humanoid.Behaviour switch { DoctorBehaviour doctor => doctor.RoomId, NurseBehaviour nurse => nurse.RoomId, _ => 0 };
+            if (roomId != 0 && simulation.FindEntity(roomId) is Room { PatientId: not 0 } room
+                && simulation.FindEntity(room.PatientId) is Humanoid { Behaviour: PatientBehaviour visitor })
+            {
+                // Room:_staffWaitToggle: from the patient leaving the door queue until they come in (not in the toilets).
+                Offer(visitor.Phase == PatientPhase.EnteringRoom && room.RoomType != "toilets", 4054, 20); // staff_wait
+
+                // GPRoom:dealtWithPatient: the light bulb once the patient is diagnosed, uncertainty when they are sent on to
+                // a diagnosis room; both go when the patient leaves (onHumanoidLeave).
+                if (room.RoomType == "gp" && visitor.Phase == PatientPhase.LeavingRoom)
+                {
+                    Offer(visitor.IsDiagnosed, 4044, 12); // idea3
+                    Offer(!visitor.IsDiagnosed && visitor.WillSeekRoom, 4020, 5); // reflexion
+                }
+            }
         }
 
         return priority < 0 ? null : icon;
