@@ -141,6 +141,35 @@ internal sealed class SpriteAtlas : IDisposable
         batch.Draw(_pages[page], new Vector2(position.X, y + first), part, tint, 0, Vector2.Zero, 1f / Scale, effects, 0);
     }
 
+    /// <summary>
+    /// Draws the part of sprite <paramref name="index"/>, placed with its top-left corner at <paramref name="position"/>,
+    /// that lies inside <paramref name="clip"/> (world coordinates), mirrored as <paramref name="effects"/> say.
+    /// </summary>
+    public void DrawCropped(SpriteBatch batch, int index, Vector2 position, Color tint, SpriteEffects effects, Rectangle clip)
+    {
+        if (!IsValid(index) || Sheet[index].IsEmpty)
+        {
+            return;
+        }
+
+        var sprite = Sheet[index];
+        int x = (int)position.X, y = (int)position.Y;
+        var visible = Rectangle.Intersect(new Rectangle(x, y, sprite.Width, sprite.Height), clip);
+        if (visible.IsEmpty)
+        {
+            return;
+        }
+
+        // Columns and rows of the source counted from its top-left; a flipped sprite shows them the other way round.
+        var firstColumn = visible.X - x;
+        var firstRow = visible.Y - y;
+        var sourceColumn = (effects & SpriteEffects.FlipHorizontally) != 0 ? sprite.Width - firstColumn - visible.Width : firstColumn;
+        var sourceRow = (effects & SpriteEffects.FlipVertically) != 0 ? sprite.Height - firstRow - visible.Height : firstRow;
+        var (page, source) = _entries[index];
+        var part = new Rectangle(source.X + (sourceColumn * Scale), source.Y + (sourceRow * Scale), visible.Width * Scale, visible.Height * Scale);
+        batch.Draw(_pages[page], new Vector2(visible.X, visible.Y), part, tint, 0, Vector2.Zero, 1f / Scale, effects, 0);
+    }
+
     /// <summary>Draws the part of a sprite placed at (<paramref name="x"/>, <paramref name="y"/>) that lies inside <paramref name="clip"/> (world coordinates).</summary>
     public void DrawClipped(SpriteBatch batch, int index, int x, int y, Rectangle clip, Color tint)
     {

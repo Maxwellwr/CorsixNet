@@ -19,6 +19,8 @@ internal sealed class AnimationRenderer : IDisposable
     private const int HeadLayer = 5;
 
     private readonly SpriteAtlas _sprites;
+    private int _clipLeft = int.MinValue;
+    private int _clipRight = int.MaxValue;
 
     public AnimationRenderer(GraphicsDevice device, AnimationSet animations, SpriteSheet sprites, Palette palette, int scale = 1)
     {
@@ -142,7 +144,7 @@ internal sealed class AnimationRenderer : IDisposable
             var top = y + element.Y;
             if (element.Layer == 0 && element.LayerId == 0)
             {
-                _sprites.Draw(batch, element.Sprite, new Vector2(left, top), tint, effects);
+                DrawSprite(batch, element.Sprite, new Vector2(left, top), tint, effects, int.MinValue, int.MaxValue);
                 continue;
             }
 
@@ -156,7 +158,7 @@ internal sealed class AnimationRenderer : IDisposable
                 {
                     if (y2 > y1)
                     {
-                        _sprites.DrawRows(batch, element.Sprite, new Vector2(left + offset, top), tint, effects, top + y1, top + y2);
+                        DrawSprite(batch, element.Sprite, new Vector2(left + offset, top), tint, effects, top + y1, top + y2);
                     }
 
                     y1 = y2;
@@ -203,18 +205,43 @@ internal sealed class AnimationRenderer : IDisposable
             var elementTint = (flags & Alpha50) != 0 ? tint * 0.5f
                 : (flags & Alpha75) != 0 ? tint * 0.25f
                 : tint;
-            if (top == int.MinValue && bottom == int.MaxValue)
-            {
-                _sprites.Draw(batch, element.Sprite, new Vector2(left, y + element.Y), elementTint, effects);
-            }
-            else
-            {
-                _sprites.DrawRows(batch, element.Sprite, new Vector2(left, y + element.Y), elementTint, effects, top, bottom);
-            }
+            DrawSprite(batch, element.Sprite, new Vector2(left, y + element.Y), elementTint, effects, top, bottom);
         }
     }
 
+    /// <summary>
+    /// Until <see cref="ClearColumnClip"/>, draws only the columns from <paramref name="left"/> to before
+    /// <paramref name="right"/> (world coordinates), as CorsixTH's <c>thdf_crop</c> clips each part of an object drawn
+    /// split over several tiles (<c>animation::draw</c>).
+    /// </summary>
+    public void SetColumnClip(int left, int right) => (_clipLeft, _clipRight) = (left, right);
+
+    /// <summary>Draws whole frames again after <see cref="SetColumnClip"/>.</summary>
+    public void ClearColumnClip() => (_clipLeft, _clipRight) = (int.MinValue, int.MaxValue);
+
     public void Dispose() => _sprites.Dispose();
+
+    /// <summary>Draws a sprite's rows from <paramref name="top"/> to before <paramref name="bottom"/>, within the column clip.</summary>
+    private void DrawSprite(SpriteBatch batch, int sprite, Vector2 position, Color tint, SpriteEffects effects, int top, int bottom)
+    {
+        if (_clipLeft == int.MinValue && _clipRight == int.MaxValue)
+        {
+            if (top == int.MinValue && bottom == int.MaxValue)
+            {
+                _sprites.Draw(batch, sprite, position, tint, effects);
+            }
+            else
+            {
+                _sprites.DrawRows(batch, sprite, position, tint, effects, top, bottom);
+            }
+
+            return;
+        }
+
+        var clipTop = Math.Max(top, -1_000_000);
+        var clipBottom = Math.Min(bottom, 1_000_000);
+        _sprites.DrawCropped(batch, sprite, position, tint, effects, new Rectangle(_clipLeft, clipTop, _clipRight - _clipLeft, clipBottom - clipTop));
+    }
 
     private static bool IsVisible(AnimationElement element, ReadOnlySpan<byte> layers)
     {

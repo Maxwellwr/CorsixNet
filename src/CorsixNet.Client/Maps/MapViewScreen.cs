@@ -126,6 +126,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>Objects whose second part (CorsixTH's slave object) is drawn on the tile.</summary>
     private readonly Dictionary<TilePosition, List<RoomObject>> _slavePartsByTile = [];
+
+    /// <summary>Parts of objects drawn split over several tiles, and of their users' animations, by the tile drawing them.</summary>
+    private readonly Dictionary<TilePosition, List<(Entity Entity, int Left, int Right)>> _splitPartsByTile = [];
     private readonly BuildRoomTool _buildTool = new();
     private readonly FurnishCorridorTool _furnishTool = new();
     private readonly HashSet<int> _hiddenObjects = [];
@@ -1729,6 +1732,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             list.Clear();
         }
 
+        foreach (var list in _splitPartsByTile.Values)
+        {
+            list.Clear();
+        }
+
         if (Simulation is not { } simulation)
         {
             return;
@@ -1770,6 +1778,22 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             };
             if (tile is not { } position)
             {
+                continue;
+            }
+
+            if (SplitParts(simulation, entity) is { } parts)
+            {
+                foreach (var (partTile, left, right) in parts)
+                {
+                    if (!_splitPartsByTile.TryGetValue(partTile, out var partList))
+                    {
+                        partList = [];
+                        _splitPartsByTile[partTile] = partList;
+                    }
+
+                    partList.Add((entity, left, right));
+                }
+
                 continue;
             }
 
@@ -1826,6 +1850,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
     }
+
+    /// <summary>
+    /// The parts of an object drawn split over several tiles (<see cref="ObjectDrawing.Split"/>), or of the animation of
+    /// someone using it from its tile, which shows the object; null for anything drawn whole.
+    /// </summary>
+    private static IEnumerable<(TilePosition Tile, int Left, int Right)>? SplitParts(Simulation simulation, Entity entity) => entity switch
+    {
+        RoomObject placed when simulation.FindEntity(placed.RoomId) is not Room { IsCrashed: true } =>
+            ObjectDrawing.Split(placed.ObjectType, placed.Tile, placed.Orientation),
+        Humanoid { ActionAnimation: not null, HiddenObjectId: not 0 } humanoid
+            when simulation.FindEntity(humanoid.HiddenObjectId) is RoomObject used && humanoid.ActionAnimationTile == used.Tile =>
+            ObjectDrawing.Split(used.ObjectType, used.Tile, used.Orientation),
+        _ => null,
+    };
 
     /// <summary>The first patient of the player's hospital waiting for an answer to their fax, in entity order.</summary>
     private static Humanoid? FirstQuestion(Simulation simulation, int player) =>
@@ -1927,58 +1965,93 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (!_entitiesByTile.TryGetValue(tile, out var list))
         {
+            DrawSplitParts(batch, simulation, tile, anchorX, anchorY);
             DrawSlaveParts(batch, tile);
             DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
             return;
         }
 
+        // Litter lies under everything, split objects included.
+        var splitDrawn = false;
         foreach (var entity in list)
         {
-            switch (entity)
+            if (!splitDrawn && entity is not Litter)
             {
-                case EntranceDoor door:
-                    _doors.Draw(batch, door, anchorX, anchorY, simulation.Tick);
-                    break;
-                case Humanoid humanoid:
-                    _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
-                    break;
-                case RoomObject placed:
-                    var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
-                    var machine = placed.Machine is null ? null : simulation.Content.FindObject(placed.ObjectType)?.Machine;
-                    if (machine is not null && simulation.FindEntity(placed.RoomId) is Room { IsCrashed: true })
-                    {
-                        _objects.DrawCrashed(batch, machine.Crashed.Id, placed.Tile, tint);
-                        break;
-                    }
-
-                    _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
-                    if (machine is not null)
-                    {
-                        _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);
-                    }
-
-                    break;
-                case Rat rat:
-                    var (_, ratAnimation, offsetX, offsetY) = RatDrawing(rat);
-                    var ratFirst = _animations.Animations.FirstFrame(ratAnimation);
-                    var ratFrame = _animations.Animations.Advance(ratFirst, (int)(simulation.Tick % _animations.Animations.Length(ratFirst)));
-                    _animations.DrawFrame(batch, ratFrame, anchorX + offsetX, anchorY + offsetY, NoLayers, flipHorizontally: false);
-                    break;
-                case Litter litter:
-                    _animations.DrawFrame(batch, _animations.Animations.FirstFrame(litter.Animation), anchorX, anchorY, NoLayers, flipHorizontally: litter.IsMirrored);
-                    break;
-                case RoomDoor { IsSwing: true } swingDoor:
-                    DrawSwingDoor(batch, simulation, swingDoor, tile, anchorX, anchorY);
-                    break;
-                case RoomDoor roomDoor:
-                    var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
-                    _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
-                    break;
+                DrawSplitParts(batch, simulation, tile, anchorX, anchorY);
+                splitDrawn = true;
             }
+
+            DrawEntity(batch, simulation, entity, tile, anchorX, anchorY);
+        }
+
+        if (!splitDrawn)
+        {
+            DrawSplitParts(batch, simulation, tile, anchorX, anchorY);
         }
 
         DrawSlaveParts(batch, tile);
         DrawFloatingDollars(batch, simulation, tile, anchorX, anchorY);
+    }
+
+    /// <summary>The parts of split objects, and of their users' animations, that <paramref name="tile"/> draws, each cropped to its column.</summary>
+    private void DrawSplitParts(SpriteBatch batch, Simulation simulation, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (!_splitPartsByTile.TryGetValue(tile, out var parts))
+        {
+            return;
+        }
+
+        foreach (var (entity, left, right) in parts)
+        {
+            _animations.SetColumnClip(left, right);
+            DrawEntity(batch, simulation, entity, tile, anchorX, anchorY);
+            _animations.ClearColumnClip();
+        }
+    }
+
+    private void DrawEntity(SpriteBatch batch, Simulation simulation, Entity entity, TilePosition tile, int anchorX, int anchorY)
+    {
+        switch (entity)
+        {
+            case EntranceDoor door:
+                _doors.Draw(batch, door, anchorX, anchorY, simulation.Tick);
+                break;
+            case Humanoid humanoid:
+                _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick);
+                break;
+            case RoomObject placed:
+                var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;
+                var machine = placed.Machine is null ? null : simulation.Content.FindObject(placed.ObjectType)?.Machine;
+                if (machine is not null && simulation.FindEntity(placed.RoomId) is Room { IsCrashed: true })
+                {
+                    _objects.DrawCrashed(batch, machine.Crashed.Id, placed.Tile, tint);
+                    break;
+                }
+
+                _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State);
+                if (machine is not null)
+                {
+                    _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);
+                }
+
+                break;
+            case Rat rat:
+                var (_, ratAnimation, offsetX, offsetY) = RatDrawing(rat);
+                var ratFirst = _animations.Animations.FirstFrame(ratAnimation);
+                var ratFrame = _animations.Animations.Advance(ratFirst, (int)(simulation.Tick % _animations.Animations.Length(ratFirst)));
+                _animations.DrawFrame(batch, ratFrame, anchorX + offsetX, anchorY + offsetY, NoLayers, flipHorizontally: false);
+                break;
+            case Litter litter:
+                _animations.DrawFrame(batch, _animations.Animations.FirstFrame(litter.Animation), anchorX, anchorY, NoLayers, flipHorizontally: litter.IsMirrored);
+                break;
+            case RoomDoor { IsSwing: true } swingDoor:
+                DrawSwingDoor(batch, simulation, swingDoor, tile, anchorX, anchorY);
+                break;
+            case RoomDoor roomDoor:
+                var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
+                _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
+                break;
+        }
     }
 
     /// <summary>
