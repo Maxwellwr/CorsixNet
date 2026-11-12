@@ -109,7 +109,8 @@ internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Ac
         yield return WindowRow.Of(
             WindowCell.Button(_typingParcel ? $"Parcel: {_parcelText}_" : $"Set parcel: {_parcelText}", () => _typingParcel = !_typingParcel,
                 highlight: _typingParcel || (tool.Mode == EditorMode.Parcel && tool.Number >= 10))
-            with { Tooltip = "Type a parcel number and press Return" });
+            with
+            { Tooltip = "Type a parcel number and press Return" });
 
         yield return WindowRow.Of(
             WindowCell.Button("Save map", () => action("save")) with { Tooltip = "Save the map to the maps folder" },
