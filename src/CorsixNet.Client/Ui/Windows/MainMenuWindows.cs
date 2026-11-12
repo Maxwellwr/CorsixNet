@@ -11,7 +11,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// <summary>
 /// <c>UIMainMenu</c>: shown when the game starts, over the first level, paused; Esc does not close it
 /// (<c>esc_closes = false</c>). Its items go to <paramref name="action"/> by name: <c>newgame</c>, <c>campaign</c>,
-/// <c>scenario</c>, <c>continue</c>, <c>load</c>, <c>options</c> and <c>exit</c>. There is no map editor yet.
+/// <c>scenario</c>, <c>continue</c>, <c>load</c>, <c>options</c>, <c>mapeditor</c> and <c>exit</c>.
 /// </summary>
 internal sealed class MainMenuWindow(Action<string> action, string version) : UiWindow
 {
@@ -30,7 +30,7 @@ internal sealed class MainMenuWindow(Action<string> action, string version) : Ui
         yield return Item("Continue Game", "continue", "Continue your latest saved game");
         yield return Item("Load Game", "load", "Load a saved game");
         yield return Item("Settings", "options", "Tweak various settings");
-        yield return WindowRow.Of(WindowCell.Button("Map Editor", () => { }, enabled: false) with { Tooltip = "Create a custom map (not yet)" });
+        yield return Item("Map Editor", "mapeditor", "Create a custom map");
         yield return Item("Exit", "exit", "No, no, please don't leave!");
         yield return WindowRow.Gap;
         yield return WindowCell.Line("Version: " + version, dim: true);

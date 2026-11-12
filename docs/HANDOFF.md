@@ -197,7 +197,21 @@ Done and committed:
   Map editor model (map_editor.lua, th_map.cpp level_map::save; 2026-11-12): Content/Levels/MapEditor.cs edits a
   LevelMap loaded with LevelMapLoader.Load(file, editing: true) (no parcel owners): PaintFloor (outside/road/hospital
   flags), walls, DeleteWalls, SetParcel, camera/heliport, Copy/Paste, ToMapFile/Save. MapFile.Create/ToBytes write
-  the format. Still needed: the editor's window with the sprite pages (drawing, on MSI) and the menu button.
+  the format. The editor's window and cursor (2026-11-12, MSI, seen live): the main menu's Map Editor or `--map-editor`
+  opens a blank map paused (a Simulation on the editor's LevelMap without map objects; MapViewScreen.StartMapEditor) with
+  MapEditorWindow: the nine sprite pages (MapEditorPages, layoutButtons) drawn with the map's block sprites on its canvas
+  (UiWindow.CanvasClicked), paste, delete wall, cameras and heliports 1-4 (players beyond the map's count greyed),
+  parcels 0-9 (the parcels overlay shows), Save map (Levels folder, "Map N.map", playable from Single Scenario), Load
+  map, New map, Quit. MapEditorTool is UIMapEditor's cursor: left drag paints (drag capabilities: floor area, north wall
+  along x, west wall along y), right press during a left drag paints in blocks, right drag copies and goes to paste,
+  moving back to the start cancels; red outlines as fillCursorArea; entrance doors drawn from the editor's placements
+  (MapEditor.PlaceEntranceDoor, checkObjectSpace). In the editor the right button no longer pans (middle does); Esc
+  reopens the window. `--script` `drag x1 y1 x2 y2 right` drags with the right button. Not yet: the player count
+  (LevelMap.PlayerCount is fixed), the custom parcel number box, objects other than entrance doors.
+  Patients knock on a room's door before going in (walk.lua's KnockDoorAction; PatientSpotAction.Knock, 2026-11-12): rooms
+  with required staff, doors that do not swing, nobody queueing or inside; knock_east animations are one frame in the
+  original. The crash trolley is drawn split over two tiles (ObjectDrawing.Split, AnimationRenderer.SetColumnClip,
+  thdf_crop), its examination too. The waiting patients' watch/yawn/foot animations were checked against the game data.
   Handyman priorities (staff_dialog.lua changeHandymanAttributes; save format 78): the staff window's Litter/Plants/
   Machines More buttons (IncreaseHandymanPriorityCommand), per-handyman thousandths in HandymanBehaviour; the first
   change makes the adviser say handyman_adjust (Hospital.HandymanPrioritiesChanged).

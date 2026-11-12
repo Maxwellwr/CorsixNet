@@ -14,14 +14,13 @@ public class MainMenuWindowTests
         var actions = new List<string>();
         var menu = new MainMenuWindow(actions.Add, "1.2.3");
 
-        foreach (var item in (string[])["Campaign", "Custom Campaign", "Single Scenario", "Continue Game", "Load Game", "Settings", "Exit"])
+        foreach (var item in (string[])["Campaign", "Custom Campaign", "Single Scenario", "Continue Game", "Load Game", "Settings", "Map Editor", "Exit"])
         {
             host.Click(menu, item);
         }
 
         Assert.True(menu.IsPinned);
-        Assert.Equal(["newgame", "campaign", "scenario", "continue", "load", "options", "exit"], actions);
-        Assert.Contains(menu.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Map Editor" && cell.OnClick is null);
+        Assert.Equal(["newgame", "campaign", "scenario", "continue", "load", "options", "mapeditor", "exit"], actions);
         Assert.Contains("Version: 1.2.3", host.Lines(menu));
     }
 

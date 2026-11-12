@@ -131,6 +131,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly Dictionary<TilePosition, List<(Entity Entity, int Left, int Right)>> _splitPartsByTile = [];
     private readonly BuildRoomTool _buildTool = new();
     private readonly FurnishCorridorTool _furnishTool = new();
+
+    /// <summary>The map editor's cursor while the editor is open (<c>UIMapEditor</c>), or null.</summary>
+    private MapEditorTool? _editorTool;
+
+    /// <summary>The map file the editor last loaded or saved, or null for a new map.</summary>
+    private string? _editorPath;
     private readonly HashSet<int> _hiddenObjects = [];
     private readonly ObjectDrawing _objects;
     private readonly FloatingDollarDrawing _floatingDollars;
@@ -265,7 +271,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         string? loadPath = null,
         GameConfig? config = null,
         string? configPath = null,
-        bool mainMenu = false)
+        bool mainMenu = false,
+        bool mapEditor = false)
     {
         _config = config ?? new GameConfig();
         _adviser.IsEnabled = !_config.AdviserDisabled;
@@ -336,7 +343,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         PrepareMapIfReady();
         _camera.ZoomAt(zoom, new Point(ViewSize.X / 2, ViewSize.Y / 2), ViewSize);
-        if (mainMenu && _session is LocalSession)
+        if (mapEditor)
+        {
+            StartMapEditor(MapEditor.Blank(), null);
+        }
+        else if (mainMenu && _session is LocalSession)
         {
             OpenMainMenu();
         }
@@ -443,6 +454,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             {
                 _buildBack = true;
             }
+            else if (_editorTool is not null)
+            {
+                OpenMapEditorWindow();
+            }
             else if (IsWindowHostReady)
             {
                 // CorsixTH's Esc shows the menu bar; quitting is on it.
@@ -517,8 +532,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var keyX = (ScrollKeyHeld("ingame_scroll_right", keys) || keys.IsKeyDown(Keys.D) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_left", keys) || keys.IsKeyDown(Keys.A) ? 1 : 0);
         var keyY = (ScrollKeyHeld("ingame_scroll_down", keys) || keys.IsKeyDown(Keys.S) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_up", keys) || keys.IsKeyDown(Keys.W) ? 1 : 0);
         var shiftHeld = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
-        var dragging = mouse.RightButton == ButtonState.Pressed || mouse.MiddleButton == ButtonState.Pressed;
-        var wasDragging = _previousMouse.RightButton == ButtonState.Pressed || _previousMouse.MiddleButton == ButtonState.Pressed;
+        // In the map editor the right button copies an area (UIMapEditor); the middle one still drags the view.
+        var rightPans = _editorTool is null;
+        var dragging = (rightPans && mouse.RightButton == ButtonState.Pressed) || mouse.MiddleButton == ButtonState.Pressed;
+        var wasDragging = (rightPans && _previousMouse.RightButton == ButtonState.Pressed) || _previousMouse.MiddleButton == ButtonState.Pressed;
         if (dragging && wasDragging)
         {
             var (dragX, dragY) = _scrolling.Drag(mouse.X - _previousMouse.X, mouse.Y - _previousMouse.Y, _camera.Zoom);
@@ -619,12 +636,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 }
 
                 DrawEntities(batch, tile, anchorX, anchorY);
+                DrawEditorObjects(batch, tile, anchorX, anchorY);
                 if (tile == ghostTile && ghost is { } shown)
                 {
                     _objects.Draw(batch, shown.ObjectType, shown.Tile, shown.Orientation, Simulation!.Tick, shown.Tint);
                 }
             }, tile => _entitiesByTile.TryGetValue(tile, out var here) && here.Any(e => e is Humanoid or Rat));
             DrawOverlay(batch, map, view);
+            if (_editorTool is { } editor && (_hoveredTile is not null || editor.IsDragging))
+            {
+                // UIMapEditor:fillCursorArea: a red outline on each tile the cursor covers.
+                foreach (var (corner, sizeX, sizeY) in editor.Outlines())
+                {
+                    for (var dx = 0; dx < sizeX; dx++)
+                    {
+                        for (var dy = 0; dy < sizeY; dy++)
+                        {
+                            var (cx, cy) = (corner.X + dx, corner.Y + dy);
+                            batch.Draw(_cellOutline, new Vector2((32 * (cx - cy)) - 32, 16 * (cx + cy)), CellOutlineColor);
+                        }
+                    }
+                }
+            }
+
             _buildTool.DrawPreview(batch, _diamond);
             if (_buildTool.IsActive && _hoveredTile is { } cell)
             {
@@ -1358,6 +1392,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         AdvanceSession(gameTime);
         if (_session is null || Simulation is not { } simulation)
         {
+            return;
+        }
+
+        if (_editorTool is { } editorTool)
+        {
+            UpdateMapEditor(editorTool, mouse);
             return;
         }
 
@@ -2298,7 +2338,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _roomsDescribed.UnionWith(Simulation!.Entities.OfType<Room>().Where(room => room.IsActive).Select(room => room.RoomType));
 
                 // CorsixTH shows a tip with the main menu; here, with the first game.
-                if (!_tipShown)
+                if (!_tipShown && _editorTool is null)
                 {
                     _tipShown = true;
                     _windows.Open(new TipOfTheDayWindow(_adviserRandom.Next(TipOfTheDayWindow.Tips.Count)));
@@ -2632,6 +2672,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             case "options":
                 _windows.Open(NewOptionsWindow());
                 break;
+            case "mapeditor":
+                StartMapEditor(MapEditor.Blank(), null);
+                break;
             case "exit":
                 _windows.Open(new ConfirmWindow("You are about to quit from CorsixNet. Are you sure this is what you want to do?", () => ExitRequested = true));
                 break;
@@ -2665,6 +2708,162 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _levels = [.. paths.Select(path => new LevelSource(Path.GetFileName(path), () => LevelMapLoader.LoadFile(path, _install)))];
         _levelList = false;
         SelectLevel(0);
+    }
+
+    /// <summary>
+    /// <c>UI:showMapEditor</c>: the map is shown paused, with nothing on it but its entrance doors, and the editor's
+    /// window and cursor take the mouse.
+    /// </summary>
+    private void StartMapEditor(MapEditor editor, string? path)
+    {
+        CloseMainMenu();
+        _windows.CloseAll();
+        foreach (var panel in _windows.Windows.OfType<BottomPanel>().ToList())
+        {
+            _windows.Close(panel);
+        }
+
+        _session?.Dispose();
+        var simulation = new Simulation(editor.Map, seed: 1, BaseGameContent.Create(), LevelRules.Free);
+        var local = new LocalSession(path is null ? "Map Editor" : Path.GetFileName(path), simulation, _saves, autosaveFrequency: 0);
+        local.SetSpeed(GameSpeed.Pause);
+        _session = local;
+        _error = null;
+        _editorTool = new MapEditorTool(editor) { Changed = () => { } };
+        _editorPath = path;
+        PrepareMapIfReady();
+        OpenMapEditorWindow();
+    }
+
+    private void OpenMapEditorWindow()
+    {
+        if (_editorTool is { } tool && !_windows.Windows.OfType<MapEditorWindow>().Any())
+        {
+            _windows.Open(new MapEditorWindow(tool, _blocks, MapEditorAction));
+        }
+    }
+
+    /// <summary>The editor's mouse on the map; the parcels' overlay shows while parcels are being set.</summary>
+    private void UpdateMapEditor(MapEditorTool tool, MouseState mouse)
+    {
+        var tile = _hoveredTile is { } point ? new TilePosition(point.X, point.Y) : (TilePosition?)null;
+        tool.Update(
+            tile,
+            mouse.LeftButton == ButtonState.Pressed,
+            mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released,
+            mouse.LeftButton == ButtonState.Released && _previousMouse.LeftButton == ButtonState.Pressed,
+            mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released,
+            mouse.RightButton == ButtonState.Released && _previousMouse.RightButton == ButtonState.Pressed);
+        if (tool.Mode == EditorMode.Parcel)
+        {
+            _overlay = MapOverlay.Parcels;
+        }
+        else if (_overlay == MapOverlay.Parcels)
+        {
+            _overlay = MapOverlay.None;
+        }
+    }
+
+    /// <summary>The entrance doors the edited map places on <paramref name="tile"/>, closed.</summary>
+    private void DrawEditorObjects(SpriteBatch batch, TilePosition tile, int anchorX, int anchorY)
+    {
+        if (_editorTool is not { } tool)
+        {
+            return;
+        }
+
+        foreach (var placement in tool.Editor.Objects)
+        {
+            if (placement.Tile != tile || placement.ObjectType is not (MapEditor.EntranceLeftDoor or MapEditor.EntranceRightDoor))
+            {
+                continue;
+            }
+
+            var west = (placement.Direction & 1) != 0;
+            var animation = (placement.ObjectType == MapEditor.EntranceRightDoor, west) switch
+            {
+                (true, false) => 308,
+                (true, true) => 312,
+                (false, false) => 316,
+                _ => 318,
+            };
+            _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
+        }
+    }
+
+    /// <summary>The editor window's own items: save and load maps in the levels folder, a new blank map, and quitting.</summary>
+    private void MapEditorAction(string action)
+    {
+        if (_editorTool is not { } tool)
+        {
+            return;
+        }
+
+        var folder = GameConfig.UserFolder(_config.Levels, _saves.Directory, "Levels");
+        switch (action)
+        {
+            case "save":
+                var path = _editorPath ?? NewMapPath(folder);
+                try
+                {
+                    tool.Editor.Save(path);
+                    _editorPath = path;
+                    ShowNotice($"Saved the map as {path}");
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    _windows.Open(new InformationWindow([$"Cannot save the map: {e.Message}"]));
+                }
+
+                break;
+            case "load":
+                var maps = Directory.Exists(folder) ? Directory.GetFiles(folder, "*.map").Order(StringComparer.OrdinalIgnoreCase).ToList() : [];
+                _windows.Open(new MapListWindow(maps, LoadEditorMap));
+                break;
+            case "restart":
+                _windows.Open(new ConfirmWindow("Start again with a blank map? Changes not saved are lost.", () => StartMapEditor(MapEditor.Blank(), null)));
+                break;
+            case "quit":
+                _windows.Open(new ConfirmWindow("Leave the map editor? Changes not saved are lost.", QuitMapEditor));
+                break;
+        }
+    }
+
+    /// <summary>A file name in the levels folder that no map has yet.</summary>
+    private static string NewMapPath(string folder)
+    {
+        for (var i = 1; ; i++)
+        {
+            var path = Path.Combine(folder, string.Create(CultureInfo.InvariantCulture, $"Map {i}.map"));
+            if (!File.Exists(path))
+            {
+                return path;
+            }
+        }
+    }
+
+    private void LoadEditorMap(string path)
+    {
+        try
+        {
+            StartMapEditor(MapEditor.Open(MapFile.Parse(File.ReadAllBytes(path))), path);
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            _windows.Open(new InformationWindow([$"Cannot load the map: {e.Message}"]));
+        }
+    }
+
+    /// <summary>Back to the main menu, over the first level as when the game starts.</summary>
+    private void QuitMapEditor()
+    {
+        _editorTool = null;
+        _editorPath = null;
+        _overlay = MapOverlay.None;
+        _windows.CloseAll();
+        _windows.Open(new BottomPanel(BottomPanelAction));
+        SelectLevel(0);
+        OpenMainMenu();
     }
 
     /// <summary>The options window's Apply: the new settings are saved to <c>config.txt</c> and used at once.</summary>
@@ -2826,6 +3025,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private string StatusLine()
     {
+        if (_editorTool is { } editor)
+        {
+            var name = _editorPath is null ? "new map" : Path.GetFileName(_editorPath);
+            var at = editor.Cursor;
+            var tile = editor.Editor.Map[at.X, at.Y];
+            return string.Create(CultureInfo.InvariantCulture, $"MAP EDITOR   {name}   tile ({at.X}, {at.Y})   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}   Esc: editor window");
+        }
+
         if (_session is null)
         {
             return "No game.";
@@ -3074,6 +3281,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private string TileLine()
     {
+        if (_editorTool is not null)
+        {
+            return "Pan: arrows WASD middle drag   Wheel: zoom   Left drag: paint, clear or paste   Right drag: copy an area";
+        }
+
         if (_buildTool.IsActive)
         {
             var reminder = Environment.TickCount64 < _buildReminderUntil ? " (finish or cancel the room to use other keys)" : string.Empty;

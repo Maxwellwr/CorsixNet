@@ -22,6 +22,7 @@ internal sealed record ClientOptions
     public bool PublicHost { get; init; }
     public string? PlayerName { get; init; }
     public bool SpriteViewer { get; init; }
+    public bool MapEditor { get; init; }
     public float Zoom { get; init; } = 1f;
     public MapOverlay Overlay { get; init; } = MapOverlay.None;
     public bool Demo { get; init; }
@@ -189,6 +190,11 @@ internal static class ClientCommandLine
         Description = "Browse sprite sheets instead of maps",
     };
 
+    private static readonly Option<bool> MapEditorOption = new("--map-editor")
+    {
+        Description = "Open the map editor with a blank map, as the main menu's Map Editor does",
+    };
+
     private static readonly Option<string?> SheetOption = new("--sheet")
     {
         Description = "Open the sprite viewer on a sheet, e.g. DATA/VBLK-0",
@@ -259,6 +265,7 @@ internal static class ClientCommandLine
         CaptureOption,
         ScriptOption,
         SpriteViewerOption,
+        MapEditorOption,
         SheetOption,
         ConfigOption,
         HostOption,
@@ -308,6 +315,7 @@ internal static class ClientCommandLine
             PublicHost = result.GetValue(PublicOption),
             PlayerName = result.GetValue(NameOption),
             SpriteViewer = result.GetValue(SpriteViewerOption) || sheet is not null,
+            MapEditor = result.GetValue(MapEditorOption),
             Zoom = result.GetValue(ZoomOption),
             Overlay = result.GetValue(OverlayOption),
             Demo = result.GetValue(DemoOption),
