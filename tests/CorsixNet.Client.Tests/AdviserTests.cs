@@ -3,6 +3,7 @@ using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 
@@ -85,6 +86,53 @@ public class AdviserTests
         checks.Observe(host.Simulation, 0, null, 0);
 
         Assert.Equal(AdviserChecks.AutopsyDiscovered.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void WithoutHandymenTheFirstLitterAndANewMachineAskForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.Hospitals[0].Littered = true;
+        var machine = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(5, 5), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.NeedHandymanLitter.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.NeedHandymanMachines.Fallback, host.Adviser.Current);
+
+        // Worn below six uses left it calls for repair: with no handyman, the adviser asks for one.
+        host.Adviser.Next(0);
+        machine.Machine!.TimesUsed = 5;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.MachineryDamaged2.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AMachineWornStraightBelowFourUsesIsFallingApart()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        host.Hire(StaffClass.Handyman);
+        var machine = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(5, 5), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        // Below six (a handyman is there), then below four after it: no advice.
+        machine.Machine!.TimesUsed = 5;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        machine.Machine.TimesUsed = 7;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        var second = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(6, 6), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+        second.Machine!.TimesUsed = 8;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.MachinesFallingApart.Fallback, host.Adviser.Current);
     }
 
     [Fact]

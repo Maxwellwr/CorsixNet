@@ -191,6 +191,9 @@ Done and committed:
   when missing): the dialogs, Ctrl+H the adviser's history, Shift+A the adviser on or off (saved),
   pause, speed up, quick save/load, the speeds 1-5, scrolling (arrows; WASD stays too), zoom (=, -,
   Shift for five times, 0), Alt/Ctrl+digit views and B the room list. Speed 6 and the stand-in keys stay fixed.
+  Handyman advice (2026-11-12): the first litter without handymen (need_handyman_litter, Hospital.Littered, save
+  format 77), a machine placed without one (need_handyman_machines), and repair calls (machines_falling_apart when a
+  machine goes straight below 4 uses left, machinery_damaged2 below 6 or from the machine window with no handyman).
   Main menu (main_menu.lua; 2026-11-12): with no --level/--map/--campaign/--load/--continue/--demo/--script/
   network option the game opens on it, the first level paused behind: Campaign, Custom Campaign and Single Scenario
   (the .campaign/.level files under config.txt's campaigns/levels, by default Campaigns/Levels beside the saves
