@@ -221,7 +221,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly string? _configPath;
 
     /// <summary>The keys for the dialogs and other actions, from <c>hotkeys.txt</c> next to the settings.</summary>
-    private readonly Hotkeys _hotkeys;
+    private Hotkeys _hotkeys;
 
     /// <summary>The game install, for reloading the sounds when the options change.</summary>
     private readonly ThemeHospitalInstall _install;
@@ -398,6 +398,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var viewSize = ViewSize;
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_previousKeys.IsKeyDown(key);
 
+        // A window waiting for a key (the hotkey assignment dialog) takes the keyboard: the game sees no keys then.
+        var realKeys = keys;
+        if (_windows.Windows.OfType<IKeyCaptureWindow>().FirstOrDefault(window => window.IsCapturing) is { } capture)
+        {
+            if (HotkeyInput.Captured(keys, _previousKeys) is { } captured)
+            {
+                capture.Capture(captured);
+            }
+
+            keys = default;
+        }
+
         if (Pressed(Keys.Escape))
         {
             if (_hiring is not null)
@@ -458,7 +470,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 }
             }
 
-            _previousKeys = keys;
+            _previousKeys = realKeys;
             _previousMouse = mouse;
             return;
         }
@@ -547,7 +559,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         UpdateSimulation(gameTime, mouse, keys, Pressed);
 
-        _previousKeys = keys;
+        _previousKeys = realKeys;
         _previousMouse = realMouse;
     }
 
@@ -2314,7 +2326,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new ConfirmWindow(Confirmation(1, "Are you sure you want to quit?"), () => ExitRequested = true));
                 break;
             case "options":
-                _windows.Open(new OptionsWindow(_config, ApplyConfig, InstalledLanguageNames(_install)));
+                _windows.Open(NewOptionsWindow());
                 break;
             case "savereplay":
                 SaveReplay();
@@ -2431,6 +2443,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         ShowNotice(_adviser.IsEnabled ? "The adviser is back" : "The adviser is quiet");
     }
 
+    /// <summary>The options, with the hotkey assignment dialog (<c>UIOptions:buttonHotkey</c>), which goes back to them.</summary>
+    private OptionsWindow NewOptionsWindow() =>
+        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))));
+
+    /// <summary><c>UIHotkeyAssign:buttonAccept</c>: the keys are used at once and saved to <c>hotkeys.txt</c>.</summary>
+    private void SaveHotkeys(Hotkeys hotkeys)
+    {
+        _hotkeys = hotkeys;
+        if (_configPath is null || Path.GetDirectoryName(Path.GetFullPath(_configPath)) is not { } folder)
+        {
+            return;
+        }
+
+        try
+        {
+            hotkeys.Save(Path.Combine(folder, Hotkeys.FileName));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowNotice($"Cannot save the hotkeys: {e.Message}");
+        }
+    }
+
     /// <summary>
     /// The hotkeys from <c>hotkeys.txt</c> beside the settings file (written with the defaults if missing); the defaults
     /// without a settings file or when the file can't be read.
@@ -2522,7 +2557,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new SaveLoadWindow(_saves, false, SaveGameTo, LoadGame));
                 break;
             case "options":
-                _windows.Open(new OptionsWindow(_config, ApplyConfig, InstalledLanguageNames(_install)));
+                _windows.Open(NewOptionsWindow());
                 break;
             case "exit":
                 _windows.Open(new ConfirmWindow("You are about to quit from CorsixNet. Are you sure this is what you want to do?", () => ExitRequested = true));

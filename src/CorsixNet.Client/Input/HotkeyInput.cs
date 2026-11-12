@@ -42,6 +42,47 @@ internal static class HotkeyInput
         };
     }
 
+    /// <summary>The hotkeys file's name for a MonoGame key, or null for a key the file has no name for.</summary>
+    public static string? KeyName(Keys key) => key switch
+    {
+        >= Keys.A and <= Keys.Z => ((char)('a' + (key - Keys.A))).ToString(),
+        >= Keys.D0 and <= Keys.D9 => ((char)('0' + (key - Keys.D0))).ToString(),
+        >= Keys.F1 and <= Keys.F12 => "f" + (key - Keys.F1 + 1).ToString(System.Globalization.CultureInfo.InvariantCulture),
+        Keys.OemPlus => "=",
+        Keys.OemMinus => "-",
+        Keys.Escape => "escape",
+        Keys.Enter => "return",
+        Keys.Space => "space",
+        Keys.Tab => "tab",
+        Keys.Delete => "delete",
+        Keys.Up => "up",
+        Keys.Down => "down",
+        Keys.Left => "left",
+        Keys.Right => "right",
+        _ => null,
+    };
+
+    /// <summary>
+    /// The key pressed this frame with the modifiers held, for the hotkey assignment dialog (CorsixTH's hotkey box
+    /// noting keys); null while only modifiers or keys without a name are pressed.
+    /// </summary>
+    public static Hotkey? Captured(KeyboardState keys, KeyboardState previous)
+    {
+        foreach (var key in keys.GetPressedKeys())
+        {
+            if (!previous.IsKeyDown(key) && KeyName(key) is { } name)
+            {
+                return new Hotkey(
+                    name,
+                    keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl),
+                    keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift),
+                    keys.IsKeyDown(Keys.LeftAlt) || keys.IsKeyDown(Keys.RightAlt));
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Whether the hotkey's modifiers, and only those, are held.</summary>
     public static bool ModifiersHeld(Hotkey hotkey, KeyboardState keys) =>
         hotkey.Ctrl == (keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl))

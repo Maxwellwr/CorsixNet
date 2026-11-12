@@ -2423,12 +2423,6 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         IsSetToDie = false;
     }
 
-    /// <summary>
-    /// <c>Patient:_dailyHealthChecks</c>: below 0.01 health goes to 0, and at 0 the patient is set to die. On the way
-    /// down, while health is from 0.18 to below 0.22, each day costs a little happiness and one time in 30 the patient is
-    /// fed up and goes home, unless they are in the room that cures them.
-    /// </summary>
-    /// <returns>False when health was already 0, which ends the patient's day.</returns>
     internal void AddToTreatmentHistory(TreatmentHistoryEntry entry) => _treatmentHistory.Add(entry);
 
     /// <summary><c>Patient:_dailyHealthHistoryRefresh</c>: today's health goes into the graph, the oldest day out.</summary>
@@ -2442,6 +2436,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         _healthHistory.Add(Health);
     }
 
+    /// <summary>
+    /// <c>Patient:_dailyHealthChecks</c>: below 0.01 health goes to 0, and at 0 the patient is set to die. On the way
+    /// down, while health is from 0.18 to below 0.22, each day costs a little happiness and one time in 30 the patient is
+    /// fed up and goes home, unless they are in a room.
+    /// </summary>
+    /// <returns>False when health was already 0, which ends the patient's day.</returns>
     internal bool OnEndDayHealth(Simulation simulation, Humanoid humanoid)
     {
         var health = Health;

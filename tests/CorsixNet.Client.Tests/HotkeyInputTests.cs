@@ -19,6 +19,26 @@ public sealed class HotkeyInputTests
     [InlineData("escape", Keys.Escape)]
     public void MapsTheFilesKeyNames(string name, Keys key) => Assert.Equal(key, HotkeyInput.ToKeys(name));
 
+    [Theory]
+    [InlineData("a")]
+    [InlineData("9")]
+    [InlineData("f12")]
+    [InlineData("=")]
+    [InlineData("return")]
+    [InlineData("right")]
+    public void NamesTheKeysItMaps(string name) => Assert.Equal(name, HotkeyInput.KeyName(HotkeyInput.ToKeys(name)!.Value));
+
+    [Fact]
+    public void CapturesTheNewKeyWithTheModifiersHeld()
+    {
+        var before = new KeyboardState(Keys.LeftControl);
+
+        Assert.Null(HotkeyInput.Captured(before, default));
+        Assert.Equal(new Hotkey("k", Ctrl: true), HotkeyInput.Captured(new KeyboardState(Keys.LeftControl, Keys.K), before));
+        Assert.Null(HotkeyInput.Captured(new KeyboardState(Keys.K), new KeyboardState(Keys.K)));
+        Assert.Null(HotkeyInput.Captured(new KeyboardState(Keys.PrintScreen), default));
+    }
+
     [Fact]
     public void EveryDefaultKeyIsOneTheKeyboardHas()
     {

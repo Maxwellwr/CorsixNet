@@ -94,9 +94,9 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: boredom, leaving angry, complaining (warmth and its
-  effect on happiness, prices changing happiness, health dropping, patients giving up, and thirst and the need for
-  the toilet growing (`Needs`), thirsty patients buying a can from the drinks machine, vomiting and peeing on the floor, and going to the toilets, are done) (`entities/humanoids/patient.lua`, `humanoid_actions/seek_toilets.lua`, `pee.lua`, `vomit.lua`).
+- Patient needs: a patient getting fed up near death leaves from any room but the one that cures them in CorsixTH,
+  here only from outside rooms (`PatientBehaviour.OnEndDayHealth`; `entities/humanoids/patient.lua`). The rest
+  (warmth, thirst, toilets, happiness, prices, waiting, vomiting) is done (`Needs`, `Feelings`).
 - Health and death: dying in place with the death animation, grim reaper and gates to hell, the dying mood
   icons and the health chart (`PatientBehaviour.Health` drops and patients die, but simply vanish) (`humanoid_actions/die.lua`, `entities/humanoids/grim_reaper.lua`).
 - Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,
@@ -189,7 +189,6 @@ fonts, faces) and the details listed.
   so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor),
   disease texts and VIP names (`OriginalTexts`, in the status line).
 - Subtitles for the announcer (`dialogs/subtitles.lua`).
-- The hotkey assignment dialog (`resizables/hotkey_assign.lua`); the keys themselves come from `hotkeys.txt` (`Hotkeys`).
 
 ## 7. Levels, goals, campaign
 
@@ -269,7 +268,8 @@ join.
   (`GameConfig`).
 - Hotkeys file (`hotkeys.txt`): read, and written with the defaults when missing, for the dialogs (F1–F9, Shift+F3,
   Ctrl+H, Y, C, F11), pause, speed up, quick save/load, the adviser toggle, the speeds, scrolling, zoom, remembered
-  views and the room list (`Hotkeys`, `HotkeyInput`). Still on fixed keys: Esc and this game's stand-in keys;
+  views and the room list (`Hotkeys`, `HotkeyInput`), and changed in the hotkey assignment dialog from the options
+  (`HotkeyAssignWindow`). Still on fixed keys: Esc and this game's stand-in keys;
   CorsixTH's other actions (sound, music, announcements toggles, screenshots, logs, furnish corridor, edit room,
   rotate object, sell the picked up item) are not read.
 - Update check (`resizables/update.lua`).
