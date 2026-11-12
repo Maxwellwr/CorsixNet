@@ -127,6 +127,15 @@ public sealed class GrimReaperBehaviour : HumanoidBehaviour
                 continue;
             }
 
+            // The hole must leave a way round it, so that it does not block a corridor one tile wide.
+            map[hole.X, hole.Y].Set(TileFlags.Passable, false);
+            var wayRound = simulation.Pathfinder.FindDistance(map, grimUse, patientUse);
+            map[hole.X, hole.Y].Set(TileFlags.Passable, true);
+            if (wayRound != 4)
+            {
+                continue;
+            }
+
             // A place for him to rise from which he can walk to his place, else his place itself.
             var spawn = grimUse;
             var facing = scenario.Facing;
@@ -142,6 +151,7 @@ public sealed class GrimReaperBehaviour : HumanoidBehaviour
                 }
             }
 
+            SetHoleFlags(map, hole, scenario.East, present: true);
             var reaper = simulation.AddEntity(id => new Humanoid(id, spawn, HumanoidType.GrimReaper));
             reaper.Face(facing);
             reaper.Behaviour = new GrimReaperBehaviour
@@ -178,6 +188,23 @@ public sealed class GrimReaperBehaviour : HumanoidBehaviour
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The gates to hell as a placed object (entities/object.lua's <c>setTile</c> with gates_to_hell.lua's footprint): the
+    /// hole is neither passable nor buildable, the tiles either side of it not buildable, until it closes.
+    /// </summary>
+    private static void SetHoleFlags(LevelMap map, TilePosition hole, bool east, bool present)
+    {
+        foreach (var d in new[] { -1, 0, 1 })
+        {
+            var (x, y) = east ? (hole.X, hole.Y + d) : (hole.X + d, hole.Y);
+            map[x, y].Set(TileFlags.Buildable, !present);
+            if (d == 0)
+            {
+                map[x, y].Set(TileFlags.Passable, !present);
+            }
+        }
     }
 
     /// <summary>The patient has walked into the hole: he swings his scythe (die.lua's <c>post_walk_into</c>).</summary>
@@ -245,6 +272,8 @@ public sealed class GrimReaperBehaviour : HumanoidBehaviour
             default:
                 if (--_timer <= 0)
                 {
+                    // die.lua's lava_destroy: the closed hole is taken away.
+                    SetHoleFlags(simulation.Map, HoleTile, HoleEast, present: false);
                     humanoid.IsDespawning = true;
                 }
 
