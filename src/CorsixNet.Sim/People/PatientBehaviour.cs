@@ -381,6 +381,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>What the patient does after leaving the current room.</summary>
     private AfterRoom Next { get; set; }
 
+    /// <summary>Whether, once out of the room, the patient looks for another room (a diagnosis room, the GP's, a treatment).</summary>
+    public bool WillSeekRoom => Next == AfterRoom.SeekRoom;
+
     /// <summary>Whether the room's staff is done with the patient (CorsixTH's <c>just_dealt_with</c>).</summary>
     private bool IsDealtWith { get; set; }
 
