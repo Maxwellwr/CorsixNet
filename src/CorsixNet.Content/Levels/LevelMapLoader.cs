@@ -50,7 +50,11 @@ public static class LevelMapLoader
     private const byte NotBuildableWest = 1 << 5;
     private const byte OutsideHospital = 1 << 4;
 
-    public static LoadedLevelMap Load(MapFile file)
+    /// <summary>
+    /// <c>level_map::load_from_th_file</c> and <c>Map:load</c>: the map's tiles, flags, parcels and objects. For the map
+    /// editor (<paramref name="editing"/>) the parcels get no owners, so no divider walls go up and nothing turns to grass.
+    /// </summary>
+    public static LoadedLevelMap Load(MapFile file, bool editing = false)
     {
         var map = new LevelMap(MapFile.Size, MapFile.Size, file.PlayerCount);
         var objects = new List<MapObjectPlacement>();
@@ -187,7 +191,7 @@ public static class LevelMapLoader
 
         // As in CorsixTH's Map:load, parcel N starts out owned by player N if there is one; the remaining parcels
         // are for sale, and show as grass until they are bought.
-        for (var parcel = 1; parcel < map.ParcelCount; parcel++)
+        for (var parcel = 1; parcel < map.ParcelCount && !editing; parcel++)
         {
             map.SetParcelOwner(parcel, parcel <= map.PlayerCount ? parcel : 0);
         }
