@@ -14,11 +14,13 @@ public sealed class TooltipTests
         var host = new WindowTestHost();
         var nurse = host.Hire(StaffClass.Nurse);
         var patient = host.AddPatient();
+        host.Adviser.Say("Hello", 0);
         UiWindow[] windows =
         [
             new BankManagerWindow(), new TownMapWindow(), new GraphWindow(), new ResearchWindow(), new PolicyWindow(), new StaffWindow(nurse.Id), new PatientWindow(patient.Id),
             new HireWindow(), new CasebookWindow(), new InformationWindow(["Hello"]), new ConfirmWindow("Sure?", () => { }), new TipOfTheDayWindow(0),
-            new NewGameWindow([Difficulty.Easy, Difficulty.Medium], "Dr", _ => { }),
+            new NewGameWindow([Difficulty.Easy, Difficulty.Medium], "Dr", _ => { }), new FaxWindow(), new CheatsWindow(), new AdviserHistoryWindow(),
+            new LevelEndWindow(),
         ];
 
         foreach (var window in windows)
