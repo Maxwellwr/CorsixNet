@@ -174,21 +174,54 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     /// </summary>
     private int _trainingRounds;
 
+    /// <summary>A surgeon leaving the operating theatre on the way to change back into a doctor, or changing.</summary>
+    private enum ChangeBack : byte
+    {
+        None,
+        Walking,
+        Changing,
+    }
+
+    private ChangeBack _changeBack;
+    private int _changeTimer;
+    private int _changeScreen;
+    private TilePosition? _changeResume;
+
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         Meander.Reset();
         RoomId = room.Id;
         Phase = DoctorPhase.WalkingToRoom;
+        if (humanoid.Type == HumanoidType.Surgeon && _changeBack == ChangeBack.None && StartChangingBack(simulation, humanoid, inside))
+        {
+            return;
+        }
+
+        if (_changeBack != ChangeBack.None)
+        {
+            // Called away while changing back: they go on there once changed.
+            _changeResume = inside;
+            return;
+        }
+
         humanoid.WalkTo(simulation, inside);
     }
 
     internal override void Update(Simulation simulation, Humanoid humanoid)
     {
+        if (_changeBack != ChangeBack.None)
+        {
+            ChangeBackStep(simulation, humanoid);
+            return;
+        }
+
         if (humanoid.Type == HumanoidType.Surgeon
             && (Phase is DoctorPhase.Idle or DoctorPhase.WalkingToRoom || simulation.FindEntity(RoomId) is not Room { RoomType: RoomVisits.OperatingTheatreRoom }))
         {
-            // The screen's last use, as a surgeon leaves the operating theatre, is left out: they are a doctor again.
-            humanoid.Type = HumanoidType.Doctor;
+            if (StartChangingBack(simulation, humanoid, humanoid.Destination))
+            {
+                return;
+            }
         }
 
         if (Phase == DoctorPhase.Idle)
@@ -1055,6 +1088,80 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         }
     }
 
+    /// <summary>
+    /// <c>commandEnteringStaff</c>'s last actions: a surgeon leaving the operating theatre walks to the surgeon screen and
+    /// changes back into a doctor there (use_screen.lua), then goes on where they were going. Without a screen in the
+    /// room they stand in, they are a doctor again at once.
+    /// </summary>
+    /// <returns>Whether they go to the screen; otherwise they are a doctor already.</returns>
+    private bool StartChangingBack(Simulation simulation, Humanoid humanoid, TilePosition? resume)
+    {
+        var tile = simulation.Map[humanoid.Tile.X, humanoid.Tile.Y];
+        if (simulation.FindEntity(tile.RoomId) is not Room { RoomType: RoomVisits.OperatingTheatreRoom } theatre
+            || RoomVisits.FindObject(simulation, theatre.Id, SurgeonScreen) is not { } screen)
+        {
+            humanoid.Type = HumanoidType.Doctor;
+            return false;
+        }
+
+        _changeResume = resume;
+        _changeScreen = screen.Id;
+        _changeBack = ChangeBack.Walking;
+        humanoid.StopWalking();
+        humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, screen));
+        return true;
+    }
+
+    private void ChangeBackStep(Simulation simulation, Humanoid humanoid)
+    {
+        if (simulation.FindEntity(_changeScreen) is not RoomObject screen)
+        {
+            humanoid.ClearActionAnimation();
+            FinishChangingBack(simulation, humanoid);
+            return;
+        }
+
+        if (_changeBack == ChangeBack.Walking)
+        {
+            if (RoomVisits.IsObjectBusy(simulation, screen, humanoid))
+            {
+                return;
+            }
+
+            // use_screen.lua for a surgeon: the screen's outfits pick the animation; they hang the scrubs back.
+            var whites = simulation.Entities.Count(e => e is Humanoid { Type: HumanoidType.Surgeon } surgeon
+                && simulation.Map[surgeon.Tile.X, surgeon.Tile.Y].RoomId == screen.RoomId);
+            var greens = Math.Max(0, 2 - whites);
+            var animation = greens > 0 ? (whites > 1 ? new AnimationRef(2796, 22) : new AnimationRef(2790, 40)) : new AnimationRef(2792, 47);
+            humanoid.Type = HumanoidType.Doctor;
+            humanoid.SetActionAnimation(simulation, animation, false, screen.Tile, RoomVisits.RenderTile(simulation, screen), screen.Id);
+            _changeTimer = animation.Length;
+            _changeBack = ChangeBack.Changing;
+            return;
+        }
+
+        if (--_changeTimer > 0)
+        {
+            return;
+        }
+
+        humanoid.ClearActionAnimation();
+        FinishChangingBack(simulation, humanoid);
+    }
+
+    private void FinishChangingBack(Simulation simulation, Humanoid humanoid)
+    {
+        humanoid.Type = HumanoidType.Doctor;
+        _changeBack = ChangeBack.None;
+        _changeScreen = 0;
+        if (_changeResume is { } resume && resume != humanoid.Tile)
+        {
+            humanoid.WalkTo(simulation, resume);
+        }
+
+        _changeResume = null;
+    }
+
     /// <summary>The first surgeon (the room's) to the table's patient side, the second to the far side (operating_table_b).</summary>
     private void WalkToTablePlace(Simulation simulation, Humanoid humanoid, Room room)
     {
@@ -1196,6 +1303,14 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         writer.WriteInt32(_sequenceObject);
         writer.WriteInt32(TrainingObjectId);
         writer.WriteInt32(_trainingRounds);
+        writer.WriteByte((byte)_changeBack);
+        writer.WriteInt32(_changeTimer);
+        writer.WriteInt32(_changeScreen);
+        writer.WriteBool(_changeResume is not null);
+        if (_changeResume is { } resume)
+        {
+            writer.WriteTile(resume);
+        }
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
@@ -1231,6 +1346,15 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         {
             doctor.TrainingObjectId = reader.ReadInt32();
             doctor._trainingRounds = reader.ReadInt32();
+        }
+
+        if (reader.Version is 0 or >= 82)
+        {
+            var changeBack = reader.ReadByte();
+            doctor._changeBack = changeBack <= (byte)ChangeBack.Changing ? (ChangeBack)changeBack : throw new InvalidDataException($"Unknown change back {changeBack}.");
+            doctor._changeTimer = reader.ReadInt32();
+            doctor._changeScreen = reader.ReadInt32();
+            doctor._changeResume = reader.ReadBool() ? reader.ReadTile() : null;
         }
 
         return doctor;
