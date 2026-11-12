@@ -202,7 +202,8 @@ public sealed class HumanoidQueue
     /// <returns>Whether the patient sits or goes to sit, so that they take no standing place.</returns>
     private bool TrySit(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, bool maySit)
     {
-        if (!maySit || patient.DiseaseId == "alien_dna" || patient.Phase is not (PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue))
+        if (!maySit || patient.DiseaseId == "alien_dna" || patient.Phase is not (PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue)
+            || (patient.BenchId == 0 && patient.IsSidetracked))
         {
             return false;
         }

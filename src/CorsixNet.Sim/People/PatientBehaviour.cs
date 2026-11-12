@@ -492,6 +492,13 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>A bench nearer the goal to move to once up, or 0.</summary>
     private int _nextBench;
 
+    /// <summary>The drinks machine a seated patient gets up for (<c>action_queue_get_soda</c>), or 0.</summary>
+    private int _benchDrink;
+
+    /// <summary>The bench the seated patient sits on, while they sit, or null (for the nurse vaccinating them).</summary>
+    internal RoomObject? SeatedBench(Simulation simulation) =>
+        _benchUse is { Phase: ObjectUsePhase.InUse } ? simulation.FindEntity(BenchId) as RoomObject : null;
+
     /// <summary>Whether the patient shows the thirsty mood (CorsixTH's <c>setMood("thirsty", "activate")</c>).</summary>
     public bool IsThirsty { get; internal set; }
 
@@ -539,6 +546,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal bool IsStatic(Humanoid humanoid) => Phase switch
     {
+        _ when BenchId != 0 => _benchUse is { Phase: ObjectUsePhase.InUse } && DrinksMachineId == 0 && SpotAction == PatientSpotAction.None,
         _ when IsSidetracked => false,
         PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue => IsStandingInQueue(humanoid),
         PatientPhase.Waiting or PatientPhase.SeekRoom => !humanoid.IsMoving,
@@ -1194,6 +1202,17 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
         _nextBench = 0;
         BenchDistance = -1;
+        if (_benchDrink != 0)
+        {
+            var drink = _benchDrink;
+            _benchDrink = 0;
+            if (simulation.FindEntity(drink) is RoomObject machine && humanoid.WalkTo(simulation, RoomVisits.UseTile(simulation, machine)))
+            {
+                DrinksMachineId = machine.Id;
+                return;
+            }
+        }
+
         ResumeAfterBench(simulation, humanoid);
     }
 
@@ -1244,6 +1263,15 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal void GoForDrink(Simulation simulation, Humanoid humanoid, RoomObject machine)
     {
+        // action_queue_get_soda: a patient sitting in a queue gets up first, then buys the can.
+        if (BenchId != 0 && DrinksMachineId == 0 && SpotAction == PatientSpotAction.None
+            && Phase is PatientPhase.InReceptionQueue or PatientPhase.InDoorQueue)
+        {
+            _benchDrink = machine.Id;
+            LeaveBench(simulation, humanoid);
+            return;
+        }
+
         if (IsSidetracked || Phase is not (PatientPhase.SeekReception or PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue
             or PatientPhase.SeekRoom or PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue or PatientPhase.Waiting))
         {
@@ -1322,6 +1350,9 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         DrinksMachineId = 0;
         _drinkUse = null;
         CarryOn(simulation, humanoid);
+
+        // Back in the queue with the can: they may sit down again (action_queue_on_change_position after the soda).
+        CurrentQueue(simulation)?.Arrange(simulation);
     }
 
     /// <summary>
@@ -1541,7 +1572,8 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal void Vomit(Simulation simulation, Humanoid humanoid)
     {
-        if (!IsAtFullyEmptyTile(simulation, humanoid) || HasVomited)
+        // atFullyEmptyTile's good_actions: not while sitting on a bench (use_object).
+        if (BenchId != 0 || !IsAtFullyEmptyTile(simulation, humanoid) || HasVomited)
         {
             return;
         }
@@ -1557,7 +1589,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// </summary>
     internal void Pee(Simulation simulation, Humanoid humanoid)
     {
-        if (!IsAtFullyEmptyTile(simulation, humanoid))
+        if (BenchId != 0 || !IsAtFullyEmptyTile(simulation, humanoid))
         {
             return;
         }
@@ -3259,6 +3291,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteInt32(BenchDistance);
         writer.WriteBool(_leaveBench);
         writer.WriteInt32(_nextBench);
+        writer.WriteInt32(_benchDrink);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -3386,6 +3419,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             patient.BenchDistance = reader.ReadInt32();
             patient._leaveBench = reader.ReadBool();
             patient._nextBench = reader.ReadInt32();
+        }
+
+        if (reader.Version is 0 or >= 84)
+        {
+            patient._benchDrink = reader.ReadInt32();
         }
 
         return patient;
