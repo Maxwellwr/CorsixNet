@@ -266,6 +266,14 @@ public sealed class DiseaseCase
     public int TurnedAway { get; internal set; }
 }
 
+/// <summary>A price's judgement by the adviser (<c>Hospital:advisePriceLevelImpact</c>'s under, over and fair).</summary>
+public enum PriceJudgment : byte
+{
+    Under,
+    Over,
+    Fair,
+}
+
 /// <summary>A player's hospital: its money, its casebook and what insurance companies owe it.</summary>
 public sealed class Hospital
 {
@@ -471,6 +479,27 @@ public sealed class Hospital
     /// (<c>_A.research.autopsy_discovered_rep_loss</c>).
     /// </summary>
     public int AutopsiesDiscovered { get; internal set; }
+
+    /// <summary>
+    /// How many times <c>computePriceLevelImpact</c> has had the adviser judge a price, and the last judgement and its
+    /// casebook entry (<c>PlayerHospital:advisePriceLevelImpact</c>), for the interface to say.
+    /// </summary>
+    public int PriceAdvices { get; private set; }
+
+    /// <inheritdoc cref="PriceAdvices"/>
+    public PriceJudgment LastPriceJudgment { get; private set; }
+
+    /// <inheritdoc cref="PriceAdvices"/>
+    public string LastPriceAdviceDisease { get; private set; } = string.Empty;
+
+    /// <summary>
+    /// Patients who went home because the price was too high, and the last one's casebook entry (Patient:goHome's
+    /// <c>warnPatientNotPaying</c>), for the interface to say once a month.
+    /// </summary>
+    public int NotPaying { get; private set; }
+
+    /// <inheritdoc cref="NotPaying"/>
+    public string LastNotPayingDisease { get; private set; } = string.Empty;
 
     /// <summary>Machines that have exploded and wrecked their room (CorsixTH's <c>num_explosions</c>, kept but never read there).</summary>
     public int Explosions { get; internal set; }
@@ -903,6 +932,12 @@ public sealed class Hospital
         {
             entry.TurnedAway++;
         }
+
+        if (reason == ReputationChange.OverPriced)
+        {
+            NotPaying++;
+            LastNotPayingDisease = entry.DiseaseId;
+        }
     }
 
     /// <summary>
@@ -927,6 +962,11 @@ public sealed class Hospital
         {
             if (random.NextInclusive(1, 100) == 1)
             {
+                if (entry.PricePercent < DiseaseCase.StandardPrice)
+                {
+                    AdvisePrice(PriceJudgment.Under, entry);
+                }
+
                 ChangeReputation(random, ReputationChange.UnderPriced);
             }
         }
@@ -934,14 +974,21 @@ public sealed class Hospital
         {
             if (random.NextInclusive(1, 100) == 1)
             {
+                AdvisePrice(PriceJudgment.Over, entry);
                 ChangeReputation(random, ReputationChange.OverPriced);
             }
         }
-        else if (Math.Abs(distortion) <= 0.15m)
+        else if (Math.Abs(distortion) <= 0.15m && random.NextInclusive(1, 200) == 1)
         {
-            // CorsixTH lets the adviser praise fair prices now and then; the chance is drawn all the same.
-            random.NextInclusive(1, 200);
+            AdvisePrice(PriceJudgment.Fair, entry);
         }
+    }
+
+    internal void AdvisePrice(PriceJudgment judgment, DiseaseCase entry)
+    {
+        PriceAdvices++;
+        LastPriceJudgment = judgment;
+        LastPriceAdviceDisease = entry.DiseaseId;
     }
 
     /// <summary>Borrows 5,000, or as much as allowed, if the loan may grow by 5,000 (<c>UIBankManager:increaseLoan</c>).</summary>
@@ -1482,6 +1529,11 @@ public sealed class Hospital
         writer.WriteBool(DidItOnFloor);
         writer.WriteBool(IsOpeningWatchHeld);
         writer.WriteInt32(Explosions);
+        writer.WriteInt32(PriceAdvices);
+        writer.WriteByte((byte)LastPriceJudgment);
+        writer.WriteString(LastPriceAdviceDisease);
+        writer.WriteInt32(NotPaying);
+        writer.WriteString(LastNotPayingDisease);
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1619,6 +1671,16 @@ public sealed class Hospital
         hospital.DidItOnFloor = reader.Version is 0 or >= 79 ? reader.ReadBool() : false;
         hospital.IsOpeningWatchHeld = reader.Version is 0 or >= 85 && reader.ReadBool();
         hospital.Explosions = reader.Version is 0 or >= 86 ? reader.ReadInt32() : 0;
+        if (reader.Version is 0 or >= 90)
+        {
+            hospital.PriceAdvices = reader.ReadInt32();
+            var judgment = reader.ReadByte();
+            hospital.LastPriceJudgment = judgment <= (byte)PriceJudgment.Fair ? (PriceJudgment)judgment : throw new InvalidDataException($"Unknown price judgment {judgment}.");
+            hospital.LastPriceAdviceDisease = reader.ReadString();
+            hospital.NotPaying = reader.ReadInt32();
+            hospital.LastNotPayingDisease = reader.ReadString();
+        }
+
         return hospital;
     }
 
