@@ -604,6 +604,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var tile = Camera.WorldToTile(world);
         _hoveredTile = inView && Map is { } map && map.Contains(tile.X, tile.Y) ? tile : null;
         _hoveredFraction = Camera.WorldToTileFraction(world);
+        UpdateHover();
 
         UpdateSimulation(gameTime, mouse, keys, Pressed);
 
@@ -1791,6 +1792,55 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
+    /// <summary>The humanoid under the cursor (picked as a click picks one), for its hoverable mood.</summary>
+    private int _hoveredHumanoid;
+
+    /// <summary>The room under the cursor or of the door under it, whose queueing patients show the queue mood.</summary>
+    private int _hoveredRoom;
+
+    /// <summary>
+    /// GameUI:onCursorWorldPositionChange's queueing icons and hoverable moods: HLIGHTP2.wav when the cursor comes onto a
+    /// room with a queue, or onto someone too cold or too hot.
+    /// </summary>
+    private void UpdateHover()
+    {
+        if (Simulation is not { } simulation || _hoveredTile is not { } hovered)
+        {
+            _hoveredHumanoid = 0;
+            _hoveredRoom = 0;
+            return;
+        }
+
+        var tile = new TilePosition(hovered.X, hovered.Y);
+        var roomId = simulation.Map[tile.X, tile.Y].RoomId;
+        if (roomId == 0)
+        {
+            // Over a door from the corridor: its room.
+            roomId = simulation.Entities.OfType<RoomDoor>()
+                .FirstOrDefault(door => door.Tile == tile || (door.Edge == EdgeOrientation.North ? door.Tile with { Y = door.Tile.Y - 1 } : door.Tile with { X = door.Tile.X - 1 }) == tile)?.RoomId ?? 0;
+        }
+
+        if (roomId != _hoveredRoom)
+        {
+            _hoveredRoom = roomId;
+            if (simulation.FindEntity(roomId) is Room { DoorQueue.Count: > 0 })
+            {
+                _sounds.Play("HLIGHTP2.wav");
+            }
+        }
+
+        var humanoid = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
+        var id = humanoid?.Id ?? 0;
+        if (id != _hoveredHumanoid)
+        {
+            _hoveredHumanoid = id;
+            if (humanoid is not null && HumanoidMoods.HoverIcon(humanoid) is not null)
+            {
+                _sounds.Play("HLIGHTP2.wav");
+            }
+        }
+    }
+
     private void CollectEntitiesByTile()
     {
         foreach (var list in _entitiesByTile.Values)
@@ -2165,7 +2215,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             case Humanoid { Behaviour: GrimReaperBehaviour { Phase: GrimReaperPhase.Closing } }:
                 break;
             case Humanoid humanoid:
-                _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick, HumanoidMoods.Icon(simulation, humanoid));
+                _humanoids.Draw(batch, humanoid, anchorX, anchorY, simulation.Tick, HumanoidMoods.Icon(simulation, humanoid, humanoid.Id == _hoveredHumanoid, _hoveredRoom));
                 break;
             case RoomObject placed:
                 var tint = placed.Id == _buildTool.HighlightedObject ? PickUpTint : Color.White;

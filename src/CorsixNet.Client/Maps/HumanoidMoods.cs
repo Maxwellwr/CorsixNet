@@ -21,9 +21,28 @@ internal static class HumanoidMoods
     /// <inheritdoc cref="OffsetX"/>
     public const int OffsetY = -96;
 
-    /// <summary>The animation of the humanoid's mood icon, or null for none.</summary>
-    public static int? Icon(Simulation simulation, Humanoid humanoid)
+    /// <summary>
+    /// Too cold (below 11 °C, warmth 0.22) or too hot (above 18 °C, 0.36): <c>Humanoid:checkWarmth</c>'s cold and hot moods,
+    /// which have no priority and show only while the cursor is over the humanoid (GameUI's hoverable moods).
+    /// </summary>
+    public static int? HoverIcon(Humanoid humanoid) =>
+        humanoid.Behaviour is not PatientBehaviour && humanoid.Profile is null ? null
+        : humanoid.Warmth < 0.22m ? 3994
+        : humanoid.Warmth > 0.36m ? 3988
+        : null;
+
+    /// <summary>
+    /// The animation of the humanoid's mood icon, or null for none. <paramref name="hovered"/>: the cursor is over the
+    /// humanoid; <paramref name="queueRoomId"/>: the room the cursor is over, whose door queue shows the queue mood.
+    /// </summary>
+    public static int? Icon(Simulation simulation, Humanoid humanoid, bool hovered = false, int queueRoomId = 0)
     {
+        // GameUI:onCursorWorldPositionChange: a hoverable mood replaces the shown one while the cursor is over them.
+        if (hovered && HoverIcon(humanoid) is { } hover)
+        {
+            return hover;
+        }
+
         var icon = 0;
         var priority = -1;
 
@@ -45,6 +64,9 @@ internal static class HumanoidMoods
             Offer(home && patient.HomeMood == PatientHomeMood.Exit, 4052, 60); // exit
             Offer(home && patient.HomeMood == PatientHomeMood.SadMoney, 4018, 55); // sad_money
             Offer(patient.EmergencyIndex != 0, 3914, 50); // emergency
+
+            // GameUI: the cursor over a room or its door shows the queue mood over every patient queueing there.
+            Offer(queueRoomId != 0 && simulation.FindEntity(queueRoomId) is Room { DoorQueue: { } queue } && queue.Contains(humanoid.Id), 4568, 70); // queue
 
             // Epidemic:startCoverUp shows the infected patients' status: infected, marked, chosen by a nurse, vaccinated.
             if (patient.IsInfected && humanoid.HospitalPlayer < simulation.Hospitals.Count

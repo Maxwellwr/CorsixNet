@@ -331,7 +331,8 @@ Next, in this order (2026-11-10):
    up (setMoodInfo): dead, cured, exit, sad_money (`PatientBehaviour.HomeMood`, save format 88), emergency, the
    cover-up's epidemic statuses, dying1-5 by health, sad2, patient_wait (no room), poo, thirsty; staff exit, pay_rise,
    tired; the icon follows the frame markers CorsixTH sets on animations (`MoodMarkers`, generated from the Lua's set{Patient,Staff}Marker calls). staff_wait (from the queue to the door), the GP's idea3/reflexion
-   (until the patient is out) are drawn too. Not yet: the queue mood while dragging in the queue window, cold/hot on hover. Left out:
+   (until the patient is out) are drawn too. The queue mood over the patients queueing at the room (or door) under the cursor and cold/hot over the humanoid under it,
+   with HLIGHTP2.wav (GameUI:onCursorWorldPositionChange), are done too (2026-11-13). Left out:
    meander.lua's idle staff going back to any `last_room` that needs staff (rooms here call staff themselves).
 2. Looks of visual diseases: Slack Male/Female done (PR #212: slack tongues and bald heads, with the GP chair, drinks
    machine, loo, X-ray, scanner and blood machine; a slack woman borrows a standard woman's animations,
