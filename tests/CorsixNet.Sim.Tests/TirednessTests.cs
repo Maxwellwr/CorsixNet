@@ -52,6 +52,34 @@ public class TirednessTests
     }
 
     [Fact]
+    public void AnOverworkedDoctorGoesCrazyAndComesRoundRestingInTheStaffRoom()
+    {
+        var simulation = NewSimulation();
+        AddRoom(simulation, "staff_room", new TileRect(4, 1, 3, 3), active: false);
+        var doctor = Hire(simulation, StaffClass.Doctor, new TilePosition(6, 6));
+        var layer = doctor.Layers[Humanoid.StaffLayer];
+        doctor.Fatigue = 1m;
+
+        // Doctor:tickDay: one day in 300 a very tired doctor goes crazy.
+        for (var day = 0; day < 3000 && !doctor.IsCrazy; day++)
+        {
+            Tiredness.CheckCrazy(simulation, doctor);
+        }
+
+        Assert.True(doctor.IsCrazy);
+        Assert.Equal(doctor.Profile!.Layer5 + 4, doctor.Layers[Humanoid.StaffLayer]);
+
+        // Still very tired, they stay crazy; rested in the staff room, they are themselves again.
+        doctor.PlaceAt(new TilePosition(5, 2));
+        Tiredness.CheckCrazy(simulation, doctor);
+        Assert.True(doctor.IsCrazy);
+        doctor.Fatigue = 0m;
+        Tiredness.CheckCrazy(simulation, doctor);
+        Assert.False(doctor.IsCrazy);
+        Assert.Equal(layer, doctor.Layers[Humanoid.StaffLayer]);
+    }
+
+    [Fact]
     public void FatigueStopsAtOne()
     {
         var simulation = NewSimulation();
