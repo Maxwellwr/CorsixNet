@@ -672,6 +672,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
             CollectEntitiesByTile();
             _humanoids.BeginFrame();
+            _objects.BeginFrame();
             // The object being placed is drawn in the same order as placed objects, so walls in front hide it.
             var ghost = _buildTool.Ghost ?? _furnishTool.Ghost;
             var ghostTile = ghost is { } g && Simulation is { } ghostSimulation ? ObjectDrawing.DrawTile(ghostSimulation.Content, g.ObjectType, g.Tile, g.Orientation) : (TilePosition?)null;
@@ -841,12 +842,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return GameCursor.KillRat;
         }
 
-        if (MachineWindow.At(simulation, tile) is { } machine && simulation.FindEntity(machine.RoomId) is Room { IsActive: true })
+        if (MachineUnderCursor(simulation, tile) is { } machine && simulation.FindEntity(machine.RoomId) is Room { IsActive: true })
         {
             return GameCursor.Repair;
         }
 
-        if (simulation.Entities.OfType<RoomObject>().Any(o => o.Desk is not null && o.Tile == tile)
+        if (DeskUnderCursor(simulation, tile) is not null
             || simulation.Entities.OfType<RoomDoor>().Any(door => door.Tile == tile))
         {
             return GameCursor.Queue;
@@ -1858,7 +1859,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             var tile = new TilePosition(target.X, target.Y);
             var here = HumanoidUnderCursor(simulation, tile);
-            var desk = simulation.Entities.OfType<RoomObject>().FirstOrDefault(o => o.Desk is not null && o.Tile == tile);
+            var desk = DeskUnderCursor(simulation, tile);
             var roomId = simulation.Map[tile.X, tile.Y].RoomId;
             if (here is not null)
             {
@@ -1873,7 +1874,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     _windows.Open(new PatientWindow(here.Id));
                 }
             }
-            else if (MachineWindow.At(simulation, tile) is { } machine && simulation.FindEntity(machine.RoomId) is Room machineRoom && RoomBuilder.IsOwnedBy(simulation.Map, machineRoom, _session.Player))
+            else if (MachineUnderCursor(simulation, tile) is { } machine && simulation.FindEntity(machine.RoomId) is Room machineRoom && RoomBuilder.IsOwnedBy(simulation.Map, machineRoom, _session.Player))
             {
                 // A click on a machine opens its window (CorsixTH's UIMachine).
                 _selected = null;
@@ -1910,6 +1911,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The world pixel under the cursor, for picking by the sprites drawn there.</summary>
     private Point? _hoveredWorld;
+
+    /// <summary>The placed object whose sprite is under the cursor (GameUI's hitTestObjects), or null.</summary>
+    private RoomObject? ObjectUnderCursor(Simulation simulation) =>
+        _hoveredWorld is { } point && _objects.ObjectAt(point) is { } id ? simulation.FindEntity(id) as RoomObject : null;
+
+    /// <summary>The machine under the cursor: by its sprite, else on the tile under it.</summary>
+    private RoomObject? MachineUnderCursor(Simulation simulation, TilePosition tile) =>
+        ObjectUnderCursor(simulation) is { Machine: not null } machine ? machine : MachineWindow.At(simulation, tile);
+
+    /// <summary>The reception desk under the cursor: by its sprite, else on the tile under it.</summary>
+    private RoomObject? DeskUnderCursor(Simulation simulation, TilePosition tile) =>
+        ObjectUnderCursor(simulation) is { Desk: not null } desk ? desk
+        : simulation.Entities.OfType<RoomObject>().FirstOrDefault(o => o.Desk is not null && o.Tile == tile);
 
     /// <summary>
     /// The humanoid under the cursor: by the pixels of the sprites last drawn (GameUI's hitTestObjects), else one
@@ -2362,7 +2376,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
                 // OperatingTheatreRoom:setXRayOn: the viewer lights up (layer 11 set to 2) while a patient is in the theatre.
                 var lit = placed.ObjectType == "x_ray_viewer" && simulation.FindEntity(placed.RoomId) is Room { PatientId: not 0 };
-                _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State, lit ? XRayViewerLit : null);
+                _objects.Draw(batch, placed.ObjectType, placed.Tile, placed.Orientation, simulation.Tick, tint, placed.HangingClothes, placed.Plant?.State, lit ? XRayViewerLit : null, placed.Id);
                 if (machine is not null)
                 {
                     _objects.DrawSmoke(batch, machine.Smoke.Id, placed.Tile, placed.Orientation, placed.Machine!.RemainingUses, simulation.Tick);

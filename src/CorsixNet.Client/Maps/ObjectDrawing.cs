@@ -205,7 +205,8 @@ internal sealed class ObjectDrawing
     /// For a plant, its state: CorsixTH draws it still, as the idle animation's first frame plus the state
     /// (<c>Plant:setNextState</c>). Null animates the object as usual.
     /// </param>
-    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint, byte? hangingClothes = null, int? frameOffset = null, byte[]? layers = null)
+    /// <param name="objectId">The placed object's id, to find it under the cursor later (<see cref="ObjectAt"/>); 0 for none.</param>
+    public void Draw(SpriteBatch batch, string objectType, TilePosition tile, Direction orientation, long tick, Color tint, byte? hangingClothes = null, int? frameOffset = null, byte[]? layers = null, int objectId = 0)
     {
         var anchorX = 32 * (tile.X - tile.Y);
         var anchorY = 16 * (tile.X + tile.Y);
@@ -244,5 +245,39 @@ internal sealed class ObjectDrawing
         var first = set.FirstFrame(animation);
         var frame = frameOffset is { } offset ? first + offset : set.Advance(first, (int)(tick % set.Length(first)));
         _renderer.DrawFrame(batch, frame, anchorX, anchorY, layers, flip, tint);
+        if (objectId != 0)
+        {
+            _drawn[objectId] = (frame, anchorX, anchorY, flip, layers, ++_drawOrder);
+        }
+    }
+
+    private readonly Dictionary<int, (int Frame, int X, int Y, bool Flip, byte[] Layers, int Order)> _drawn = [];
+    private int _drawOrder;
+
+    /// <summary>Forgets where objects were drawn, at the start of drawing the map.</summary>
+    public void BeginFrame()
+    {
+        _drawn.Clear();
+        _drawOrder = 0;
+    }
+
+    /// <summary>
+    /// The placed object whose sprite, as last drawn, has an opaque pixel at the world point; of several, the one drawn
+    /// last (GameUI's <c>hitTestObjects</c>).
+    /// </summary>
+    public int? ObjectAt(Point world)
+    {
+        int? best = null;
+        var bestOrder = -1;
+        foreach (var (id, drawn) in _drawn)
+        {
+            if (drawn.Order > bestOrder && _renderer.HitTest(drawn.Frame, drawn.X, drawn.Y, drawn.Layers, drawn.Flip, world.X, world.Y))
+            {
+                best = id;
+                bestOrder = drawn.Order;
+            }
+        }
+
+        return best;
     }
 }

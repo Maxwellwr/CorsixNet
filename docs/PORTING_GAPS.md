@@ -184,8 +184,8 @@ fonts, faces) and the details listed.
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
 - Cursors: the original's (DATA/MPointer, `CursorDrawing`) are drawn for the map's hover cases (patient, staff, queue at a
   door or desk, machine repair, rat, infected patient), editing a room, waiting while it empties, carrying staff and a pressed button; not yet the
-  room resize/move arrows, the bank's SPointer ones; people are picked by their sprites' pixels (`HumanoidDrawing.HumanoidAt`),
-  objects still by tile. Tooltips for the annual report's
+  room resize/move arrows, the bank's SPointer ones; people and placed objects are picked by their sprites' pixels (`HumanoidDrawing.HumanoidAt`,
+  `ObjectDrawing.ObjectAt`; machines and reception desks use it), doors still by tile. Tooltips for the annual report's
   figures and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
   cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
   information, confirm, tip of the day, new game, fax, cheats, adviser history and level end buttons have CorsixTH's `tooltip.*` texts, from the original's strings when
