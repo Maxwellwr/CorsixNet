@@ -213,6 +213,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Announces machines that start needing a repair urgently (CorsixTH's <c>announceRepair</c>).</summary>
     private readonly RepairAnnouncer _repairs = new();
 
+    private readonly GatesToHellSounds _hellSounds = new();
+
     private object? _repairSession;
 
     /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
@@ -2544,6 +2546,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             _sounds.Play(sound);
         }
+
+        _hellSounds.Update(Simulation!, _session.Speed, Environment.TickCount64, hole => _sounds.PlayAt("LAVA00*.WAV", ScreenOf(hole), ViewSize));
         if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))
         {
             _windows.Toggle(new FaxWindow());

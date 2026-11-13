@@ -57,14 +57,14 @@ internal sealed class SoundEffects : IDisposable
     /// <c>Entity:playSound</c>: a sound at a point of the view, quieter away from its centre and not heard off it
     /// (<c>sound_player::play_at</c>).
     /// </summary>
-    public void PlayAt(string name, Vector2 screen, Point viewSize)
+    /// <returns>How long the sound lasts, or zero when it is not heard.</returns>
+    public TimeSpan PlayAt(string name, Vector2 screen, Point viewSize)
     {
         var dx = screen.X - Math.Floor(viewSize.X / 2.0);
         var dy = screen.Y - Math.Floor(viewSize.Y / 2.0);
-        if (SoundChoice.VolumeAt(_volume, dx, dy, SoundChoice.StageRadius(viewSize.X, viewSize.Y)) is { } volume)
-        {
-            PlayAtVolume(name, (float)volume);
-        }
+        return SoundChoice.VolumeAt(_volume, dx, dy, SoundChoice.StageRadius(viewSize.X, viewSize.Y)) is { } volume
+            ? PlayAtVolume(name, (float)volume)
+            : TimeSpan.Zero;
     }
 
     public void Dispose()
@@ -77,27 +77,29 @@ internal sealed class SoundEffects : IDisposable
         _loaded.Clear();
     }
 
-    private void PlayAtVolume(string name, float volume)
+    private TimeSpan PlayAtVolume(string name, float volume)
     {
         if (_choice is null || _broken || volume <= 0)
         {
-            return;
+            return TimeSpan.Zero;
         }
 
         name = _choice.Resolve(name, _random.Next);
         if (Effect(name) is not { } effect)
         {
-            return;
+            return TimeSpan.Zero;
         }
 
         try
         {
             effect.Play(Math.Clamp(volume, 0f, 1f), 0f, 0f);
+            return effect.Duration;
         }
         catch (Exception e) when (e is NoAudioHardwareException or InstancePlayLimitException or InvalidOperationException)
         {
             // As CorsixTH without a sound device, or with every channel in use, the sound is not heard.
             _broken = e is NoAudioHardwareException;
+            return TimeSpan.Zero;
         }
     }
 
