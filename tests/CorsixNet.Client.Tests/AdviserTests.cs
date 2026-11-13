@@ -8,6 +8,7 @@ using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.People;
+using CorsixNet.Sim.Research;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 
@@ -137,6 +138,20 @@ public class AdviserTests
         doctor.IsCrazy = true;
         checks.Observe(simulation, 0, null, 0);
         Assert.Equal(AdviserChecks.DoctorCrazyOverwork.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AnAreaResearchedToTheEndIsAnnounced()
+    {
+        var host = new WindowTestHost();
+        var research = host.Simulation.Hospitals[0].Research;
+        research.Area(ResearchCategory.Drugs).Current = ResearchTarget.Drain;
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        research.Area(ResearchCategory.Drugs).Current = ResearchTarget.None;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.DrugFullyResearched.Fallback.Replace("%s", "Drugs", StringComparison.Ordinal), host.Adviser.Current);
     }
 
     [Fact]

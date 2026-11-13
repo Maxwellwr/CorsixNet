@@ -190,6 +190,9 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice DrugImproved = new(11, 26, "The %s drug has been improved by your Research Department.");
     public static readonly Advice MachineImproved = new(11, 27, "The %s has been improved by your Research Department.");
 
+    /// <summary>ResearchDepartment:nextResearch: nothing more to research in an area (S[17]'s area names).</summary>
+    public static readonly Advice DrugFullyResearched = new(11, 122, "You have researched everything in %s.");
+
     // Epidemic:showAppropriateAdviceMessages, during a cover-up
     public static readonly Advice EpidemicSeriousWarning = new(28, 2, "That contagious disease is getting serious. You need to do something about it!");
     public static readonly Advice EpidemicHurryUp = new(28, 3, "If you don't deal with that epidemic now, you're going to be in big trouble. Hurry!");
@@ -369,6 +372,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             {
                 Say(DrugImproved, texts?.DiseaseName(id) ?? id);
             }
+        }
+
+        // nextResearch: an area with nothing left to research (current = nil) since the last look.
+        foreach (var category in snapshot.DoneAreas.Except(last.DoneAreas))
+        {
+            Say(DrugFullyResearched, texts?.String(17, (int)category + 1) ?? category.ToString());
         }
 
         // advisePriceLevelImpact: the price of a casebook entry judged.
@@ -1043,7 +1052,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         IReadOnlyDictionary<string, (int Effectiveness, int Cost)> Drugs,
         int PriceAdvices,
         int NotPaying,
-        IReadOnlySet<int> Crazy)
+        IReadOnlySet<int> Crazy,
+        IReadOnlySet<Sim.Research.ResearchCategory> DoneAreas)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -1085,7 +1095,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 hospital.Casebook.ToDictionary(pair => pair.Key, pair => (pair.Value.CureEffectiveness, pair.Value.DrugCost), StringComparer.Ordinal),
                 hospital.PriceAdvices,
                 hospital.NotPaying,
-                staff.Where(s => s.IsCrazy).Select(s => s.Id).ToHashSet());
+                staff.Where(s => s.IsCrazy).Select(s => s.Id).ToHashSet(),
+                Enum.GetValues<Sim.Research.ResearchCategory>().Where(category => hospital.Research.Area(category).Current.IsNone).ToHashSet());
         }
     }
 }

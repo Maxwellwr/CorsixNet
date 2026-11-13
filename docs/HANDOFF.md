@@ -170,7 +170,8 @@ Done and committed:
   S[21], S[62]) with English stand-ins. Benches, queues, litter, machines and level progress came later (see below);
   2026-11-13 added the price judgements and patients not paying (`Hospital.PriceAdvices`, `NotPaying`; save format 90),
   the epidemic's hurry up and serious warnings, and drug and machine improvements. Not done: falling_1-6 (said only
-  when the player knocks a patient over, which this port cannot do) and research's new_available/drug_fully_researched.
+  when the player knocks a patient over, which this port cannot do) and research's new_available (an object discovered other than by research, which this port has no way of; drug_fully_researched
+  was added the same day).
   Dialogs (information.lua, confirm_dialog.lua, tip_of_the_day.lua): a tip of the day with the first
   game, a room's description from S[57] the first time one is built (room_information_dialogs), and
   Restart and Quit in the menu ask first.
