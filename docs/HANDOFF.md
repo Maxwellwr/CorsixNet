@@ -315,8 +315,8 @@ Done and committed:
   the animation), wait meandering; the patient changes into a gown (new types Surgeon, GownedMale/FemalePatient), the
   surgeons wash at the sink and take their places; the second surgeon operates from the far side (operating_table_b's
   animations, 2 to 5 rounds) while the first's use of the table with the patient loops its one-frame in-use animation
-  for as long; then the patient changes back and is cured. Left out: the surgeons changing back as they leave (they
-  turn into doctors at once), the X-ray viewer lighting up, the screen's outfit idles (the "needs a ward/surgeon" advice is done with the rooms' requirements below). From 2026-11-10 the user lets threads merge their own green PRs.
+  for as long; then the patient changes back and is cured. The surgeons changing back at the screen as they leave or go to rest, the X-ray viewer lighting up and the screen's
+  outfit idles were done later (PRs #264, #283 and the X-ray viewer); the "needs a ward/surgeon" advice is done with the rooms' requirements below. From 2026-11-10 the user lets threads merge their own green PRs.
 
 Next, in this order (2026-11-10):
 
@@ -336,7 +336,8 @@ Next, in this order (2026-11-10):
    meander.lua's idle staff going back to any `last_room` that needs staff (rooms here call staff themselves).
 2. Looks of visual diseases: Slack Male/Female done (PR #212: slack tongues and bald heads, with the GP chair, drinks
    machine, loo, X-ray, scanner and blood machine; a slack woman borrows a standard woman's animations,
-   `ObjectDefinition.LooksLike`). Still: pregnant patients are women only (not yet: a "pregnant" man was seen). Chewbacca done
+   `ObjectDefinition.LooksLike`). Pregnant patients are women only; a "pregnant" man seen once could not be found again (2026-11-13: every way a patient
+   gets a disease checked, and four months with the ward and theatre showed only standard and gowned women). Chewbacca done
    with electrolysis (PR #215). Alternate Male done with the fracture clinic (PR #216; women are off, CorsixTH's disable_fractured_bones_females default). Transparent and Invisible done (2026-11-12, MSI, seen live: TransparentMale/FemalePatient, InvisiblePatient with their walking,
    doors, knocking, vomiting, peeing, dying, the GP's chair, bench, loo, drinks machine, X-ray (invisible), scanner and autopsy;
    the pharmacy's drink morphs them into standard patients, MultiUsePhase.SecondaryMorph, NurseBehaviour.BecomeStandard; the
@@ -419,7 +420,8 @@ aliens included; stripped and gowned patients die as the standard man or woman).
 as a standard man while the grim reaper rises near the gates to hell (drawn from his behaviour, not a placed object),
 walks to his place and waits; the patient gets up, walks in and falls; he swings, leaves and the hole closes. The hole
 blocks its tile (not passable or buildable, its sides not buildable, as gates_to_hell.lua's footprint) until it closes,
-and is only opened where it leaves a way round (die.lua's 4-step check; 2026-11-12, cloud). Not yet: the sounds.
+and is only opened where it leaves a way round (die.lua's 4-step check; 2026-11-12, cloud). Its lava sounds play while it is open (2026-11-13, `GatesToHellSounds`:
+LAVA00*.WAV with showGatesToHell's silences by tick rate).
 
 How the room ports were done (PRs #200-#209): read the room and object .lua, dump frame counts with a throwaway
 Formats test (`AnimationSet.Load(RealGameData.Require())`, `Length(FirstFrame(id))`), add the definitions to
