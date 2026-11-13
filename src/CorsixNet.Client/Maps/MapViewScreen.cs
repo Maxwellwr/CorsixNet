@@ -621,6 +621,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var tile = Camera.WorldToTile(world);
         _hoveredTile = inView && Map is { } map && map.Contains(tile.X, tile.Y) ? tile : null;
         _hoveredFraction = Camera.WorldToTileFraction(world);
+        _hoveredWorld = inView ? new Point((int)Math.Floor(world.X), (int)Math.Floor(world.Y)) : null;
         UpdateHover();
 
         UpdateSimulation(gameTime, mouse, keys, Pressed);
@@ -670,6 +671,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var toTarget = Matrix.CreateTranslation(-topLeft.X, -topLeft.Y, 0) * Matrix.CreateScale(scale, scale, 1);
             batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
             CollectEntitiesByTile();
+            _humanoids.BeginFrame();
             // The object being placed is drawn in the same order as placed objects, so walls in front hide it.
             var ghost = _buildTool.Ghost ?? _furnishTool.Ghost;
             var ghostTile = ghost is { } g && Simulation is { } ghostSimulation ? ObjectDrawing.DrawTile(ghostSimulation.Content, g.ObjectType, g.Tile, g.Orientation) : (TilePosition?)null;
@@ -1855,7 +1857,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         else if (clicked && _hoveredTile is { } target)
         {
             var tile = new TilePosition(target.X, target.Y);
-            var here = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
+            var here = HumanoidUnderCursor(simulation, tile);
             var desk = simulation.Entities.OfType<RoomObject>().FirstOrDefault(o => o.Desk is not null && o.Tile == tile);
             var roomId = simulation.Map[tile.X, tile.Y].RoomId;
             if (here is not null)
@@ -1906,6 +1908,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The humanoid under the cursor (picked as a click picks one), for its hoverable mood.</summary>
     private int _hoveredHumanoid;
 
+    /// <summary>The world pixel under the cursor, for picking by the sprites drawn there.</summary>
+    private Point? _hoveredWorld;
+
+    /// <summary>
+    /// The humanoid under the cursor: by the pixels of the sprites last drawn (GameUI's hitTestObjects), else one
+    /// standing on the tile under it.
+    /// </summary>
+    private Humanoid? HumanoidUnderCursor(Simulation simulation, TilePosition tile) =>
+        (_hoveredWorld is { } point && _humanoids.HumanoidAt(simulation, point) is { } id ? simulation.FindEntity(id) as Humanoid : null)
+        ?? simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
+
     /// <summary>The room under the cursor or of the door under it, whose queueing patients show the queue mood.</summary>
     private int _hoveredRoom;
 
@@ -1940,7 +1953,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
-        var humanoid = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
+        var humanoid = HumanoidUnderCursor(simulation, tile);
         var id = humanoid?.Id ?? 0;
         if (id != _hoveredHumanoid)
         {

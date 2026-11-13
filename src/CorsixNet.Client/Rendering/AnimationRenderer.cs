@@ -210,6 +210,56 @@ internal sealed class AnimationRenderer : IDisposable
     }
 
     /// <summary>
+    /// Whether the frame drawn at (<paramref name="x"/>, <paramref name="y"/>) covers the point (<paramref name="px"/>,
+    /// <paramref name="py"/>) with an opaque pixel (CorsixTH's <c>animation::hit_test</c> through
+    /// <c>sprite_sheet::hit_test_sprite</c>).
+    /// </summary>
+    public bool HitTest(int frame, int x, int y, ReadOnlySpan<byte> layers, bool flipHorizontally, int px, int py)
+    {
+        foreach (var element in Animations.Elements(frame))
+        {
+            if (!IsVisible(element, layers))
+            {
+                continue;
+            }
+
+            var width = _sprites.WidthOf(element.Sprite);
+            var height = _sprites.HeightOf(element.Sprite);
+            var flags = flipHorizontally ? (byte)(element.Flags ^ FlipHorizontal) : element.Flags;
+            if (width == 0 || height == 0 || (flags & (Alpha50 | Alpha75)) == (Alpha50 | Alpha75))
+            {
+                continue;
+            }
+
+            var left = flipHorizontally ? x - element.X - width : x + element.X;
+            var top = y + element.Y;
+            var sx = px - left;
+            var sy = py - top;
+            if (sx < 0 || sy < 0 || sx >= width || sy >= height)
+            {
+                continue;
+            }
+
+            if ((flags & FlipHorizontal) != 0)
+            {
+                sx = width - 1 - sx;
+            }
+
+            if ((flags & FlipVertical) != 0)
+            {
+                sy = height - 1 - sy;
+            }
+
+            if (_sprites.Sheet[element.Sprite][sx, sy] != Palette.TransparentIndex)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Until <see cref="ClearColumnClip"/>, draws only the columns from <paramref name="left"/> to before
     /// <paramref name="right"/> (world coordinates), as CorsixTH's <c>thdf_crop</c> clips each part of an object drawn
     /// split over several tiles (<c>animation::draw</c>).
