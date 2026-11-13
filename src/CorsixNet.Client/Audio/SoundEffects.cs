@@ -67,6 +67,18 @@ internal sealed class SoundEffects : IDisposable
             : TimeSpan.Zero;
     }
 
+    /// <summary>
+    /// A sound by CorsixTH's number (1 for the archive's first, as an animation frame names it), at a point of the view
+    /// (<c>sound_player::play_at</c>).
+    /// </summary>
+    public void PlayNumberAt(int number, Vector2 screen, Point viewSize)
+    {
+        if (_choice is { } choice && number >= 1 && number <= choice.Archive.Sounds.Count)
+        {
+            PlayAt(choice.Archive.Sounds[number - 1].Name, screen, viewSize);
+        }
+    }
+
     public void Dispose()
     {
         foreach (var effect in _loaded.Values)

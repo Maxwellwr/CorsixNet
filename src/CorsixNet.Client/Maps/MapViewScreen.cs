@@ -215,6 +215,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private readonly GatesToHellSounds _hellSounds = new();
 
+    private readonly FrameSounds _frameSounds = new();
+
     private object? _repairSession;
 
     /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
@@ -327,9 +329,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var sprites = install.LoadSpriteSheet("DATA", "VSPR-0", complex: false);
         _animations = new AnimationRenderer(device, AnimationSet.Load(install), sprites, palette, upscale);
         _blueprints = new BlueprintDrawing(device, install, _blocks, _animations, sprites, palette);
-        _humanoids = new HumanoidDrawing(_animations);
+        _humanoids = new HumanoidDrawing(_animations) { FrameDrawn = (key, frame, x, y) => _frameSounds.Drawn(_animations.Animations, key, frame, x, y) };
         _doors = new EntranceDoorDrawing(_animations);
-        _objects = new ObjectDrawing(_animations);
+        _objects = new ObjectDrawing(_animations) { FrameDrawn = (key, frame, x, y) => _frameSounds.Drawn(_animations.Animations, key, frame, x, y) };
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
         try
         {
@@ -673,6 +675,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             CollectEntitiesByTile();
             _humanoids.BeginFrame();
             _objects.BeginFrame();
+            _frameSounds.BeginFrame();
             // The object being placed is drawn in the same order as placed objects, so walls in front hide it.
             var ghost = _buildTool.Ghost ?? _furnishTool.Ghost;
             var ghostTile = ghost is { } g && Simulation is { } ghostSimulation ? ObjectDrawing.DrawTile(ghostSimulation.Content, g.ObjectType, g.Tile, g.Orientation) : (TilePosition?)null;
@@ -730,6 +733,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _capturePath = null;
                 ExitRequested = true;
             }
+        }
+
+        // animation::draw: a frame's sound plays where it was drawn.
+        foreach (var (sound, x, y) in _frameSounds.TakeDue())
+        {
+            _sounds.PlayNumberAt(sound, (new Vector2(x, y) - _camera.TopLeft(viewSize).ToVector2()) * _camera.Zoom, viewSize);
         }
 
         _device.SetRenderTarget(null);

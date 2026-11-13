@@ -248,11 +248,15 @@ internal sealed class ObjectDrawing
         if (objectId != 0)
         {
             _drawn[objectId] = (frame, anchorX, anchorY, flip, layers, ++_drawOrder);
+            FrameDrawn?.Invoke(objectId, frame, anchorX, anchorY);
         }
     }
 
     private readonly Dictionary<int, (int Frame, int X, int Y, bool Flip, byte[] Layers, int Order)> _drawn = [];
     private int _drawOrder;
+
+    /// <summary>Told of each placed object drawn: its id, the frame and where (for the frames' sounds).</summary>
+    public Action<int, int, int, int>? FrameDrawn { get; set; }
 
     /// <summary>Forgets where objects were drawn, at the start of drawing the map.</summary>
     public void BeginFrame()
