@@ -189,7 +189,8 @@ fonts, faces) and the details listed.
   figures and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
   cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
   information, confirm, tip of the day, new game, fax, cheats, adviser history and level end buttons have CorsixTH's `tooltip.*` texts, from the original's strings when
-  loaded, `OriginalTooltips`); object and humanoid highlighting on hover; hover info.
+  loaded, `OriginalTooltips`); object and humanoid highlighting on hover. Hover info done as the second status line (`DynamicInfo`: the
+  bottom panel's dynamic info of the patient, member of staff, VIP, inspector or machine under the cursor, S[59] texts).
 - Strings and languages: CorsixTH's language files and their mapping of the original strings, translations, and
   showing them in windows (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`), and
   so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor),
