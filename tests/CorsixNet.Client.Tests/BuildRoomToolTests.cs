@@ -41,5 +41,26 @@ public class BuildRoomToolTests
         Assert.True(tool.IsActive);
     }
 
+    [Fact]
+    public void ARoomPickedForEditingWaitsWhileItEmpties()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var definition = simulation.Content.FindRoom("gp")!;
+        host.Submit(new BuildRoomCommand(new RoomPlan("gp", new TileRect(4, 4, 4, 4), new DoorPlacement(new(5, 4), EdgeOrientation.North))));
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+        room.IsActive = true;
+
+        // The edit command is on its way, then the room's people leave: GameUI's waiting cursor meanwhile.
+        var tool = new BuildRoomTool();
+        tool.StartEditing(definition, room.Id, simulation.Tick);
+        Assert.True(tool.IsWaitingForRoom(simulation));
+        room.IsActive = false;
+        room.IsClosing = true;
+        Assert.True(tool.IsWaitingForRoom(simulation));
+        room.IsClosing = false;
+        Assert.False(tool.IsWaitingForRoom(simulation));
+    }
+
     private static BuildInput Back() => new(null, 0, 0, false, false, false, false, false, true, false);
 }
