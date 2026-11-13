@@ -103,6 +103,10 @@ internal static class Feelings
         if (isStaff && humanoid.Profile!.Class != StaffClass.Receptionist)
         {
             OnEndDayStaff(simulation, humanoid, humanoid.Profile);
+            if (humanoid.Profile.Class == StaffClass.Doctor)
+            {
+                Tiredness.CheckCrazy(simulation, humanoid);
+            }
         }
         else if (humanoid.Behaviour is PatientBehaviour patient)
         {

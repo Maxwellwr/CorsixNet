@@ -166,6 +166,12 @@ public sealed class Humanoid : Entity
     /// </summary>
     public bool IsTiredMoodShown { get; internal set; }
 
+    /// <summary>
+    /// Whether the doctor has gone crazy from overwork (CorsixTH's <c>is_crazy</c>, <c>Doctor:setCrazy</c>): their
+    /// <see cref="StaffLayer"/> shows 4 more until they have rested.
+    /// </summary>
+    public bool IsCrazy { get; internal set; }
+
     /// <summary>Fired or quit: leaving the hospital and no longer counted as its staff (CorsixTH's <c>fired</c>).</summary>
     public bool IsFired { get; internal set; }
 
@@ -780,6 +786,7 @@ public sealed class Humanoid : Entity
             _skipStepTick = reader.ReadBool(),
             IsFast = reader.ReadBool(),
             _fastStep = reader.ReadBool(),
+            IsCrazy = reader.Version is 0 or >= 91 && reader.ReadBool(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -844,6 +851,7 @@ public sealed class Humanoid : Entity
         writer.WriteBool(_skipStepTick);
         writer.WriteBool(IsFast);
         writer.WriteBool(_fastStep);
+        writer.WriteBool(IsCrazy);
 
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)

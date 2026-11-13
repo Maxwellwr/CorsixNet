@@ -125,6 +125,21 @@ public class AdviserTests
     }
 
     [Fact]
+    public void ADoctorGoneCrazyIsAnnounced()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        host.Submit(new HireStaffCommand(StaffClass.Doctor, 0, new(5, 2)));
+        var doctor = simulation.Entities.OfType<Humanoid>().Single(h => h.Profile is { Class: StaffClass.Doctor });
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(simulation, 0, null, 0);
+
+        doctor.IsCrazy = true;
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.DoctorCrazyOverwork.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
     public void WithoutHandymenTheFirstLitterAndANewMachineAskForOne()
     {
         var host = new WindowTestHost();

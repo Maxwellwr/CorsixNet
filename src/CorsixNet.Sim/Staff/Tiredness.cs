@@ -92,6 +92,27 @@ internal static class Tiredness
     }
 
     /// <summary>
+    /// <c>Doctor:tickDay</c>'s overwork: a very tired doctor may go crazy (one day in 300); one who is no longer very
+    /// tired comes to their senses while resting (<c>Doctor:setCrazy</c>).
+    /// </summary>
+    internal static void CheckCrazy(Simulation simulation, Humanoid humanoid)
+    {
+        if (!IsVeryTired(simulation, humanoid.Fatigue))
+        {
+            if (humanoid.IsCrazy && IsResting(simulation, humanoid) && humanoid.Layers[Humanoid.StaffLayer] >= 5)
+            {
+                humanoid.SetLayer(Humanoid.StaffLayer, (byte)(humanoid.Layers[Humanoid.StaffLayer] - 4));
+                humanoid.IsCrazy = false;
+            }
+        }
+        else if (simulation.Random.NextInclusive(1, 300) == 1 && !humanoid.IsCrazy && humanoid.Profile is { } profile)
+        {
+            humanoid.SetLayer(Humanoid.StaffLayer, (byte)(profile.Layer5 + 4));
+            humanoid.IsCrazy = true;
+        }
+    }
+
+    /// <summary>
     /// <c>Staff:updateSpeed</c>, at the end of every tick: juniors walk slowly and consultants fast; very tired staff
     /// one step slower and those tired enough to crack up two (receptionists never); a doctor in the training room
     /// slowly; with the no-rest cheat everyone fast.

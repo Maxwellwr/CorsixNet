@@ -249,7 +249,8 @@ Done and committed:
   queue_too_long_send_doctor/need_doctors), plants_thirsty once a plant, people_did_it_on_the_floor
   (Hospital.DidItOnFloor), fax_received (first fax in a campaign level; client-side flag, not saved),
   information.emergency at helicopter phase 60, epidemic_health_inspector, reception_need_receptionist / no_desk_5 on
-  buying a desk. Bench advice and the tutorial were done since; not yet: doctor_crazy_overwork (no crazy doctors yet). msgMultiReceptionDesks (reception_bottleneck, queue_too_long_at_reception, another_desk) runs when a
+  buying a desk. Bench advice and the tutorial were done since; crazy doctors done 2026-11-13 (`Tiredness.CheckCrazy`, `Humanoid.IsCrazy`, save format 91: a very
+  tired doctor goes crazy one day in 300, looks wild (layer 5 + 4) until rested in the staff room; doctor_crazy_overwork). msgMultiReceptionDesks (reception_bottleneck, queue_too_long_at_reception, another_desk) runs when a
   patient sets off for a desk or joins its queue (AdviserChecks.MultiReceptionDesks).
   Fax keypad (fax.lua UIFax:validate, cheats.lua processCheatCode): digits, Cancel, Correct and Validate in the fax
   window; 24328 opens the cheats window, 112 is accepted, the four toggle codes (FaxCodes.ToggleCheat, CorsixTH's

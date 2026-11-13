@@ -69,6 +69,9 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
     public static readonly Advice NeedStaffroom = new(11, 74, "Your staff need a staff room.");
     public static readonly Advice StaffOverworked = new(11, 17, "Your staff are overworked.");
     public static readonly Advice StaffTired = new(28, 9, "Your staff are getting tired.");
+
+    /// <summary>Doctor:setCrazy: a doctor gone crazy from overwork.</summary>
+    public static readonly Advice DoctorCrazyOverwork = new(11, 95, "Oh no! One of your doctors has gone crazy from overwork. He'll get better if you let him rest straight away.");
     public static readonly Advice PlaceRadiators = new(62, 14, "Place some radiators to keep the hospital warm.");
     public static readonly Advice NeedToilets = new(11, 20, "Patients need toilets.");
     public static readonly Advice BuildToilets = new(28, 11, "Build some toilets.");
@@ -307,6 +310,12 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                     Say(index == 0 ? ManyKilled : AnotherPatientKilled, snapshot.Deaths);
                 }
             }
+        }
+
+        // Doctor:setCrazy.
+        if (snapshot.Crazy.Except(last.Crazy).Any())
+        {
+            Say(DoctorCrazyOverwork);
         }
 
         // Staff:requestRaise: the first time anyone asks, the adviser explains.
@@ -1033,7 +1042,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         IReadOnlyDictionary<string, int> MachineImprovements,
         IReadOnlyDictionary<string, (int Effectiveness, int Cost)> Drugs,
         int PriceAdvices,
-        int NotPaying)
+        int NotPaying,
+        IReadOnlySet<int> Crazy)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -1074,7 +1084,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 hospital.Research.Objects.ToDictionary(pair => pair.Key, pair => pair.Value.StrengthImprovements + pair.Value.CostImprovements, StringComparer.Ordinal),
                 hospital.Casebook.ToDictionary(pair => pair.Key, pair => (pair.Value.CureEffectiveness, pair.Value.DrugCost), StringComparer.Ordinal),
                 hospital.PriceAdvices,
-                hospital.NotPaying);
+                hospital.NotPaying,
+                staff.Where(s => s.IsCrazy).Select(s => s.Id).ToHashSet());
         }
     }
 }
