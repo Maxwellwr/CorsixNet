@@ -2,6 +2,8 @@ using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Diseases;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -88,6 +90,38 @@ public class AdviserTests
         checks.Observe(host.Simulation, 0, null, 0);
 
         Assert.Equal(AdviserChecks.AutopsyDiscovered.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void PricesPatientsNotPayingAndImprovementsAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var hospital = simulation.Hospitals[0];
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var entry = hospital.CaseOf(DiseaseCatalog.Find("uncommon_cold")!, simulation.Rules.Diseases);
+        entry.DrugCost = 100;
+        checks.Observe(simulation, 0, null, 0);
+
+        // advisePriceLevelImpact.
+        hospital.AdvisePrice(PriceJudgment.Over, entry);
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.HighPrices.Fallback.Replace("%s", "uncommon_cold", StringComparison.Ordinal), host.Adviser.Current);
+        host.Adviser.Next(0);
+
+        // warnPatientNotPaying, once a month.
+        hospital.UpdateNotCuredCounts(simulation.Random, ReputationChange.OverPriced, entry);
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.PatientNotPaying.Fallback.Replace("%s", "uncommon_cold", StringComparison.Ordinal), host.Adviser.Current);
+        host.Adviser.Next(0);
+        hospital.UpdateNotCuredCounts(simulation.Random, ReputationChange.OverPriced, entry);
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        // improveDrug: cheaper or more effective.
+        entry.DrugCost = 90;
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.DrugImproved.Fallback.Replace("%s", "uncommon_cold", StringComparison.Ordinal), host.Adviser.Current);
     }
 
     [Fact]

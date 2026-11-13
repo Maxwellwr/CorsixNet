@@ -183,6 +183,20 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
     public static readonly Advice NewMachineResearched = new(11, 24, "Research has produced a new %s.");
 
+    // research_department.lua: a drug's or a machine's improvement
+    public static readonly Advice DrugImproved = new(11, 26, "The %s drug has been improved by your Research Department.");
+    public static readonly Advice MachineImproved = new(11, 27, "The %s has been improved by your Research Department.");
+
+    // Epidemic:showAppropriateAdviceMessages, during a cover-up
+    public static readonly Advice EpidemicSeriousWarning = new(28, 2, "That contagious disease is getting serious. You need to do something about it!");
+    public static readonly Advice EpidemicHurryUp = new(28, 3, "If you don't deal with that epidemic now, you're going to be in big trouble. Hurry!");
+
+    // PlayerHospital:advisePriceLevelImpact and warnPatientNotPaying (CorsixTH's own texts)
+    public static readonly Advice LowPrices = new(0, 0, "You're charging too little for %s. This will bring people to your hospital, but you won't make a lot of profit from each one.", "adviser.warnings.low_prices");
+    public static readonly Advice HighPrices = new(0, 0, "Your charges for %s are high. This will make big profits in the short-term, but ultimately you'll start to drive people away.", "adviser.warnings.high_prices");
+    public static readonly Advice FairPrices = new(0, 0, "Your charges for %s seem fair and balanced.", "adviser.warnings.fair_prices");
+    public static readonly Advice PatientNotPaying = new(0, 0, "A patient left without paying for %s because it's too expensive!", "adviser.warnings.patient_not_paying");
+
     // room requirements (ResearchRoom:roomFinished)
     public static readonly Advice ResearchRoomNeedResearcher = new(11, 84, "The research department needs a doctor who is a researcher: nobody else can work there.");
 
@@ -209,6 +223,14 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
     /// <summary>Whether the first fax has been explained (<c>message_popup</c>).</summary>
     private bool _faxAdvised;
+
+    /// <summary>The month (since the start) in which warnPatientNotPaying last spoke: once a month only.</summary>
+    private long _notPayingMonth = -1;
+
+    /// <summary>The epidemic whose hurry up and serious warnings have been given (has_said_hurry_up, has_said_serious).</summary>
+    private object? _epidemicAdvised;
+    private bool _saidHurryUp;
+    private bool _saidSerious;
     private bool _curedDiedMessage;
     private bool _payRiseAdvised;
     private int _vipsAnnounced;
@@ -322,6 +344,40 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 Say(NewMachineResearched, simulation.Content.FindObject(id)?.Name ?? id);
             }
         }
+
+        // ResearchDepartment:improveMachine and improveDrug.
+        foreach (var (id, improvements) in snapshot.MachineImprovements)
+        {
+            if (last.MachineImprovements.TryGetValue(id, out var before) && improvements > before)
+            {
+                Say(MachineImproved, simulation.Content.FindObject(id)?.Name ?? id);
+            }
+        }
+
+        foreach (var (id, drug) in snapshot.Drugs)
+        {
+            if (last.Drugs.TryGetValue(id, out var before) && (drug.Effectiveness > before.Effectiveness || drug.Cost < before.Cost))
+            {
+                Say(DrugImproved, texts?.DiseaseName(id) ?? id);
+            }
+        }
+
+        // advisePriceLevelImpact: the price of a casebook entry judged.
+        if (snapshot.PriceAdvices > last.PriceAdvices)
+        {
+            var name = texts?.DiseaseName(hospital.LastPriceAdviceDisease) ?? hospital.LastPriceAdviceDisease;
+            Say(hospital.LastPriceJudgment switch { Sim.Economy.PriceJudgment.Under => LowPrices, Sim.Economy.PriceJudgment.Over => HighPrices, _ => FairPrices }, name);
+        }
+
+        // warnPatientNotPaying: once a month (the flag is reset on the 28th).
+        var monthNow = (simulation.Date.Year * 12L) + simulation.Date.Month;
+        if (snapshot.NotPaying > last.NotPaying && _notPayingMonth != monthNow)
+        {
+            _notPayingMonth = monthNow;
+            Say(PatientNotPaying, texts?.DiseaseName(hospital.LastNotPayingDisease) ?? hospital.LastNotPayingDisease);
+        }
+
+        EpidemicAdvice(simulation, hospital, Say);
 
         // Doctor:updateSkill: a doctor who becomes a specialist, a doctor or a consultant.
         foreach (var (id, rank) in snapshot.Ranks)
@@ -913,6 +969,39 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         }
     }
 
+    /// <summary>
+    /// Epidemic:showAppropriateAdviceMessages, while a cover-up is under way: hurry up at a quarter of the watch left with
+    /// someone still contagious, or a serious warning once a quarter has gone with more than ten contagious; each once.
+    /// </summary>
+    private void EpidemicAdvice(Simulation simulation, Sim.Economy.Hospital hospital, Action<Advice, object[]> say)
+    {
+        if (hospital.Epidemics.Current is not { IsCoverUpActive: true, IsWatchRunning: true } epidemic)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(epidemic, _epidemicAdvised))
+        {
+            _epidemicAdvised = epidemic;
+            _saidHurryUp = false;
+            _saidSerious = false;
+        }
+
+        // countdown_intervals is the watch's first value (WatchSegments - 1); open_timer counts down from it.
+        const int Intervals = Sim.Disasters.Epidemics.WatchSegments - 1;
+        var contagious = epidemic.InfectedIds.Count(id => simulation.FindEntity(id) is Humanoid { Behaviour: PatientBehaviour { IsInfected: true, IsVaccinated: false } });
+        if (!_saidHurryUp && contagious > 0 && epidemic.WatchTimer == Intervals / 4)
+        {
+            _saidHurryUp = true;
+            say(EpidemicHurryUp, []);
+        }
+        else if (epidemic.WatchTimer <= Intervals * 3 / 4 && !_saidSerious && contagious > 10)
+        {
+            _saidSerious = true;
+            say(EpidemicSeriousWarning, []);
+        }
+    }
+
     private static int CountIn(Simulation simulation, Room room, string objectType) =>
         simulation.Entities.Count(e => e is RoomObject placed && placed.RoomId == room.Id && string.Equals(placed.ObjectType, objectType, StringComparison.Ordinal));
 
@@ -940,7 +1029,11 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         int InspectorId,
         int Desks,
         int Receptionists,
-        IReadOnlySet<int> SeekingReception)
+        IReadOnlySet<int> SeekingReception,
+        IReadOnlyDictionary<string, int> MachineImprovements,
+        IReadOnlyDictionary<string, (int Effectiveness, int Cost)> Drugs,
+        int PriceAdvices,
+        int NotPaying)
     {
         public static Snapshot Of(Simulation simulation, int player)
         {
@@ -977,7 +1070,11 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 simulation.Entities.OfType<Humanoid>()
                     .Where(h => h.Behaviour is PatientBehaviour { Phase: PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue } && h.HospitalPlayer == player)
                     .Select(h => h.Id)
-                    .ToHashSet());
+                    .ToHashSet(),
+                hospital.Research.Objects.ToDictionary(pair => pair.Key, pair => pair.Value.StrengthImprovements + pair.Value.CostImprovements, StringComparer.Ordinal),
+                hospital.Casebook.ToDictionary(pair => pair.Key, pair => (pair.Value.CureEffectiveness, pair.Value.DrugCost), StringComparer.Ordinal),
+                hospital.PriceAdvices,
+                hospital.NotPaying);
         }
     }
 }

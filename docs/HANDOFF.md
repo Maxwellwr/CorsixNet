@@ -167,7 +167,10 @@ Done and committed:
   advice on set days from month 5 (money, staff room, radiators, toilets, heating, plants, thirst),
   the reception at month ends of year 1, the first cure/death, the first raise request, the boiler,
   earthquakes, new machines and VIPs walking in. Texts come from the game's strings (S[11], S[28],
-  S[21], S[62]) with English stand-ins. Not yet: benches, queues, litter, machines, level progress.
+  S[21], S[62]) with English stand-ins. Benches, queues, litter, machines and level progress came later (see below);
+  2026-11-13 added the price judgements and patients not paying (`Hospital.PriceAdvices`, `NotPaying`; save format 90),
+  the epidemic's hurry up and serious warnings, and drug and machine improvements. Not done: falling_1-6 (said only
+  when the player knocks a patient over, which this port cannot do) and research's new_available/drug_fully_researched.
   Dialogs (information.lua, confirm_dialog.lua, tip_of_the_day.lua): a tip of the day with the first
   game, a room's description from S[57] the first time one is built (room_information_dialogs), and
   Restart and Quit in the menu ask first.
@@ -246,8 +249,7 @@ Done and committed:
   queue_too_long_send_doctor/need_doctors), plants_thirsty once a plant, people_did_it_on_the_floor
   (Hospital.DidItOnFloor), fax_received (first fax in a campaign level; client-side flag, not saved),
   information.emergency at helicopter phase 60, epidemic_health_inspector, reception_need_receptionist / no_desk_5 on
-  buying a desk. Not yet: benches (sitting ratios need seated patients), doctor_crazy_overwork (no crazy doctors yet),
-  the tutorial. msgMultiReceptionDesks (reception_bottleneck, queue_too_long_at_reception, another_desk) runs when a
+  buying a desk. Bench advice and the tutorial were done since; not yet: doctor_crazy_overwork (no crazy doctors yet). msgMultiReceptionDesks (reception_bottleneck, queue_too_long_at_reception, another_desk) runs when a
   patient sets off for a desk or joins its queue (AdviserChecks.MultiReceptionDesks).
   Fax keypad (fax.lua UIFax:validate, cheats.lua processCheatCode): digits, Cancel, Correct and Validate in the fax
   window; 24328 opens the cheats window, 112 is accepted, the four toggle codes (FaxCodes.ToggleCheat, CorsixTH's
