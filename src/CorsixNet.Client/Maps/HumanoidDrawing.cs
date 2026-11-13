@@ -89,6 +89,7 @@ internal sealed class HumanoidDrawing
     {
         var drawn = DrawHumanoid(batch, humanoid, anchorX, anchorY, tick);
         _drawn[humanoid.Id] = (drawn, ++_drawOrder);
+        FrameDrawn?.Invoke(humanoid.Id, _renderer.Animations.Advance(_renderer.Animations.FirstFrame(drawn.Animation), drawn.Frame), drawn.X, drawn.Y);
         if (mood is { } icon)
         {
             // Entity:setMoodInfo: the icon's animation is a child of the humanoid's (draw_child), placed by the marker of
@@ -100,6 +101,9 @@ internal sealed class HumanoidDrawing
             _renderer.DrawFrame(batch, frame, drawn.X + markerX + HumanoidMoods.OffsetX, drawn.Y + markerY + HumanoidMoods.OffsetY, NoLayers, flipHorizontally: false);
         }
     }
+
+    /// <summary>Told of each humanoid drawn: its id, the frame and where (for the frames' sounds).</summary>
+    public Action<int, int, int, int>? FrameDrawn { get; set; }
 
     /// <summary>Forgets where humanoids were drawn, at the start of drawing the map.</summary>
     public void BeginFrame()

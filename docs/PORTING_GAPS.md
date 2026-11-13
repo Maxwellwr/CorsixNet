@@ -244,7 +244,9 @@ the distance falloff of `sound_player::play_at`; `play_sounds` and `sound_volume
 has: the build tool's door and window clicks, placing and turning objects, hiring and picking up and putting down
 staff, buying a parcel, shooting a rat, sending a patient home (positional).
 
-- Sound effects the simulation causes: objects, doors (`eledoor2.wav`), footsteps, machines, the earthquake
+- The animations' own sounds (VFRA's frame sounds with CorsixTH's replacements: machines, doors, objects, getting up,
+  vomiting, the grim reaper's swipe and more) play where the frame is drawn (`FrameSounds`, 2026-11-13). Still:
+  sound effects the simulation causes: doors (`eledoor2.wav`), footsteps, the earthquake
   (`quake.wav`), cheers and boos at the year end, vaccination (`vaccin.wav`), patients' coughs and other idle sounds;
   the interface's hover and button sounds once there are windows; announcer speech; adviser voice;
   `play_announcements` and `announcement_volume`.
