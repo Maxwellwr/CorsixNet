@@ -128,6 +128,13 @@ internal sealed class BuildRoomTool
     /// <summary>Whether the room is a finished one being edited (paid for: confirming costs nothing, taking it down asks).</summary>
     public bool IsEditing => _editing && _phase == Phase.Objects;
 
+    /// <summary>
+    /// Whether a room picked for editing is still being emptied (or the edit command is on its way): GameUI's
+    /// waiting_cursor until Room:tryToEdit lets the editing start.
+    /// </summary>
+    public bool IsWaitingForRoom(Simulation simulation) =>
+        _editing && _phase == Phase.Objects && simulation.FindEntity(_roomId) is Room { IsActive: true } or Room { IsClosing: true };
+
     /// <summary>The room being furnished or edited.</summary>
     public int RoomId => _roomId;
 

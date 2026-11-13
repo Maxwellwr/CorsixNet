@@ -795,6 +795,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return GameCursor.Grab;
         }
 
+        if (Simulation is { } waiting && _buildTool.IsWaitingForRoom(waiting))
+        {
+            return GameCursor.Sleep;
+        }
+
         var down = mouse.LeftButton == ButtonState.Pressed || mouse.RightButton == ButtonState.Pressed;
         if (_cursorOverWindow || Simulation is not { } simulation || _session is null || _hoveredTile is not { } hovered
             || _buildTool.IsActive || _furnishTool.IsActive)
