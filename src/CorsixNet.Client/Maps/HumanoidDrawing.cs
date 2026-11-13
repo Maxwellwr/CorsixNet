@@ -1,8 +1,10 @@
 using CorsixNet.Client.Rendering;
+using CorsixNet.Sim;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.People;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client.Maps;
@@ -86,6 +88,7 @@ internal sealed class HumanoidDrawing
     public void Draw(SpriteBatch batch, Humanoid humanoid, int anchorX, int anchorY, long tick, int? mood = null)
     {
         var drawn = DrawHumanoid(batch, humanoid, anchorX, anchorY, tick);
+        _drawn[humanoid.Id] = (drawn, ++_drawOrder);
         if (mood is { } icon)
         {
             // Entity:setMoodInfo: the icon's animation is a child of the humanoid's (draw_child), placed by the marker of
@@ -97,6 +100,49 @@ internal sealed class HumanoidDrawing
             _renderer.DrawFrame(batch, frame, drawn.X + markerX + HumanoidMoods.OffsetX, drawn.Y + markerY + HumanoidMoods.OffsetY, NoLayers, flipHorizontally: false);
         }
     }
+
+    /// <summary>Forgets where humanoids were drawn, at the start of drawing the map.</summary>
+    public void BeginFrame()
+    {
+        _drawn.Clear();
+        _drawOrder = 0;
+    }
+
+    /// <summary>
+    /// The humanoid whose sprite, as last drawn, is under the world point: of several, the one drawn last, which is in
+    /// front (GameUI's <c>hitTestObjects</c>, by the pixels of the frames as CorsixTH tests them).
+    /// </summary>
+    public int? HumanoidAt(Simulation simulation, Point world)
+    {
+        int? best = null;
+        var bestOrder = -1;
+        Span<byte> layers = stackalloc byte[Humanoid.LayerCount];
+        foreach (var (id, (drawn, order)) in _drawn)
+        {
+            if (order < bestOrder || simulation.FindEntity(id) is not Humanoid humanoid)
+            {
+                continue;
+            }
+
+            for (var i = 0; i < layers.Length; i++)
+            {
+                layers[i] = humanoid.Layers[i];
+            }
+
+            var set = _renderer.Animations;
+            var frame = set.Advance(set.FirstFrame(drawn.Animation), drawn.Frame);
+            if (_renderer.HitTest(frame, drawn.X, drawn.Y, layers, drawn.Flip, world.X, world.Y))
+            {
+                best = id;
+                bestOrder = order;
+            }
+        }
+
+        return best;
+    }
+
+    private readonly Dictionary<int, (Drawn Drawn, int Order)> _drawn = [];
+    private int _drawOrder;
 
     /// <summary>Where a humanoid was drawn, and which frame of which animation.</summary>
     private readonly record struct Drawn(int X, int Y, int Animation, int Frame, int Length, bool Flip);
