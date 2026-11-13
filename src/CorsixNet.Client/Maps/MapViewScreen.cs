@@ -3735,6 +3735,21 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return _notice;
         }
 
+        // GameUI: the bottom panel's dynamic info of what is under the cursor.
+        if (Simulation is { } infoSimulation && _hoveredTile is { } infoTile)
+        {
+            var tile0 = new TilePosition(infoTile.X, infoTile.Y);
+            if (infoSimulation.FindEntity(_hoveredHumanoid) is Humanoid hovered && DynamicInfo.Of(infoSimulation, hovered, _texts) is { Length: > 0 } info)
+            {
+                return info;
+            }
+
+            if (MachineUnderCursor(infoSimulation, tile0) is { } infoMachine)
+            {
+                return DynamicInfo.OfMachine(infoSimulation, infoMachine, _texts);
+            }
+        }
+
         if (_hoveredTile is not { } position || Map is not { } map)
         {
             var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-6: speed   Z: hold to speed up" : string.Empty;
