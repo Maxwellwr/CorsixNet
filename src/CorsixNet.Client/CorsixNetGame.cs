@@ -48,6 +48,7 @@ internal sealed class CorsixNetGame : Game
 
         // Keep updating without focus: a network game must keep up with the server. A script's input counts as focused.
         _screen?.Update(gameTime, IsActive || script is not null);
+        IsMouseVisible = _screen?.DrawsCursor != true;
 
         if (_screen?.ExitRequested == true || script?.QuitRequested == true)
         {

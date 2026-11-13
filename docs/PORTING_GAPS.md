@@ -182,7 +182,9 @@ fonts, faces) and the details listed.
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
-- Cursors per action (build, pick up, hand, queue) from the original's sprites; tooltips for the annual report's
+- Cursors: the original's (DATA/MPointer, `CursorDrawing`) are drawn for the map's hover cases (patient, staff, queue at a
+  door or desk, machine repair, rat, infected patient), editing a room, carrying staff and a pressed button; not yet the
+  room resize/move arrows, sleep while a room empties, the bank's SPointer ones, and picking by sprite rather than tile. Tooltips for the annual report's
   figures and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
   cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
   information, confirm, tip of the day, new game, fax, cheats, adviser history and level end buttons have CorsixTH's `tooltip.*` texts, from the original's strings when

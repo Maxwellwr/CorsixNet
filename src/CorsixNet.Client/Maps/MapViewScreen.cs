@@ -159,6 +159,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly ObjectDrawing _objects;
     private readonly FloatingDollarDrawing _floatingDollars;
 
+    /// <summary>The original's cursors (DATA/MPointer), or null if the sheet could not be loaded.</summary>
+    private readonly CursorDrawing? _cursors;
+
+    /// <summary>Whether the mouse was over a window at the last update.</summary>
+    private bool _cursorOverWindow;
+
     /// <summary>Objects the demo still has to place in its GP's office, one at a time.</summary>
     private readonly Queue<string> _demoFurniture = new();
     private int _demoFurnitureExpected;
@@ -323,6 +329,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _doors = new EntranceDoorDrawing(_animations);
         _objects = new ObjectDrawing(_animations);
         _floatingDollars = new FloatingDollarDrawing(device, install, palette, upscale);
+        try
+        {
+            _cursors = new CursorDrawing(device, install, palette);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException)
+        {
+            _cursors = null;
+        }
         Ui.StaffFaces.Current = Ui.StaffFaces.Load(device, install, palette);
         _texts = LoadTexts(install, _config);
         _sounds = SoundEffects.Load(install, _config);
@@ -527,6 +541,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var realMouse = mouse;
         var overWindow = IsWindowHostReady
             && _windows.Update(this, mouse, _previousMouse, new Rectangle(0, StatusHeight, _device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight)));
+        _cursorOverWindow = overWindow;
         if (overWindow)
         {
             mouse = new MouseState(mouse.X, mouse.Y, _previousMouse.ScrollWheelValue, _previousMouse.LeftButton, _previousMouse.MiddleButton, _previousMouse.RightButton, _previousMouse.XButton1, _previousMouse.XButton2);
@@ -749,7 +764,86 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         DrawLevelList(batch);
+        if (_cursors is not null)
+        {
+            var at = InputScript.Mouse();
+            _cursors.Draw(batch, CurrentCursor(at), new Point(at.X, at.Y));
+        }
+
         batch.End();
+    }
+
+    /// <inheritdoc/>
+    public bool DrawsCursor => _cursors is not null;
+
+    /// <summary>
+    /// GameUI:onCursorWorldPositionChange's cursor: the epidemic's over an infected patient during a cover-up, else the
+    /// hover cursor of what is under it (a patient, staff, a door or reception desk's queue, a machine to repair, a rat),
+    /// else the pressed one while a button is down; editing a room or carrying staff have theirs.
+    /// </summary>
+    private GameCursor CurrentCursor(MouseState mouse)
+    {
+        if (_pickingRoomToEdit)
+        {
+            return GameCursor.EditRoom;
+        }
+
+        if (_pickedUpStaff is not null)
+        {
+            return GameCursor.Grab;
+        }
+
+        var down = mouse.LeftButton == ButtonState.Pressed || mouse.RightButton == ButtonState.Pressed;
+        if (_cursorOverWindow || Simulation is not { } simulation || _session is null || _hoveredTile is not { } hovered
+            || _buildTool.IsActive || _furnishTool.IsActive)
+        {
+            return down ? GameCursor.Clicked : GameCursor.Default;
+        }
+
+        var tile = new TilePosition(hovered.X, hovered.Y);
+        if (simulation.FindEntity(_hoveredHumanoid) is Humanoid humanoid)
+        {
+            if (humanoid.Behaviour is PatientBehaviour { IsInfected: true } && humanoid.HospitalPlayer < simulation.Hospitals.Count
+                && simulation.Hospitals[humanoid.HospitalPlayer].Epidemics.Current is { IsCoverUp: true, IsWatchRunning: true })
+            {
+                return GameCursor.Epidemic;
+            }
+
+            if (humanoid.Behaviour is PatientBehaviour)
+            {
+                return GameCursor.Patient;
+            }
+
+            if (humanoid.Profile is not null && !humanoid.IsFired)
+            {
+                return GameCursor.Staff;
+            }
+
+            return GameCursor.Default;
+        }
+
+        if (simulation.Entities.OfType<Rat>().Any(rat => !rat.IsGone && RatDrawing(rat).Tile == tile))
+        {
+            return GameCursor.KillRatHover;
+        }
+
+        if (RatNear(simulation, _session.Player, hovered) is not null)
+        {
+            return GameCursor.KillRat;
+        }
+
+        if (MachineWindow.At(simulation, tile) is { } machine && simulation.FindEntity(machine.RoomId) is Room { IsActive: true })
+        {
+            return GameCursor.Repair;
+        }
+
+        if (simulation.Entities.OfType<RoomObject>().Any(o => o.Desk is not null && o.Tile == tile)
+            || simulation.Entities.OfType<RoomDoor>().Any(door => door.Tile == tile))
+        {
+            return GameCursor.Queue;
+        }
+
+        return down ? GameCursor.Clicked : GameCursor.Default;
     }
 
     public void Dispose()
@@ -758,6 +852,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _target?.Dispose();
         _blueprints.Dispose();
         _floatingDollars.Dispose();
+        _cursors?.Dispose();
         _animations.Dispose();
         _blocks.Dispose();
         _text.Dispose();
