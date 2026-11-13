@@ -1495,24 +1495,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
-        // Until rats can be clicked, X shoots the player's rat nearest the tile under the cursor, if it is within a tile.
-        if (pressed(Keys.X) && _hoveredTile is { } aim)
+        // GameUI's ingame_setTransparent (X, while held) and ingame_toggleTransparent (Shift+X): walls half transparent.
+        if (HotkeyInput.Pressed(_hotkeys["ingame_toggleTransparent"], keys, pressed))
         {
-            var shot = simulation.Entities.OfType<Rat>()
-                .Where(rat => !rat.IsGone && rat.Player == _session.Player)
-                .Select(rat => (rat, RatDrawing(rat).Tile))
-                .Where(entry => Math.Abs(entry.Tile.X - aim.X) <= 1 && Math.Abs(entry.Tile.Y - aim.Y) <= 1)
-                .OrderBy(entry => Math.Abs(entry.Tile.X - aim.X) + Math.Abs(entry.Tile.Y - aim.Y))
-                .Select(entry => entry.rat)
-                .FirstOrDefault();
-            if (shot is not null)
-            {
-                // Rat:onClick.
-                _session.Submit(new ShootRatCommand(shot.Id));
-                _sounds.Play("shotgun.wav");
-                _sounds.Play("deadrat2.wav");
-            }
+            _wallsTransparentToggled = !_wallsTransparentToggled;
         }
+
+        _renderer.TransparentWalls = _wallsTransparentToggled || HotkeyInput.Held(_hotkeys["ingame_setTransparent"], keys);
 
         // Until staff can be grabbed with the hand cursor, M picks up the player's member of staff nearest the cursor
         // (within a tile) and M again puts them down at the cursor; on the same tile, nothing happens.
@@ -1754,7 +1743,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
-        if (clicked && _hoveredTile is { } target)
+        if (clicked && _hoveredTile is { } aim && RatNear(simulation, _session.Player, aim) is { } shot)
+        {
+            // Rat:onClick: a click on one of the player's rats (within a tile of the cursor) shoots it.
+            _session.Submit(new ShootRatCommand(shot.Id));
+            _sounds.Play("shotgun.wav");
+            _sounds.Play("deadrat2.wav");
+        }
+        else if (clicked && _hoveredTile is { } target)
         {
             var tile = new TilePosition(target.X, target.Y);
             var here = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
@@ -1791,6 +1787,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
     }
+
+    /// <summary>Whether Shift+X has made the walls transparent (GameUI's toggled_transparency).</summary>
+    private bool _wallsTransparentToggled;
+
+    /// <summary>The player's rat nearest the tile under the cursor, if it is within a tile.</summary>
+    private Rat? RatNear(Simulation simulation, int player, Point aim) =>
+        simulation.Entities.OfType<Rat>()
+            .Where(rat => !rat.IsGone && rat.Player == player)
+            .Select(rat => (rat, RatDrawing(rat).Tile))
+            .Where(entry => Math.Abs(entry.Tile.X - aim.X) <= 1 && Math.Abs(entry.Tile.Y - aim.Y) <= 1)
+            .OrderBy(entry => Math.Abs(entry.Tile.X - aim.X) + Math.Abs(entry.Tile.Y - aim.Y))
+            .Select(entry => entry.rat)
+            .FirstOrDefault();
 
     /// <summary>The humanoid under the cursor (picked as a click picks one), for its hoverable mood.</summary>
     private int _hoveredHumanoid;

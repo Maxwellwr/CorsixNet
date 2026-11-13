@@ -43,7 +43,7 @@ objects from the level file.
   sofa/TV/video game/pool table, training projector and lecture chairs, research desk/computer/autopsy.
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
 - Special entities: helicopter (emergencies), gates to hell (death) (`objects/helicopter.lua`, `gates_to_hell.lua`).
-  Rat holes and rats are done (`Rats`, `Rat`), except clicking a rat (X shoots the one by the cursor), the kill
+  Rat holes and rats are done (`Rats`, `Rat`), except the kill
   cursor and sounds, the debug rat, and rat holes closing when a room is edited or removed.
 
 ## 3. Staff and their behaviour
@@ -302,7 +302,7 @@ join.
 **Has:** map layers, walls with shadows, windows, doors, objects and humanoids with layers and
 mirroring, blueprint drawing, bitmap fonts, palette remaps.
 
-- Wall transparency (walls cut away), animated map elements.
-- Smoke from broken machines, explosion animations. (Screen shake during earthquakes and the
-  `enable_screen_shake` option are done.)
+- (Done: transparent walls, X held or Shift+X toggled; machines' smoke and their crashed look after an explosion, which
+  is all CorsixTH draws for one (Machine:explodeMachine); screen shake during earthquakes. CorsixTH's level_map draws
+  the map's blocks unanimated, so there are no animated map elements to port.)
 - Video playback (Smacker intro/win/lose movies).
