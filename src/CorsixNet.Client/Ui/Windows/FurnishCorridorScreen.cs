@@ -179,14 +179,7 @@ internal sealed class FurnishCorridorScreen(Func<IWindowHost, List<ObjectDefinit
         }
         else if (pressed == "confirm")
         {
-            // confirm: the objects chosen go on the cursor one after the other, each bought as it is placed.
-            host.PlaySound(WindowLayer.DefaultButtonSound);
-            var list = objects.SelectMany(o => Enumerable.Repeat(o, _quantities.GetValueOrDefault(o.Id))).ToList();
-            host.Close(window);
-            if (list.Count > 0)
-            {
-                buy(list);
-            }
+            Buy(host, window, buy);
         }
         else if (pressed.StartsWith("item", StringComparison.Ordinal))
         {
@@ -194,6 +187,17 @@ internal sealed class FurnishCorridorScreen(Func<IWindowHost, List<ObjectDefinit
         }
     }
 
+    /// <summary>confirm (the button, or Enter): the objects chosen go on the cursor one after the other, each bought as it is placed.</summary>
+    public void Buy(IWindowHost host, UiWindow window, Action<IReadOnlyList<ObjectDefinition>> buy)
+    {
+        host.PlaySound(WindowLayer.DefaultButtonSound);
+        var list = List(host).SelectMany(o => Enumerable.Repeat(o, _quantities.GetValueOrDefault(o.Id))).ToList();
+        host.Close(window);
+        if (list.Count > 0)
+        {
+            buy(list);
+        }
+    }
     public string? Tooltip(IWindowHost host, Point local)
     {
         string Tip(int index, string fallback) => OriginalTooltips.Get(host, index, fallback);

@@ -57,8 +57,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Staff management screen: done in the original's look (`StaffManagementScreen`: tabs, pages, ordering by a heading,
   bonus, pay rise, sack, the view, the arrow keys). A raise request is answered from the table look or the fax only.
 - Keys in windows: a window on top in its original look takes the keys it handles (`UiWindow.TakesKey`): the arrows in
-  staff management and the casebook, Enter in the confirmation and information dialogs. Not yet: Enter in the hire,
-  furnish and edit room windows, the patient window's send home key, the place objects keys.
+  staff management and the casebook, Enter in the confirmation, information, hire and buy objects windows. Not yet: the
+  patient window's send home key, the place objects keys.
 - Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
