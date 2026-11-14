@@ -274,6 +274,14 @@ internal interface IWindowHost
     /// <summary>Starts the next level, or this one again.</summary>
     void StartLevel(bool next);
 
+    /// <summary>Whether the winning letter waits on the fax (World:winGame), until it is taken or turned down.</summary>
+    bool IsWinLetterPending => false;
+
+    /// <summary>decline_new_level: the letter goes and the level goes on.</summary>
+    void DeclineWinLetter()
+    {
+    }
+
     /// <summary>The key given to an action in the hotkeys file, as the player reads it (such as F1), or null.</summary>
     string? HotkeyText(string action);
 
@@ -285,6 +293,9 @@ internal interface IWindowHost
 
     /// <summary>The level's town, in capitals, as the town map shows it (<c>map.level_name</c>), or null if unknown.</summary>
     string? LevelTitle => null;
+
+    /// <summary>The next level's town, as the winning letter offers it (<c>_S.level_names[level + 1]</c>), or null.</summary>
+    string? NextLevelTitle => null;
 
     /// <summary>
     /// The map round an entity as it looked last frame (a window's view circle), 75 by 75 world pixels, or null until

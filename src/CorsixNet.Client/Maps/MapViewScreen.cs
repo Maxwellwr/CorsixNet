@@ -3043,7 +3043,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _lastYearSeen = Simulation.Date.Year;
         if (hospital.Outcome != EndOutcome.None && hospital.Outcome != _lastOutcome)
         {
-            _windows.Open(new LevelEndWindow());
+            if (hospital.Outcome == EndOutcome.Won && FaxScreen.IsAvailable(this))
+            {
+                // World:winGame: the letter comes on the fax, opened at once (openLastMessage).
+                _winLetterPending = true;
+                _windows.Open(new FaxWindow());
+            }
+            else
+            {
+                _windows.Open(new LevelEndWindow());
+            }
         }
 
         _lastOutcome = hospital.Outcome;
@@ -3183,6 +3192,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private bool IsVaccinationTarget(Humanoid humanoid) =>
         CoverUpRunning() is not null && humanoid.Behaviour is PatientBehaviour { IsInfected: true, IsVaccinated: false, IsMarkedForVaccination: false };
 
+    private bool _winLetterPending;
+
+    bool IWindowHost.IsWinLetterPending => _winLetterPending && Simulation is { } simulation && _session is not null && simulation.Hospitals[_session.Player].Outcome == EndOutcome.Won;
+
+    void IWindowHost.DeclineWinLetter() => _winLetterPending = false;
+
     void IWindowHost.PickUpStaff(int staffId)
     {
         _pickedUpStaff = staffId;
@@ -3198,16 +3213,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     string? IWindowHost.LevelTitle => _session is LocalSession local ? LevelTitle(local.Name, _texts) : null;
 
+    string? IWindowHost.NextLevelTitle => _session is LocalSession && _levelIndex + 1 < _levels.Count ? LevelTitle(_levels[_levelIndex + 1].Name, _texts, capitals: false) : null;
+
     /// <summary>
     /// Map:load's level_name: an original level's town is <c>_S.level_names[level]</c> (S[12][level + 1]) in capitals;
     /// other levels go by their file's name.
     /// </summary>
-    internal static string? LevelTitle(string fileName, OriginalTexts? texts)
+    internal static string? LevelTitle(string fileName, OriginalTexts? texts, bool capitals = true)
     {
         var match = System.Text.RegularExpressions.Regex.Match(fileName, @"^LEVEL\.L(\d+)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (match.Success && int.TryParse(match.Groups[1].Value, CultureInfo.InvariantCulture, out var level))
         {
-            return texts?.String(12, level + 1)?.ToUpper(CultureInfo.CurrentCulture);
+            return capitals ? texts?.String(12, level + 1)?.ToUpper(CultureInfo.CurrentCulture) : texts?.String(12, level + 1);
         }
 
         return Path.GetFileNameWithoutExtension(fileName) is { Length: > 0 } name ? name.ToUpper(CultureInfo.CurrentCulture) : null;
@@ -4467,10 +4484,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return [];
         }
 
-        return FaxWindow.Pending(simulation, _session.Player).Select(key => key[..key.IndexOf(':', StringComparison.Ordinal)] switch
+        return FaxWindow.Pending(simulation, _session.Player, ((IWindowHost)this).IsWinLetterPending).Select(key => key[..key.IndexOf(':', StringComparison.Ordinal)] switch
         {
             "vip" => "personality",
-            "vipreport" or "emergencyreport" or "epidemicreport" => "report",
+            "vipreport" or "emergencyreport" or "epidemicreport" or "winletter" => "report",
             "diseasereport" => "disease",
             "emergency" => "emergency",
             "epidemic" => "epidemy",
@@ -4565,7 +4582,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             PanelFaxes(),
             PanelDialogOpen,
             Tutorial.Lit,
-            FaxWindow.Pending(simulation, _session.Player).ToList());
+            FaxWindow.Pending(simulation, _session.Player, ((IWindowHost)this).IsWinLetterPending).ToList());
         _bottomPanel.Draw(batch, viewport, state, mouse, InputScript.Mouse());
     }
 

@@ -102,6 +102,15 @@ internal sealed class FaxWindow : UiWindow
         var simulation = host.Simulation;
         var hospital = simulation.Hospitals[host.Player];
         var messages = new List<FaxMessage>();
+        if (host.IsWinLetterPending)
+        {
+            // World:winGame's letter: on to the next level (or back to the menu after the last), or stay a while longer.
+            var next = host.HasNextLevel;
+            messages.Add(new FaxMessage(
+                [.. WinLetterLines(host)],
+                [(next ? host.Texts?.Named("fax.choices.accept_new_level") ?? "Move on to the next level" : host.Texts?.Named("fax.choices.return_to_main_menu") ?? "Return to the main menu", next, () => host.StartLevel(next: true)),
+                 (host.Texts?.Named("fax.choices.decline_new_level") ?? "Continue playing a while longer", true, host.DeclineWinLetter)]));
+        }
         if (hospital.Vips.IsInvitationPending)
         {
             var name = host.Texts?.VipName(hospital.Vips.InvitedName) ?? UiText.Format("corsixnet.fax.vip_number", "VIP %1%", hospital.Vips.InvitedName);
@@ -169,9 +178,14 @@ internal sealed class FaxWindow : UiWindow
         return messages;
     }
     /// <summary>The faxes waiting, as keys to tell new ones apart: what they are about and for whom.</summary>
-    public static IEnumerable<string> Pending(Simulation simulation, int player)
+    public static IEnumerable<string> Pending(Simulation simulation, int player, bool winLetter = false)
     {
         var hospital = simulation.Hospitals[player];
+        if (winLetter)
+        {
+            yield return "winletter:";
+        }
+
         if (hospital.Vips.IsInvitationPending)
         {
             yield return $"vip:{hospital.Vips.InvitationExpires}";
@@ -376,6 +390,96 @@ internal sealed class FaxWindow : UiWindow
         {
             yield return new Advice(44, 40, "The most you could have earned was %d. You earned %d.").Text(host.Texts, report.MaxBonus, report.Earned);
         }
+    }
+
+    /// <summary>
+    /// World:getCampaignWinningText for an original level: one of the four letters (1 to 4 offering the next level, 9 to
+    /// 12 after the last one) of S[39], to the player, with the salary offered and the next town.
+    /// </summary>
+    internal static IEnumerable<string> WinLetterLines(IWindowHost host)
+    {
+        var simulation = host.Simulation;
+        var hospital = simulation.Hospitals[host.Player];
+        var letters = Letters(host.Texts);
+        var index = (simulation.Date.MonthOfGame % 4) + 1 + (host.HasNextLevel ? 0 : 8);
+        if (TranslatedLetter(host.Texts, index) is { Count: >= 3 } translated)
+        {
+            while (letters.Count <= index)
+            {
+                letters.Add([]);
+            }
+
+            letters[index] = translated;
+        }
+        if (index >= letters.Count || letters[index].Count < 3)
+        {
+            yield return UiText.Get("corsixnet.progress.won", "Congratulations! You have met every goal of this level.");
+            if (hospital.SalaryOffer > 0)
+            {
+                yield return string.Create(CultureInfo.InvariantCulture, $"{UiText.Get("corsixnet.progress.new_salary", "Your new salary")}: {MoneyText.Format(hospital.SalaryOffer)}");
+            }
+
+            yield break;
+        }
+
+        var arguments = new object[][] { [host.PlayerName], [hospital.SalaryOffer], [host.NextLevelTitle ?? string.Empty] };
+        for (var i = 0; i < letters[index].Count; i++)
+        {
+            var text = letters[index][i];
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                yield return i < arguments.Length ? new Advice(0, 0, text).Text(null, arguments[i]) : text;
+            }
+        }
+    }
+
+    /// <summary>The chosen translation's letter (<c>letter[index]</c>), its lines without the "//" ending them, or null.</summary>
+    private static List<string>? TranslatedLetter(CorsixNet.Content.OriginalTexts? texts, int index)
+    {
+        var lines = new List<string>();
+        for (var i = 1; texts?.Named(string.Create(CultureInfo.InvariantCulture, $"letter.{index}.{i}")) is { } line; i++)
+        {
+            lines.Add(line.Replace("//", string.Empty, StringComparison.Ordinal));
+        }
+
+        return lines.Count > 0 ? lines : null;
+    }
+
+    /// <summary>
+    /// original_strings.lua's letters: S[39] read in order, "." starting the next letter and ".." ending them, a line
+    /// ending at each "//".
+    /// </summary>
+    internal static List<List<string>> Letters(CorsixNet.Content.OriginalTexts? texts)
+    {
+        var letters = new List<List<string>> { new() { string.Empty } };
+        for (var i = 1; texts is not null && i < 1000; i++)
+        {
+            if (texts.String(39, i) is not { } s)
+            {
+                break;
+            }
+
+            if (s == ".")
+            {
+                letters.Add([string.Empty]);
+            }
+            else if (s == "..")
+            {
+                letters.RemoveAt(letters.Count - 1);
+                break;
+            }
+            else
+            {
+                var letter = letters[^1];
+                letter[^1] += s.Replace("//", string.Empty, StringComparison.Ordinal);
+                if (s.Contains("//", StringComparison.Ordinal))
+                {
+                    letter.Add(string.Empty);
+                }
+            }
+        }
+
+        return letters;
     }
 
     /// <summary>

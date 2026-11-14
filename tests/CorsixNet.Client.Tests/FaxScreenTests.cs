@@ -77,4 +77,14 @@ public sealed class FaxScreenTests
         Assert.Equal(4, epidemic.Count);
         Assert.Contains("2000", epidemic[1], StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void TheWinningLetterWithoutTheGamesTextsSaysTheLevelIsWon()
+    {
+        var host = new WindowTestHost();
+        Assert.DoesNotContain(FaxWindow.Letters(null)[0], line => line.Length > 0);
+        var lines = FaxWindow.WinLetterLines(host).ToList();
+        Assert.NotEmpty(lines);
+        Assert.Equal("winletter:", Assert.Single(FaxWindow.Pending(host.Simulation, 0, winLetter: true).Take(1)));
+    }
 }
