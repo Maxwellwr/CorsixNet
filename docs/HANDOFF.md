@@ -46,6 +46,17 @@ Milestone M5 (build mode and a first complete room, then reception → GP patien
 
 Done and committed:
 
+- The original's look (2026-11-14, PRs #308–#341): the bottom panel (`OriginalBottomPanel`), the adviser's figure and
+  balloon (`AdviserFigure`), and every dialog the original draws from its own graphics now draws itself that way when
+  the graphics are there, falling back to its table of text otherwise (tests, demo data): bank manager, casebook,
+  policy, research, progress report, graphs, town map, annual report, fax (fullscreen, 640×480 centred); build room,
+  room edit and its buy window, furnish corridor, hire, staff, patient, queue, machine, watch, information and confirm.
+  The pattern: a `*Screen` class per dialog, `UiWindow.IsFullscreen(host)` (with `FullscreenSize`,
+  `FullscreenPosition`, `CapturesMouse`), `OriginalGraphics` (pictures, sheets and fonts from QData or Data with their
+  palettes, the language's Unicode face for Russian), and `IWindowHost` helpers (`CloseUp` for view circles,
+  `DrawIdle`, `DrawAnimation`, `TileAtScreen`, `PlayerName`). CorsixTH's own resizable windows (tip of the day,
+  options, menus) use its `aux_ui` bitmaps, which the original lacks, so they stay our text windows.
+  Live checks: `--load <save> --script` with `key F1`… and `button <label>`; panel buttons are found by name.
 - Room building in the original's steps: blueprint (drag, resize by edge, move by middle) →
   door → windows → furniture → confirm. Esc steps back; in the furniture step it takes the room
   down. No doors or windows on corner tiles.
