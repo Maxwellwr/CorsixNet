@@ -311,6 +311,14 @@ internal interface IWindowHost
     {
     }
 
+    /// <summary>
+    /// The fax's 24328 puts the cheats menu on the menu bar until the game is left (<c>app.cheats_menu_unlocked</c>,
+    /// <c>UIMenuBar:unlockCheats</c>).
+    /// </summary>
+    void UnlockCheatsMenu()
+    {
+    }
+
     /// <summary>Draws a humanoid standing in the first frame of their idle animation facing west, as UIQueue:drawPatient.</summary>
     void DrawIdle(SpriteBatch batch, Humanoid humanoid, Point at)
     {

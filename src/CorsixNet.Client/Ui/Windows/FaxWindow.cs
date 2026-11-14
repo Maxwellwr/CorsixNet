@@ -727,6 +727,7 @@ internal sealed class FaxWindow : UiWindow
             case FaxCode.Cheats:
                 host.Adviser.Say(UiText.Get("adviser.cheats.th_cheat", "Congratulations, you have unlocked cheats!"), Environment.TickCount64);
                 host.Open(new CheatsWindow());
+                host.UnlockCheatsMenu();
                 break;
             case FaxCode.Hello:
                 break;

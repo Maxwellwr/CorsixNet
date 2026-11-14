@@ -36,6 +36,7 @@ public sealed class FaxCodeTests
         host.Click(fax, "Validate");
 
         Assert.Contains(host.Opened, window => window is CheatsWindow);
+        Assert.True(host.CheatsMenuUnlocked);
         Assert.Equal("fax_yes.wav", host.Sounds[^1]);
         Assert.Equal("Congratulations, you have unlocked cheats!", host.Adviser.Current);
 

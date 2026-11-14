@@ -51,6 +51,10 @@ internal sealed class WindowTestHost : IWindowHost
 
     public void ToggleVaccinationMode() => IsVaccinationMode = !IsVaccinationMode;
 
+    public bool CheatsMenuUnlocked { get; private set; }
+
+    public void UnlockCheatsMenu() => CheatsMenuUnlocked = true;
+
     public int? PickedUp { get; private set; }
 
     public TilePosition? Centered { get; private set; }

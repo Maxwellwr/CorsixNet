@@ -3292,11 +3292,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The menu's items that are not windows.</summary>
     private readonly OriginalMenuBar _menuBar = new();
 
+    /// <summary>Whether the fax's 24328 has put the cheats menu on the bar (<c>app.cheats_menu_unlocked</c>), until the game is left.</summary>
+    private bool _cheatsMenuUnlocked;
+
+    void IWindowHost.UnlockCheatsMenu() => _cheatsMenuUnlocked = true;
+
     private int MenuBarMeasure(string text) => ((IWindowHost)this).Graphics?.Font("FONT01V", OriginalGraphics.MainPalette)?.Measure(text).Width ?? 0;
 
     /// <summary>
     /// makeGameMenu's menus: file (load, save, quick save and load, restart, quit), options, charts (the dialogs) and
-    /// debug (cheats, replays). CorsixTH's own options and debug items this game has no counterpart for are left out.
+    /// debug (replays), and once the fax's 24328 has unlocked them the cheats (<c>UIMenuBar:unlockCheats</c>). CorsixTH's
+    /// own options and debug items this game has no counterpart for are left out.
     /// </summary>
     private List<MenuBarMenu> MenuBarMenus()
     {
@@ -3307,7 +3313,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         // The game speed menu's check items (rate): the speed ticked is the one running.
         MenuBarItem Speed(string name, string fallback, GameSpeed speed) => new(Item(name, fallback), () => _session?.SetSpeed(speed), () => _session?.Speed == speed);
-        return
+        List<MenuBarMenu> menus =
         [
             new(Item("menu.file", "FILE"), [
                 Do("menu_file.load", "LOAD", "load"),
@@ -3340,10 +3346,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Open("menu_charts.policy", "POLICY", () => new PolicyWindow()),
                 Open("menu_charts.machine_menu", "MACHINE MENU", () => new MachineMenuWindow())]),
             new(Item("menu.debug", "DEBUG"), [
-                Open("corsixnet.menu.cheats", "Cheats", () => new CheatsWindow()),
                 Do("corsixnet.menu.save_replay", "Save replay", "savereplay"),
                 Do("corsixnet.menu.watch_replay", "Watch replay", "replays")]),
         ];
+        if (_cheatsMenuUnlocked)
+        {
+            menus.Add(new(Item("menu.cheats_title", "CHEATS"), [Open("menu.cheats", "CHEATS", () => new CheatsWindow())]));
+        }
+
+        return menus;
     }
 
     private void MenuAction(string action)
