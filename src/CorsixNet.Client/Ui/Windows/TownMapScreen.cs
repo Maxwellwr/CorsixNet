@@ -258,6 +258,8 @@ internal sealed class TownMapScreen
     {
         var simulation = host.Simulation;
         var map = simulation.Map;
+        var doors = simulation.Entities.OfType<EntranceDoor>().Where(door => door.IsRight).Select(door => door.Tile).ToHashSet();
+        var doorColour = new Color(200, 200, 200);
         for (var y = 0; y < map.Height; y++)
         {
             for (var x = 0; x < map.Width; x++)
@@ -287,14 +289,25 @@ internal sealed class TownMapScreen
                 }
 
                 var shown = tile.Has(TileFlags.Hospital) || original.Has(TileFlags.Hospital);
+                var inside = tile.Has(TileFlags.Hospital);
                 if (shown && tile.NorthWall != 0)
                 {
                     batch.Draw(pixel, new Rectangle(px, py, 3, 1), Color.White);
+
+                    // The entrance door: its right half on the tile before, a grey bar along the wall.
+                    if (doors.Contains(new TilePosition(x - 1, y)))
+                    {
+                        batch.Draw(pixel, new Rectangle(px - 6, inside ? py - 2 : py, 9, 3), doorColour);
+                    }
                 }
 
                 if (shown && tile.WestWall != 0)
                 {
                     batch.Draw(pixel, new Rectangle(px, py, 1, 3), Color.White);
+                    if (doors.Contains(new TilePosition(x, y - 1)))
+                    {
+                        batch.Draw(pixel, new Rectangle(inside ? px - 2 : px, py - 6, 3, 9), doorColour);
+                    }
                 }
             }
         }
