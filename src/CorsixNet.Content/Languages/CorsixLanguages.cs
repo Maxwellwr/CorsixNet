@@ -1,16 +1,18 @@
-// CorsixTH's own translations: the language files (CorsixTH/Lua/languages/*.lua) evaluated as CorsixTH's strings.lua
-// does (Strings:init's Language() names, Strings:load's merging environment, Inherit, utf8/cp437, LoadStrings), and
-// original_strings.lua's mapping of string names to the original's S[section][index].
+// CorsixTH's own translations and CorsixNet's own strings, as YAML: each file declares its language and the steps
+// CorsixTH's strings.lua takes for it (Inherit, the original's strings by name, strings set, removed and copied), in
+// order. tools/CorsixNet.LanguageImport writes CorsixTH's files (CorsixTH/Lua/languages/*.lua) out this way.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
 using CorsixNet.Formats;
+using YamlDotNet.Core;
+using YamlDotNet.RepresentationModel;
 
 namespace CorsixNet.Content.Languages;
 
 /// <summary>
-/// A language CorsixTH's files declare: its names (<c>Language(...)</c>, the first in the language itself, the second in
-/// English, then abbreviations) and its font (<c>Font(...)</c>: "cp437" or none for the game's own font, "mik" for the
+/// A language the files declare: its names (<c>language</c>, the first in the language itself, the second in
+/// English, then abbreviations) and its font (<c>font</c>: "cp437" or none for the game's own font, "mik" for the
 /// Russian original's, "unicode" for a TrueType font).
 /// </summary>
 public sealed record CorsixLanguage(IReadOnlyList<string> Names, string? Font)
@@ -26,8 +28,29 @@ public sealed record CorsixLanguage(IReadOnlyList<string> Names, string? Font)
 }
 
 /// <summary>
-/// The language files, read once: which language each declares, and their statements to evaluate when one is loaded.
+/// The language files, read once: which language each declares, and their steps to take when one is loaded.
 /// </summary>
+/// <remarks>
+/// A file is a YAML mapping:
+/// <code>
+/// language: [Français, French, fr, fre, fra]
+/// font: cp437
+/// steps:
+///   - inherit: English
+///   - original_strings: 1
+///   - strings:
+///       tutorial:
+///         build_reception: Construisez une réception
+///   - remove: [staff_descriptions.misc.38]
+///   - copy: {menu_file_save: menu_file_load}
+/// strings:
+///   corsixnet: ...
+/// </code>
+/// Nested mappings join their keys with dots and lists number their items from 1, as CorsixTH's tables do. The
+/// pseudo language original_strings has <c>original</c> steps naming the original's strings: <c>name: [section,
+/// index]</c>, or <c>name: [section]</c> for a whole section as a list. A <c>strings</c> mapping beside <c>steps</c>
+/// is a last step.
+/// </remarks>
 public sealed class CorsixLanguages
 {
     /// <summary>The pseudo language that maps names to the original's strings.</summary>
@@ -36,60 +59,46 @@ public sealed class CorsixLanguages
     /// <summary>The folder beside CorsixTH's files that holds CorsixNet's own strings, in the same form.</summary>
     public const string OwnStringsFolder = "CorsixNet";
 
-    private readonly Dictionary<string, Chunk> _byName = new(StringComparer.OrdinalIgnoreCase);
+    /// <summary>The language files' extension.</summary>
+    public const string Extension = ".yaml";
+
+    private readonly Dictionary<string, LanguageFile> _byName = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<CorsixLanguage> _languages = [];
     private readonly CorsixLanguages? _own;
 
     /// <param name="files">CorsixTH's language files.</param>
     /// <param name="ownFiles">
-    /// CorsixNet's own strings for the interface CorsixTH has no text for, one file per language declared with
-    /// <c>Language(...)</c> as CorsixTH's are; a loaded language gets its file's strings over CorsixTH's.
+    /// CorsixNet's own strings for the interface CorsixTH has no text for, one file per language declared as CorsixTH's
+    /// are; a loaded language gets its file's strings over CorsixTH's.
     /// </param>
     public CorsixLanguages(IEnumerable<(string FileName, string Text)> files, IEnumerable<(string FileName, string Text)>? ownFiles = null)
     {
         _own = ownFiles is null ? null : new CorsixLanguages(ownFiles);
         foreach (var (fileName, text) in files.OrderBy(file => file.FileName, StringComparer.Ordinal))
         {
-            IReadOnlyList<LuaStatement> statements;
+            LanguageFile file;
             try
             {
-                statements = LuaChunk.Parse(text);
+                file = LanguageFile.Parse(fileName, text);
             }
-            catch (InvalidDataException exception)
+            catch (YamlException exception)
             {
                 throw new InvalidDataException($"{fileName}: {exception.Message}", exception);
             }
 
-            // Strings:init runs each file with Language() and Font() recording the names, the rest doing nothing.
-            string? font = null;
-            List<string>? names = null;
-            foreach (var call in statements.OfType<LuaCallStatement>().Select(statement => statement.Call))
-            {
-                switch ((call.Function as LuaName)?.Name)
-                {
-                    case "Font" when call.Arguments is [LuaStringLiteral value, ..]:
-                        font = value.Value;
-                        break;
-                    case "Language" when names is null:
-                        names = [.. call.Arguments.Select(ConstantText).OfType<string>()];
-                        break;
-                }
-            }
-
-            if (names is not { Count: > 0 })
+            if (file.Names.Count == 0)
             {
                 continue;
             }
 
-            var chunk = new Chunk(fileName, statements);
-            foreach (var name in names)
+            foreach (var name in file.Names)
             {
-                _byName.TryAdd(name, chunk);
+                _byName.TryAdd(name, file);
             }
 
-            if (!string.Equals(names[0], OriginalStrings, StringComparison.Ordinal))
+            if (!string.Equals(file.Names[0], OriginalStrings, StringComparison.Ordinal))
             {
-                _languages.Add(new CorsixLanguage(names, font));
+                _languages.Add(new CorsixLanguage(file.Names, file.Font));
             }
         }
     }
@@ -98,15 +107,15 @@ public sealed class CorsixLanguages
     public IReadOnlyList<CorsixLanguage> Languages => _languages;
 
     /// <summary>
-    /// Reads every <c>*.lua</c> file of a folder, and CorsixNet's own strings from its <c>CorsixNet</c> folder; none
-    /// when a folder is missing.
+    /// Reads every language file of a folder, and CorsixNet's own strings from its <c>CorsixNet</c> folder; none when
+    /// a folder is missing.
     /// </summary>
     public static CorsixLanguages Load(string directory) =>
         new(Files(directory), Files(Path.Combine(directory, OwnStringsFolder)));
 
     private static List<(string FileName, string Text)> Files(string directory) =>
         Directory.Exists(directory)
-            ? [.. Directory.EnumerateFiles(directory, "*.lua").Select(path => (Path.GetFileName(path), File.ReadAllText(path)))]
+            ? [.. Directory.EnumerateFiles(directory, "*" + Extension).Select(path => (Path.GetFileName(path), File.ReadAllText(path)))]
             : [];
 
     /// <summary>The language a name or abbreviation means (case ignored), or null.</summary>
@@ -114,8 +123,8 @@ public sealed class CorsixLanguages
         _languages.FirstOrDefault(language => language.Names.Any(n => string.Equals(n, name.Trim(), StringComparison.OrdinalIgnoreCase)));
 
     /// <summary>
-    /// The number of the original's string file a language inherits last (<c>Inherit("original_strings", n)</c>, its own
-    /// or through the languages it inherits), or null.
+    /// The number of the original's string file a language inherits last (<c>original_strings: n</c>, its own or
+    /// through the languages it inherits), or null.
     /// </summary>
     public int? OriginalStringsNumber(string language)
     {
@@ -125,304 +134,252 @@ public sealed class CorsixLanguages
 
         void Walk(string name, HashSet<string> seen)
         {
-            if (!_byName.TryGetValue(name, out var chunk) || !seen.Add(chunk.FileName))
+            if (!_byName.TryGetValue(name, out var file) || !seen.Add(file.FileName))
             {
                 return;
             }
 
-            foreach (var call in chunk.Statements.OfType<LuaCallStatement>().Select(statement => statement.Call))
+            foreach (var step in file.Steps)
             {
-                if (call.Function is LuaName { Name: "Inherit" } && call.Arguments is [LuaStringLiteral parent, ..] arguments)
+                switch (step)
                 {
-                    if (string.Equals(parent.Value, OriginalStrings, StringComparison.OrdinalIgnoreCase))
-                    {
-                        number = arguments.Count > 1 && arguments[1] is LuaNumberLiteral n ? (int)n.Value : 0;
-                    }
-                    else
-                    {
-                        Walk(parent.Value, seen);
-                    }
+                    case InheritStep inherit:
+                        Walk(inherit.Language, seen);
+                        break;
+                    case OriginalStringsStep original:
+                        number = original.Number;
+                        break;
                 }
             }
         }
     }
 
     /// <summary>
-    /// Evaluates a language (CorsixTH's <c>Strings:load</c>): its file in an environment where assignments merge into
-    /// the strings and <c>Inherit</c> evaluates another language first. <paramref name="originalStrings"/> gives the
-    /// original's strings for <c>Inherit("original_strings", n)</c>; when it gives none, names mapped to them keep
-    /// what was assigned before. An unknown language falls back to English, as CorsixTH's <c>_loadPrivate</c>.
+    /// Loads a language (CorsixTH's <c>Strings:load</c>): its steps in order, an inherited language's first where it
+    /// is inherited. <paramref name="originalStrings"/> gives the original's strings for <c>original_strings: n</c>;
+    /// when it gives none, names mapped to them keep what was set before. An unknown language falls back to English,
+    /// as CorsixTH's <c>_loadPrivate</c>. CorsixNet's own strings for the language come last.
     /// </summary>
     public LanguageStrings Load(string language, Func<int, StringTable?> originalStrings)
     {
         var strings = new LanguageStrings();
-        Evaluate(language, strings, originalStrings, [], []);
+        Evaluate(language, strings, originalStrings, null, []);
 
         // CorsixNet's own strings for the language, by any of its names; none for one without a file of them.
         var names = Find(language)?.Names ?? [language];
-        if (_own is not null && names.Select(name => _own._byName.GetValueOrDefault(name)).FirstOrDefault(chunk => chunk is not null) is { } own)
+        if (_own is not null && names.Select(name => _own._byName.GetValueOrDefault(name)).FirstOrDefault(file => file is not null) is { } own)
         {
-            new Evaluator(_own, strings, originalStrings, [], [own.FileName]).Run(own.Statements);
+            _own.Run(own, strings, originalStrings, null, [own.FileName]);
         }
 
         return strings;
     }
 
-    private void Evaluate(string language, LanguageStrings strings, Func<int, StringTable?> originalStrings, object?[] arguments, HashSet<string> running)
+    private void Evaluate(string language, LanguageStrings strings, Func<int, StringTable?> originalStrings, int? number, HashSet<string> running)
     {
-        if (!_byName.TryGetValue(language, out var chunk) && !_byName.TryGetValue("English", out chunk))
+        if (!_byName.TryGetValue(language, out var file) && !_byName.TryGetValue("English", out file))
         {
             return;
         }
 
-        if (!running.Add(chunk.FileName))
+        if (!running.Add(file.FileName))
         {
             return;
         }
 
-        new Evaluator(this, strings, originalStrings, arguments, running).Run(chunk.Statements);
-        running.Remove(chunk.FileName);
+        Run(file, strings, originalStrings, number, running);
+        running.Remove(file.FileName);
     }
 
-    private static string? ConstantText(LuaExpression expression) => expression switch
+    private void Run(LanguageFile file, LanguageStrings strings, Func<int, StringTable?> originalStrings, int? number, HashSet<string> running)
     {
-        LuaStringLiteral text => text.Value,
-        LuaCall { Function: LuaName { Name: "utf8" or "cp437" }, Arguments: [LuaStringLiteral text] } => text.Value,
-        _ => null,
-    };
-
-    private sealed record Chunk(string FileName, IReadOnlyList<LuaStatement> Statements);
-
-    /// <summary>A table of the strings environment, by its dotted path.</summary>
-    private sealed record EnvironmentTable(string Path);
-
-    /// <summary>A table constructor's value: its entries in order.</summary>
-    private sealed record TableValue(List<(string Key, object? Value)> Entries);
-
-    /// <summary>A string from the original's strings, and where it came from.</summary>
-    private sealed record OriginalString(int Section, int Index, string? Text);
-
-    /// <summary><c>LoadStrings(...)</c>'s table, or one of its sections.</summary>
-    private sealed record OriginalTable(StringTable? Strings, int? Section);
-
-    /// <summary>One of the environment's functions.</summary>
-    private sealed record Function(string Name);
-
-    /// <summary>What this reader does not work out (loops, local functions' results, arithmetic).</summary>
-    private sealed record Unknown
-    {
-        public static readonly Unknown Value = new();
-    }
-
-    private sealed class Evaluator(CorsixLanguages languages, LanguageStrings strings, Func<int, StringTable?> originalStrings, object?[] arguments, HashSet<string> running)
-    {
-        private static readonly HashSet<string> Functions = new(StringComparer.Ordinal)
+        foreach (var step in file.Steps)
         {
-            "utf8", "cp437", "Language", "Font", "Inherit", "Encoding", "LoadStrings", "SetSpeechFile", "IsArabicNumerals", "ipairs", "pairs", "type",
-        };
-
-        private readonly Dictionary<string, object?> _locals = new(StringComparer.Ordinal);
-
-        public void Run(IReadOnlyList<LuaStatement> statements)
-        {
-            foreach (var statement in statements)
+            switch (step)
             {
-                switch (statement)
-                {
-                    case LuaCallStatement { Call: var call }:
-                        Call(call);
-                        break;
-                    case LuaAssignment { IsLocal: true } local:
-                        for (var i = 0; i < local.Targets.Count; i++)
+                case InheritStep inherit:
+                    Evaluate(inherit.Language, strings, originalStrings, null, running);
+                    break;
+                case OriginalStringsStep original:
+                    Evaluate(OriginalStrings, strings, originalStrings, original.Number, running);
+                    break;
+                case SetStep set:
+                    foreach (var (path, text) in set.Strings)
+                    {
+                        strings.Set(path, text);
+                    }
+
+                    break;
+                case RemoveStep remove:
+                    foreach (var path in remove.Paths)
+                    {
+                        strings.Remove(path);
+                    }
+
+                    break;
+                case CopyStep copy:
+                    foreach (var (to, from) in copy.Copies)
+                    {
+                        foreach (var (key, text) in strings.Below(from))
                         {
-                            _locals[((LuaName)local.Targets[i]).Name] = i < local.Values.Count ? Evaluate(local.Values[i]) : null;
+                            strings.Set(to + key, text);
                         }
+                    }
 
-                        break;
-                    case LuaAssignment assignment:
-                        for (var i = 0; i < assignment.Targets.Count && i < assignment.Values.Count; i++)
-                        {
-                            Assign(assignment.Targets[i], Evaluate(assignment.Values[i]));
-                        }
-
-                        break;
-                }
-            }
-        }
-
-        private object? Call(LuaCall call)
-        {
-            var function = call.Function is LuaName { Name: var name } && !_locals.ContainsKey(name) && Functions.Contains(name) ? name : null;
-            switch (function)
-            {
-                case "utf8" or "cp437":
-                    return call.Arguments is [var argument] ? Text(Evaluate(argument)) : Unknown.Value;
-                case "Inherit" when call.Arguments.Count > 0 && Text(Evaluate(call.Arguments[0])) is { } parent:
-                    languages.Evaluate(parent, strings, originalStrings, [.. call.Arguments.Skip(1).Select(Evaluate)], running);
-                    return null;
-                case "LoadStrings":
+                    break;
+                case OriginalStep names:
                     // original_strings.lua loads "Lang-" .. n .. ".dat" with the number it was inherited with.
-                    return new OriginalTable(arguments is [decimal number, ..] ? originalStrings((int)number) : null, null);
-                case "Language" or "Font" or "Encoding" or "SetSpeechFile" or "IsArabicNumerals" or "Inherit":
-                    return null;
-                default:
-                    return Unknown.Value;
+                    Name(names, number is { } n ? originalStrings(n) : null, strings);
+                    break;
             }
         }
+    }
 
-        private object? Evaluate(LuaExpression expression)
+    /// <summary>The original's strings under their names: each mapped, and set where the table has it.</summary>
+    private static void Name(OriginalStep names, StringTable? table, LanguageStrings strings)
+    {
+        foreach (var (path, section, index) in names.Names)
         {
-            switch (expression)
+            if (index is { } single)
             {
-                case LuaStringLiteral text:
-                    return text.Value;
-                case LuaNumberLiteral number:
-                    return number.Value;
-                case LuaBooleanLiteral boolean:
-                    return boolean.Value;
-                case LuaNilLiteral:
-                    return null;
-                case LuaVarArgs:
-                    return arguments.Length > 0 ? arguments[0] : null;
-                case LuaName { Name: var name }:
-                    if (_locals.TryGetValue(name, out var local))
-                    {
-                        return local;
-                    }
-
-                    return Functions.Contains(name) ? new Function(name) : Lookup(name);
-                case LuaIndex index:
-                    return Index(Evaluate(index.Target), Evaluate(index.Key));
-                case LuaCall call:
-                    return Call(call);
-                case LuaBinary { Operator: "..", Left: var left, Right: var right }:
-                    return Text(Evaluate(left)) is { } a && Text(Evaluate(right)) is { } b ? a + b : Unknown.Value;
-                case LuaTableConstructor table:
-                    return Table(table);
-                default:
-                    return Unknown.Value;
-            }
-        }
-
-        private TableValue Table(LuaTableConstructor table)
-        {
-            var entries = new List<(string, object?)>();
-            var position = 1;
-            foreach (var field in table.Fields)
-            {
-                var value = Evaluate(field.Value);
-                if (field.Key is null)
+                strings.MapOriginal(section, single, path);
+                if (table?.Get(section - 1, single - 1) is { } text)
                 {
-                    entries.Add((position++.ToString(CultureInfo.InvariantCulture), value));
-                }
-                else if (Key(Evaluate(field.Key)) is { } key)
-                {
-                    entries.Add((key, value));
-                }
-            }
-
-            return new TableValue(entries);
-        }
-
-        private object? Index(object? target, object? key)
-        {
-            switch (target)
-            {
-                case OriginalTable { Section: null } table when key is decimal section:
-                    return table with { Section = (int)section };
-                case OriginalTable { Section: { } section } table when key is decimal index:
-                    var text = table.Strings?.Get(section - 1, (int)index - 1);
-                    return new OriginalString(section, (int)index, text);
-                case EnvironmentTable table when Key(key) is { } name:
-                    return Lookup(table.Path + "." + name);
-                case TableValue table when Key(key) is { } name:
-                    return table.Entries.LastOrDefault(entry => entry.Key == name).Value;
-                default:
-                    return Unknown.Value;
-            }
-        }
-
-        /// <summary>The environment's value at a path: a string, or the (endless) table there.</summary>
-        private object Lookup(string path) => strings.Get(path) is { } text ? text : new EnvironmentTable(path);
-
-        private void Assign(LuaExpression target, object? value)
-        {
-            switch (target)
-            {
-                case LuaName { Name: var name } when _locals.ContainsKey(name):
-                    _locals[name] = value;
-                    break;
-                case LuaName { Name: var name }:
-                    Merge(name, value);
-                    break;
-                case LuaIndex index when Evaluate(index.Target) is EnvironmentTable table && Key(Evaluate(index.Key)) is { } key:
-                    Merge(table.Path + "." + key, value);
-                    break;
-            }
-        }
-
-        /// <summary>The environment's <c>__newindex</c>: strings are set, tables merged into the table there.</summary>
-        private void Merge(string path, object? value)
-        {
-            switch (value)
-            {
-                case string text:
                     strings.Set(path, text);
-                    break;
-                case decimal number:
-                    strings.Set(path, number.ToString(CultureInfo.InvariantCulture));
-                    break;
-                case OriginalString original:
-                    strings.MapOriginal(original.Section, original.Index, path);
-                    if (original.Text is { } originalText)
+                }
+            }
+            else if (table is not null)
+            {
+                // humanoid_name_starts = S[9]: the whole section as a list.
+                for (var i = 1; i <= table.SectionSize(section - 1); i++)
+                {
+                    var item = path + "." + i.ToString(CultureInfo.InvariantCulture);
+                    strings.MapOriginal(section, i, item);
+                    if (table.Get(section - 1, i - 1) is { } text)
                     {
-                        strings.Set(path, originalText);
+                        strings.Set(item, text);
                     }
-
-                    break;
-                case null:
-                    // staff_descriptions.misc[38] = nil
-                    strings.Remove(path);
-                    break;
-                case OriginalTable { Strings: { } original, Section: { } section }:
-                    // humanoid_name_starts = S[9]: the whole section as a list.
-                    for (var index = 1; index <= original.SectionSize(section - 1); index++)
-                    {
-                        Merge(path + "." + index.ToString(CultureInfo.InvariantCulture), new OriginalString(section, index, original.Get(section - 1, index - 1)));
-                    }
-
-                    break;
-                case TableValue table:
-                    foreach (var (key, entry) in table.Entries)
-                    {
-                        Merge(path + "." + key, entry);
-                    }
-
-                    break;
-                case EnvironmentTable source when source.Path != path:
-                    foreach (var (key, copied) in strings.Below(source.Path))
-                    {
-                        strings.Set(path + key, copied);
-                    }
-
-                    break;
+                }
             }
         }
+    }
 
-        private static string? Text(object? value) => value switch
+    private abstract record Step;
+
+    private sealed record InheritStep(string Language) : Step;
+
+    private sealed record OriginalStringsStep(int Number) : Step;
+
+    private sealed record SetStep(IReadOnlyList<(string Path, string Text)> Strings) : Step;
+
+    private sealed record RemoveStep(IReadOnlyList<string> Paths) : Step;
+
+    private sealed record CopyStep(IReadOnlyList<(string To, string From)> Copies) : Step;
+
+    private sealed record OriginalStep(IReadOnlyList<(string Path, int Section, int? Index)> Names) : Step;
+
+    /// <summary>A language file as read: its names, font and steps.</summary>
+    private sealed record LanguageFile(string FileName, IReadOnlyList<string> Names, string? Font, IReadOnlyList<Step> Steps)
+    {
+        public static LanguageFile Parse(string fileName, string text)
         {
-            string text => text,
-            decimal number => number.ToString(CultureInfo.InvariantCulture),
-            OriginalString original => original.Text,
-            _ => null,
+            var stream = new YamlStream();
+            stream.Load(new StringReader(text));
+            if (stream.Documents.Count == 0 || stream.Documents[0].RootNode is not YamlMappingNode root)
+            {
+                return new LanguageFile(fileName, [], null, []);
+            }
+
+            List<string> names = [];
+            string? font = null;
+            var steps = new List<Step>();
+            foreach (var (keyNode, value) in root.Children)
+            {
+                switch (Scalar(keyNode))
+                {
+                    case "language":
+                        names = [.. List(value)];
+                        break;
+                    case "font":
+                        font = Scalar(value);
+                        break;
+                    case "steps" when value is YamlSequenceNode sequence:
+                        foreach (var item in sequence)
+                        {
+                            if (item is YamlMappingNode { Children: [var (stepKey, stepValue)] })
+                            {
+                                steps.Add(ReadStep(fileName, Scalar(stepKey), stepValue));
+                            }
+                            else
+                            {
+                                throw new InvalidDataException($"{fileName}, line {item.Start.Line}: a step is a mapping of one key.");
+                            }
+                        }
+
+                        break;
+                    case "strings":
+                        steps.Add(new SetStep(Flatten(value)));
+                        break;
+                    default:
+                        throw new InvalidDataException($"{fileName}, line {keyNode.Start.Line}: unknown key '{Scalar(keyNode)}'.");
+                }
+            }
+
+            return new LanguageFile(fileName, names, font, steps);
+        }
+
+        private static Step ReadStep(string fileName, string kind, YamlNode value) => kind switch
+        {
+            "inherit" => new InheritStep(Scalar(value)),
+            "original_strings" => new OriginalStringsStep(int.Parse(Scalar(value), NumberStyles.Integer, CultureInfo.InvariantCulture)),
+            "strings" => new SetStep(Flatten(value)),
+            "remove" => new RemoveStep([.. List(value)]),
+            "copy" => new CopyStep([.. Flatten(value)]),
+            "original" => new OriginalStep([.. ((YamlMappingNode)value).Children.Select(pair => OriginalName(Scalar(pair.Key), [.. List(pair.Value)]))]),
+            _ => throw new InvalidDataException($"{fileName}, line {value.Start.Line}: unknown step '{kind}'."),
         };
 
-        private static string? Key(object? value) => value switch
+        private static (string Path, int Section, int? Index) OriginalName(string path, List<string> numbers) =>
+            (path, int.Parse(numbers[0], CultureInfo.InvariantCulture), numbers.Count > 1 ? int.Parse(numbers[1], CultureInfo.InvariantCulture) : null);
+
+        private static string Scalar(YamlNode node) => node is YamlScalarNode { Value: { } value } ? value : string.Empty;
+
+        private static IEnumerable<string> List(YamlNode node) =>
+            node is YamlSequenceNode sequence ? sequence.Select(Scalar) : [Scalar(node)];
+
+        /// <summary>The strings under a node by dotted name: mappings join keys, lists number items from 1.</summary>
+        private static List<(string, string)> Flatten(YamlNode node)
         {
-            string text => text,
-            decimal number when number == decimal.Truncate(number) => number.ToString("0", CultureInfo.InvariantCulture),
-            _ => null,
-        };
+            var result = new List<(string, string)>();
+            Walk(node, string.Empty);
+            return result;
+
+            void Walk(YamlNode current, string path)
+            {
+                switch (current)
+                {
+                    case YamlMappingNode mapping:
+                        foreach (var (key, value) in mapping.Children)
+                        {
+                            Walk(value, Join(path, Scalar(key)));
+                        }
+
+                        break;
+                    case YamlSequenceNode sequence:
+                        for (var i = 0; i < sequence.Children.Count; i++)
+                        {
+                            Walk(sequence.Children[i], Join(path, (i + 1).ToString(CultureInfo.InvariantCulture)));
+                        }
+
+                        break;
+                    case YamlScalarNode scalar:
+                        result.Add((path, scalar.Value ?? string.Empty));
+                        break;
+                }
+            }
+
+            static string Join(string path, string key) => path.Length == 0 ? key : path + "." + key;
+        }
     }
 }
 

@@ -8,6 +8,9 @@
     <Project Path="src/CorsixNet.Server/CorsixNet.Server.csproj" />
     <Project Path="src/CorsixNet.Sim/CorsixNet.Sim.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/CorsixNet.LanguageImport/CorsixNet.LanguageImport.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CorsixNet.Analyzers.Tests/CorsixNet.Analyzers.Tests.csproj" />
     <Project Path="tests/CorsixNet.Client.Tests/CorsixNet.Client.Tests.csproj" />

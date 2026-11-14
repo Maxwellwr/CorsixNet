@@ -6,13 +6,18 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CorsixNet.Content.Tests" />
+    <InternalsVisibleTo Include="CorsixNet.LanguageImport" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- CorsixTH's language files (CorsixTH/Lua/languages, MIT), read by CorsixLanguages. -->
-    <None Include="Languages/CorsixTH/*.lua" Link="Languages/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- CorsixTH's language files (CorsixTH/Lua/languages, MIT) as YAML, read by CorsixLanguages. -->
+    <None Include="Languages/CorsixTH/*.yaml" Link="Languages/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <!-- CorsixNet's own interface strings in the same form, laid over CorsixTH's by CorsixLanguages. -->
-    <None Include="Languages/CorsixNet/*.lua" Link="Languages/CorsixNet/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Languages/CorsixNet/*.yaml" Link="Languages/CorsixNet/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
   </ItemGroup>
 
   <ItemGroup>
