@@ -217,6 +217,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private readonly WorldSounds _worldSounds = new(new Random());
 
+    private readonly Announcer _announcer = new(new Random());
+
     private readonly GatesToHellSounds _hellSounds = new();
 
     private readonly FrameSounds _frameSounds = new();
@@ -2600,12 +2602,25 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _worldSounds.Reset();
         }
 
-        foreach (var sound in _repairs.Update(Simulation!, _session.Player).Concat(_announcements.Update(Simulation!, _session.Player)))
+        // The announcer's: announceRepair's (critical) and the hospital's; the rest are plain sounds.
+        var staffedDesk = Simulation!.Entities.Any(e => e is Humanoid { Behaviour: ReceptionistBehaviour { Phase: ReceptionistPhase.Staffing } } receptionist && receptionist.Employer == _session.Player);
+        foreach (var sound in _repairs.Update(Simulation!, _session.Player))
+        {
+            _announcer.Request(sound, AnnouncementPriority.Critical, Simulation!.Hours, staffedDesk);
+        }
+
+        foreach (var sound in _announcements.Update(Simulation!, _session.Player))
         {
             _sounds.Play(sound);
         }
 
-        _worldSounds.Update(Simulation!, Environment.TickCount64, _session.IsPaused, (name, tile) => _sounds.PlayAt(name, ScreenOf(tile), ViewSize), _sounds.Play);
+        foreach (var (name, priority) in _announcements.TakeAnnouncements())
+        {
+            _announcer.Request(name, priority, Simulation!.Hours, staffedDesk);
+        }
+
+        _worldSounds.Update(Simulation!, Environment.TickCount64, _session.IsPaused, (name, tile) => _sounds.PlayAt(name, ScreenOf(tile), ViewSize), _sounds.Play, name => _announcer.Request(name, AnnouncementPriority.Critical, Simulation!.Hours, staffedDesk));
+        _announcer.Update(Environment.TickCount64, Simulation!.Hours, _session.IsPaused, staffedDesk, _config.PlayAnnouncements, _sounds.PlayAnnouncement);
 
         _hellSounds.Update(Simulation!, _session.Speed, Environment.TickCount64, hole => _sounds.PlayAt("LAVA00*.WAV", ScreenOf(hole), ViewSize));
         if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))

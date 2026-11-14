@@ -58,6 +58,16 @@ internal sealed class HospitalAnnouncements(Random random)
     private HashSet<int> _marked = [];
     private HashSet<int> _fired = [];
     private readonly HashSet<int> _announcedVisitors = [];
+    private readonly List<(string Name, AnnouncementPriority Priority)> _announcements = [];
+    private bool _heatingBroken;
+
+    /// <summary>The announcements for the announcer found by the last <see cref="Update"/>; the list returned holds the plain sounds.</summary>
+    public List<(string Name, AnnouncementPriority Priority)> TakeAnnouncements()
+    {
+        var taken = _announcements.ToList();
+        _announcements.Clear();
+        return taken;
+    }
 
     /// <summary>Forgets what was seen, for a new or loaded game.</summary>
     public void Reset() => _watching = false;
@@ -77,7 +87,7 @@ internal sealed class HospitalAnnouncements(Random random)
                 calling.Add(room.Id);
                 if (_watching && !_calling.Contains(room.Id))
                 {
-                    sounds.Add(CallSounds[room.RoomType]);
+                    _announcements.Add((CallSounds[room.RoomType], AnnouncementPriority.Normal));
                 }
             }
         }
@@ -86,18 +96,18 @@ internal sealed class HospitalAnnouncements(Random random)
         var epidemic = hospital.Epidemics.Current;
         if (_watching && epidemic is { IsRevealed: true } && (!ReferenceEquals(epidemic, _epidemic) || !_revealed))
         {
-            sounds.Add($"EPID00{random.Next(1, 5)}.wav");
+            _announcements.Add(($"EPID00{random.Next(1, 5)}.wav", AnnouncementPriority.Critical));
         }
 
         if (_watching && _epidemic is { Outcome: EpidemicOutcome.CoveredUp or EpidemicOutcome.Fined or EpidemicOutcome.Evacuated } ended && !ReferenceEquals(epidemic, ended))
         {
-            sounds.Add($"EPID00{random.Next(5, 9)}.wav");
+            _announcements.Add(($"EPID00{random.Next(5, 9)}.wav", AnnouncementPriority.Critical));
         }
 
         // Cheats:announceCheat.
         if (_watching && hospital.Cheated && !_cheated)
         {
-            sounds.Add($"cheat00{random.Next(1, 4)}.wav");
+            _announcements.Add(($"cheat00{random.Next(1, 4)}.wav", AnnouncementPriority.Critical));
         }
 
         // msgCured and msgKilled: the cheer and the boo, always heard.
@@ -128,7 +138,8 @@ internal sealed class HospitalAnnouncements(Random random)
             fired.Add(leaver.Id);
             if (_watching && !_fired.Contains(leaver.Id) && LeaveSounds(leaver.Profile!.Class) is { Length: > 0 } leave)
             {
-                sounds.Add(leave[random.Next(leave.Length)]);
+                // leave_priority: High, Critical for a receptionist (heard even with nobody at the desk).
+                _announcements.Add((leave[random.Next(leave.Length)], leaver.Profile.Class == StaffClass.Receptionist ? AnnouncementPriority.Critical : AnnouncementPriority.High));
             }
         }
 
@@ -141,9 +152,16 @@ internal sealed class HospitalAnnouncements(Random random)
                 _announcedVisitors.Add(visitor.Id);
                 if (_watching)
                 {
-                    sounds.Add(visitor.Behaviour is VipBehaviour ? $"vip00{random.Next(1, 6)}.wav" : "vip008.wav");
+                    _announcements.Add((visitor.Behaviour is VipBehaviour ? $"vip00{random.Next(1, 6)}.wav" : "vip008.wav", AnnouncementPriority.High));
                 }
             }
+        }
+
+        // adviseBoilerBreakdown: an apology, sorry002 or sorry004 with the heating off, sorry003 or sorry004 at full.
+        if (_watching && hospital.IsHeatingBroken && !_heatingBroken)
+        {
+            var full = hospital.RadiatorHeat >= Sim.Economy.Hospital.MaxRadiatorHeat;
+            _announcements.Add((random.Next(2) == 0 ? "sorry004.wav" : full ? "sorry003.wav" : "sorry002.wav", AnnouncementPriority.Normal));
         }
 
         // Hospital:tick: one hour in a hundred, with a GP's office and more than two patients, a background sound.
@@ -160,6 +178,7 @@ internal sealed class HospitalAnnouncements(Random random)
         _revealed = epidemic?.IsRevealed ?? false;
         _cheated = hospital.Cheated;
         _hours = simulation.Hours;
+        _heatingBroken = hospital.IsHeatingBroken;
         _cured = hospital.Cured;
         _deaths = hospital.Deaths;
         _marked = marked;

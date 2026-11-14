@@ -178,7 +178,8 @@ fonts, faces) and the details listed.
 - Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
 - Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
-- Adviser: the speaking figure and the announcer (`dialogs/adviser.lua`, `announcer.lua`); the queue, history and much
+- Adviser: the speaking figure (`dialogs/adviser.lua`); the announcer's queue is done (`Audio/Announcer`: priorities,
+  expiry, the staffed-desk rule, random announcements, `play_announcements`, `announcement_volume`); the queue, history and much
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
@@ -247,8 +248,8 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
   vomiting, the grim reaper's swipe and more) play where the frame is drawn (`FrameSounds`, 2026-11-13). Still:
   sound effects the simulation causes (2026-11-14: rooms calling for staff, the epidemic's start and end, cheats, the
   background ispot sounds, the cheer and boo, vaccin.wav and staff's leave sounds play, `HospitalAnnouncements`; the entrance doors and earthquakes, `WorldSounds`): footsteps, patients' coughs and other idle sounds;
-  the interface's hover sounds (buttons play selectx.wav and the close box no4.wav, `WindowLayer`, 2026-11-14); announcer speech; adviser voice;
-  `play_announcements` and `announcement_volume`.
+  the interface's hover sounds (buttons play selectx.wav and the close box no4.wav, `WindowLayer`, 2026-11-14); adviser voice; the settings window's
+  switches for the announcer and its volume (config.txt's keys are read).
 - Music playback and the jukebox (`dialogs/jukebox.lua`), MP3 replacement music, volumes (`resizables/sound_setting.lua`).
 
 ## 10. Network

@@ -22,11 +22,14 @@ public class HospitalAnnouncementsTests
 
         // The office opens without a doctor: the GP call, once.
         room.IsActive = true;
-        Assert.Equal(["reqd008.wav"], announcements.Update(simulation, 0));
         Assert.Empty(announcements.Update(simulation, 0));
+        Assert.Equal([("reqd008.wav", AnnouncementPriority.Normal)], announcements.TakeAnnouncements());
+        announcements.Update(simulation, 0);
+        Assert.Empty(announcements.TakeAnnouncements());
 
         simulation.Hospitals[0].Cheated = true;
-        Assert.Matches("^cheat00[1-3]\\.wav$", Assert.Single(announcements.Update(simulation, 0)));
+        announcements.Update(simulation, 0);
+        Assert.Matches("^cheat00[1-3]\\.wav$", Assert.Single(announcements.TakeAnnouncements()).Name);
 
         // A cure cheers, a death boos.
         simulation.Hospitals[0].Cured++;
@@ -37,12 +40,15 @@ public class HospitalAnnouncementsTests
         host.Submit(new HireStaffCommand(StaffClass.Handyman, 0, new(5, 2)));
         announcements.Update(simulation, 0);
         simulation.Entities.OfType<Humanoid>().Single(h => h.Profile is { Class: StaffClass.Handyman }).IsFired = true;
-        Assert.Contains("sack006.wav", announcements.Update(simulation, 0));
+        announcements.Update(simulation, 0);
+        Assert.Contains(("sack006.wav", AnnouncementPriority.High), announcements.TakeAnnouncements());
 
         // A VIP walking into the hospital is announced once.
         var vip = simulation.AddEntity(id => Humanoid.CreatePatient(id, new TilePosition(10, 10), simulation.Random, Sim.Diseases.PatientLook.Standard, 0));
         vip.Behaviour = new Sim.People.VipBehaviour(1, 5);
-        Assert.Contains(announcements.Update(simulation, 0), sound => sound.StartsWith("vip00", StringComparison.Ordinal));
-        Assert.DoesNotContain(announcements.Update(simulation, 0), sound => sound.StartsWith("vip00", StringComparison.Ordinal));
+        announcements.Update(simulation, 0);
+        Assert.Contains(announcements.TakeAnnouncements(), heard => heard.Name.StartsWith("vip00", StringComparison.Ordinal));
+        announcements.Update(simulation, 0);
+        Assert.Empty(announcements.TakeAnnouncements());
     }
 }

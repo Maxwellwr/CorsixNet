@@ -30,7 +30,8 @@ internal sealed class WorldSounds(Random random)
     /// that returns how long it lasts (zero when it is not in the archive); <paramref name="now"/> in milliseconds.
     /// </summary>
     /// <param name="paused">The game is paused: the shaking stops (tickEarthquake's "pause").</param>
-    public void Update(Simulation simulation, long now, bool paused, Action<string, TilePosition> playAt, Func<string, TimeSpan> play)
+    /// <param name="announce">Hands an announcement to the announcer.</param>
+    public void Update(Simulation simulation, long now, bool paused, Action<string, TilePosition> playAt, Func<string, TimeSpan> play, Action<string>? announce = null)
     {
         var doors = new Dictionary<int, bool>();
         foreach (var door in simulation.Entities.OfType<EntranceDoor>().Where(door => door.IsRight))
@@ -45,7 +46,15 @@ internal sealed class WorldSounds(Random random)
         var shaking = !paused && simulation.Earthquakes.Shake != EarthquakeShake.None;
         if (_watching && shaking && !_shaking)
         {
-            play($"quake00{random.Next(1, 5)}.wav");
+            var quake = $"quake00{random.Next(1, 5)}.wav";
+            if (announce is not null)
+            {
+                announce(quake);
+            }
+            else
+            {
+                play(quake);
+            }
         }
 
         if (shaking && now >= _rumbleUntil)

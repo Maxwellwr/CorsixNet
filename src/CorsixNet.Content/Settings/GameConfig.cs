@@ -14,7 +14,7 @@ namespace CorsixNet.Content.Settings;
 /// <c>width = 800</c> and <c>language = [[English]]</c>, with CorsixTH's setting names and defaults.
 /// </summary>
 /// <remarks>
-/// Only the settings CorsixNet acts on are read and written; CorsixTH's others (announcements, music, movies, the
+/// Only the settings CorsixNet acts on are read and written; CorsixTH's others (music, movies, the
 /// options dialog's game rules, ...) are left out until there is something they change.
 /// </remarks>
 public sealed record GameConfig
@@ -100,6 +100,12 @@ public sealed record GameConfig
 
     /// <summary>The volume of sound effects, from 0 to 1 (<c>sound_volume</c>).</summary>
     public decimal SoundVolume { get; init; } = 0.5m;
+
+    /// <summary>Whether the announcer speaks (<c>play_announcements</c>).</summary>
+    public bool PlayAnnouncements { get; init; } = true;
+
+    /// <summary>The announcer's volume, from 0 to 1 (<c>announcement_volume</c>).</summary>
+    public decimal AnnouncementVolume { get; init; } = 0.5m;
 
     /// <summary>Whether the mouse at the screen's edge does not scroll the map (<c>prevent_edge_scrolling</c>).</summary>
     public bool PreventEdgeScrolling { get; init; }
@@ -199,6 +205,8 @@ public sealed record GameConfig
             RemoveDestroyedRooms = Bool("remove_destroyed_rooms", defaults.RemoveDestroyedRooms),
             PlaySounds = Bool("play_sounds", defaults.PlaySounds),
             SoundVolume = Number("sound_volume", defaults.SoundVolume),
+            PlayAnnouncements = Bool("play_announcements", defaults.PlayAnnouncements),
+            AnnouncementVolume = Number("announcement_volume", defaults.AnnouncementVolume),
             PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
             ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
             ZoomSpeed = Number("zoom_speed", defaults.ZoomSpeed),
@@ -365,6 +373,8 @@ public sealed record GameConfig
             """);
         text.Append(CultureInfo.InvariantCulture, $"play_sounds = {Lua(PlaySounds)}\n");
         text.Append(CultureInfo.InvariantCulture, $"sound_volume = {Number(SoundVolume)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"play_announcements = {Lua(PlayAnnouncements)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"announcement_volume = {Number(AnnouncementVolume)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------
