@@ -215,6 +215,14 @@ internal sealed class AnnualReportWindow : UiWindow
 {
     public override string Title => "Annual report";
 
+    private readonly AnnualReportScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="AnnualReportScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => AnnualReportScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var hospital = host.Simulation.Hospitals[host.Player];
