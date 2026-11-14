@@ -19,6 +19,22 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     private readonly Dictionary<string, SpriteAtlas?> _sheets = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextRenderer?> _fonts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Palette?> _palettes = new(StringComparer.OrdinalIgnoreCase);
+    private Texture2D? _pixel;
+
+    /// <summary>A white pixel, for the dialogs' coloured panels and lines.</summary>
+    public Texture2D Pixel
+    {
+        get
+        {
+            if (_pixel is null)
+            {
+                _pixel = new Texture2D(device, 1, 1);
+                _pixel.SetData([Microsoft.Xna.Framework.Color.White]);
+            }
+
+            return _pixel;
+        }
+    }
 
     /// <summary>A 640 by 480 picture (<c>loadRaw</c>) with its palette, both named <paramref name="name"/>.</summary>
     public Texture2D? Picture(string name)
@@ -60,6 +76,7 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
 
     public void Dispose()
     {
+        _pixel?.Dispose();
         foreach (var picture in _pictures.Values)
         {
             picture?.Dispose();
