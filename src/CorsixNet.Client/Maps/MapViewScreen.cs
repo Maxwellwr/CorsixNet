@@ -744,6 +744,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             CollectEntitiesByTile();
             _humanoids.BeginFrame();
             _objects.BeginFrame();
+            _drawnDoors.Clear();
             _frameSounds.BeginFrame();
             // The object being placed is drawn in the same order as placed objects, so walls in front hide it.
             var ghost = _buildTool.Ghost ?? _furnishTool.Ghost;
@@ -1955,7 +1956,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var tile = new TilePosition(target.X, target.Y);
             var here = HumanoidUnderCursor(simulation, tile);
             var desk = DeskUnderCursor(simulation, tile);
-            var roomId = simulation.Map[tile.X, tile.Y].RoomId;
             if (here is not null)
             {
                 _selected = here.Id;
@@ -1975,11 +1975,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _selected = null;
                 _windows.Open(new MachineWindow(machine.Id));
             }
-            else if (desk is not null || (roomId > 0 && simulation.FindEntity(roomId) is Room { IsActive: true }))
+            else if ((desk?.Id ?? QueueRoomOf(DoorRoomUnderCursor(simulation)) ?? QueueRoomAt(simulation, tile)?.Id) is { } queueOwner)
             {
-                // A click on a reception desk or a room opens its queue (CorsixTH's UIQueue).
+                // A click on a reception desk (ReceptionDesk:onClick) or on a room's door (Door:onClick) opens its queue
+                // (CorsixTH's UIQueue); a click elsewhere in the room, on its floor or an empty chair, opens nothing.
                 _selected = null;
-                _windows.Open(new QueueWindow(desk?.Id ?? roomId));
+                _windows.Open(new QueueWindow(queueOwner));
             }
             else if (_selected is { } id)
             {
@@ -2027,6 +2028,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private Humanoid? HumanoidUnderCursor(Simulation simulation, TilePosition tile) =>
         (_hoveredWorld is { } point && _humanoids.HumanoidAt(simulation, point) is { } id ? simulation.FindEntity(id) as Humanoid : null)
         ?? simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Tile == tile || h.StepTarget == tile);
+
+    /// <summary>Door:onClick: the room whose door's sprite was clicked, if it is finished.</summary>
+    internal static int? QueueRoomOf(Room? room) => room is { IsActive: true } ? room.Id : null;
+
+    /// <summary>
+    /// Door:onClick when the cursor is not on the door's sprite: the finished room whose door is on the tile, or on the
+    /// tile across the wall from it; null anywhere else, inside rooms too.
+    /// </summary>
+    internal static Room? QueueRoomAt(Simulation simulation, TilePosition tile) =>
+        simulation.Entities.OfType<RoomDoor>()
+            .Where(door => IsDoorTile(door, tile))
+            .Select(door => simulation.FindEntity(door.RoomId) as Room)
+            .FirstOrDefault(room => room is { IsActive: true });
+
+    /// <summary>Whether the tile is the door's own tile or the one across the wall from it (both swing doors' too).</summary>
+    private static bool IsDoorTile(RoomDoor door, TilePosition tile)
+    {
+        static TilePosition Across(RoomDoor door, TilePosition side) =>
+            door.Edge == EdgeOrientation.North ? side with { Y = side.Y - 1 } : side with { X = side.X - 1 };
+
+        return tile == door.Tile || tile == Across(door, door.Tile)
+            || (door.IsSwing && (tile == door.SlaveTile || tile == Across(door, door.SlaveTile)));
+    }
 
     /// <summary>The room under the cursor or of the door under it, whose queueing patients show the queue mood.</summary>
     private int _hoveredRoom;
@@ -2501,7 +2525,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 break;
             case RoomDoor roomDoor:
                 var animation = roomDoor.Edge == EdgeOrientation.North ? RoomDoorNorth : RoomDoorWest;
-                _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: false);
+                DrawDoorFrame(batch, roomDoor, _animations.Animations.FirstFrame(animation), anchorX, anchorY, flip: false);
                 break;
         }
     }
@@ -2526,12 +2550,42 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (elapsed >= 0 && elapsed < swingAnimation.Length)
             {
                 var first = _animations.Animations.FirstFrame(swingAnimation.Id);
-                _animations.DrawFrame(batch, _animations.Animations.Advance(first, (int)elapsed), anchorX, anchorY, NoLayers, flipHorizontally: west);
+                DrawDoorFrame(batch, door, _animations.Animations.Advance(first, (int)elapsed), anchorX, anchorY, west);
                 return;
             }
         }
 
-        _animations.DrawFrame(batch, _animations.Animations.FirstFrame(animation), anchorX, anchorY, NoLayers, flipHorizontally: flip);
+        DrawDoorFrame(batch, door, _animations.Animations.FirstFrame(animation), anchorX, anchorY, flip);
+    }
+
+    /// <summary>Draws a frame of a room's door and remembers where, for clicks on it (GameUI's hitTestObjects).</summary>
+    private void DrawDoorFrame(SpriteBatch batch, RoomDoor door, int frame, int anchorX, int anchorY, bool flip)
+    {
+        _animations.DrawFrame(batch, frame, anchorX, anchorY, NoLayers, flipHorizontally: flip);
+        _drawnDoors.Add((door.RoomId, frame, anchorX, anchorY, flip));
+    }
+
+    /// <summary>The room doors' frames drawn this frame: the room, the frame, where and whether mirrored.</summary>
+    private readonly List<(int RoomId, int Frame, int X, int Y, bool Flip)> _drawnDoors = [];
+
+    /// <summary>The room whose door's sprite, as last drawn, is under the cursor (the one drawn last, in front), or null.</summary>
+    private Room? DoorRoomUnderCursor(Simulation simulation)
+    {
+        if (_hoveredWorld is not { } point)
+        {
+            return null;
+        }
+
+        for (var i = _drawnDoors.Count - 1; i >= 0; i--)
+        {
+            var (roomId, frame, x, y, flip) = _drawnDoors[i];
+            if (_animations.HitTest(frame, x, y, NoLayers, flip, point.X, point.Y))
+            {
+                return simulation.FindEntity(roomId) as Room;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>The second parts of objects drawn on <paramref name="tile"/>, such as the radiation shield's front.</summary>
