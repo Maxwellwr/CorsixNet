@@ -1,6 +1,8 @@
 // Finding the Unicode font, ported from CorsixTH CorsixTH/Lua/graphics.lua (Graphics:loadFontFile).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
+using System.Text;
+
 namespace CorsixNet.Client.Rendering;
 
 /// <summary>
@@ -48,12 +50,13 @@ internal sealed class UnicodeFonts : IDisposable
     public IReadOnlyList<string> SystemFonts { get; }
 
     /// <summary>
-    /// The face to draw the text's language with: the first of <see cref="Preferred"/> there is, else the first system
-    /// font with all the text's characters, else the system font missing the fewest; null if there is no font at all.
+    /// The face to draw the text's language with: the font chosen for the language if there is one, else the first of
+    /// <see cref="Preferred"/> there is, else the first system font with all the text's characters, else the system
+    /// font missing the fewest; null if there is no font at all.
     /// </summary>
-    public (string Path, TrueTypeFace Face)? Find(string sample)
+    public (string Path, TrueTypeFace Face)? Find(string sample, string? chosen = null)
     {
-        foreach (var path in Preferred)
+        foreach (var path in string.IsNullOrWhiteSpace(chosen) ? Preferred : Preferred.Prepend(chosen))
         {
             if (Face(path) is { } face)
             {
@@ -85,7 +88,57 @@ internal sealed class UnicodeFonts : IDisposable
     }
 
     /// <summary>Whether a font found for the text has all its characters.</summary>
-    public bool CanDraw(string sample) => Find(sample) is { } found && found.Face.MissingGlyphs(sample) == 0;
+    public bool CanDraw(string sample, string? chosen = null) => Find(sample, chosen) is { } found && found.Face.MissingGlyphs(sample) == 0;
+
+    /// <summary>
+    /// The fonts in the system's font folders (or the folders given) with every letter of the text, by family name,
+    /// for choosing a language's font; punctuation is left out, as few fonts have every sign a translation uses.
+    /// </summary>
+    public IReadOnlyList<(string Name, string Path)> Choices(string sample, IEnumerable<string>? folders = null)
+    {
+        var letters = string.Concat(sample.EnumerateRunes().Where(Rune.IsLetter).Distinct().Select(rune => rune.ToString()));
+        var files = (folders ?? DefaultFontFolders())
+            .Where(Directory.Exists)
+            .SelectMany(folder => Directory.EnumerateFiles(folder))
+            .Where(file => Path.GetExtension(file).ToUpperInvariant() is ".TTF" or ".OTF" or ".TTC")
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        var choices = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        // Shortest names first, so that a family is chosen by its plain file (arial.ttf, not arialbi.ttf).
+        foreach (var file in files.OrderBy(file => Path.GetFileName(file).Length).ThenBy(file => file, StringComparer.OrdinalIgnoreCase))
+        {
+            // Read without FreeType and let go at once: there may be hundreds, some of them large.
+            using var face = Read(file, hinted: false);
+            if (face is not null && face.MissingGlyphs(letters) == 0)
+            {
+                var name = face.FamilyName;
+                choices.TryAdd(string.IsNullOrWhiteSpace(name) ? Path.GetFileNameWithoutExtension(file) : name, file);
+            }
+        }
+
+        return [.. choices.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase).Select(pair => (pair.Key, pair.Value))];
+    }
+
+    /// <summary>The family name of the font in the file; null if it is not a font.</summary>
+    public string? NameOf(string path)
+    {
+        using var face = Read(path, hinted: false);
+        return face is null ? null : string.IsNullOrWhiteSpace(face.FamilyName) ? Path.GetFileNameWithoutExtension(path) : face.FamilyName;
+    }
+
+    /// <summary>The folders the system keeps fonts in, the user's own first.</summary>
+    public static IEnumerable<string> DefaultFontFolders()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            return [Path.Combine(local, "Microsoft", "Windows", "Fonts"), Environment.GetFolderPath(Environment.SpecialFolder.Fonts)];
+        }
+
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return OperatingSystem.IsMacOS()
+            ? [Path.Combine(home, "Library", "Fonts"), "/Library/Fonts", "/System/Library/Fonts", "/System/Library/Fonts/Supplemental"]
+            : [Path.Combine(home, ".fonts"), Path.Combine(home, ".local", "share", "fonts"), "/usr/share/fonts/truetype/dejavu", "/usr/share/fonts/truetype/noto", "/usr/share/fonts/TTF", "/usr/share/fonts/noto", "/usr/share/fonts/truetype/freefont"];
+    }
 
     public void Dispose()
     {
@@ -152,16 +205,20 @@ internal sealed class UnicodeFonts : IDisposable
             return face;
         }
 
+        face = Read(path, hinted: true);
+        _faces[path] = face;
+        return face;
+    }
+
+    private TrueTypeFace? Read(string path, bool hinted)
+    {
         try
         {
-            face = _exists(path) ? TrueTypeFace.Load(_read(path)) : null;
+            return _exists(path) ? TrueTypeFace.Load(_read(path), hinted) : null;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            face = null;
+            return null;
         }
-
-        _faces[path] = face;
-        return face;
     }
 }

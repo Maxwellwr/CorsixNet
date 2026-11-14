@@ -129,4 +129,19 @@ public sealed class GameConfigTests : IDisposable
     {
         Assert.Equal(number, new GameConfig { Language = language }.OriginalLanguageNumber());
     }
+
+    [Fact]
+    public void KeepsAFontForEachLanguage()
+    {
+        var config = new GameConfig()
+            .WithLanguageFont("Russian", @"C:\Fonts	ahoma.ttf")
+            .WithLanguageFont("Chinese (simplified)", @"C:\Fonts\msyh.ttc");
+
+        var read = GameConfig.Parse(config.ToText());
+
+        Assert.Equal(@"C:\Fonts	ahoma.ttf", read.LanguageFont(["Русский", "Russian", "ru"]));
+        Assert.Equal(@"C:\Fonts\msyh.ttc", read.LanguageFont(["Chinese (simplified)"]));
+        Assert.Null(read.LanguageFont(["Polish", "pl"]));
+        Assert.Null(read.WithLanguageFont("russian", null).LanguageFont(["Russian"]));
+    }
 }

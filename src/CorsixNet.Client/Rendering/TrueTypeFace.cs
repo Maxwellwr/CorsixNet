@@ -58,7 +58,10 @@ internal sealed unsafe class TrueTypeFace : IDisposable
     }
 
     /// <summary>Reads a font file's first face (FreeType's <c>FT_New_Memory_Face</c> with index 0); null if it is not a font.</summary>
-    public static TrueTypeFace? Load(byte[] data)
+    public static TrueTypeFace? Load(byte[] data) => Load(data, hinted: true);
+
+    /// <summary>Reads a font file's first face, opening it with FreeType to draw it only when <paramref name="hinted"/>.</summary>
+    public static TrueTypeFace? Load(byte[] data, bool hinted)
     {
         if (data.Length < 12)
         {
@@ -78,12 +81,34 @@ internal sealed unsafe class TrueTypeFace : IDisposable
 
         try
         {
-            return StbTrueType.CreateFont(data, offset) is { } info ? new TrueTypeFace(info, FreeTypeGlyphs.Open(data)) : null;
+            return StbTrueType.CreateFont(data, offset) is { } info ? new TrueTypeFace(info, hinted ? FreeTypeGlyphs.Open(data) : null) : null;
         }
-        catch (Exception exception) when (exception is IndexOutOfRangeException or ArgumentException or NullReferenceException)
+        catch (Exception exception) when (exception is IndexOutOfRangeException or ArgumentException or NullReferenceException || exception.GetType() == typeof(Exception))
         {
-            // stb_truetype trusts the file's tables; a damaged file reads out of bounds.
+            // stb_truetype trusts the file's tables; a damaged file reads out of bounds. A font it cannot use (one
+            // without a Unicode character map, such as a symbol font) it refuses with a plain Exception.
             return null;
+        }
+    }
+
+    /// <summary>The face's family name from its 'name' table, in English where it has it; empty if it has none.</summary>
+    public string FamilyName
+    {
+        get
+        {
+            // Windows names in US English, then in the languages of the other fonts looked for; then the Macintosh one.
+            foreach (var (platform, encoding, language) in new[] { (3, 1, 0x409), (3, 1, 0x419), (3, 1, 0x804), (3, 1, 0x404), (3, 1, 0x411), (3, 1, 0x412), (1, 0, 0) })
+            {
+                int length;
+                var name = StbTrueType.stbtt_GetFontNameString(_info, &length, platform, encoding, language, 1);
+                if (name is not null && length > 0)
+                {
+                    var bytes = new ReadOnlySpan<byte>(name, length);
+                    return platform == 3 ? Encoding.BigEndianUnicode.GetString(bytes) : Encoding.Latin1.GetString(bytes);
+                }
+            }
+
+            return string.Empty;
         }
     }
 
