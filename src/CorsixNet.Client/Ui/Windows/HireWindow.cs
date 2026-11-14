@@ -52,7 +52,6 @@ internal sealed class HireWindow : UiWindow
             {
                 _category = staffClass;
                 _selected = 0;
-                host.PlaySound("selectx.wav");
             },
             highlight: staffClass == _category || Tutorial.Lit("staff:" + staffClass)).WithTooltip(OriginalTooltips.Get(host, 23 + order, "See the " + Plural(staffClass).ToLowerInvariant() + " looking for work"))).ToList());
         yield return WindowRow.Gap;

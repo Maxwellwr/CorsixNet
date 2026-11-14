@@ -49,7 +49,6 @@ internal sealed class PolicyWindow : UiWindow
         WindowCell.Button(text, () =>
         {
             host.Submit(new SetPolicyCommand(policy, value));
-            host.PlaySound("selectx.wav");
         });
 
     private static WindowCell Switch(IWindowHost host, string text, PolicyKind policy, bool current, bool on) =>

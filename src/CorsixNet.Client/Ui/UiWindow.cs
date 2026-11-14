@@ -42,6 +42,12 @@ internal sealed record WindowCell(string Text, Action? OnClick = null, bool Dim 
     /// <summary>Whether the cell is drawn as a button, also when it cannot be clicked now.</summary>
     public bool IsButton { get; init; }
 
+    /// <summary>
+    /// The sound a click on the button plays (CorsixTH's <c>button.sound</c>): null for the windows' default_button_sound,
+    /// selectx.wav; empty for none.
+    /// </summary>
+    public string? Sound { get; init; }
+
     /// <summary>What the cell's tooltip says while the mouse rests on it, or null for none.</summary>
     public string? Tooltip { get; init; }
 

@@ -50,6 +50,9 @@ public class WindowTests
         Assert.Equal(0, clicks);
         Assert.True(layer.Update(host, press, over, Screen));
         Assert.Equal(1, clicks);
+
+        // Button:handleClick: the windows' default_button_sound.
+        Assert.Equal(["selectx.wav"], host.Sounds);
     }
 
     [Fact]

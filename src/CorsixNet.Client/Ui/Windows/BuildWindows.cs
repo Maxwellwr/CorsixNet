@@ -53,7 +53,6 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
                     WindowCell.Button("Buy", () =>
                     {
                         tool.PlaceExtra(definition);
-                        host.PlaySound("selectx.wav");
                     }, simulation.Hospitals[host.Player].Balance >= price));
             }
         }

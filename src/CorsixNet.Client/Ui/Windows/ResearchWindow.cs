@@ -83,7 +83,6 @@ internal sealed class ResearchWindow : UiWindow
         var button = WindowCell.Button(text, () =>
         {
             host.Submit(new AdjustResearchCommand(category, change));
-            host.PlaySound("selectx.wav");
         }, enabled);
         var area = category switch
         {
