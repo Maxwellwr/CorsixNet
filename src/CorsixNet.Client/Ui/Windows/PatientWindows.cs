@@ -5,6 +5,9 @@ using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -20,6 +23,36 @@ internal sealed class PatientWindow(int patientId) : UiWindow
 
     public int PatientId { get; } = patientId;
 
+    private PatientScreen? _screen;
+
+    private PatientScreen Screen => _screen ??= new PatientScreen(PatientId);
+
+    /// <summary>The original's look (<see cref="PatientScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => Patient(host) is not null && PatientScreen.IsAvailable(host);
+
+    public override Point FullscreenSize => PatientScreen.Size;
+
+    /// <summary>UIPatient:setDefaultPosition(-20, 30).</summary>
+    public override Point? FullscreenPosition => new(-20, 30);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
+    {
+        if (Patient(host) is { Behaviour: PatientBehaviour patient } humanoid)
+        {
+            Screen.Draw(batch, host, origin, mouse, humanoid, patient);
+        }
+    }
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        if (Patient(host) is { Behaviour: PatientBehaviour patient } humanoid)
+        {
+            Screen.Mouse(host, this, local, mouse, previous, humanoid, patient);
+        }
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) =>
+        Patient(host) is { Behaviour: PatientBehaviour patient } ? Screen.Tooltip(host, local, patient) : null;
     public override string Title => "Patient";
 
     public override bool IsSameAs(UiWindow other) => other is PatientWindow window && window.PatientId == PatientId;
