@@ -84,6 +84,9 @@ internal sealed class WindowLayer
         Open(window);
     }
 
+    /// <summary>The windows' <c>default_button_sound</c>.</summary>
+    public const string DefaultButtonSound = "selectx.wav";
+
     public void Close(UiWindow window) => _open.RemoveAll(open => ReferenceEquals(open.Window, window));
 
     /// <summary>Closes the front window (Esc).</summary>
@@ -193,6 +196,8 @@ internal sealed class WindowLayer
         var layout = hit.Layout!;
         if (layout.Close.Contains(point))
         {
+            // Window:addPanel gives a button that closes its window no4.wav.
+            host.PlaySound("no4.wav");
             _open.Remove(hit);
             return true;
         }
@@ -205,7 +210,16 @@ internal sealed class WindowLayer
         }
 
         var clicked = layout.Cells.FirstOrDefault(cell => cell.Cell.OnClick is not null && cell.Area.Contains(point));
-        clicked.Cell?.OnClick?.Invoke();
+        if (clicked.Cell is { OnClick: { } onClick } cell)
+        {
+            // Button:handleClick: the button's sound, then what it does.
+            if ((cell.Sound ?? DefaultButtonSound) is { Length: > 0 } sound)
+            {
+                host.PlaySound(sound);
+            }
+
+            onClick();
+        }
         if (layout.Canvas.Contains(point))
         {
             hit.Window.CanvasClicked(host, point - layout.Canvas.Location);

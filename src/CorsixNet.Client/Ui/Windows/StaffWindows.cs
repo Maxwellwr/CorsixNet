@@ -91,7 +91,6 @@ internal sealed class StaffManagementWindow : UiWindow
                 _category = staffClass;
                 _selected = null;
                 _confirmFire = null;
-                host.PlaySound("selectx.wav");
             },
             highlight: staffClass == _category)).ToList());
         yield return WindowRow.Gap;
@@ -165,7 +164,6 @@ internal sealed class StaffManagementWindow : UiWindow
     {
         _selected = id;
         _confirmFire = null;
-        host.PlaySound("selectx.wav");
     }
 
     private static string Plural(StaffClass staffClass) => staffClass switch

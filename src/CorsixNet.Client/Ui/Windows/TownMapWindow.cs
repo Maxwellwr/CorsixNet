@@ -70,6 +70,5 @@ internal sealed class TownMapWindow : UiWindow
     private static void Heat(IWindowHost host, int tenths)
     {
         host.Submit(new SetRadiatorHeatCommand(tenths));
-        host.PlaySound("selectx.wav");
     }
 }

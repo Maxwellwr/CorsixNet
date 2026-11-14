@@ -66,7 +66,11 @@ internal sealed class CasebookWindow : UiWindow
         WindowCell.Button(text, () =>
         {
             // UICasebook:increasePay and decreasePay: the wrong-choice buzz at the end of the range.
-            host.PlaySound(percent is < DiseaseCase.MinPrice or > DiseaseCase.MaxPrice ? "Wrong2.wav" : "selectx.wav");
+            if (percent is < DiseaseCase.MinPrice or > DiseaseCase.MaxPrice)
+            {
+                host.PlaySound("Wrong2.wav");
+            }
+
             host.Submit(new SetTreatmentPriceCommand(disease.Id, percent));
             _showPercent = true;
         }).WithTooltip(text.StartsWith('-') ? OriginalTooltips.Get(host, 145, "Lower the charge") : OriginalTooltips.Get(host, 146, "Raise the charge"));
