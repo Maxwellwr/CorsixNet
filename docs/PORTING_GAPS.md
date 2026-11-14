@@ -54,7 +54,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Hire window: the original's panel (names, descriptions and portraits are done, `StaffTexts`, `StaffFaces`); picking up and placing staff
   (two steps, cancel puts candidate back) (`dialogs/hire_staff.lua`, `place_staff.lua`, `staff_profile.lua`).
 - Staff management screen: done in the original's look (`StaffManagementScreen`: tabs, pages, ordering by a heading,
-  bonus, pay rise, sack, the view, the arrow keys). A raise request is answered from the table look or the fax only.
+  bonus, pay rise, sack, the view, the arrow keys). A raise request comes as a "strike" icon on the bottom panel
+  that opens `StaffRiseWindow` (`staff_rise.lua`: Req12V, grant or refuse, Esc does not close it, the game pauses).
 - Keys in windows: a window on top in its original look takes the keys it handles (`UiWindow.TakesKey`): the arrows in
   staff management and the casebook, Enter in the confirmation, information, hire and buy objects windows, H (`ingame_patient_gohome`) in the patient
   window. Not yet: the place objects keys (sell, rotate).
@@ -65,8 +66,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   waiting patients, emergencies, fatigue, specialist rooms first), unless another waiting room scores better for them;
   with `staff_allowed_to_move`, staff idle in a room nobody waits for are called to a room with patients waiting.
   There is no call queue object or dispatching of handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
-- Going to the staff room and resting there, the raise request dialog (`staff_rise.lua`; the requests, the
-  policy's automatic raise and quitting are in `StaffEmployment`). Happiness is
+- Going to the staff room and resting there (the raise requests, the policy's automatic raise and quitting are in
+  `StaffEmployment`, the request dialog in `StaffRiseWindow`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
   for working and waiting for a staff room (`Tiredness`); resting (`RestingBehaviour`), being on call in the staff
   room, the no-rest cheat, the tired mood (`Humanoid.IsTiredMoodShown`, with its icon over the head) and researchers and trainees going back to their room after resting are done.

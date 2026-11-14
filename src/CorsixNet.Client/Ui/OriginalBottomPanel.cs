@@ -134,7 +134,7 @@ internal sealed class OriginalBottomPanel : IDisposable
 
     /// <summary>
     /// Follows the mouse: a button pressed and let go over it gives its key to <paramref name="act"/>, as does a fax
-    /// icon ("fax"); a right click on the bank opens the statement ("bankstats"), on a fax icon dismisses that fax
+    /// icon ("fax:" and its place); a right click on the bank opens the statement ("bankstats"), on a fax icon dismisses that fax
     /// ("faxdismiss:" and its place, UIMessage:dismissMessage).
     /// </summary>
     /// <returns>Whether the mouse is over the panel or a fax icon, so the map does not get it.</returns>
@@ -147,11 +147,11 @@ internal sealed class OriginalBottomPanel : IDisposable
         var button = ButtonAt(bounds, at, hovering);
         if (mouse.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released)
         {
-            _pressed = button?.Key ?? (FaxAt(viewport, at, faxes) is not null ? "fax" : null);
+            _pressed = button?.Key ?? FaxKey(viewport, at, faxes);
         }
         else if (mouse.LeftButton == ButtonState.Released && previous.LeftButton == ButtonState.Pressed)
         {
-            var released = button?.Key ?? (FaxAt(viewport, at, faxes) is not null ? "fax" : null);
+            var released = button?.Key ?? FaxKey(viewport, at, faxes);
             if (_pressed is not null && _pressed == released)
             {
                 act(_pressed);
@@ -278,7 +278,7 @@ internal sealed class OriginalBottomPanel : IDisposable
             var icon = FaxIcon(state.Faxes[i]);
             var (_, fx, fy) = _drawer.Icons[i];
             var area = new Rectangle(bounds.X + fx, bounds.Y + fy, FaxWidth, FaxHeight);
-            var down = state.IsOn("fax") || (_pressed == "fax" && area.Contains(mouse) && buttons.LeftButton == ButtonState.Pressed);
+            var down = (state.Faxes[i] != "strike" && state.IsOn("fax")) || (_pressed == FaxKey(i) && area.Contains(mouse) && buttons.LeftButton == ButtonState.Pressed);
             var sprite = down ? icon + 1 : icon;
             var up = fy == FaxDrawer.StopY;
             if (up)
@@ -397,6 +397,11 @@ internal sealed class OriginalBottomPanel : IDisposable
         var bounds = Bounds(viewport);
         return new Rectangle(bounds.X + 1 + (index * FaxWidth), bounds.Y - FaxRise, FaxWidth, FaxHeight);
     }
+
+    /// <summary>The key a fax icon gives when clicked: "fax:" and its place.</summary>
+    private static string FaxKey(int index) => string.Create(CultureInfo.InvariantCulture, $"fax:{index}");
+
+    private string? FaxKey(Viewport viewport, Point at, int faxes) => FaxAt(viewport, at, faxes) is { } index ? FaxKey(index) : null;
 
     /// <summary>The fax icon under the mouse, where the icons are now (in their places before they are first drawn).</summary>
     private int? FaxAt(Viewport viewport, Point at, int faxes)

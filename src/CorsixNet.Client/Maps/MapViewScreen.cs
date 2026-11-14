@@ -221,6 +221,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The faxes waiting when last looked, so that a new one opens the faxes window.</summary>
     private HashSet<string> _seenFaxes = new(StringComparer.Ordinal);
 
+    /// <summary>The staff whose raise requests had an icon when last looked, so that a new one plays NewFax.wav.</summary>
+    private HashSet<int> _seenRaises = [];
+
+    /// <summary>Staff whose raise request has been answered, until the game has taken the answer.</summary>
+    private readonly HashSet<int> _raisesAnswered = [];
+
+    /// <summary>Whether a window that must pause the game (<see cref="UiWindow.MustPause"/>) paused it.</summary>
+    private bool _pausedForWindow;
+
     /// <summary>Announces machines that start needing a repair urgently (CorsixTH's <c>announceRepair</c>).</summary>
     private readonly RepairAnnouncer _repairs = new();
 
@@ -2980,6 +2989,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _seenFaxes = faxes;
+
+        // UIBottomPanel:_showMessageIcon: a raise request's icon comes out of the fax door with NewFax.wav, but nothing opens.
+        var raises = RaiseRequests().Select(staff => staff.Id).ToHashSet();
+        if (raises.Any(id => !_seenRaises.Contains(id)))
+        {
+            _sounds.Play("NewFax.wav");
+        }
+
+        _seenRaises = raises;
+        PauseForWindows();
         if (!ReferenceEquals(_session, _repairSession))
         {
             _repairSession = _session;
@@ -3172,7 +3191,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     OriginalTexts? IWindowHost.Texts => _texts;
 
-    void IWindowHost.Submit(Command command) => _session?.Submit(command);
+    void IWindowHost.Submit(Command command)
+    {
+        if (command is AnswerRaiseCommand answer)
+        {
+            // The answer only takes effect on the next tick (after the pause the request window made): its icon stays away meanwhile.
+            _raisesAnswered.Add(answer.StaffId);
+        }
+
+        _session?.Submit(command);
+    }
 
     void IWindowHost.Open(UiWindow window) => _windows.Open(window);
 
@@ -4497,7 +4525,57 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             "emergency" => "emergency",
             "epidemic" => "epidemy",
             _ => "information",
-        }).ToList();
+        }).Concat(RaiseRequests().Select(_ => "strike")).ToList();
+    }
+
+    /// <summary>
+    /// The player's staff asking for a raise whose icon stands on the bottom panel (PlayerHospital:makeRaiseRequest's
+    /// "strike" message), the longest waiting first: not those whose request window is open or who have been answered.
+    /// </summary>
+    private List<Humanoid> RaiseRequests()
+    {
+        if (Simulation is not { } simulation || _session is null || _session.Player >= simulation.Hospitals.Count)
+        {
+            return [];
+        }
+
+        var player = _session.Player;
+        var asking = simulation.Entities.OfType<Humanoid>()
+            .Where(h => h is { Profile: not null, IsFired: false, RaiseRequest: > 0 } && h.Employer == player)
+            .ToList();
+        _raisesAnswered.RemoveWhere(id => !asking.Any(h => h.Id == id));
+        return asking
+            .Where(h => !_raisesAnswered.Contains(h.Id) && !_windows.Windows.Any(w => w is StaffRiseWindow rise && rise.StaffId == h.Id))
+            .OrderBy(h => h.QuittingIn)
+            .ThenBy(h => h.Id)
+            .ToList();
+    }
+
+    /// <summary>
+    /// World:mustPauseWindowAdd and mustPauseWindowRemoved: while a window that must pause the game is open the game is
+    /// paused; when the last one goes the game goes on, unless the player had paused it already.
+    /// </summary>
+    private void PauseForWindows()
+    {
+        if (_session is not { CanChangeSpeed: true } session)
+        {
+            return;
+        }
+
+        var mustPause = _windows.Windows.Any(w => w.MustPause);
+        if (mustPause && !session.IsPaused)
+        {
+            session.SetSpeed(GameSpeed.Pause);
+            _pausedForWindow = true;
+        }
+        else if (!mustPause && _pausedForWindow)
+        {
+            _pausedForWindow = false;
+            if (session.IsPaused)
+            {
+                session.ResumeSpeed();
+            }
+        }
     }
 
     /// <summary>A button of the original bottom panel: the dialog it opens or closes, or the tool it starts.</summary>
@@ -4519,6 +4597,25 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
             return;
         }
+
+        if (key.StartsWith("fax:", StringComparison.Ordinal))
+        {
+            // UIMessage:openMessage: a raise request's icon opens its window (UIStaffRise) and goes; the others open the faxes.
+            var index = int.Parse(key["fax:".Length..], CultureInfo.InvariantCulture);
+            var faxCount = PanelFaxes().Count - RaiseRequests().Count;
+            if (index >= faxCount)
+            {
+                if (RaiseRequests().ElementAtOrDefault(index - faxCount) is { } asking)
+                {
+                    _windows.Open(new StaffRiseWindow(asking.Id, asking.RaiseRequest));
+                }
+
+                return;
+            }
+
+            key = "fax";
+        }
+
         // research and edit room have no click sound (setSound()).
         if (key is not ("edit" or "research"))
         {
@@ -4587,7 +4684,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             PanelFaxes(),
             PanelDialogOpen,
             Tutorial.Lit,
-            FaxWindow.Pending(simulation, _session.Player, ((IWindowHost)this).IsWinLetterPending).ToList());
+            [.. FaxWindow.Pending(simulation, _session.Player, ((IWindowHost)this).IsWinLetterPending), .. RaiseRequests().Select(staff => string.Create(CultureInfo.InvariantCulture, $"strike:{staff.Id}"))]);
         _bottomPanel.Draw(batch, viewport, state, mouse, InputScript.Mouse());
     }
 

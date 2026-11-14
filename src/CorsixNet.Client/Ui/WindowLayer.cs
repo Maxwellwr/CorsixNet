@@ -90,11 +90,11 @@ internal sealed class WindowLayer
 
     public void Close(UiWindow window) => RemoveAll(open => ReferenceEquals(open.Window, window));
 
-    /// <summary>Closes the front window (Esc).</summary>
+    /// <summary>Closes the front window that Esc closes (Esc).</summary>
     /// <returns>Whether there was one to close.</returns>
     public bool CloseTop()
     {
-        var index = _open.FindLastIndex(open => !open.Window.IsPinned);
+        var index = _open.FindLastIndex(open => !open.Window.IsPinned && open.Window.ClosesWithEsc);
         if (index < 0)
         {
             return false;
