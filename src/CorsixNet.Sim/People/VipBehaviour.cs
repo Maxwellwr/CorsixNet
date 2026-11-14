@@ -36,7 +36,7 @@ public enum VipPhase : byte
 /// with a chance, and always a research department or ward), and on leaving rate the hospital from 1 (best) to 15.
 /// </summary>
 /// <remarks>
-/// Not yet: machines and crashed rooms (there are none yet), the arrival announcement and the faxes.
+/// The arrival announcement is the client's (HospitalAnnouncements).
 /// </remarks>
 public sealed class VipBehaviour : HumanoidBehaviour, IQueueMember
 {

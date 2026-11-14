@@ -38,5 +38,11 @@ public class HospitalAnnouncementsTests
         announcements.Update(simulation, 0);
         simulation.Entities.OfType<Humanoid>().Single(h => h.Profile is { Class: StaffClass.Handyman }).IsFired = true;
         Assert.Contains("sack006.wav", announcements.Update(simulation, 0));
+
+        // A VIP walking into the hospital is announced once.
+        var vip = simulation.AddEntity(id => Humanoid.CreatePatient(id, new TilePosition(10, 10), simulation.Random, Sim.Diseases.PatientLook.Standard, 0));
+        vip.Behaviour = new Sim.People.VipBehaviour(1, 5);
+        Assert.Contains(announcements.Update(simulation, 0), sound => sound.StartsWith("vip00", StringComparison.Ordinal));
+        Assert.DoesNotContain(announcements.Update(simulation, 0), sound => sound.StartsWith("vip00", StringComparison.Ordinal));
     }
 }
