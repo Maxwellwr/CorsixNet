@@ -3,6 +3,7 @@ using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Rooms;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Client.Tests;
 
@@ -26,5 +27,16 @@ public class HospitalAnnouncementsTests
 
         simulation.Hospitals[0].Cheated = true;
         Assert.Matches("^cheat00[1-3]\\.wav$", Assert.Single(announcements.Update(simulation, 0)));
+
+        // A cure cheers, a death boos.
+        simulation.Hospitals[0].Cured++;
+        simulation.Hospitals[0].Deaths++;
+        Assert.Equal(["cheer.wav", "boo.wav"], announcements.Update(simulation, 0));
+
+        // A handyman fired says goodbye.
+        host.Submit(new HireStaffCommand(StaffClass.Handyman, 0, new(5, 2)));
+        announcements.Update(simulation, 0);
+        simulation.Entities.OfType<Humanoid>().Single(h => h.Profile is { Class: StaffClass.Handyman }).IsFired = true;
+        Assert.Contains("sack006.wav", announcements.Update(simulation, 0));
     }
 }
