@@ -294,7 +294,7 @@ internal sealed class QueuePopupWindow(int patientId, Point at) : UiWindow
 
     public int PatientId { get; } = patientId;
 
-    public override string Title => "Queue";
+    public override string Title => UiText.Get("corsixnet.queue.caption", "Queue");
 
     public override bool IsFullscreen(IWindowHost host) => QueueScreen.IsAvailable(host);
 
@@ -351,17 +351,17 @@ internal sealed class QueuePopupWindow(int patientId, Point at) : UiWindow
     }
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) =>
-        Reception.Contains(local) ? "Send the patient back to reception" : Home.Contains(local) ? "Send the patient home" : null;
+        Reception.Contains(local) ? UiText.Get("tooltip.queue_window.patient_dropdown.reception", "Send the patient back to reception") : Home.Contains(local) ? UiText.Get("tooltip.queue_window.patient_dropdown.send_home", "Send the patient home") : null;
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         yield return WindowRow.Of(
-            WindowCell.Button("Reception", () =>
+            WindowCell.Button(UiText.Get("rooms_short.reception", "Reception"), () =>
             {
                 host.Submit(new SendPatientToReceptionCommand(PatientId));
                 host.Close(this);
             }),
-            WindowCell.Button("Home", () =>
+            WindowCell.Button(UiText.Get("corsixnet.queue.home", "Home"), () =>
             {
                 host.Submit(new SendPatientHomeCommand(PatientId));
                 host.Close(this);

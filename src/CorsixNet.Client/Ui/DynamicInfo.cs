@@ -46,7 +46,7 @@ internal static class DynamicInfo
 
         if (humanoid.Profile is { } profile)
         {
-            var name = texts?.Staff.FullName(profile) ?? string.Create(CultureInfo.InvariantCulture, $"{profile.Class} {humanoid.Id}");
+            var name = texts?.Staff.FullName(profile) ?? UiText.Format("corsixnet.staff.unnamed", "%1% %2%", profile.Class, humanoid.Id);
             return Join(name, StaffLabels.Doing(simulation, humanoid), $"{S(29, "Tiredness")} {StaffLabels.Percent(humanoid.Fatigue)}");
         }
 
@@ -81,7 +81,7 @@ internal static class DynamicInfo
             return null;
         }
 
-        var name = texts?.Staff.FullName(profile) ?? string.Create(CultureInfo.InvariantCulture, $"{profile.Class} {humanoid.Id}");
+        var name = texts?.Staff.FullName(profile) ?? UiText.Format("corsixnet.staff.unnamed", "%1% %2%", profile.Class, humanoid.Id);
         var receptionist = profile.Class == Sim.Staff.StaffClass.Receptionist;
         return new DynamicInfoLines(
             [name, StaffLabels.Doing(simulation, humanoid), receptionist ? string.Empty : S(29, "Tiredness")],
@@ -93,14 +93,14 @@ internal static class DynamicInfo
     public static string OfMachine(Simulation simulation, RoomObject machine, OriginalTexts? texts)
     {
         string S(int index, string fallback) => texts?.String(59, index) ?? fallback;
-        var name = simulation.Content.FindObject(machine.ObjectType)?.Name ?? machine.ObjectType;
+        var name = UiText.ObjectName(simulation.Content, machine.ObjectType);
         var state = machine.Machine!;
         return Join(name, Format(S(31, "Strength %d"), state.Strength), Format(S(32, "Times used %d"), state.TimesUsed));
     }
 
     private static string PatientAction(Simulation simulation, PatientBehaviour patient, Func<int, string, string> s)
     {
-        var room = simulation.FindEntity(patient.TargetId) is Room target ? simulation.Content.FindRoom(target.RoomType)?.Name ?? target.RoomType : null;
+        var room = simulation.FindEntity(patient.TargetId) is Room target ? UiText.RoomName(simulation.Content, target.RoomType) : null;
         return patient.Phase switch
         {
             PatientPhase.Dying => s(5, "Dying"),
@@ -117,7 +117,7 @@ internal static class DynamicInfo
     private static string Contagious(Simulation simulation, Humanoid humanoid, PatientBehaviour patient, Func<int, string, string> s) =>
         patient.IsInfected && humanoid.HospitalPlayer >= 0 && humanoid.HospitalPlayer < simulation.Hospitals.Count
         && simulation.Hospitals[humanoid.HospitalPlayer].Epidemics.Current is { IsCoverUp: true }
-            ? patient.IsVaccinated ? "I am no longer contagious" : s(26, "I am contagious")
+            ? patient.IsVaccinated ? UiText.Get("dynamic_info.patient.actions.epidemic_vaccinated", "I am no longer contagious") : s(26, "I am contagious")
             : string.Empty;
 
     private static string Diagnosis(PatientBehaviour patient, OriginalTexts? texts, Func<int, string, string> s)

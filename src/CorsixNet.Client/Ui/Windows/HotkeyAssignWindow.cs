@@ -34,7 +34,7 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
     private string _pane = Panes[0].Id;
     private string? _listening;
 
-    public override string Title => "Hotkey Assignment";
+    public override string Title => UiText.Get("hotkey_window.caption_main", "Hotkey Assignment");
 
     /// <summary>The action waiting for a key, or null.</summary>
     internal string? Listening => _listening;
@@ -52,7 +52,7 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
-        var buttons = Panes.Select(pane => WindowCell.Button(pane.Title, () => ShowPane(pane.Id), highlight: pane.Id == _pane) with { Tooltip = pane.Tooltip }).ToList();
+        var buttons = Panes.Select(pane => WindowCell.Button(Translated(pane.Title), () => ShowPane(pane.Id), highlight: pane.Id == _pane) with { Tooltip = Translated(pane.Tooltip) }).ToList();
         for (var i = 0; i < buttons.Count; i += 3)
         {
             yield return new WindowRow(buttons.Skip(i).Take(3).ToList());
@@ -61,7 +61,7 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         foreach (var (title, keys) in Panes.First(pane => pane.Id == _pane).Sections)
         {
             yield return WindowRow.Gap;
-            yield return WindowCell.Line(title, highlight: true);
+            yield return WindowCell.Line(Translated(title), highlight: true);
             foreach (var action in keys)
             {
                 var listening = _listening == action;
@@ -73,10 +73,31 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Accept", () => Accept(host)) with { Tooltip = "Accept and save hotkey assignments" },
-            WindowCell.Button("Reset to Defaults", ResetToDefaults) with { Tooltip = "Reset all hotkeys to the program's defaults" },
-            WindowCell.Button("Cancel", () => Leave(host)) with { Tooltip = "Cancel the assignment and go back to the options menu" });
+            WindowCell.Button(UiText.Get("hotkey_window.button_accept", "Accept"), () => Accept(host)) with { Tooltip = UiText.Get("tooltip.hotkey_window.button_accept", "Accept and save hotkey assignments") },
+            WindowCell.Button(UiText.Get("hotkey_window.button_defaults", "Reset to Defaults"), ResetToDefaults) with { Tooltip = UiText.Get("tooltip.hotkey_window.button_defaults", "Reset all hotkeys to the program's defaults") },
+            WindowCell.Button(UiText.Get("hotkey_window.button_cancel", "Cancel"), () => Leave(host)) with { Tooltip = UiText.Get("tooltip.hotkey_window.button_cancel", "Cancel the assignment and go back to the options menu") });
     }
+
+    /// <summary>A pane's or section's title or tooltip in the chosen language, by its <c>hotkey_window</c> name.</summary>
+    private static string Translated(string english) => english switch
+    {
+        "General In-Game Keys" => UiText.Get("hotkey_window.panel_generalInGameKeys", english),
+        "Assign general in-game hotkeys" => UiText.Get("tooltip.hotkey_window.panel_generalInGameKeys", english),
+        "Game Speed Keys" => UiText.Get("hotkey_window.panel_gameSpeedKeys", english),
+        "Assign hotkeys to control the game speed" => UiText.Get("tooltip.hotkey_window.button_gameSpeedKeys", english),
+        "Scroll Keys" => UiText.Get("hotkey_window.panel_scrollKeys", english),
+        "Assign hotkeys to scroll the screen" => UiText.Get("tooltip.hotkey_window.panel_scrollKeys", english),
+        "Zoom Keys" => UiText.Get("hotkey_window.panel_zoomKeys", english),
+        "Assign hotkeys to zoom in and out" => UiText.Get("tooltip.hotkey_window.panel_zoomKeys", english),
+        "Toggle Keys" => UiText.Get("hotkey_window.panel_toggleKeys", english),
+        "Assign hotkeys to toggle options" => UiText.Get("tooltip.hotkey_window.panel_toggleKeys", english),
+        "Panel Keys" => UiText.Get("hotkey_window.caption_panels", english),
+        "Assign hotkeys to open panels" => UiText.Get("tooltip.hotkey_window.caption_panels", english),
+        "Recall Position Keys" => UiText.Get("hotkey_window.panel_recallPosKeys", english),
+        "Assign hotkeys to save and recall camera positions" => UiText.Get("tooltip.hotkey_window.button_recallPosKeys", english),
+        "Store Position Keys" => UiText.Get("hotkey_window.panel_storePosKeys", english),
+        _ => english,
+    };
 
     /// <summary><c>buttonAccept</c>: the new keys are handed over to be saved.</summary>
     private void Accept(IWindowHost host)
@@ -106,8 +127,10 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         back?.Invoke();
     }
 
-    /// <summary>The action's name as <c>hotkey_window</c> gives it.</summary>
-    internal static string Label(string action) => action switch
+    /// <summary>The action's name as <c>hotkey_window</c> gives it, in the chosen language.</summary>
+    internal static string Label(string action) => UiText.Get("hotkey_window." + action, EnglishLabel(action)).Trim();
+
+    private static string EnglishLabel(string action) => action switch
     {
         "ingame_scroll_up" => "Scroll Up",
         "ingame_scroll_down" => "Scroll Down",

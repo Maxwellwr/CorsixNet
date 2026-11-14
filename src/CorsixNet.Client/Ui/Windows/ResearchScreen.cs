@@ -171,8 +171,8 @@ internal sealed class ResearchScreen
             {
                 var current = research.Area(categories[i - 1]).Current;
                 return Progress(simulation, research, current) is { } progress
-                    ? string.Create(CultureInfo.InvariantCulture, $"Progress towards the next discovery: {(int)(progress * 100)} %")
-                    : "Nothing being researched here";
+                    ? UiText.Format("corsixnet.research.progress", "Progress towards the next discovery: %1% %%", (int)(progress * 100))
+                    : UiText.Get("tooltip.research_policy.no_research", "Nothing being researched here");
             }
         }
 

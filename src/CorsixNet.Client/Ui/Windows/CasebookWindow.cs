@@ -22,7 +22,7 @@ internal sealed class CasebookWindow : UiWindow
 {
     private bool _showPercent;
 
-    public override string Title => "Drug casebook";
+    public override string Title => UiText.Get("corsixnet.casebook.caption", "Drug casebook");
 
     public override string? Hotkey => "F5";
 
@@ -46,8 +46,8 @@ internal sealed class CasebookWindow : UiWindow
         var simulation = host.Simulation;
         var hospital = simulation.Hospitals[host.Player];
         var rules = simulation.Rules.Diseases;
-        yield return WindowCell.Button(_showPercent ? "Show charges" : "Show percent", () => _showPercent = !_showPercent).WithTooltip(OriginalTooltips.Get(host, 140, "Show the charge as money or as a percentage"));
-        yield return WindowRow.Of("Disease", WindowCell.Number("Rep"), WindowCell.Number("Charge"), "", "", "", "", WindowCell.Number("Earned"), WindowCell.Number("Cured"), WindowCell.Number("Died"), WindowCell.Number("Away"), WindowCell.Number("Cure"), "Research");
+        yield return WindowCell.Button(_showPercent ? UiText.Get("corsixnet.casebook.show_charges", "Show charges") : UiText.Get("corsixnet.casebook.show_percent", "Show percent"), () => _showPercent = !_showPercent).WithTooltip(OriginalTooltips.Get(host, 140, "Show the charge as money or as a percentage"));
+        yield return WindowRow.Of(UiText.Get("corsixnet.casebook.disease", "Disease"), WindowCell.Number(UiText.Get("corsixnet.bank.reputation", "Rep")), WindowCell.Number(UiText.Get("corsixnet.casebook.charge", "Charge")), "", "", "", "", WindowCell.Number(UiText.Get("corsixnet.casebook.earned", "Earned")), WindowCell.Number(UiText.Get("corsixnet.casebook.cured", "Cured")), WindowCell.Number(UiText.Get("corsixnet.casebook.died", "Died")), WindowCell.Number(UiText.Get("corsixnet.casebook.away", "Away")), WindowCell.Number(UiText.Get("corsixnet.casebook.cure", "Cure")), UiText.Get("corsixnet.menu.research", "Research"));
         var known = DiseaseCatalog.All
             .Where(disease => hospital.PeekCase(disease, rules).Discovered)
             .Select(disease => (Disease: disease, Name: host.Texts?.DiseaseName(disease.Id) ?? disease.Id))
@@ -76,7 +76,7 @@ internal sealed class CasebookWindow : UiWindow
                 WindowCell.Number(disease.IsPseudo ? string.Empty : string.Create(CultureInfo.InvariantCulture, $"{entry.CureEffectiveness} %")),
                 disease.IsPseudo
                     ? string.Empty
-                    : WindowCell.Button(concentrated ? "Stop" : "Concentrate", () => host.Submit(new ConcentrateResearchCommand(disease.Id)), highlight: concentrated).WithTooltip(OriginalTooltips.Get(host, 147, "Concentrate research on treating this disease")));
+                    : WindowCell.Button(concentrated ? UiText.Get("corsixnet.casebook.stop", "Stop") : UiText.Get("corsixnet.casebook.concentrate", "Concentrate"), () => host.Submit(new ConcentrateResearchCommand(disease.Id)), highlight: concentrated).WithTooltip(OriginalTooltips.Get(host, 147, "Concentrate research on treating this disease")));
         }
     }
 

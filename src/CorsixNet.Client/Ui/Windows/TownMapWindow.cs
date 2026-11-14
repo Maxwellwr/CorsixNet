@@ -16,7 +16,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class TownMapWindow : UiWindow
 {
-    public override string Title => "Town map";
+    public override string Title => UiText.Get("corsixnet.menu.town_map", "Town map");
 
     public override string? Hotkey => "F4";
 
@@ -36,23 +36,23 @@ internal sealed class TownMapWindow : UiWindow
         var hospital = simulation.Hospitals[host.Player];
         var humanoids = simulation.Entities.OfType<Humanoid>().ToList();
         var objects = simulation.Entities.OfType<RoomObject>().Where(o => simulation.Map[o.Tile.X, o.Tile.Y].Parcel is var parcel && simulation.Map.GetParcelOwner(parcel) == host.Player + 1).ToList();
-        yield return WindowRow.Of("Patients", WindowCell.Number(humanoids.Count(h => h.Behaviour is PatientBehaviour && h.HospitalPlayer == host.Player && !h.IsDespawning).ToString(CultureInfo.InvariantCulture)));
-        yield return WindowRow.Of("Staff", WindowCell.Number(humanoids.Count(h => h.Profile is not null && h.Employer == host.Player && !h.IsFired).ToString(CultureInfo.InvariantCulture)));
-        yield return WindowRow.Of("Plants", WindowCell.Number(objects.Count(o => o.ObjectType == "plant").ToString(CultureInfo.InvariantCulture)));
-        yield return WindowRow.Of("Radiators", WindowCell.Number(objects.Count(o => o.ObjectType == "radiator").ToString(CultureInfo.InvariantCulture)));
-        yield return WindowRow.Of("Fire extinguishers", WindowCell.Number(objects.Count(o => o.ObjectType == "extinguisher").ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.town_map.patients", "Patients"), WindowCell.Number(humanoids.Count(h => h.Behaviour is PatientBehaviour && h.HospitalPlayer == host.Player && !h.IsDespawning).ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.menu.staff", "Staff"), WindowCell.Number(humanoids.Count(h => h.Profile is not null && h.Employer == host.Player && !h.IsFired).ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.staff.plants", "Plants"), WindowCell.Number(objects.Count(o => o.ObjectType == "plant").ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.town_map.radiators", "Radiators"), WindowCell.Number(objects.Count(o => o.ObjectType == "radiator").ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.town_map.fire_extinguishers", "Fire extinguishers"), WindowCell.Number(objects.Count(o => o.ObjectType == "extinguisher").ToString(CultureInfo.InvariantCulture)));
         yield return WindowRow.Gap;
 
-        yield return WindowCell.Line("Heating", highlight: true);
+        yield return WindowCell.Line(UiText.Get("corsixnet.town_map.heating", "Heating"), highlight: true);
         yield return WindowRow.Of(
-            hospital.IsHeatingBroken ? "The boiler is broken" : string.Create(CultureInfo.InvariantCulture, $"Radiators at {hospital.RadiatorHeat * 10} %"),
-            WindowCell.Button("Colder", () => Heat(host, hospital.RadiatorHeat - 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat > Hospital.MinRadiatorHeat).WithTooltip(OriginalTooltips.Get(host, 198, "Turn the heating down")),
-            WindowCell.Button("Warmer", () => Heat(host, hospital.RadiatorHeat + 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat < Hospital.MaxRadiatorHeat).WithTooltip(OriginalTooltips.Get(host, 197, "Turn the heating up")));
-        yield return WindowRow.Of("Heating bill so far this month", WindowCell.Number(MoneyText.Format((long)hospital.AccruedHeating)));
+            hospital.IsHeatingBroken ? UiText.Get("corsixnet.town_map.boiler_broken", "The boiler is broken") : UiText.Format("corsixnet.town_map.radiators_at", "Radiators at %1% %%", hospital.RadiatorHeat * 10),
+            WindowCell.Button(UiText.Get("corsixnet.town_map.colder", "Colder"), () => Heat(host, hospital.RadiatorHeat - 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat > Hospital.MinRadiatorHeat).WithTooltip(OriginalTooltips.Get(host, 198, "Turn the heating down")),
+            WindowCell.Button(UiText.Get("corsixnet.town_map.warmer", "Warmer"), () => Heat(host, hospital.RadiatorHeat + 1), !hospital.IsHeatingBroken && hospital.RadiatorHeat < Hospital.MaxRadiatorHeat).WithTooltip(OriginalTooltips.Get(host, 197, "Turn the heating up")));
+        yield return WindowRow.Of(UiText.Get("corsixnet.town_map.heating_bill", "Heating bill so far this month"), WindowCell.Number(MoneyText.Format((long)hospital.AccruedHeating)));
         yield return WindowRow.Gap;
 
-        yield return WindowCell.Line("Land", highlight: true);
-        yield return WindowRow.Of("Parcel", "Owner", WindowCell.Number("Price"), string.Empty);
+        yield return WindowCell.Line(UiText.Get("corsixnet.town_map.land", "Land"), highlight: true);
+        yield return WindowRow.Of(UiText.Get("corsixnet.town_map.parcel", "Parcel"), UiText.Get("corsixnet.town_map.owner", "Owner"), WindowCell.Number(UiText.Get("corsixnet.build.price", "Price")), string.Empty);
         for (var parcel = 1; parcel < simulation.Map.ParcelCount; parcel++)
         {
             var owner = simulation.Map.GetParcelOwner(parcel);
@@ -60,15 +60,15 @@ internal sealed class TownMapWindow : UiWindow
             var forSale = simulation.IsParcelPurchasable(parcel, host.Player);
             var number = parcel;
             yield return WindowRow.Of(
-                string.Create(CultureInfo.InvariantCulture, $"Parcel {parcel}"),
-                owner == host.Player + 1 ? "You" : owner > 0 ? string.Create(CultureInfo.InvariantCulture, $"Player {owner}") : forSale ? "For sale" : "Not for sale yet",
+                UiText.Format("corsixnet.staff.parcel", "Parcel %1%", parcel),
+                owner == host.Player + 1 ? UiText.Get("corsixnet.town_map.you", "You") : owner > 0 ? UiText.Format("corsixnet.town_map.player", "Player %1%", owner) : forSale ? UiText.Get("town_map.for_sale", "For sale") : UiText.Get("corsixnet.town_map.not_for_sale_yet", "Not for sale yet"),
                 WindowCell.Number(owner == 0 ? MoneyText.Format(price) : string.Empty),
                 forSale
-                    ? WindowCell.Button("Buy", () =>
+                    ? WindowCell.Button(UiText.Get("corsixnet.build.buy", "Buy"), () =>
                     {
                         if (price > hospital.Balance)
                         {
-                            host.Notice($"Not enough money for parcel {number}: it costs {MoneyText.Format(price)}");
+                            host.Notice(UiText.Format("corsixnet.town_map.cannot_afford", "Not enough money for parcel %1%: it costs %2%", number, MoneyText.Format(price)));
                             host.PlaySound("Wrong2.wav");
                             return;
                         }

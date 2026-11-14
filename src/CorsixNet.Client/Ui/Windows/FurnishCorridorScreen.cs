@@ -110,7 +110,7 @@ internal sealed class FurnishCorridorScreen(Func<IWindowHost, List<ObjectDefinit
         for (var i = 0; i < objects.Count; i++)
         {
             var font = i == _hovered ? blue : white;
-            Text(font, objects[i].Name, 163, 20 + ((i + 1) * 19));
+            Text(font, UiText.Object(objects[i]), 163, 20 + ((i + 1) * 19));
             var quantity = _quantities.GetValueOrDefault(objects[i].Id).ToString(CultureInfo.InvariantCulture);
             Text(font, quantity, 306 + ((19 - font.Measure(quantity).Width) / 2), 20 + ((i + 1) * 19));
         }
@@ -209,7 +209,7 @@ internal sealed class FurnishCorridorScreen(Func<IWindowHost, List<ObjectDefinit
             "confirm" => Tip(40, "Buy these objects"),
             { } key when key.StartsWith("less", StringComparison.Ordinal) => Tip(42, "Buy one less"),
             { } key when key.StartsWith("more", StringComparison.Ordinal) => Tip(43, "Buy one more"),
-            { } key when key.StartsWith("item", StringComparison.Ordinal) => objects[key[^1] - '0'].Name,
+            { } key when key.StartsWith("item", StringComparison.Ordinal) => UiText.Object(objects[key[^1] - '0']),
             _ => new Rectangle(20, 168, 107, 19).Contains(local) ? Tip(38, "The price of the object")
                 : new Rectangle(20, 196, 107, 19).Contains(local) ? Tip(39, "The total of what you are buying")
                 : null,

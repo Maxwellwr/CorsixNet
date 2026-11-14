@@ -64,7 +64,7 @@ internal sealed class PatientWindow(int patientId) : UiWindow
             PatientScreen.GoHome(host, this, humanoid);
         }
     }
-    public override string Title => "Patient";
+    public override string Title => UiText.Get("corsixnet.patient.caption", "Patient");
 
     public override bool IsSameAs(UiWindow other) => other is PatientWindow window && window.PatientId == PatientId;
 
@@ -78,32 +78,32 @@ internal sealed class PatientWindow(int patientId) : UiWindow
         }
 
         var simulation = host.Simulation;
-        var disease = patient.IsDiagnosed ? host.Texts?.DiseaseName(patient.DiseaseId) ?? patient.DiseaseId : "Not diagnosed yet";
-        yield return WindowRow.Of("Disease", new WindowCell(disease, Highlight: patient.IsDiagnosed));
-        yield return WindowRow.Of("Diagnosis", WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{Math.Min(100, patient.DiagnosisProgress / 10)} %")));
-        yield return WindowRow.Of("Health", WindowCell.Number(StaffLabels.Percent(patient.Health)), HealthGraph(patient));
-        yield return WindowRow.Of("Warmth", WindowCell.Number(StaffLabels.Percent(humanoid.Warmth)));
-        yield return WindowRow.Of("Thirst", WindowCell.Number(StaffLabels.Percent(patient.Thirst)));
-        yield return WindowRow.Of("Toilet", WindowCell.Number(StaffLabels.Percent(patient.ToiletNeed)));
-        yield return WindowRow.Of("Happiness", WindowCell.Number(StaffLabels.Percent(humanoid.Happiness)), patient.IsSad ? "Sad" : string.Empty);
+        var disease = patient.IsDiagnosed ? host.Texts?.DiseaseName(patient.DiseaseId) ?? patient.DiseaseId : UiText.Get("corsixnet.patient.not_diagnosed", "Not diagnosed yet");
+        yield return WindowRow.Of(UiText.Get("corsixnet.casebook.disease", "Disease"), new WindowCell(disease, Highlight: patient.IsDiagnosed));
+        yield return WindowRow.Of(UiText.Get("corsixnet.policy.diagnosis", "Diagnosis"), WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{Math.Min(100, patient.DiagnosisProgress / 10)} %")));
+        yield return WindowRow.Of(UiText.Get("corsixnet.patient.health", "Health"), WindowCell.Number(StaffLabels.Percent(patient.Health)), HealthGraph(patient));
+        yield return WindowRow.Of(UiText.Get("corsixnet.patient.warmth", "Warmth"), WindowCell.Number(StaffLabels.Percent(humanoid.Warmth)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.patient.thirst", "Thirst"), WindowCell.Number(StaffLabels.Percent(patient.Thirst)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.patient.toilet", "Toilet"), WindowCell.Number(StaffLabels.Percent(patient.ToiletNeed)));
+        yield return WindowRow.Of(UiText.Get("tooltip.handyman_window.happiness", "Happiness"), WindowCell.Number(StaffLabels.Percent(humanoid.Happiness)), patient.IsSad ? UiText.Get("corsixnet.patient.sad", "Sad") : string.Empty);
         if (patient.PayAmount > 0)
         {
-            yield return WindowRow.Of("To pay", WindowCell.Number(MoneyText.Format(patient.PayAmount)));
+            yield return WindowRow.Of(UiText.Get("corsixnet.patient.to_pay", "To pay"), WindowCell.Number(MoneyText.Format(patient.PayAmount)));
         }
 
         if (patient.IsInfected)
         {
-            yield return WindowRow.Of("Contagious", patient.IsVaccinated ? "Vaccinated" : patient.IsMarkedForVaccination ? "Waiting for a nurse" : "Not vaccinated");
+            yield return WindowRow.Of(UiText.Get("corsixnet.patient.contagious", "Contagious"), patient.IsVaccinated ? UiText.Get("corsixnet.patient.vaccinated", "Vaccinated") : patient.IsMarkedForVaccination ? UiText.Get("corsixnet.patient.waiting_for_nurse", "Waiting for a nurse") : UiText.Get("corsixnet.patient.not_vaccinated", "Not vaccinated"));
         }
 
         if (patient.TreatmentHistory.Count > 0)
         {
-            yield return WindowRow.Of("Been to", string.Join(", ", patient.TreatmentHistory.Select(entry => History(simulation, host, entry))));
+            yield return WindowRow.Of(UiText.Get("corsixnet.patient.been_to", "Been to"), string.Join(", ", patient.TreatmentHistory.Select(entry => History(simulation, host, entry))));
         }
 
         if (patient.Question != PatientQuestion.None)
         {
-            yield return WindowCell.Line(patient.Question == PatientQuestion.NoDiagnosisRoom ? "Asks what to do: no diagnosis room left" : "Asks what to do: no room to treat them", highlight: true);
+            yield return WindowCell.Line(patient.Question == PatientQuestion.NoDiagnosisRoom ? UiText.Get("corsixnet.patient.asks_no_diagnosis", "Asks what to do: no diagnosis room left") : UiText.Get("corsixnet.patient.asks_no_treatment", "Asks what to do: no room to treat them"), highlight: true);
         }
 
         yield return WindowRow.Gap;
@@ -112,18 +112,18 @@ internal sealed class PatientWindow(int patientId) : UiWindow
         var coverUp = hospital.Epidemics.Current is { IsCoverUp: true, IsWatchRunning: true };
         yield return WindowRow.Of(
             (_confirmHome
-                ? WindowCell.Button("Sure? Send home", () => host.Submit(new SendPatientHomeCommand(humanoid.Id)))
-                : WindowCell.Button("Send home", () => _confirmHome = true)).WithTooltip(OriginalTooltips.Get(host, 94, "Send the patient home")),
-            WindowCell.Button("Guess cure", () => host.Submit(new GuessPatientCureCommand(humanoid.Id)), canGuess).WithTooltip(OriginalTooltips.Get(host, 96, "Stop diagnosing and guess the cure")),
-            WindowCell.Button("Vaccinate", () => host.Submit(new VaccinateCommand(humanoid.Id)), coverUp && patient.IsInfected && !patient.IsVaccinated && !patient.IsMarkedForVaccination).WithTooltip("Have a nurse vaccinate this patient during the epidemic"),
-            WindowCell.Button("Show", () => host.CenterOn(humanoid.Tile)).WithTooltip(OriginalTooltips.Get(host, 95, "Show the patient in the hospital")),
-            WindowCell.Button("Queue", () => host.Open(new QueueWindow(patient.TargetId)), QueueWindow.QueueOf(simulation, patient.TargetId) is not null).WithTooltip(OriginalTooltips.Get(host, 97, "Show the queue the patient is in")));
+                ? WindowCell.Button(UiText.Get("corsixnet.patient.confirm_send_home", "Sure? Send home"), () => host.Submit(new SendPatientHomeCommand(humanoid.Id)))
+                : WindowCell.Button(UiText.Get("corsixnet.patient.send_home", "Send home"), () => _confirmHome = true)).WithTooltip(OriginalTooltips.Get(host, 94, "Send the patient home")),
+            WindowCell.Button(UiText.Get("corsixnet.patient.guess_cure", "Guess cure"), () => host.Submit(new GuessPatientCureCommand(humanoid.Id)), canGuess).WithTooltip(OriginalTooltips.Get(host, 96, "Stop diagnosing and guess the cure")),
+            WindowCell.Button(UiText.Get("corsixnet.patient.vaccinate", "Vaccinate"), () => host.Submit(new VaccinateCommand(humanoid.Id)), coverUp && patient.IsInfected && !patient.IsVaccinated && !patient.IsMarkedForVaccination).WithTooltip(UiText.Get("corsixnet.patient.vaccinate_tooltip", "Have a nurse vaccinate this patient during the epidemic")),
+            WindowCell.Button(UiText.Get("corsixnet.staff.show", "Show"), () => host.CenterOn(humanoid.Tile)).WithTooltip(OriginalTooltips.Get(host, 95, "Show the patient in the hospital")),
+            WindowCell.Button(UiText.Get("corsixnet.queue.caption", "Queue"), () => host.Open(new QueueWindow(patient.TargetId)), QueueWindow.QueueOf(simulation, patient.TargetId) is not null).WithTooltip(OriginalTooltips.Get(host, 97, "Show the queue the patient is in")));
     }
 
     private static string History(Simulation simulation, IWindowHost host, TreatmentHistoryEntry entry) => entry.Kind switch
     {
-        TreatmentHistoryKind.Room => simulation.Content.FindRoom(entry.Id)?.Name ?? entry.Id,
-        TreatmentHistoryKind.Diagnosis => $"diagnosed {host.Texts?.DiseaseName(entry.Id) ?? entry.Id}",
+        TreatmentHistoryKind.Room => UiText.RoomName(simulation.Content, entry.Id),
+        TreatmentHistoryKind.Diagnosis => UiText.Format("corsixnet.patient.diagnosed", "diagnosed %1%", host.Texts?.DiseaseName(entry.Id) ?? entry.Id),
         _ => "cured",
     };
 
@@ -147,7 +147,7 @@ internal sealed class QueueWindow(int ownerId) : UiWindow
 {
     public int OwnerId { get; } = ownerId;
 
-    public override string Title => "Queue";
+    public override string Title => UiText.Get("corsixnet.queue.caption", "Queue");
 
     private QueueScreen? _screen;
 
@@ -186,23 +186,23 @@ internal sealed class QueueWindow(int ownerId) : UiWindow
         }
 
         var owner = simulation.FindEntity(OwnerId);
-        yield return WindowCell.Line(owner is Room room ? simulation.Content.FindRoom(room.RoomType)?.Name ?? room.RoomType : "Reception desk", highlight: true);
+        yield return WindowCell.Line(owner is Room room ? UiText.RoomName(simulation.Content, room.RoomType) : UiText.Get("object.reception_desk", "Reception desk"), highlight: true);
         yield return WindowRow.Of(
-            "Queue size",
-            WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{queue.Count} of {queue.MaxSize}")),
+            UiText.Get("queue_window.num_in_queue", "Queue size"),
+            WindowCell.Number(UiText.Format("corsixnet.machines.uses_of", "%1% of %2%", queue.Count, queue.MaxSize)),
             WindowCell.Button("-5", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, -5)), queue.MaxSize > 0).WithTooltip(OriginalTooltips.Get(host, 75, "Make the queue shorter")),
             WindowCell.Button("-1", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, -1)), queue.MaxSize > 0).WithTooltip(OriginalTooltips.Get(host, 75, "Make the queue shorter")),
             WindowCell.Button("+1", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, 1)), queue.MaxSize < HumanoidQueue.MaxMaxSize).WithTooltip(OriginalTooltips.Get(host, 76, "Make the queue longer")),
             WindowCell.Button("+5", () => host.Submit(new ChangeQueueSizeCommand(OwnerId, 5)), queue.MaxSize < HumanoidQueue.MaxMaxSize).WithTooltip(OriginalTooltips.Get(host, 76, "Make the queue longer")));
         if (owner is Room withStaff && simulation.FindEntity(withStaff.StaffId) is Humanoid { Profile: not null } staff)
         {
-            yield return WindowRow.Of("Staff", StaffLabels.Name(host, staff));
+            yield return WindowRow.Of(UiText.Get("corsixnet.menu.staff", "Staff"), StaffLabels.Name(host, staff));
         }
 
         yield return WindowRow.Gap;
         if (queue.Count == 0)
         {
-            yield return WindowCell.Line("Nobody is queueing.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.patient.nobody_queueing", "Nobody is queueing."), dim: true);
             yield break;
         }
 
@@ -221,14 +221,14 @@ internal sealed class QueueWindow(int ownerId) : UiWindow
             var cells = new List<WindowCell>
             {
                 WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{i + 1}.")),
-                WindowCell.Button(patient.IsDiagnosed ? host.Texts?.DiseaseName(patient.DiseaseId) ?? patient.DiseaseId : string.Create(CultureInfo.InvariantCulture, $"Patient {member.Id}"), () => host.Open(new PatientWindow(member.Id))).WithTooltip(OriginalTooltips.Get(host, 80, "Open the patient's window")),
+                WindowCell.Button(patient.IsDiagnosed ? host.Texts?.DiseaseName(patient.DiseaseId) ?? patient.DiseaseId : UiText.Format("corsixnet.patient.number", "Patient %1%", member.Id), () => host.Open(new PatientWindow(member.Id))).WithTooltip(OriginalTooltips.Get(host, 80, "Open the patient's window")),
                 WindowCell.Number(StaffLabels.Percent(patient.Health)),
-                WindowCell.Button("Front", () => host.Submit(new MoveInQueueCommand(id, 0)), position > 0).WithTooltip(OriginalTooltips.Get(host, 77, "Move the patient to the front of the queue")),
-                WindowCell.Button("Back", () => host.Submit(new MoveInQueueCommand(id, queue.Count - 1)), position < queue.Count - 1).WithTooltip(OriginalTooltips.Get(host, 78, "Move the patient to the end of the queue")),
+                WindowCell.Button(UiText.Get("corsixnet.patient.front", "Front"), () => host.Submit(new MoveInQueueCommand(id, 0)), position > 0).WithTooltip(OriginalTooltips.Get(host, 77, "Move the patient to the front of the queue")),
+                WindowCell.Button(UiText.Get("corsixnet.patient.back", "Back"), () => host.Submit(new MoveInQueueCommand(id, queue.Count - 1)), position < queue.Count - 1).WithTooltip(OriginalTooltips.Get(host, 78, "Move the patient to the end of the queue")),
             };
             foreach (var other in others.Take(2))
             {
-                cells.Add(WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"To room {other.Id}"), () => host.Submit(new SendPatientToRoomCommand(id, other.Id))));
+                cells.Add(WindowCell.Button(UiText.Format("corsixnet.patient.to_room", "To room %1%", other.Id), () => host.Submit(new SendPatientToRoomCommand(id, other.Id))));
             }
 
             yield return new WindowRow(cells);

@@ -215,9 +215,9 @@ internal sealed class ProgressReportScreen
     }
 
     /// <summary>The hospital's name: the player's name for theirs, the original's competitor names (S[5]) for the others.</summary>
-    private static string HospitalName(IWindowHost host, int index) =>
+    internal static string HospitalName(IWindowHost host, int index) =>
         index == host.Player ? host.PlayerName
-        : host.Texts?.String(5, index switch { 1 => 1, 2 => 3, 3 => 2, _ => 4 }) ?? string.Create(CultureInfo.InvariantCulture, $"Hospital {index + 1}");
+        : host.Texts?.String(5, index switch { 1 => 1, 2 => 3, 3 => 2, _ => 4 }) ?? UiText.Format("corsixnet.hospital_number", "Hospital %1%", index + 1);
 
     private static bool InHospital(LevelMap map, int player, TilePosition tile) =>
         map.Contains(tile.X, tile.Y) && map[tile.X, tile.Y].Has(TileFlags.Hospital) && map.GetParcelOwner(map[tile.X, tile.Y].Parcel) == player + 1;

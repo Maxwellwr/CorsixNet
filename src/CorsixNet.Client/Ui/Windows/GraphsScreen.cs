@@ -201,7 +201,7 @@ internal sealed class GraphsScreen
         string Tip(int index, string fallback) => OriginalTooltips.Get(host, index, fallback);
         return Close.Contains(local) ? Tip(176, "Close the graphs")
             : Scale.Contains(local) ? Tip(177, "Change the graph's time scale")
-            : PenAt(local) is { } pen ? pen == 7 ? "Toggle reputation" : Tip(178 + pen, "Toggle " + GraphWindow.Lines[pen].Name.ToLowerInvariant())
+            : PenAt(local) is { } pen ? pen == 7 ? UiText.Get("tooltip.graphs.reputation", "Toggle reputation") : Tip(178 + pen, "Toggle " + GraphWindow.Lines[pen].Name.ToLowerInvariant())
             : null;
     }
 

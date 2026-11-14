@@ -8,14 +8,14 @@ namespace CorsixNet.Client.Ui.Windows;
 /// <summary>The last things the adviser said, newest first, to read again or delete.</summary>
 internal sealed class AdviserHistoryWindow : UiWindow
 {
-    public override string Title => "Adviser's messages";
+    public override string Title => UiText.Get("corsixnet.adviser_history.caption", "Adviser's messages");
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var adviser = host.Adviser;
         if (adviser.History.Count == 0)
         {
-            yield return WindowCell.Line("The adviser has said nothing yet.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.adviser_history.none", "The adviser has said nothing yet."), dim: true);
             yield break;
         }
 
@@ -23,7 +23,7 @@ internal sealed class AdviserHistoryWindow : UiWindow
         {
             var index = i;
             var lines = BottomPanel.Wrap(adviser.History[i], BottomPanel.WrapLength);
-            yield return WindowRow.Of(WindowCell.Button("Delete", () => adviser.RemoveFromHistory(index)).WithTooltip("Click to dismiss this message"), WindowCell.Line(lines[0]));
+            yield return WindowRow.Of(WindowCell.Button(UiText.Get("corsixnet.adviser_history.delete", "Delete"), () => adviser.RemoveFromHistory(index)).WithTooltip(UiText.Get("tooltip.adviser_history.delete_message", "Click to dismiss this message")), WindowCell.Line(lines[0]));
             foreach (var line in lines.Skip(1))
             {
                 yield return WindowRow.Of(new WindowCell(string.Empty), WindowCell.Line(line));
@@ -31,6 +31,6 @@ internal sealed class AdviserHistoryWindow : UiWindow
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of(WindowCell.Button("Delete all", adviser.ClearHistory).WithTooltip("Click to delete all messages"));
+        yield return WindowRow.Of(WindowCell.Button(UiText.Get("corsixnet.adviser_history.delete_all", "Delete all"), adviser.ClearHistory).WithTooltip(UiText.Get("tooltip.adviser_history.header.delete_message", "Click to delete all messages")));
     }
 }

@@ -16,7 +16,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class WatchWindow : UiWindow
 {
-    public override string Title => "Watch";
+    public override string Title => UiText.Get("corsixnet.watch.caption", "Watch");
 
     /// <summary>At the left, a little above the bottom, as CorsixTH's <c>UIWatch</c>.</summary>
     public override Vector2? DefaultPosition => new(20, -100);
@@ -52,22 +52,22 @@ internal sealed class WatchWindow : UiWindow
         {
             var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;
             yield return WindowRow.Of(
-                string.Create(CultureInfo.InvariantCulture, $"Opening in {days} days"),
+                UiText.Format("corsixnet.watch.opening_in", "Opening in %1% days", days),
                 Segments(hospital.OpenTimer + 1),
-                WindowCell.Button("Open now", () => host.Submit(new OpenHospitalCommand())).WithTooltip(OriginalTooltips.Get(host, 238, "Open the hospital now")));
+                WindowCell.Button(UiText.Get("corsixnet.watch.open_now", "Open now"), () => host.Submit(new OpenHospitalCommand())).WithTooltip(OriginalTooltips.Get(host, 238, "Open the hospital now")));
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: true } emergency)
         {
             yield return WindowRow.Of(
-                string.Create(CultureInfo.InvariantCulture, $"Emergency: {emergency.Cured} cured, {emergency.Killed} lost of {emergency.Victims}"),
+                UiText.Format("corsixnet.watch.emergency", "Emergency: %1% cured, %2% lost of %3%", emergency.Cured, emergency.Killed, emergency.Victims),
                 Segments(emergency.WatchTimer + 1));
         }
 
         if (hospital.Epidemics.Current is { IsWatchRunning: true } epidemic)
         {
             yield return WindowRow.Of(
-                string.Create(CultureInfo.InvariantCulture, $"Epidemic: {Epidemics.CountInfectedPatients(simulation, epidemic)} infected, the inspector is coming"),
+                UiText.Format("corsixnet.watch.epidemic", "Epidemic: %1% infected, the inspector is coming", Epidemics.CountInfectedPatients(simulation, epidemic)),
                 Segments(epidemic.WatchTimer + 1));
         }
     }

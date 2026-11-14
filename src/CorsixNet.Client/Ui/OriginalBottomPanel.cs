@@ -182,9 +182,23 @@ internal sealed class OriginalBottomPanel : IDisposable
     public static string? TooltipAt(Viewport viewport, Point mouse, Func<string, string?> hotkeyText)
     {
         var bounds = Bounds(viewport);
-        return ButtonAt(bounds, mouse, bounds.Contains(mouse)) is { } button
-            ? hotkeyText(button.Hotkey) is { } key ? $"{button.Tooltip} ({key})" : button.Tooltip
-            : null;
+        if (ButtonAt(bounds, mouse, bounds.Contains(mouse)) is not { } button)
+        {
+            return null;
+        }
+
+        var name = button.Key switch
+        {
+            "bank" => "corsixnet.toolbar.bank_tooltip",
+            "corridor" => "tooltip.toolbar.objects",
+            "staff" => "tooltip.toolbar.staff_list",
+            "town" => "tooltip.toolbar.town_map",
+            var other => "tooltip.toolbar." + other,
+        };
+        var template = UiText.Get(name, button.Tooltip + " (%s)");
+        return hotkeyText(button.Hotkey) is { } key
+            ? UiText.Fill(template, key)
+            : System.Text.RegularExpressions.Regex.Replace(template, @"\s*\(%s\)", string.Empty);
     }
 
     /// <summary>The middle of the button labelled <paramref name="label"/>, for scripts (see <c>InputScript</c>).</summary>

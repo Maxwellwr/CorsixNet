@@ -14,7 +14,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class PolicyWindow : UiWindow
 {
-    public override string Title => "Hospital policy";
+    public override string Title => UiText.Get("corsixnet.policy.caption", "Hospital policy");
 
     public override string? Hotkey => "F9";
 
@@ -31,21 +31,21 @@ internal sealed class PolicyWindow : UiWindow
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var policies = host.Simulation.Hospitals[host.Player].Policies;
-        yield return WindowCell.Line("Diagnosis", highlight: true);
-        yield return Slider(host, "Send home below", PolicyKind.SendHome, policies.SendHome, Percent(policies.SendHome), OriginalTooltips.Get(host, 233, "Patients less certainly diagnosed than this are sent home, those more certain than the guess get the cure"));
-        yield return Slider(host, "Guess cure from", PolicyKind.GuessCure, policies.GuessCure, Percent(policies.GuessCure), OriginalTooltips.Get(host, 233, "Patients less certainly diagnosed than this are sent home, those more certain than the guess get the cure"));
-        yield return Slider(host, "Stop procedure at", PolicyKind.StopProcedure, policies.StopProcedure, Percent(policies.StopProcedure), OriginalTooltips.Get(host, 234, "Diagnosis goes on until the doctors are this certain"));
+        yield return WindowCell.Line(UiText.Get("corsixnet.policy.diagnosis", "Diagnosis"), highlight: true);
+        yield return Slider(host, UiText.Get("corsixnet.policy.send_home", "Send home below"), PolicyKind.SendHome, policies.SendHome, Percent(policies.SendHome), OriginalTooltips.Get(host, 233, "Patients less certainly diagnosed than this are sent home, those more certain than the guess get the cure"));
+        yield return Slider(host, UiText.Get("corsixnet.policy.guess_cure", "Guess cure from"), PolicyKind.GuessCure, policies.GuessCure, Percent(policies.GuessCure), OriginalTooltips.Get(host, 233, "Patients less certainly diagnosed than this are sent home, those more certain than the guess get the cure"));
+        yield return Slider(host, UiText.Get("corsixnet.policy.stop_procedure", "Stop procedure at"), PolicyKind.StopProcedure, policies.StopProcedure, Percent(policies.StopProcedure), OriginalTooltips.Get(host, 234, "Diagnosis goes on until the doctors are this certain"));
         yield return WindowRow.Gap;
-        yield return WindowCell.Line("Staff", highlight: true);
-        yield return Slider(host, "Staff room when tired", PolicyKind.GoToStaffRoom, policies.GoToStaffRoom, Percent(policies.GoToStaffRoom), OriginalTooltips.Get(host, 235, "How tired staff are before they rest in the staff room"));
+        yield return WindowCell.Line(UiText.Get("corsixnet.menu.staff", "Staff"), highlight: true);
+        yield return Slider(host, UiText.Get("corsixnet.policy.staff_room", "Staff room when tired"), PolicyKind.GoToStaffRoom, policies.GoToStaffRoom, Percent(policies.GoToStaffRoom), OriginalTooltips.Get(host, 235, "How tired staff are before they rest in the staff room"));
         yield return WindowRow.Of(
-            "Staff leave their rooms",
-            Switch(host, "Allowed", PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: true).WithTooltip(OriginalTooltips.Get(host, 231, "Staff may leave their rooms to work where they are needed")),
-            Switch(host, "Not allowed", PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: false).WithTooltip(OriginalTooltips.Get(host, 232, "Staff stay in the rooms you put them in")));
+            UiText.Get("corsixnet.policy.staff_leave", "Staff leave their rooms"),
+            Switch(host, UiText.Get("corsixnet.policy.allowed", "Allowed"), PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: true).WithTooltip(OriginalTooltips.Get(host, 231, "Staff may leave their rooms to work where they are needed")),
+            Switch(host, UiText.Get("corsixnet.policy.not_allowed", "Not allowed"), PolicyKind.StaffAllowedToMove, policies.StaffAllowedToMove, on: false).WithTooltip(OriginalTooltips.Get(host, 232, "Staff stay in the rooms you put them in")));
         yield return WindowRow.Of(
-            "Raises staff ask for",
-            Switch(host, "Grant", PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: true).WithTooltip("Raises staff ask for are given at once (the options menu's wage requests)"),
-            Switch(host, "Ask me", PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: false).WithTooltip("You are asked about each raise staff ask for"));
+            UiText.Get("corsixnet.policy.raises", "Raises staff ask for"),
+            Switch(host, UiText.Get("corsixnet.staff.grant", "Grant"), PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: true).WithTooltip(UiText.Get("corsixnet.policy.grant_tooltip", "Raises staff ask for are given at once (the options menu's wage requests)")),
+            Switch(host, UiText.Get("corsixnet.policy.ask_me", "Ask me"), PolicyKind.GrantWageIncrease, policies.GrantWageIncrease, on: false).WithTooltip(UiText.Get("corsixnet.policy.ask_me_tooltip", "You are asked about each raise staff ask for")));
     }
 
     private static string Percent(int thousandths) => string.Create(CultureInfo.InvariantCulture, $"{thousandths / 10} %");

@@ -13,9 +13,9 @@ namespace CorsixNet.Client.Ui.Windows;
 /// <c>UIInformation</c>: paragraphs of text to read and close, such as a room's description the first time one is
 /// built.
 /// </summary>
-internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string title = "Information") : UiWindow
+internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string? title = null) : UiWindow
 {
-    public override string Title => title;
+    public override string Title => title ?? UiText.Get("corsixnet.information.caption", "Information");
 
     /// <summary>Centred, as CorsixTH's <c>UIInformation</c>.</summary>
     public override Vector2? DefaultPosition => new(0.5f, 0.5f);
@@ -73,7 +73,7 @@ internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of(WindowCell.Button("OK", () => host.Close(this)).WithTooltip("Close the information dialog"));
+        yield return WindowRow.Of(WindowCell.Button(UiText.Get("install.ok", "OK"), () => host.Close(this)).WithTooltip(UiText.Get("tooltip.information.close", "Close the information dialog")));
     }
 
     /// <summary>Characters on a line: CorsixTH's information box is 300 pixels of text wide.</summary>
@@ -85,7 +85,7 @@ internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string
 /// </summary>
 internal sealed class ConfirmWindow(string question, Action ok) : UiWindow
 {
-    public override string Title => "Confirm";
+    public override string Title => UiText.Get("corsixnet.confirm.caption", "Confirm");
 
     private readonly ConfirmScreen _screen = new();
 
@@ -145,12 +145,12 @@ internal sealed class ConfirmWindow(string question, Action ok) : UiWindow
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("OK", () =>
+            WindowCell.Button(UiText.Get("install.ok", "OK"), () =>
             {
                 host.Close(this);
                 ok();
             }).WithTooltip(OriginalTooltips.Get(host, 87, "Confirm")),
-            WindowCell.Button("Cancel", () => host.Close(this)).WithTooltip(OriginalTooltips.Get(host, 86, "Cancel")));
+            WindowCell.Button(UiText.Get("graphics_window.cancel", "Cancel"), () => host.Close(this)).WithTooltip(OriginalTooltips.Get(host, 86, "Cancel")));
     }
 }
 
@@ -178,23 +178,31 @@ internal sealed class TipOfTheDayWindow(int first) : UiWindow
         "Emergencies can be a good source for some extra cash, provided that you have enough capacities to handle the emergency patients in time.",
     ];
 
+    /// <summary>The tips' names in the language files, in the order of <see cref="Tips"/>.</summary>
+    private static readonly string[] TipNames =
+    [
+        "totd_window.tips.1", "totd_window.tips.2", "totd_window.tips.3", "totd_window.tips.4", "totd_window.tips.5", "totd_window.tips.6",
+        "corsixnet.tips.options", "totd_window.tips.12", "totd_window.tips.15", "totd_window.tips.16", "totd_window.tips.17", "totd_window.tips.18",
+        "totd_window.tips.19",
+    ];
+
     private int _tip = ((first % Tips.Count) + Tips.Count) % Tips.Count;
 
-    public override string Title => "Tip of the day";
+    public override string Title => UiText.Get("corsixnet.tips.caption", "Tip of the day");
 
     /// <summary>The tip shown, 0-based.</summary>
     public int Tip => _tip;
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
-        foreach (var line in BottomPanel.Wrap(Tips[_tip], 60))
+        foreach (var line in BottomPanel.Wrap(UiText.Get(TipNames[_tip], Tips[_tip]), 60))
         {
             yield return line;
         }
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Previous tip", () => _tip = (_tip + Tips.Count - 1) % Tips.Count).WithTooltip("Display the previous tip"),
-            WindowCell.Button("Next tip", () => _tip = (_tip + 1) % Tips.Count).WithTooltip("Display the next tip"));
+            WindowCell.Button(UiText.Get("totd_window.previous", "Previous tip"), () => _tip = (_tip + Tips.Count - 1) % Tips.Count).WithTooltip(UiText.Get("tooltip.totd_window.previous", "Display the previous tip")),
+            WindowCell.Button(UiText.Get("totd_window.next", "Next tip"), () => _tip = (_tip + 1) % Tips.Count).WithTooltip(UiText.Get("tooltip.totd_window.next", "Display the next tip")));
     }
 }
