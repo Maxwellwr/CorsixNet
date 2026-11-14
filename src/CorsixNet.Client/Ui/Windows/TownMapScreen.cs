@@ -91,6 +91,13 @@ internal sealed class TownMapScreen
             }
         }
 
+        if (host.LevelTitle is { } town)
+        {
+            // The city's name, centred in 260 by 15 at (300, 43).
+            var size = city.Measure(town);
+            At(city, town, 300 + ((260 - size.Width) / 2), 43 + ((15 - size.Height) / 2));
+        }
+
         var objects = simulation.Entities.OfType<RoomObject>().Where(o => !o.IsDestroyed && Ours(map, host.Player, o.Tile)).ToList();
         var patients = simulation.Entities.OfType<Humanoid>().Count(h => h.Behaviour is PatientBehaviour && h.HospitalPlayer == host.Player && !h.IsDespawning && InHospital(map, host.Player, h.Tile));
         var radiators = objects.Count(o => o.ObjectType == "radiator");

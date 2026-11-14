@@ -141,6 +141,9 @@ internal interface IWindowHost
     /// <summary>The player's name, which their hospital goes by (CorsixTH's <c>player_name</c>).</summary>
     string PlayerName => "Player";
 
+    /// <summary>The level's town, in capitals, as the town map shows it (<c>map.level_name</c>), or null if unknown.</summary>
+    string? LevelTitle => null;
+
     /// <summary>
     /// The map round an entity as it looked last frame (a window's view circle), 75 by 75 world pixels, or null until
     /// the next frame has drawn it; asking keeps it drawn.

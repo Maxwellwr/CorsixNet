@@ -3169,6 +3169,23 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     OriginalGraphics? IWindowHost.Graphics => _graphics;
 
+    string? IWindowHost.LevelTitle => _session is LocalSession local ? LevelTitle(local.Name, _texts) : null;
+
+    /// <summary>
+    /// Map:load's level_name: an original level's town is <c>_S.level_names[level]</c> (S[12][level + 1]) in capitals;
+    /// other levels go by their file's name.
+    /// </summary>
+    internal static string? LevelTitle(string fileName, OriginalTexts? texts)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(fileName, @"^LEVEL\.L(\d+)$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (match.Success && int.TryParse(match.Groups[1].Value, CultureInfo.InvariantCulture, out var level))
+        {
+            return texts?.String(12, level + 1)?.ToUpper(CultureInfo.CurrentCulture);
+        }
+
+        return Path.GetFileNameWithoutExtension(fileName) is { Length: > 0 } name ? name.ToUpper(CultureInfo.CurrentCulture) : null;
+    }
+
     string IWindowHost.PlayerName => _config.PlayerName is { Length: > 0 } name ? name : "Player";
 
     string? IWindowHost.HotkeyText(string action) => _hotkeys[action]?.ToString();
