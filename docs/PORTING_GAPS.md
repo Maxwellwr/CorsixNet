@@ -168,8 +168,10 @@ MMPX smoothing, and windows over the map (`Client/Ui`): text stand-ins for Corsi
 send commands. Every window below exists in that form; what is missing is the original's look (panels, sprites,
 fonts, faces) and the details listed.
 
-- Bottom panel as the original draws it, with message icons (`dialogs/bottom_panel.lua`); the text panel has the
-  balance, the dialogs' buttons, the faxes' count and the adviser's line.
+- Bottom panel: drawn as the original's (`Ui/OriginalBottomPanel`: Panel02V buttons with the hover row, balance,
+  date, reputation meter, fax door, dynamic info and pause text, fax icons by kind). Missing: the fax icons sliding out
+  of the door and their siren, a right click dismissing a fax, the progress bars of the dynamic info, and CorsixTH's
+  machine menu button (aux_ui sprites); Machines and the adviser's messages are on their hotkeys only.
 - Top menu bar (`dialogs/menu.lua`); Esc opens a menu window with the file items, options, charts and debug.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
@@ -179,7 +181,7 @@ fonts, faces) and the details listed.
 - Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
 - Adviser: done, the figure too (`AdviserFigure`: getting up, talking with the balloon, waiting, getting down,
-  clicks on him); the bottom panel behind him is still our text bar. The announcer's queue is done (`Audio/Announcer`: priorities,
+  clicks on him). The announcer's queue is done (`Audio/Announcer`: priorities,
   expiry, the staffed-desk rule, random announcements, `play_announcements`, `announcement_volume`); the queue, history and much
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
