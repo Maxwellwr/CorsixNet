@@ -4,24 +4,74 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace CorsixNet.Client.Rendering;
 
-/// <summary>Draws single lines of text with a Theme Hospital bitmap font.</summary>
+/// <summary>
+/// Draws single lines of text with a Theme Hospital bitmap font, or with a TrueType face standing in for it when the
+/// language needs characters the bitmap font does not have (CorsixTH's <c>Graphics:loadLanguageFont</c>, whose font
+/// proxy lets the language change the font of text already set up).
+/// </summary>
 internal sealed class TextRenderer : IDisposable
 {
+    private readonly GraphicsDevice _device;
     private readonly BitmapFont _font;
     private readonly SheetTextures _glyphs;
+    private readonly BitmapFontMatch? _match;
+    private readonly Dictionary<int, Texture2D?> _trueTypeGlyphs = [];
+    private TrueTypeFace? _face;
+    private int _trueTypeLineHeight;
 
     public TextRenderer(GraphicsDevice device, BitmapFont font, Palette palette)
     {
+        _device = device;
         _font = font;
         _glyphs = new SheetTextures(device, font.Sheet, palette);
+        _match = BitmapFontMatch.Find(font.Sheet, palette);
     }
 
-    public int LineHeight => _font.MeasureLine("Mg").Height + _font.LineSpacing;
+    /// <summary>Whether text is drawn with a TrueType face rather than the bitmap font.</summary>
+    public bool IsTrueType => _face is not null;
 
-    public (int Width, int Height) Measure(string text) => _font.MeasureLine(text);
+    public int LineHeight => _face is null ? _font.MeasureLine("Mg").Height + _font.LineSpacing : _trueTypeLineHeight;
+
+    /// <summary>
+    /// Draws with the face from now on, sized and coloured after the bitmap font (<c>freetype_font:setFontOptions</c>);
+    /// null goes back to the bitmap font.
+    /// </summary>
+    public void UseTrueType(TrueTypeFace? face)
+    {
+        if (ReferenceEquals(face, _face))
+        {
+            return;
+        }
+
+        DisposeTrueTypeGlyphs();
+        _face = face;
+        if (face is not null)
+        {
+            var (width, height) = _match is { } match ? (match.Width, match.Height) : (9, 14);
+            face.SetIdealCharacterSize(width, height);
+            _trueTypeLineHeight = face.Layout("Mg").Height;
+        }
+    }
+
+    public (int Width, int Height) Measure(string text)
+    {
+        if (_face is null)
+        {
+            return _font.MeasureLine(text);
+        }
+
+        var line = _face.Layout(text);
+        return (line.Width, line.Height);
+    }
 
     public void Draw(SpriteBatch batch, string text, Vector2 position, int scale = 1, Color? tint = null)
     {
+        if (_face is not null)
+        {
+            DrawTrueType(batch, _face, text, position, scale, tint ?? Color.White);
+            return;
+        }
+
         foreach (var (sprite, x) in _font.Layout(text))
         {
             if (_glyphs[sprite] is { } glyph)
@@ -31,5 +81,66 @@ internal sealed class TextRenderer : IDisposable
         }
     }
 
-    public void Dispose() => _glyphs.Dispose();
+    public void Dispose()
+    {
+        _glyphs.Dispose();
+        DisposeTrueTypeGlyphs();
+    }
+
+    /// <summary>
+    /// Each glyph at its place on the line, in the bitmap font's colour (<c>ttf_color</c> left to be detected) times the
+    /// tint; CorsixTH renders the whole line into one texture, which comes to the same pixels.
+    /// </summary>
+    private void DrawTrueType(SpriteBatch batch, TrueTypeFace face, string text, Vector2 position, int scale, Color tint)
+    {
+        var color = _match is { Color: var c } ? new Color(c.R * tint.R / 255, c.G * tint.G / 255, c.B * tint.B / 255, tint.A) : tint;
+        var line = face.Layout(text);
+        foreach (var glyph in line.Glyphs)
+        {
+            if (GlyphTexture(face, glyph.Index) is not { } texture)
+            {
+                continue;
+            }
+
+            var x = glyph.X + glyph.Metrics.BearingX;
+            var y = line.Baseline - glyph.Metrics.BearingY;
+            batch.Draw(texture, position + new Vector2(x * scale, y * scale), null, color, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
+        }
+    }
+
+    private Texture2D? GlyphTexture(TrueTypeFace face, int index)
+    {
+        if (_trueTypeGlyphs.TryGetValue(index, out var texture))
+        {
+            return texture;
+        }
+
+        var bitmap = face.Rasterize(index);
+        if (bitmap.Width > 0 && bitmap.Height > 0)
+        {
+            // White with the coverage as alpha, premultiplied as BlendState.AlphaBlend expects.
+            var colors = new Color[bitmap.Pixels.Length];
+            for (var i = 0; i < colors.Length; i++)
+            {
+                var a = bitmap.Pixels[i];
+                colors[i] = new Color(a, a, a, a);
+            }
+
+            texture = new Texture2D(_device, bitmap.Width, bitmap.Height);
+            texture.SetData(colors);
+        }
+
+        _trueTypeGlyphs[index] = texture;
+        return texture;
+    }
+
+    private void DisposeTrueTypeGlyphs()
+    {
+        foreach (var texture in _trueTypeGlyphs.Values)
+        {
+            texture?.Dispose();
+        }
+
+        _trueTypeGlyphs.Clear();
+    }
 }

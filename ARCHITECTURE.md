@@ -673,10 +673,20 @@ format, Lua assignments with CorsixTH's names, in `%AppData%/CorsixNet` on Windo
 `$XDG_CONFIG_HOME/CorsixNet` or `~/.config/CorsixNet` elsewhere (or `CORSIXNET_CONFIG`, or `--config FILE`). A
 missing file is written with the defaults. Only the settings the client acts on are kept: `language` (the
 original's `LANG-n.DAT` for English, French, German, Italian, Spanish or Swedish, with CorsixTH's translation from
-`Languages/*.lua` beside the game laid over it; CorsixTH's other translations whose font is the game's own
-are offered too), `fullscreen`, `width` and
+`Languages/*.lua` beside the game laid over it; CorsixTH's other translations are offered too), `unicode_font`,
+`fullscreen`, `width` and
 `height`, `enable_screen_shake`, `autosave_frequency`, `theme_hospital_install` (used when no game folder is given
 and it exists) and `player_name`. Command-line options still win.
+
+Translations whose `Font(...)` is "unicode" or "mik" (Russian; the Russian original's own bitmap font is not read)
+are drawn with a TrueType font, as CorsixTH's `freetype_font`. `UnicodeFonts` (client) finds it as
+`Graphics:loadFontFile` does: `unicode_font`, then `CorsixTHUnicode.ttf` or `GoNotoKurrent-Regular.ttf` beside the
+game, and, since CorsixNet bundles no font, the first system font (Segoe UI, Arial, ..., then the Chinese, Japanese
+and Korean ones) that has every character of the translation. `TrueTypeFace` reads it with StbTrueTypeSharp (a C#
+port of stb_truetype, so no native FreeType) and sizes it as `set_ideal_character_size` from the 'M' of `FONT01V`
+(`BitmapFontMatch`, `match_bitmap_font`), at least 14 pixels high, in that sprite's main colour. `TextRenderer` swaps
+between the bitmap font and the face when the language changes; the status bar and windows follow its line height.
+A language is listed in the options when the game's font or a found font can draw its name.
 
 ## Content and mods
 

@@ -69,6 +69,15 @@ public sealed record GameConfig
     /// <summary>The Theme Hospital folder; <see cref="PlaceholderInstall"/> or one that is not there means look for it.</summary>
     public string ThemeHospitalInstall { get; init; } = PlaceholderInstall;
 
+    /// <summary>CorsixTH's default font file, which is a placeholder: the font is then looked for elsewhere.</summary>
+    public const string PlaceholderUnicodeFont = @"X:\ThemeHospital\font.ttc";
+
+    /// <summary>
+    /// The TrueType font for languages the game's font cannot draw, such as Russian, Polish or Chinese (CorsixTH's
+    /// <c>unicode_font</c>); <see cref="PlaceholderUnicodeFont"/> or one that is not there means look for one.
+    /// </summary>
+    public string UnicodeFont { get; init; } = PlaceholderUnicodeFont;
+
     /// <summary>The folder of the player's own levels (CorsixTH's <c>levels</c>); empty for <see cref="UserFolder"/>'s default.</summary>
     public string Levels { get; init; } = string.Empty;
 
@@ -183,6 +192,7 @@ public sealed record GameConfig
             RoomInformationDialogs = Bool("room_information_dialogs", defaults.RoomInformationDialogs),
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
+            UnicodeFont = Text("unicode_font", defaults.UnicodeFont),
             Levels = Text("levels", defaults.Levels),
             Campaigns = Text("campaigns", defaults.Campaigns),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
@@ -234,6 +244,11 @@ public sealed record GameConfig
             -- or one of CorsixTH's translations the game's font can draw:
             --  Brazilian Portuguese / pt_br / br    Danish / da / dk    Dutch / nl / dut
             --  Finnish / fi / fin    Norwegian / nb / nob    Portuguese / pt
+            -- or one drawn with a Unicode font (see unicode_font below):
+            --  Russian / ru / rus    Ukrainian / uk / ukr    Polish / pl / pol
+            --  Czech / cs / cze    Hungarian / hu / hun    Greek / el / gre
+            --  Chinese (simplified) / zh(s)    Chinese (traditional) / zh(t)
+            --  Japanese / ja / jp    Korean / ko / kor
             -- The game's own language files (LANG-n.DAT) are used where installed, with
             -- CorsixTH's translation laid over them; otherwise English, or the first one
             -- installed, is used.
@@ -319,6 +334,18 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"theme_hospital_install = {Quote(ThemeHospitalInstall)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- Font file setting.
+            -- Specify a font file here if you wish to play the game in a language not
+            -- present in the original game. Examples include Russian, Chinese and Polish.
+            -- When it is not there, CorsixTHUnicode.ttf or GoNotoKurrent-Regular.ttf beside
+            -- the game is used, else a font of the system that has the language's letters.
+            --
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"unicode_font = {Quote(UnicodeFont)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------
