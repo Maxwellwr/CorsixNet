@@ -819,6 +819,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var down = mouse.LeftButton == ButtonState.Pressed || mouse.RightButton == ButtonState.Pressed;
+        if (!_cursorOverWindow && _buildTool.IsActive
+            && _buildTool.Cursor(_hoveredTile is { } buildTile ? new TilePosition(buildTile.X, buildTile.Y) : null) is { } buildCursor)
+        {
+            return buildCursor;
+        }
         if (_cursorOverWindow || Simulation is not { } simulation || _session is null || _hoveredTile is not { } hovered
             || _buildTool.IsActive || _furnishTool.IsActive)
         {

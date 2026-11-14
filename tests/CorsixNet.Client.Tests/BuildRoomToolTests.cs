@@ -1,4 +1,5 @@
 using CorsixNet.Client.Maps;
+using CorsixNet.Client.Ui;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
@@ -61,6 +62,31 @@ public class BuildRoomToolTests
         room.IsClosing = false;
         Assert.False(tool.IsWaitingForRoom(simulation));
     }
+
+    [Fact]
+    public void TheBlueprintShowsMoveResizeAndArrowCursors()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var tool = new BuildRoomTool();
+        tool.Start(simulation.Content.FindRoom("gp")!);
+        Assert.Equal(GameCursor.ResizeRoom, tool.Cursor(new TilePosition(5, 5)));
+
+        // Drag out 4 by 4 from (4, 4) to (7, 7).
+        tool.Update(simulation, 0, Mouse(new(4, 4), down: true, pressed: true));
+        tool.Update(simulation, 0, Mouse(new(7, 7), down: true));
+        tool.Update(simulation, 0, Mouse(new(7, 7), released: true));
+
+        // UIEditRoom:onCursorWorldPositionChange.
+        Assert.Equal(GameCursor.MoveRoom, tool.Cursor(new TilePosition(5, 6)));
+        Assert.Equal(GameCursor.AllArrows, tool.Cursor(new TilePosition(4, 4)));
+        Assert.Equal(GameCursor.WestEastArrow, tool.Cursor(new TilePosition(7, 5)));
+        Assert.Equal(GameCursor.NorthSouthArrow, tool.Cursor(new TilePosition(5, 4)));
+        Assert.Equal(GameCursor.ResizeRoom, tool.Cursor(new TilePosition(9, 9)));
+    }
+
+    private static BuildInput Mouse(TilePosition at, bool down = false, bool pressed = false, bool released = false) =>
+        new(at, 128, 128, down, pressed, released, false, false, false, false);
 
     private static BuildInput Back() => new(null, 0, 0, false, false, false, false, false, true, false);
 }

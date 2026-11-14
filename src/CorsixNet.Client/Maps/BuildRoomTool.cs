@@ -104,6 +104,53 @@ internal sealed class BuildRoomTool
 
     public bool IsActive => _phase != Phase.Inactive;
 
+    /// <summary>
+    /// UIEditRoom:onCursorWorldPositionChange's cursor: on the blueprint, moving inside it, arrows on its edges and
+    /// corners, resizing outside it (and while dragging, the drag's own); placing the door or windows, resizing; none of
+    /// its own while furnishing.
+    /// </summary>
+    public Ui.GameCursor? Cursor(TilePosition? hovered)
+    {
+        if (_phase is Phase.Door or Phase.Windows)
+        {
+            return Ui.GameCursor.ResizeRoom;
+        }
+
+        if (_phase != Phase.Blueprint)
+        {
+            return null;
+        }
+
+        switch (_drag)
+        {
+            case Drag.Move:
+                return Ui.GameCursor.MoveRoom;
+            case Drag.Resize:
+                return EdgeCursor(_dragArea, _dragStart);
+            case Drag.New:
+                return Ui.GameCursor.ResizeRoom;
+        }
+
+        if (_area is not { } area || hovered is not { } at || !area.Contains(at))
+        {
+            return Ui.GameCursor.ResizeRoom;
+        }
+
+        return at.X > area.X && at.X < area.Right - 1 && at.Y > area.Y && at.Y < area.Bottom - 1
+            ? Ui.GameCursor.MoveRoom
+            : EdgeCursor(area, at);
+    }
+
+    /// <summary>The arrows for a tile on the blueprint's border: both at a corner, west-east on a side, north-south on the others.</summary>
+    private static Ui.GameCursor EdgeCursor(TileRect area, TilePosition at)
+    {
+        var northSouth = at.Y == area.Y || at.Y == area.Bottom - 1;
+        var westEast = at.X == area.X || at.X == area.Right - 1;
+        return westEast && northSouth ? Ui.GameCursor.AllArrows
+            : westEast ? Ui.GameCursor.WestEastArrow
+            : Ui.GameCursor.NorthSouthArrow;
+    }
+
     /// <summary>The blueprint to draw on the map, with its door and windows, until the room is built.</summary>
     public RoomBlueprint? Blueprint => _blueprint;
 
