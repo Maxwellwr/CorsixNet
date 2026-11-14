@@ -284,6 +284,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly Adviser _adviser = new();
     private readonly AdviserFigure _adviserFigure = new();
 
+    /// <summary>The original's bottom panel, or null where its graphics could not be read (the text panel then).</summary>
+    private readonly OriginalBottomPanel? _bottomPanel;
+
     /// <summary>The bottom panel's sprites (<c>Data/Panel02V</c>), for the adviser's balloon.</summary>
     private readonly SpriteAtlas? _panelSprites;
 
@@ -347,8 +350,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
         _windows = new WindowLayer(text => _text.Measure(text).Width, () => _text.LineHeight) { Origin = new Point(8, StatusHeight + 8) };
-        InputScript.ButtonFinder = _windows.FindButton;
-        _windows.Open(new BottomPanel(BottomPanelAction));
+        try
+        {
+            _bottomPanel = new OriginalBottomPanel(device, install, palette);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException)
+        {
+            // Without the panel's graphics, the text panel stands in.
+            _bottomPanel = null;
+            _windows.Open(new BottomPanel(BottomPanelAction));
+        }
+
+        InputScript.ButtonFinder = (text, nth) => (nth <= 1 && _bottomPanel is not null ? OriginalBottomPanel.FindButton(_device.Viewport, text) : null) ?? _windows.FindButton(text, nth);
         var sprites = install.LoadSpriteSheet("DATA", "VSPR-0", complex: false);
         _animations = new AnimationRenderer(device, AnimationSet.Load(install), sprites, palette, upscale);
         _blueprints = new BlueprintDrawing(device, install, _blocks, _animations, sprites, palette);
@@ -584,8 +597,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             mouse = new MouseState(mouse.X, mouse.Y, mouse.ScrollWheelValue, _previousMouse.LeftButton, mouse.MiddleButton, _previousMouse.RightButton, mouse.XButton1, mouse.XButton2);
         }
 
+        var overPanel = IsWindowHostReady && _bottomPanel is not null
+            && _bottomPanel.Update(_device.Viewport, mouse, _previousMouse, PanelFaxes().Count, BottomPanelButton);
+        var panelHeight = _bottomPanel is null ? 0 : OriginalBottomPanel.Height;
         var overWindow = IsWindowHostReady
-            && _windows.Update(this, mouse, _previousMouse, new Rectangle(0, StatusHeight, _device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight)));
+            && (_windows.Update(this, mouse, _previousMouse, new Rectangle(0, StatusHeight, _device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight - panelHeight))) | overPanel);
         _cursorOverWindow = overWindow;
         if (overWindow)
         {
@@ -818,8 +834,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (IsWindowHostReady)
         {
             var pointer = InputScript.Mouse();
-            _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
+            DrawBottomPanel(batch, viewport, new Point(pointer.X, pointer.Y));
             DrawAdviser(batch, viewport);
+            _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
+            if (_bottomPanel is not null && OriginalBottomPanel.TooltipAt(viewport, new Point(pointer.X, pointer.Y), ((IWindowHost)this).HotkeyText) is { } tooltip)
+            {
+                OriginalBottomPanel.DrawTooltip(batch, _text, _pixel, viewport, new Point(pointer.X, pointer.Y), tooltip);
+            }
         }
 
         DrawLevelList(batch);
@@ -923,6 +944,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _floatingDollars.Dispose();
         _cursors?.Dispose();
         _panelSprites?.Dispose();
+        _bottomPanel?.Dispose();
         _blackText?.Dispose();
         _animations.Dispose();
         _blocks.Dispose();
@@ -3553,6 +3575,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             _text.UseTrueType(null);
             _blackText?.UseTrueType(null);
+            _bottomPanel?.UseTrueType(null);
             _unicodeFonts.Dispose();
             _unicodeFonts = new UnicodeFonts(config.UnicodeFont, AppContext.BaseDirectory);
         }
@@ -3968,6 +3991,118 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         return string.Create(CultureInfo.InvariantCulture, $"{date.Day} {months[date.Month - 1]} year {date.Year}");
     }
 
+    /// <summary>GameUI: the bottom panel's dynamic info of what is under the cursor, or null.</summary>
+    private string? HoverInfo()
+    {
+        if (_cursorOverWindow || Simulation is not { } simulation || _hoveredTile is not { } point)
+        {
+            return null;
+        }
+
+        var tile = new TilePosition(point.X, point.Y);
+        if (simulation.FindEntity(_hoveredHumanoid) is Humanoid hovered && DynamicInfo.Of(simulation, hovered, _texts) is { Length: > 0 } info)
+        {
+            return info;
+        }
+
+        return MachineUnderCursor(simulation, tile) is { } machine ? DynamicInfo.OfMachine(simulation, machine, _texts) : null;
+    }
+
+    /// <summary>
+    /// The kinds of the faxes waiting (UIMessage's types), in the order the fax window lists them: the VIP's invitation
+    /// is a personality, results are reports, a patient's diagnosis is information.
+    /// </summary>
+    private List<string> PanelFaxes()
+    {
+        if (Simulation is not { } simulation || _session is null || _session.Player >= simulation.Hospitals.Count)
+        {
+            return [];
+        }
+
+        return FaxWindow.Pending(simulation, _session.Player).Select(key => key[..key.IndexOf(':', StringComparison.Ordinal)] switch
+        {
+            "vip" => "personality",
+            "vipreport" or "emergencyreport" => "report",
+            "emergency" => "emergency",
+            "epidemic" => "epidemy",
+            _ => "information",
+        }).ToList();
+    }
+
+    /// <summary>A button of the original bottom panel: the dialog it opens or closes, or the tool it starts.</summary>
+    private void BottomPanelButton(string key)
+    {
+        // research and edit room have no click sound (setSound()).
+        if (key is not ("edit" or "research"))
+        {
+            _sounds.Play(WindowLayer.DefaultButtonSound);
+        }
+
+        UiWindow? dialog = key switch
+        {
+            "bank" => new BankManagerWindow(),
+            "bankstats" => new BankStatementWindow(),
+            "hire" => new HireWindow(),
+            "staff" => new StaffManagementWindow(),
+            "town" => new TownMapWindow(),
+            "casebook" => new CasebookWindow(),
+            "research" => new ResearchWindow(),
+            "status" => new ProgressReportWindow(),
+            "charts" => new GraphWindow(),
+            "policy" => new PolicyWindow(),
+            "fax" => new FaxWindow(),
+            _ => null,
+        };
+        if (dialog is null)
+        {
+            BottomPanelAction(key);
+        }
+        else
+        {
+            _windows.Toggle(dialog);
+        }
+    }
+
+    /// <summary>The kinds of dialog the original bottom panel's toggle buttons open, so they show pressed while open.</summary>
+    private bool PanelDialogOpen(string key) => key switch
+    {
+        "bank" => _windows.Windows.Any(w => w is BankManagerWindow or BankStatementWindow),
+        "hire" => _windows.Windows.Any(w => w is HireWindow),
+        "staff" => _windows.Windows.Any(w => w is StaffManagementWindow),
+        "town" => _windows.Windows.Any(w => w is TownMapWindow),
+        "casebook" => _windows.Windows.Any(w => w is CasebookWindow),
+        "research" => _windows.Windows.Any(w => w is ResearchWindow),
+        "status" => _windows.Windows.Any(w => w is ProgressReportWindow),
+        "charts" => _windows.Windows.Any(w => w is GraphWindow),
+        "policy" => _windows.Windows.Any(w => w is PolicyWindow),
+        "fax" => _windows.Windows.Any(w => w is FaxWindow),
+        "rooms" => _roomList || _buildTool.IsActive,
+        "corridor" => _furnishTool.IsActive || _windows.Windows.Any(w => w is FurnishCorridorWindow),
+        "edit" => _pickingRoomToEdit,
+        _ => false,
+    };
+
+    private void DrawBottomPanel(SpriteBatch batch, Viewport viewport, Point mouse)
+    {
+        if (_bottomPanel is null || Simulation is not { } simulation || _session is null || _session.Player >= simulation.Hospitals.Count)
+        {
+            return;
+        }
+
+        var hospital = simulation.Hospitals[_session.Player];
+        var month = _texts?.String(6, simulation.Date.Month) ?? CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(simulation.Date.Month);
+        var state = new BottomPanelState(
+            hospital.Balance,
+            hospital.Reputation,
+            string.Create(CultureInfo.InvariantCulture, $"{simulation.Date.Day} {month}"),
+            HoverInfo(),
+            _session.IsPaused ? _texts?.String(3, 22) ?? "Pause" : null,
+            PanelFaxes(),
+            PanelDialogOpen,
+            Tutorial.Lit);
+        _bottomPanel.Draw(batch, viewport, state, mouse, InputScript.Mouse());
+    }
+
     private string TileLine()
     {
         if (_editorTool is not null)
@@ -3991,20 +4126,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return _notice;
         }
 
-        // GameUI: the bottom panel's dynamic info of what is under the cursor.
-        if (Simulation is { } infoSimulation && _hoveredTile is { } infoTile)
+        if (_bottomPanel is null && HoverInfo() is { } info)
         {
-            var tile0 = new TilePosition(infoTile.X, infoTile.Y);
-            if (infoSimulation.FindEntity(_hoveredHumanoid) is Humanoid hovered && DynamicInfo.Of(infoSimulation, hovered, _texts) is { Length: > 0 } info)
-            {
-                return info;
-            }
-
-            if (MachineUnderCursor(infoSimulation, tile0) is { } infoMachine)
-            {
-                return DynamicInfo.OfMachine(infoSimulation, infoMachine, _texts);
-            }
+            return info;
         }
+
 
         if (_hoveredTile is not { } position || Map is not { } map)
         {
@@ -4078,6 +4204,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         _text.UseTrueType(face);
         _blackText?.UseTrueType(face);
+        _bottomPanel?.UseTrueType(face);
         _windows.Origin = new Point(8, StatusHeight + 8);
     }
 
