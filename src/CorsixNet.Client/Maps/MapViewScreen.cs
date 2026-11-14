@@ -739,6 +739,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var ghost = _buildTool.Ghost ?? _furnishTool.Ghost;
             var ghostTile = ghost is { } g && Simulation is { } ghostSimulation ? ObjectDrawing.DrawTile(ghostSimulation.Content, g.ObjectType, g.Tile, g.Orientation) : (TilePosition?)null;
             var blueprint = _buildTool.Blueprint;
+            // Walls in front of what is being put down let it be seen.
+            _renderer.SeeThroughAt = ghostTile ?? (_hiring is not null || _pickedUpStaff is not null ? _staffTile is { } staffAt ? new TilePosition(staffAt.X, staffAt.Y) : null : null);
             _renderer.Draw(batch, map, view, (tile, anchorX, anchorY) =>
             {
                 if (blueprint is not null)
