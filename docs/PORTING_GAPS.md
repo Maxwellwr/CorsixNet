@@ -31,15 +31,15 @@ objects from the level file.
 - Furnish corridor window with counts and prices (`dialogs/furnish_corridor.lua`); the bench drawn
   split over three tiles as CorsixTH does (drawn from its own tile for now).
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
-- Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
+- (Done: every room of the original with its objects and machines, `BaseGameContent`, `RoomVisits`.)
 - Machines: the gear icon over a machine a handyman was called to is drawn. The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
   invulnerable and repair-all cheats are done. Strength, wear per use,
   smoking, explosion (room crash), repair by handymen and the machine window's call and replace (`MachineWindow`,
   `CallHandymanCommand`, `ReplaceMachineCommand`) are done (`Machines`, `HandymanBehaviour`).
 - Optional room objects: the "Choose Items" window (counts and prices) and buying them after the furniture step,
   selling objects. Extra objects placed while furnishing are bought and sold back.
-- Object-specific use: benches (sitting while queueing), staff-room
-  sofa/TV/video game/pool table, training projector and lecture chairs, research desk/computer/autopsy.
+- (Done: benches, the staff room's sofa, video game and pool table, the training room's projector and lecture chairs,
+  the research room's desks, computer and autopsy.)
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
 - Special entities: helicopter (emergencies), gates to hell (death) (`objects/helicopter.lua`, `gates_to_hell.lua`).
   Rat holes and rats are done (`Rats`, `Rat`), except the kill
@@ -74,7 +74,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   and handymen without a job meander (`Meandering`), so do the pharmacy's nurse and the general diagnosis doctor
   between patients, handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).
 - Training: learning on the job (`Training.LearnOnTheJob`, `doctor.lua`'s `tick`), the room, teaching, skill growth, gaining abilities and the advice (promotions, a consultant needed, too few lecture chairs; `AdviserChecks`) are done (`Training`).
-- Surgeons, psychiatrists, researchers actually being required by rooms.
+- (Done: surgeons, psychiatrists and researchers required by their rooms, `RoomVisits.IsQualifiedFor`.)
 - Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
 - Patients waiting look at the watch, yawn and tap a foot with 30, 20 and 10 days left, and those with sleeping illness yawn one day in ten (`PatientSpotAction`; `humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`). In CorsixTH these are patients' animations only.
   Staff speed (juniors, consultants, tiredness, the no-rest cheat) is done (`Tiredness.UpdateSpeed`).
@@ -87,11 +87,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 GP visits and diagnosis progress, waiting/going home by default policies, payment (insurance two months
 later), treatment in the pharmacy with cure or death; all diseases and pseudo diseases in `DiseaseCatalog`.
 
-- Looks of visual diseases: Partial, only bloaty head; the other humanoid types (slack tongue, invisible,
-  transparent, alien, chewbacca/hairyitis, elvis/king complex, etc.) are missing from the sim and client
-  (`entities/humanoids/patient.lua`, `diseases/*.lua`).
-- Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
-  those cured in the pharmacy.
+- (Done: the looks of the visual diseases, `PatientLook` and its humanoid types.)
+- (Done: diagnosis in every diagnosis room and treatment in every treatment room, `RoomVisits`.)
 - Patient needs: a patient fed up near death in a room that does not cure them goes home once their visit is over,
   where CorsixTH sends them at once (`PatientBehaviour.IsFedUp`; `entities/humanoids/patient.lua`). The rest
   (warmth, thirst, toilets, happiness, prices, waiting, vomiting) is done (`Needs`, `Feelings`).
@@ -99,7 +96,7 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   that they leave a way round. Health running down, the step aside, the fall, the trip to heaven and, for 65 % of the men,
   the trip to hell with the grim reaper and the gates to hell are done (`PatientBehaviour.UpdateDying`, `DeathAnimations`,
   `GrimReaperBehaviour`); those killed when a room crashes simply vanish, as in CorsixTH.
-- Queue features: benches and the queue window itself (`queue.lua`, `dialogs/queue_dialog.lua`). Priorities for VIPs,
+- Queue features: benches and the queue window are done. Priorities for VIPs,
   the inspector and emergency patients, rooms taking patients from other rooms' queues (`TryToFindNearbyPatients`), and
   the window's size buttons, moving patients in the queue and sending a patient to another room of the same type as
   commands (`ChangeQueueSizeCommand`, `MoveInQueueCommand`, `SendPatientToRoomCommand`) are done.
@@ -216,7 +213,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   `world.lua`'s winning letter, `fax.lua`), choosing a custom level or campaign in a menu, briefings shown (`app.lua`,
   `Campaigns/`, `Levels/`). Loading a custom level (`.level` + `.map`, with overlays) and reading a campaign file are
   done (`LevelMapLoader.LoadCustom`, `LoadCampaign`, `--map`, `--campaign`). The difficulty and what it changes (`LevelRules.Difficulty`, `--difficulty`)
-  are done, except the ward's use of it, as there is no ward yet.
+  are done, the ward's healing too.
 - Free build mode (Done in the simulation: `LevelRules.WithFreeBuild`, `free_build_mode` in `config.txt` for `--map`
   levels outside a campaign, `--free-build` on the server; the progress report's free build text and the VIP and
   emergency faxes' free build remarks are shown). Sandbox options

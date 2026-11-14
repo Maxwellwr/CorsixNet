@@ -41,10 +41,6 @@ public enum PatientLook : byte
 /// A disease, or a diagnosis room's "pseudo disease" that a patient pays for when diagnosed there
 /// (CorsixTH's <c>diseases/*.lua</c> and <c>diagnosis/*.lua</c>).
 /// </summary>
-/// <remarks>
-/// Visual diseases mostly need humanoid types the client cannot draw yet (invisible, Elvis, slack tongue,
-/// ...); until it can, their patients look like <see cref="PatientLook.Standard"/> ones.
-/// </remarks>
 public sealed class DiseaseDefinition
 {
     public DiseaseDefinition(string id, int expertiseId, int curePrice)
