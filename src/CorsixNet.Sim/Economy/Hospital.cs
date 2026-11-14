@@ -602,6 +602,9 @@ public sealed class Hospital
     /// <summary><c>Hospital:removeRatholeXY</c>: the holes of a tile close.</summary>
     internal void RemoveRatholesAt(TilePosition tile) => _ratholes.RemoveAll(hole => hole.Tile == tile);
 
+    /// <summary>Closes the holes that match.</summary>
+    internal void RemoveRatholes(Predicate<Rathole> match) => _ratholes.RemoveAll(match);
+
     /// <summary>Whether the boiler is broken, so that the radiators are stuck at full or no heat (CorsixTH's <c>heating_broke</c>).</summary>
     public bool IsHeatingBroken { get; private set; }
 

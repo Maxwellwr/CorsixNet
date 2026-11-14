@@ -447,6 +447,7 @@ public sealed record EditRoomCommand(int RoomId) : Command
         {
             room.IsActive = false;
             room.IsClosing = true;
+            Disasters.Rats.RemoveRatholesAroundRoom(simulation, room);
             RoomVisits.UpdateClosing(simulation, room);
         }
     }

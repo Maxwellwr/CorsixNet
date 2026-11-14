@@ -44,7 +44,7 @@ objects from the level file.
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
 - Special entities: helicopter (emergencies), gates to hell (death) (`objects/helicopter.lua`, `gates_to_hell.lua`).
   Rat holes and rats are done (`Rats`, `Rat`), except the kill
-  cursor and sounds, the debug rat, and rat holes closing when a room is edited or removed.
+  cursor and sounds, the debug rat, (rat holes in a room's walls close when it is edited or crashes, `Rats.RemoveRatholesAroundRoom`).
 
 ## 3. Staff and their behaviour
 

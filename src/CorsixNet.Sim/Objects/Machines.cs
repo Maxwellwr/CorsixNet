@@ -242,6 +242,7 @@ internal static class Machines
         var owner = RoomVisits.Owner(simulation, room);
         room.IsCrashed = true;
         room.IsActive = false;
+        Disasters.Rats.RemoveRatholesAroundRoom(simulation, room);
         room.StaffId = 0;
         room.StaffPresent = false;
         room.PatientId = 0;
