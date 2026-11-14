@@ -7,6 +7,9 @@ using CorsixNet.Client.Maps;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -20,6 +23,42 @@ internal sealed class MachineWindow(int machineId) : UiWindow
 
     public override string Title => "Machine";
 
+    private readonly MachineScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="MachineScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => Machine(host) is not null && MachineScreen.IsAvailable(host);
+
+    public override Point FullscreenSize => MachineScreen.Size;
+
+    /// <summary>UIMachine:setDefaultPosition(-20, 30).</summary>
+    public override Point? FullscreenPosition => new(-20, 30);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
+    {
+        if (Machine(host) is { } machine)
+        {
+            _screen.Draw(batch, host, origin, mouse, machine);
+        }
+    }
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        if (Machine(host) is { } machine)
+        {
+            _screen.Mouse(host, this, local, mouse, previous, machine);
+        }
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => MachineScreen.Tooltip(host, local);
+
+    /// <summary><c>UIMachine:replaceMachine</c> from the original's look: the price, then the question.</summary>
+    internal void AskToReplace(IWindowHost host, RoomObject machine)
+    {
+        var simulation = host.Simulation;
+        var name = simulation.Content.FindObject(machine.ObjectType)?.Name ?? machine.ObjectType;
+        var cost = host.Player >= 0 && host.Player < simulation.Hospitals.Count ? simulation.Hospitals[host.Player].Research.ObjectCost(simulation.Rules, machine.ObjectType) : 0;
+        Replace(host, name, cost);
+    }
     public override bool IsSameAs(UiWindow other) => other is MachineWindow;
 
     public override bool IsDone(IWindowHost host) => Machine(host) is null;
