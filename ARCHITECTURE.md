@@ -691,7 +691,11 @@ of its width): `TrueTypeFace.PixelSizeFor` keeps the face's proportions and take
 small letters are as tall as the bitmap font's 'M' and 'x' (`BitmapFontMatch`), but its small letters no wider than
 nine tenths of the bitmap font's, so that translations, longer than the English, fit (ideograms get at least 14
 pixels); colour as `match_bitmap_font`. Lines the bitmap font has every character of (Latin text, numbers) keep the
-bitmap font, on the face's baseline (`TextRenderer.IsTrueTypeFor`). `TextRenderer` swaps between the bitmap font and the face when the language changes; the status bar and windows follow its line height.
+bitmap font, on the face's baseline (`TextRenderer.IsTrueTypeFor`). `CyrillicGlyphs` (Formats) gives each bitmap
+font Cyrillic made from its own Latin letters (shared shapes copied, И Я Э mirrored, the rest put together from the
+stems and bars of Н F L E K B, small letters as small capitals by taking out rows), keeping its palette indices, so
+Russian is drawn in the game's lettering; fonts it cannot make every Russian letter for (serif, hand-drawn,
+outlined, digits only) get none and stay with the TrueType face. `BitmapFont.WithGlyphs` adds them. `TextRenderer` swaps between the bitmap font and the face when the language changes; the status bar and windows follow its line height.
 A language is listed in the options when the game's font or a found font can draw its name.
 
 ## Content and mods
