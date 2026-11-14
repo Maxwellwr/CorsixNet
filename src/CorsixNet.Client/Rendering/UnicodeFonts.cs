@@ -108,8 +108,10 @@ internal sealed class UnicodeFonts : IDisposable
                 fonts = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Fonts");
             }
 
-            // Latin, Greek and Cyrillic first; then Chinese (simplified, traditional), Japanese and Korean.
-            return new[] { "segoeui.ttf", "arial.ttf", "tahoma.ttf", "msyh.ttc", "msjh.ttc", "YuGothR.ttc", "meiryo.ttc", "msgothic.ttc", "malgun.ttf", "simsun.ttc", "gulim.ttc" }
+            // Latin, Greek and Cyrillic first, Verdana and Tahoma before the rest as their wide letters, tall small
+            // letters and hinting for the screen come nearest the game's own fonts; then Chinese (simplified,
+            // traditional), Japanese and Korean.
+            return new[] { "tahoma.ttf", "verdana.ttf", "segoeui.ttf", "arial.ttf", "msyh.ttc", "msjh.ttc", "YuGothR.ttc", "meiryo.ttc", "msgothic.ttc", "malgun.ttf", "simsun.ttc", "gulim.ttc" }
                 .Select(name => Path.Combine(fonts, name));
         }
 
@@ -117,6 +119,7 @@ internal sealed class UnicodeFonts : IDisposable
         {
             return
             [
+                "/System/Library/Fonts/Supplemental/Verdana.ttf",
                 "/System/Library/Fonts/Supplemental/Arial.ttf",
                 "/System/Library/Fonts/Helvetica.ttc",
                 "/System/Library/Fonts/PingFang.ttc",

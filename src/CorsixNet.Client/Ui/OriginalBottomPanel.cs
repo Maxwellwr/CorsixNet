@@ -115,12 +115,15 @@ internal sealed class OriginalBottomPanel : IDisposable
     /// <summary>Where the reputation meter's marker goes from the panel's left (<c>drawReputationMeter</c>).</summary>
     public static int ReputationX(int reputation) => 55 + (int)Math.Floor(65.0 / 1000 * Math.Clamp(reputation, 0, 1000));
 
-    /// <summary>Draws the bitmap fonts' text with the face from now on, or the bitmap fonts again (null).</summary>
-    public void UseTrueType(TrueTypeFace? face)
+    /// <summary>
+    /// Draws the bitmap fonts' text with the face from now on, at least so many pixels to the em, or the bitmap fonts
+    /// again (null).
+    /// </summary>
+    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8)
     {
-        _dateFont.UseTrueType(face);
-        _whiteFont.UseTrueType(face);
-        _pauseFont.UseTrueType(face);
+        _dateFont.UseTrueType(face, minimumSize);
+        _whiteFont.UseTrueType(face, minimumSize);
+        _pauseFont.UseTrueType(face, minimumSize);
     }
 
     /// <summary>
@@ -215,7 +218,7 @@ internal sealed class OriginalBottomPanel : IDisposable
         }
 
         var dateWidth = _dateFont.Measure(state.Date).Width;
-        _dateFont.Draw(batch, state.Date, new Vector2(x + 140 + ((60 - dateWidth) / 2), y + 20), tint: _dateFont.IsTrueType ? new Color(175, 50, 15) : null);
+        _dateFont.Draw(batch, state.Date, new Vector2(x + 140 + ((60 - dateWidth) / 2), y + 20), tint: _dateFont.IsTrueTypeFor(state.Date) ? new Color(175, 50, 15) : null);
 
         if (!hovering)
         {
@@ -275,7 +278,7 @@ internal sealed class OriginalBottomPanel : IDisposable
         if (state.Pause is { } pause && state.Info is null)
         {
             var width = _pauseFont.Measure(pause).Width;
-            _pauseFont.Draw(batch, pause, new Vector2(x + 10 + ((255 - width) / 2), y + 14), tint: _pauseFont.IsTrueType ? new Color(35, 138, 173) : null);
+            _pauseFont.Draw(batch, pause, new Vector2(x + 10 + ((255 - width) / 2), y + 14), tint: _pauseFont.IsTrueTypeFor(pause) ? new Color(35, 138, 173) : null);
             return;
         }
 

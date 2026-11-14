@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" />
+    <PackageReference Include="FreeTypeSharp" />
     <PackageReference Include="StbTrueTypeSharp" />
     <PackageReference Include="System.CommandLine" />
   </ItemGroup>

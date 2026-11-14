@@ -25,50 +25,80 @@ public sealed class TrueTypeFontTests
         Assert.Equal(2, face.MissingGlyphs("жжMщ"));
     }
 
-    // freetype_font::set_ideal_character_size: small sizes are scaled up to 14 pixels high and 9 wide.
+    // Capitals 700 units and small letters 500 units tall of 1000, small letters 500 wide on average.
     [Theory]
-    [InlineData(10, 10, 14, 14)]
-    [InlineData(8, 10, 11, 14)]
-    [InlineData(6, 20, 9, 30)]
-    [InlineData(12, 16, 12, 16)]
-    public void Small_sizes_are_scaled_up(int width, int height, int expectedWidth, int expectedHeight)
+    [InlineData(7, 0, 0, 8, 10)]
+    [InlineData(7, 6, 0, 8, 12)]
+    [InlineData(7, 6, 5.0, 8, 9)]
+    [InlineData(7, 6, 0, 14, 14)]
+    [InlineData(0, 0, 0, 8, 14)]
+    public void The_size_matches_the_bitmap_font_s_letters_without_widening_the_text(int capitals, int small, double width, int minimum, int expected)
+    {
+        using var face = TrueTypeFace.Load(SyntheticFont.Build(
+            [new('H', 600, 50, 0, 550, 700), new('x', 500, 50, 0, 450, 500), .. "abcdefghijklmnopqrstuvwyz".Select(c => new SyntheticFont.Glyph(c, 500, 50, 0, 450, 500))]))!;
+
+        Assert.Equal(expected, face.PixelSizeFor(capitals, small, width, minimum));
+    }
+
+    [Fact]
+    public void A_size_keeps_the_face_s_proportions()
     {
         using var face = TrueTypeFace.Load(SyntheticFont.Latin("M"))!;
 
-        face.SetIdealCharacterSize(width, height);
+        face.SetPixelSize(12);
 
-        Assert.Equal((expectedWidth, expectedHeight), face.PixelSize);
+        Assert.Equal(12, face.PixelSize);
     }
 
-    // At 14 pixels to the em of 1000 units: 'M' advances 10 pixels, its box 0..10 wide and 10 above the baseline; 'g'
-    // is 7 above and 3 below. A line is one pixel more than its glyphs reach.
+    // At 14 pixels to the em of 1000 units: 'M' advances 9.8 pixels, 10 above the baseline; 'g' 8.4, 7 above and 3
+    // below. Advances are whole pixels (FreeType's hinting may round 'g' either way); a line is one pixel more than its
+    // glyphs reach.
     [Fact]
     public void A_line_is_laid_out_with_whole_pixel_advances_on_one_baseline()
     {
         using var face = TrueTypeFace.Load(SyntheticFont.Latin("Mg"))!;
-        face.SetIdealCharacterSize(14, 14);
+        face.SetPixelSize(14);
 
         var line = face.Layout("MgM");
 
-        Assert.Equal([0, 10, 18], line.Glyphs.Select(glyph => glyph.X));
+        var m = line.Glyphs[0].Metrics;
+        var g = line.Glyphs[1].Metrics;
+        Assert.Equal(10, m.Advance);
+        Assert.InRange(g.Advance, 8, 9);
+        Assert.Equal([0, m.Advance, m.Advance + g.Advance], line.Glyphs.Select(glyph => glyph.X));
         Assert.Equal(10, line.Baseline);
         Assert.Equal(1 + 10 + 3, line.Height);
-        Assert.Equal(1 + 18 + 10, line.Width);
+        Assert.Equal(1 + line.Glyphs[2].X + m.BearingX + m.Width, line.Width);
         Assert.Equal((0, 0), (face.Layout(string.Empty).Width, face.Layout(string.Empty).Height));
     }
 
+    // 'M' fills 0.7 to 9.1 pixels across and 0 to 9.8 up: whole rows and columns are covered, the edges partly or, one
+    // bit a pixel, not at all.
     [Fact]
     public void A_glyph_is_rasterised_as_coverage()
     {
         using var face = TrueTypeFace.Load(SyntheticFont.Latin("M "))!;
-        face.SetIdealCharacterSize(14, 14);
+        face.SetPixelSize(14);
         var line = face.Layout("M ");
 
         var bitmap = face.Rasterize(line.Glyphs[0].Index);
 
-        Assert.Equal((10, 10), (bitmap.Width, bitmap.Height));
+        Assert.InRange(bitmap.Width, 8, 10);
+        Assert.Equal(10, bitmap.Height);
         Assert.Equal(255, bitmap.Pixels[(5 * bitmap.Width) + 5]);
-        Assert.Empty(face.Rasterize(line.Glyphs[1].Index).Pixels);
+        Assert.All(face.Rasterize(line.Glyphs[1].Index).Pixels, coverage => Assert.Equal(0, coverage));
+    }
+
+    [Fact]
+    public void Lines_the_bitmap_font_can_draw_keep_it()
+    {
+        var sprites = Enumerable.Range(0, 128 - BitmapFont.FirstCharacter).Select(_ => new IndexedImage(4, 4, new byte[16])).ToList();
+        var font = new BitmapFont(SpriteSheet.FromImages(sprites));
+
+        Assert.True(TextRenderer.BitmapCanDraw(font, "Previous tip 40000"));
+
+        // Cyrillic is not in the code page, which would make it '?'.
+        Assert.False(TextRenderer.BitmapCanDraw(font, "1 Янв"));
     }
 
     // match_bitmap_font: the size of 'M' (sprite 'M' - 31) and the colour scoring most, black and white pixels
@@ -83,7 +113,7 @@ public sealed class TrueTypeFontTests
 
         var match = BitmapFontMatch.Find(SpriteSheet.FromImages(sprites), palette);
 
-        Assert.Equal(new BitmapFontMatch(4, 2, palette[2]), match);
+        Assert.Equal(new BitmapFontMatch(4, 2, palette[2]) { CapitalHeight = 2, Baseline = 2 }, match);
     }
 
     [Fact]
@@ -92,7 +122,7 @@ public sealed class TrueTypeFontTests
         var palette = TestPalette();
         var sprites = Enumerable.Repeat(IndexedImage.Empty, '0' - BitmapFont.FirstCharacter).ToList();
         sprites.Add(new IndexedImage(3, 5, [.. Enumerable.Repeat((byte)2, 15)]));
-        Assert.Equal(new BitmapFontMatch(3, 5, palette[2]), BitmapFontMatch.Find(SpriteSheet.FromImages(sprites), palette));
+        Assert.Equal(new BitmapFontMatch(3, 5, palette[2]) { CapitalHeight = 5, Baseline = 5 }, BitmapFontMatch.Find(SpriteSheet.FromImages(sprites), palette));
 
         var others = new[] { new IndexedImage(4, 6, [.. Enumerable.Repeat((byte)2, 24)]), new IndexedImage(6, 8, [.. Enumerable.Repeat((byte)2, 48)]) };
         Assert.Equal(new BitmapFontMatch(5, 7, palette[2]), BitmapFontMatch.Find(SpriteSheet.FromImages(others), palette));

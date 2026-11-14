@@ -681,11 +681,17 @@ and it exists) and `player_name`. Command-line options still win.
 Translations whose `Font(...)` is "unicode" or "mik" (Russian; the Russian original's own bitmap font is not read)
 are drawn with a TrueType font, as CorsixTH's `freetype_font`. `UnicodeFonts` (client) finds it as
 `Graphics:loadFontFile` does: `unicode_font`, then `CorsixTHUnicode.ttf` or `GoNotoKurrent-Regular.ttf` beside the
-game, and, since CorsixNet bundles no font, the first system font (Segoe UI, Arial, ..., then the Chinese, Japanese
-and Korean ones) that has every character of the translation. `TrueTypeFace` reads it with StbTrueTypeSharp (a C#
-port of stb_truetype, so no native FreeType) and sizes it as `set_ideal_character_size` from the 'M' of `FONT01V`
-(`BitmapFontMatch`, `match_bitmap_font`), at least 14 pixels high, in that sprite's main colour. `TextRenderer` swaps
-between the bitmap font and the face when the language changes; the status bar and windows follow its line height.
+game, and, since CorsixNet bundles no font, the first system font (Tahoma, Verdana, Segoe UI, Arial, ..., then the
+Chinese, Japanese and Korean ones) that has every character of the translation. `TrueTypeFace` reads it with
+StbTrueTypeSharp (which characters it has, kerning, letter heights) and draws it with FreeType (FreeTypeSharp, native
+libraries for Windows, Linux and macOS; `FreeTypeGlyphs`) hinted and one bit a pixel, crisp like the game's fonts, or
+with stb_truetype's unhinted outlines when FreeType's library does not load. It is not sized as
+`set_ideal_character_size` (the 'M' sprite as the em square, at least 9 by 14, which squeezes every face to some 70%
+of its width): `TrueTypeFace.PixelSizeFor` keeps the face's proportions and takes the em at which its capitals and
+small letters are as tall as the bitmap font's 'M' and 'x' (`BitmapFontMatch`), but its small letters no wider than
+nine tenths of the bitmap font's, so that translations, longer than the English, fit (ideograms get at least 14
+pixels); colour as `match_bitmap_font`. Lines the bitmap font has every character of (Latin text, numbers) keep the
+bitmap font, on the face's baseline (`TextRenderer.IsTrueTypeFor`). `TextRenderer` swaps between the bitmap font and the face when the language changes; the status bar and windows follow its line height.
 A language is listed in the options when the game's font or a found font can draw its name.
 
 ## Content and mods
