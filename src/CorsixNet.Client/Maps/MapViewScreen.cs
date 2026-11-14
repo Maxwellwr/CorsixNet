@@ -805,6 +805,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _capturePath = null;
                 ExitRequested = true;
             }
+
+            RenderCloseUps(batch, map);
         }
 
         // animation::draw: a frame's sound plays where it was drawn.
@@ -958,6 +960,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _panelSprites?.Dispose();
         _bottomPanel?.Dispose();
         _graphics.Dispose();
+        foreach (var closeUp in _closeUps.Values)
+        {
+            closeUp.Dispose();
+        }
         _blackText?.Dispose();
         _animations.Dispose();
         _blocks.Dispose();
@@ -4084,6 +4090,72 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         return string.Create(CultureInfo.InvariantCulture, $"{date.Day} {months[date.Month - 1]} year {date.Year}");
     }
 
+    /// <summary>The close-up views windows asked for (their view circles), by the entity they follow.</summary>
+    private readonly Dictionary<int, RenderTarget2D> _closeUps = [];
+    private readonly HashSet<int> _closeUpsWanted = [];
+
+    /// <summary>The size of a close-up view in world pixels (UIStaff's 75 by 75 of the map).</summary>
+    public const int CloseUpSize = 75;
+
+    Texture2D? IWindowHost.CloseUp(int entityId)
+    {
+        _closeUpsWanted.Add(entityId);
+        return _closeUps.GetValueOrDefault(entityId);
+    }
+
+    /// <summary>
+    /// UIStaff:draw's <c>map:draw</c> into the view circle: for each entity a window asked about last frame, the map
+    /// round it, 75 by 75 world pixels with the entity in the middle and a little low, as the frame shows it.
+    /// </summary>
+    private void RenderCloseUps(SpriteBatch batch, LevelMap map)
+    {
+        foreach (var stale in _closeUps.Keys.Where(id => !_closeUpsWanted.Contains(id)).ToList())
+        {
+            _closeUps[stale].Dispose();
+            _closeUps.Remove(stale);
+        }
+
+        if (_closeUpsWanted.Count == 0 || Simulation is not { } simulation)
+        {
+            return;
+        }
+
+        var scale = _blocks.Scale;
+        var humanoidFrames = _humanoids.FrameDrawn;
+        var objectFrames = _objects.FrameDrawn;
+        _humanoids.FrameDrawn = null;
+        _objects.FrameDrawn = null;
+        foreach (var id in _closeUpsWanted)
+        {
+            if (simulation.FindEntity(id) is not Humanoid humanoid)
+            {
+                continue;
+            }
+
+            var anchor = _humanoids.DrawnAt(id) ?? new Point(32 * (humanoid.Tile.X - humanoid.Tile.Y), 16 * (humanoid.Tile.X + humanoid.Tile.Y));
+            var topLeft = new Point(anchor.X - (CloseUpSize / 2), anchor.Y - 61);
+            if (!_closeUps.TryGetValue(id, out var target) || target.Width != CloseUpSize * scale)
+            {
+                target?.Dispose();
+                target = new RenderTarget2D(_device, CloseUpSize * scale, CloseUpSize * scale);
+                _closeUps[id] = target;
+            }
+
+            _device.SetRenderTarget(target);
+            _device.Clear(Background);
+            var toTarget = Matrix.CreateTranslation(-topLeft.X, -topLeft.Y, 0) * Matrix.CreateScale(scale, scale, 1);
+            batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, transformMatrix: toTarget);
+            _renderer.Draw(batch, map, new Rectangle(topLeft, new Point(CloseUpSize, CloseUpSize)), (tile, anchorX, anchorY) => DrawEntities(batch, tile, anchorX, anchorY),
+                tile => _entitiesByTile.TryGetValue(tile, out var here) && here.Any(e => e is Humanoid or Rat),
+                (tile, anchorX, anchorY) => DrawEarlyEntities(batch, tile, anchorX, anchorY),
+                tile => _earlyByTile.TryGetValue(tile, out var early) && early.Count > 0);
+            batch.End();
+        }
+
+        _humanoids.FrameDrawn = humanoidFrames;
+        _objects.FrameDrawn = objectFrames;
+        _closeUpsWanted.Clear();
+    }
     /// <summary>GameUI: the bottom panel's dynamic info of what is under the cursor, or null.</summary>
     private string? HoverInfo()
     {

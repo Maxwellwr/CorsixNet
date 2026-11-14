@@ -8,6 +8,7 @@ using CorsixNet.Sim.People;
 using CorsixNet.Sim.Staff;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -199,6 +200,41 @@ internal sealed class StaffWindow(int staffId) : UiWindow
 
     public int StaffId { get; } = staffId;
 
+    private StaffScreen? _screen;
+
+    private StaffScreen Screen => _screen ??= new StaffScreen(StaffId);
+
+    /// <summary>The original's look (<see cref="StaffScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host)
+    {
+        _handyman = Staff(host)?.Behaviour is HandymanBehaviour;
+        return Staff(host) is not null && StaffScreen.IsAvailable(host);
+    }
+
+    private bool _handyman;
+
+    public override Point FullscreenSize => StaffScreen.Size(_handyman);
+
+    /// <summary>UIStaff:setDefaultPosition(-20, 30).</summary>
+    public override Point? FullscreenPosition => new(-20, 30);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
+    {
+        if (Staff(host) is { } staff)
+        {
+            Screen.Draw(batch, host, origin, mouse, staff);
+        }
+    }
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        if (Staff(host) is { } staff)
+        {
+            Screen.Mouse(host, this, local, mouse, previous, staff);
+        }
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => Staff(host) is { } staff ? StaffScreen.Tooltip(host, local, staff) : null;
     public override string Title => "Staff";
 
     public override bool IsSameAs(UiWindow other) => other is StaffWindow window && window.StaffId == StaffId;

@@ -126,6 +126,9 @@ internal sealed class HumanoidDrawing
     /// <summary>Told of each humanoid drawn: its id, the frame and where (for the frames' sounds).</summary>
     public Action<int, int, int, int>? FrameDrawn { get; set; }
 
+    /// <summary>Where the humanoid's animation was last drawn (its anchor, world pixels), or null if it was not.</summary>
+    public Point? DrawnAt(int id) => _drawn.TryGetValue(id, out var drawn) ? new Point(drawn.Drawn.X, drawn.Drawn.Y) : null;
+
     /// <summary>Forgets where humanoids were drawn, at the start of drawing the map.</summary>
     public void BeginFrame()
     {
