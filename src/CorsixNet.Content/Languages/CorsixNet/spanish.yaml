@@ -44,6 +44,7 @@ strings:
       options: 'Opciones'
       settings: 'Ajustes'
       levels: 'Niveles'
+      insane_speed: Demencial
       charts: 'Informes'
       bank: 'Banco'
       statement: 'Estado de cuentas'

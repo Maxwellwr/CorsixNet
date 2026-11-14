@@ -3326,7 +3326,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Speed("menu_options_game_speed.slower", "SLOWER", GameSpeed.Slower),
                 Speed("menu_options_game_speed.normal", "NORMAL", GameSpeed.Normal),
                 Speed("menu_options_game_speed.max_speed", "MAX SPEED", GameSpeed.MaxSpeed),
-                Speed("menu_options_game_speed.and_then_some_more", "AND THEN SOME MORE", GameSpeed.AndThenSomeMore)]),
+                Speed("menu_options_game_speed.and_then_some_more", "AND THEN SOME MORE", GameSpeed.AndThenSomeMore),
+                Speed("corsixnet.menu.insane_speed", "Insane", GameSpeed.Insane)]),
             new(Item("menu.charts", "CHARTS"), [
                 Open("menu_charts.bank_manager", "BANK MANAGER", () => new BankManagerWindow()),
                 Open("menu_charts.statement", "STATEMENT", () => new BankStatementWindow()),

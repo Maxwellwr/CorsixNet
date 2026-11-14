@@ -58,6 +58,7 @@ strings:
       options: Options
       settings: Paramètres
       levels: Niveaux
+      insane_speed: Démentielle
       charts: Tableaux
       bank: Banque
       statement: Relevé
