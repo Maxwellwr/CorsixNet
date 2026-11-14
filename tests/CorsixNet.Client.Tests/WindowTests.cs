@@ -31,6 +31,36 @@ public class WindowTests
     }
 
     [Fact]
+    public void AWindowIsToldWhenItIsClosed()
+    {
+        var layer = new WindowLayer(text => text.Length * 6, 10);
+        var policy = new ClosingWindow();
+        var casebook = new ClosingWindow();
+        layer.Open(policy);
+        layer.Close(policy);
+        layer.Open(casebook);
+        Assert.True(layer.CloseTop());
+        layer.Open(policy);
+        layer.CloseAll();
+
+        Assert.Equal(2, policy.Closings);
+        Assert.Equal(1, casebook.Closings);
+    }
+
+    private sealed class ClosingWindow : UiWindow
+    {
+        public int Closings { get; private set; }
+
+        public override string Title => "Closing";
+
+        public override bool IsSameAs(UiWindow other) => ReferenceEquals(other, this);
+
+        public override IEnumerable<WindowRow> Rows(IWindowHost host) => [];
+
+        public override void Closed() => Closings++;
+    }
+
+    [Fact]
     public void AClickOnAButtonRunsItAndTheMapDoesNotSeeIt()
     {
         var host = new WindowTestHost();

@@ -78,7 +78,7 @@ internal sealed class WindowLayer
     {
         if (_open.FindIndex(open => open.Window.IsSameAs(window)) is >= 0 and var index)
         {
-            _open.RemoveAt(index);
+            RemoveAt(index);
             return;
         }
 
@@ -88,7 +88,7 @@ internal sealed class WindowLayer
     /// <summary>The windows' <c>default_button_sound</c>.</summary>
     public const string DefaultButtonSound = "selectx.wav";
 
-    public void Close(UiWindow window) => _open.RemoveAll(open => ReferenceEquals(open.Window, window));
+    public void Close(UiWindow window) => RemoveAll(open => ReferenceEquals(open.Window, window));
 
     /// <summary>Closes the front window (Esc).</summary>
     /// <returns>Whether there was one to close.</returns>
@@ -100,7 +100,7 @@ internal sealed class WindowLayer
             return false;
         }
 
-        _open.RemoveAt(index);
+        RemoveAt(index);
         return true;
     }
 
@@ -144,7 +144,27 @@ internal sealed class WindowLayer
     }
 
     /// <summary>Closes every dialog; pinned windows stay.</summary>
-    public void CloseAll() => _open.RemoveAll(open => !open.Window.IsPinned);
+    public void CloseAll() => RemoveAll(open => !open.Window.IsPinned);
+
+    /// <summary>Takes the window at <paramref name="index"/> off the screen and tells it so.</summary>
+    private void RemoveAt(int index)
+    {
+        var window = _open[index].Window;
+        _open.RemoveAt(index);
+        window.Closed();
+    }
+
+    /// <summary>Takes the windows that match off the screen and tells each so.</summary>
+    private void RemoveAll(Predicate<OpenWindow> match)
+    {
+        for (var i = _open.Count - 1; i >= 0; i--)
+        {
+            if (match(_open[i]))
+            {
+                RemoveAt(i);
+            }
+        }
+    }
 
     /// <summary>
     /// Lays out the windows from the game's state and handles the mouse: clicks on buttons, dragging title bars,
@@ -155,7 +175,7 @@ internal sealed class WindowLayer
     public bool Update(IWindowHost host, MouseState mouse, MouseState previous, Rectangle screen)
     {
         _host = host;
-        _open.RemoveAll(open => open.Window.IsDone(host));
+        RemoveAll(open => open.Window.IsDone(host));
         foreach (var open in _open)
         {
             open.Layout = Lay(open, host, screen);
@@ -225,7 +245,7 @@ internal sealed class WindowLayer
         {
             // Window:addPanel gives a button that closes its window no4.wav.
             host.PlaySound("no4.wav");
-            _open.Remove(hit);
+            RemoveAt(_open.IndexOf(hit));
             return true;
         }
 
