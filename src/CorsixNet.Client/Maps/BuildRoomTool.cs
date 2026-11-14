@@ -82,6 +82,10 @@ internal sealed class BuildRoomTool
 
     /// <summary>Whether the object on the cursor was bought from the list of extras (see <see cref="PlaceExtra"/>).</summary>
     private bool _placingExtra;
+
+    /// <summary>The room being copied: its size, its door from its top left corner, and its objects.</summary>
+    private (int Width, int Height, DoorPlacement Door)? _copy;
+    private readonly List<(string ObjectType, TilePosition Offset, Direction Orientation)> _copyObjects = [];
     private ObjectPlacementProblem _placeProblem;
     private bool _pickingUp;
     private int _highlightedObject;
@@ -95,6 +99,9 @@ internal sealed class BuildRoomTool
         Windows,
         Waiting,
         Objects,
+
+        /// <summary>A copy of a built room follows the cursor until it is put down (our addition).</summary>
+        Copy,
     }
 
     private enum Drag
@@ -117,6 +124,11 @@ internal sealed class BuildRoomTool
         if (_phase is Phase.Door or Phase.Windows)
         {
             return Ui.GameCursor.ResizeRoom;
+        }
+
+        if (_phase == Phase.Copy)
+        {
+            return Ui.GameCursor.MoveRoom;
         }
 
         if (_phase != Phase.Blueprint)
@@ -242,8 +254,75 @@ internal sealed class BuildRoomTool
         _placingExtra = true;
     }
 
+    /// <summary>
+    /// Starts copying a built room (our addition, CorsixTH has none): a room of the same type, size and door follows the
+    /// cursor by its top left corner, and once built its objects are put where they stood in the original, as far as
+    /// they fit; then it is furnished and confirmed as any new room. Windows are not copied.
+    /// </summary>
+    public void StartCopy(Simulation simulation, Room source)
+    {
+        if (simulation.Content.FindRoom(source.RoomType) is not { } definition || simulation.FindEntity(source.DoorId) is not RoomDoor door)
+        {
+            return;
+        }
+
+        Start(definition);
+        var origin = new TilePosition(source.Area.X, source.Area.Y);
+        _copy = (source.Area.Width, source.Area.Height, new DoorPlacement(new TilePosition(door.Tile.X - origin.X, door.Tile.Y - origin.Y), door.Edge));
+        _copyObjects.Clear();
+        foreach (var placed in simulation.Entities.OfType<RoomObject>().Where(o => o.RoomId == source.Id && !o.IsDestroyed).OrderBy(o => o.Id))
+        {
+            _copyObjects.Add((placed.ObjectType, new TilePosition(placed.Tile.X - origin.X, placed.Tile.Y - origin.Y), placed.Orientation));
+        }
+
+        _phase = Phase.Copy;
+    }
+
+    /// <summary>Whether a copy of a room is following the cursor.</summary>
+    public bool IsCopying => _phase == Phase.Copy;
+
+    private Command? UpdateCopy(Simulation simulation, int player, BuildInput input)
+    {
+        if (input.Back || input.RightClicked || _copy is not { } copy)
+        {
+            _phase = Phase.Inactive;
+            _copy = null;
+            _copyObjects.Clear();
+            return null;
+        }
+
+        if (input.Hovered is not { } at)
+        {
+            _area = null;
+            _door = null;
+            return null;
+        }
+
+        _area = new TileRect(at.X, at.Y, copy.Width, copy.Height);
+        _door = copy.Door with { Tile = new TilePosition(at.X + copy.Door.Tile.X, at.Y + copy.Door.Tile.Y) };
+        _windows.Clear();
+        _problem = RoomBuilder.Check(simulation.Map, simulation.Content, new RoomPlan(_room!.Id, _area.Value, _door.Value), player);
+        if (!input.LeftPressed || _problem != RoomPlanProblem.None)
+        {
+            return null;
+        }
+
+        PlaySound?.Invoke("buildclk.wav");
+        _copy = null;
+        var command = Submit(simulation, player);
+        if (command is null)
+        {
+            // Not enough money: the copy stays on the cursor with the message.
+            _copy = copy;
+            _phase = Phase.Copy;
+        }
+
+        return command;
+    }
     public void Start(RoomDefinition room)
     {
+        _copy = null;
+        _copyObjects.Clear();
         _editing = false;
         _room = room;
         _phase = Phase.Blueprint;
@@ -275,6 +354,7 @@ internal sealed class BuildRoomTool
             Phase.Windows => UpdateWindows(simulation, player, input),
             Phase.Waiting => UpdateWaiting(simulation, player, input),
             Phase.Objects => UpdateObjects(simulation, player, input),
+            Phase.Copy => UpdateCopy(simulation, player, input),
             _ => null,
         };
         _blueprint = CreateBlueprint(simulation, player);
@@ -301,6 +381,7 @@ internal sealed class BuildRoomTool
                 ? $"{name}: waiting for people to leave the site   Esc: back to the blueprint"
                 : $"{name}: building...",
             Phase.Objects => ObjectsStatus(simulation),
+            Phase.Copy => $"{name}: copy of a room, the same size, door and objects; click to put it down{Explain(_problem)}{message}   Esc or right click: cancel",
             _ => string.Empty,
         };
     }
@@ -372,9 +453,21 @@ internal sealed class BuildRoomTool
 
     private RoomBlueprint? CreateBlueprint(Simulation simulation, int player)
     {
-        if (_area is not { } area || _phase is not (Phase.Blueprint or Phase.Door or Phase.Windows or Phase.Waiting))
+        if (_area is not { } area || _phase is not (Phase.Blueprint or Phase.Door or Phase.Windows or Phase.Waiting or Phase.Copy))
         {
             return null;
+        }
+
+        if (_phase == Phase.Copy)
+        {
+            var copyMap = simulation.Map;
+            var copy = RoomBlueprint.Create(area, tile => copyMap.Contains(tile.X, tile.Y) && RoomBuilder.CheckTile(copyMap, area, tile, player) == RoomPlanProblem.None, placed: false);
+            if (_door is { } copyDoor)
+            {
+                copy.SetDoor(copyDoor, _problem == RoomPlanProblem.None, _room?.SwingDoors ?? false);
+            }
+
+            return copy;
         }
 
         if (_phase == Phase.Blueprint)
@@ -671,6 +764,23 @@ internal sealed class BuildRoomTool
         }
 
         ForgetSettledCommands(simulation, room);
+
+        // A copied room's objects go in one by one, where they stood in the original, as long as they fit.
+        while (_copyObjects.Count > 0 && !input.Back)
+        {
+            var (objectType, offset, orientation) = _copyObjects[0];
+            _copyObjects.RemoveAt(0);
+            var at = new TilePosition(room.Area.X + offset.X, room.Area.Y + offset.Y);
+            if (ObjectPlacer.Check(simulation, objectType, at, orientation, player) != ObjectPlacementProblem.None)
+            {
+                continue;
+            }
+
+            var newer = simulation.Entities.Count == 0 ? 1 : simulation.Entities.Max(e => e.Id) + 1;
+            _pending.Add(new Pending(objectType, +1, simulation.Tick, newer, at, orientation));
+            StopPlacing();
+            return new PlaceObjectCommand(objectType, at, orientation);
+        }
 
         if (input.Back)
         {

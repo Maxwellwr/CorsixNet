@@ -112,6 +112,42 @@ public class BuildRoomToolTests
             Assert.Equal(extra, tool.Ghost?.ObjectType);
         }
     }
+    [Fact]
+    public void ACopiedRoomGetsTheOriginalsDoorAndObjects()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        host.Submit(new BuildRoomCommand(new RoomPlan("toilets", new TileRect(4, 4, 4, 4), new DoorPlacement(new(5, 4), EdgeOrientation.North))));
+        var source = Assert.Single(simulation.Entities.OfType<Room>());
+        foreach (var needed in new[] { "loo", "sink" })
+        {
+            var spot = Enumerable.Range(4, 4).SelectMany(x => Enumerable.Range(4, 4).Select(y => new TilePosition(x, y)))
+                .First(tile => ObjectPlacer.Check(simulation, needed, tile, Direction.North, 0) == ObjectPlacementProblem.None);
+            host.Submit(new PlaceObjectCommand(needed, spot, Direction.North));
+        }
+
+        var tool = new BuildRoomTool();
+        tool.StartCopy(simulation, source);
+        Assert.True(tool.IsCopying);
+        Assert.Null(tool.Update(simulation, 0, Mouse(new(12, 4))));
+        Assert.Equal(new TileRect(12, 4, 4, 4), tool.Blueprint?.Area);
+
+        var command = tool.Update(simulation, 0, Mouse(new(12, 4), down: true, pressed: true));
+        Assert.Equal(new DoorPlacement(new(13, 4), EdgeOrientation.North), Assert.IsType<BuildRoomCommand>(command).Plan.Door);
+        host.Submit(command!);
+        for (var i = 0; i < 10; i++)
+        {
+            if (tool.Update(simulation, 0, Mouse(new(12, 4))) is { } next)
+            {
+                host.Submit(next);
+            }
+        }
+
+        var copy = simulation.Entities.OfType<Room>().Single(r => r.Id != source.Id);
+        string Objects(Room room) => string.Join(",", simulation.Entities.OfType<RoomObject>().Where(o => o.RoomId == room.Id)
+            .Select(o => $"{o.ObjectType}@{o.Tile.X - room.Area.X},{o.Tile.Y - room.Area.Y}").OrderBy(s => s, StringComparer.Ordinal));
+        Assert.Equal(Objects(source), Objects(copy));
+    }
     private static BuildInput Mouse(TilePosition at, bool down = false, bool pressed = false, bool released = false) =>
         new(at, 128, 128, down, pressed, released, false, false, false, false);
 
