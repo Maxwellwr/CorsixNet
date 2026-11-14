@@ -25,8 +25,10 @@ internal sealed class TextRenderer : IDisposable
     public TextRenderer(GraphicsDevice device, BitmapFont font, Palette palette)
     {
         _device = device;
-        _font = font;
-        _glyphs = new SheetTextures(device, font.Sheet, palette);
+
+        // Cyrillic made from the font's own letters, so that Russian keeps the game's lettering where it can.
+        _font = font.WithGlyphs(CyrillicGlyphs.Build(font));
+        _glyphs = new SheetTextures(device, _font.Sheet, palette);
         _match = BitmapFontMatch.Find(font.Sheet, palette);
     }
 
@@ -62,7 +64,8 @@ internal sealed class TextRenderer : IDisposable
 
     /// <summary>
     /// Whether the text is drawn with the TrueType face: only when one is in use and the text has characters the bitmap
-    /// font has not, so that Latin text and numbers keep the game's own letters, standing on the face's baseline.
+    /// font has not, so that Latin text, numbers and (for the fonts <see cref="CyrillicGlyphs"/> can make it for)
+    /// Russian keep the game's own letters, standing on the face's baseline.
     /// </summary>
     public bool IsTrueTypeFor(string text) => _face is not null && !BitmapCanDraw(_font, text);
 
@@ -166,15 +169,7 @@ internal sealed class TextRenderer : IDisposable
     {
         foreach (var rune in text.EnumerateRunes())
         {
-            if (Rune.IsWhiteSpace(rune))
-            {
-                continue;
-            }
-
-            // Characters the code page has not come back as '?', which the font does have.
-            var code = Cp437.FromUnicode(rune.Value);
-            if (code > byte.MaxValue || Cp437.ToUnicode((byte)code) != rune.Value
-                || !font.TryGetGlyph(rune, out var sprite) || font.Sheet[sprite] is not { Width: > 1, Height: > 1 })
+            if (!Rune.IsWhiteSpace(rune) && !font.HasGlyph(rune))
             {
                 return false;
             }
