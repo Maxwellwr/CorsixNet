@@ -115,6 +115,16 @@ internal sealed class ProgressReportScreen
             sheet.Draw(batch, 5, origin.X + 455 + (int)Math.Floor(96 * value), origin.Y + y, Color.White);
         }
 
+        if (simulation.Rules.FreeBuild)
+        {
+            // progress_report.free_build: centred in 150 pixels at (265, 194).
+            var freeBuild = host.Texts?.Named("progress_report.free_build") ?? "FREE BUILD";
+            var row = 0;
+            foreach (var line in Maps.MapViewScreen.WrapToWidth(freeBuild, 150, text => normal.Measure(text).Width))
+            {
+                At(normal, line, 265 + ((150 - normal.Measure(line).Width) / 2), 194 + (row++ * normal.LineHeight));
+            }
+        }
         // Only one kind of warning a month (show_progress_screen_warnings): the warmth, the thirst or the happiness.
         var kind = WarningKind(simulation.Date.MonthOfGame);
         var warning = kind == 1 && warmth < 0.3m ? (6, "Your patients are too cold. Put more radiators in.")
