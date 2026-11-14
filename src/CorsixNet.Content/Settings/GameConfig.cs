@@ -78,6 +78,20 @@ public sealed record GameConfig
     /// </summary>
     public string UnicodeFont { get; init; } = PlaceholderUnicodeFont;
 
+    /// <summary>
+    /// The font file chosen for each language drawn with a TrueType font, by the language's name as in
+    /// <see cref="Language"/> (<c>unicode_fonts</c>, CorsixNet's own); a language without one takes
+    /// <see cref="UnicodeFont"/>, else a font of the system.
+    /// </summary>
+    public LanguageFonts LanguageFonts { get; init; } = LanguageFonts.None;
+
+    /// <summary>The font file chosen for the language (any of its names), or null for none.</summary>
+    public string? LanguageFont(IEnumerable<string> names) =>
+        names.Select(name => LanguageFonts.GetValueOrDefault(name.Trim())).FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+
+    /// <summary>These settings with the font for the language set, or taken away (null or empty).</summary>
+    public GameConfig WithLanguageFont(string language, string? path) => this with { LanguageFonts = LanguageFonts.With(language, path) };
+
     /// <summary>The folder of the player's own levels (CorsixTH's <c>levels</c>); empty for <see cref="UserFolder"/>'s default.</summary>
     public string Levels { get; init; } = string.Empty;
 
@@ -199,6 +213,9 @@ public sealed record GameConfig
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
             UnicodeFont = Text("unicode_font", defaults.UnicodeFont),
+            LanguageFonts = values.GetValueOrDefault("unicode_fonts") is LuaTable fonts
+                ? new LanguageFonts(fonts.Fields.Where(field => field.Value is string).Select(field => KeyValuePair.Create(field.Key, (string)field.Value!)))
+                : defaults.LanguageFonts,
             Levels = Text("levels", defaults.Levels),
             Campaigns = Text("campaigns", defaults.Campaigns),
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
@@ -354,6 +371,26 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"unicode_font = {Quote(UnicodeFont)}\n");
+        text.Append("""
+
+            -------------------------------------------------------------------------------
+            -- A font file for each language drawn with a Unicode font, by the language's
+            -- name, chosen in the options window or written here, e.g.
+            --  unicode_fonts = { Russian = [[C:\Windows\Fonts\tahoma.ttf]] }
+            -- A language without one uses unicode_font above, else a font of the system.
+            --
+
+            """);
+        text.Append("unicode_fonts = {");
+        foreach (var (language, path) in LanguageFonts.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            var key = language.Length > 0 && !char.IsAsciiDigit(language[0]) && language.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')
+                ? language
+                : $"[\"{language.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)}\"]";
+            text.Append(CultureInfo.InvariantCulture, $"\n  {key} = {Quote(path)},");
+        }
+
+        text.Append(LanguageFonts.Count > 0 ? "\n}\n" : " }\n");
         text.Append("""
 
             -------------------------------------------------------------------------------

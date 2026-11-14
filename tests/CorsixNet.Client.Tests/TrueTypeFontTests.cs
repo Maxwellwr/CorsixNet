@@ -149,6 +149,33 @@ public sealed class TrueTypeFontTests
         using (var fonts = Fonts(files, GameConfigPlaceholder))
         {
             Assert.Equal(Path.Combine("/game", "GoNotoKurrent-Regular.ttf"), fonts.Find("я")?.Path);
+
+            // A font chosen for the language comes before them all; one that is not there is passed over.
+            Assert.Equal("/system/cyrillic.ttf", fonts.Find("я", "/system/cyrillic.ttf")?.Path);
+            Assert.Equal(Path.Combine("/game", "GoNotoKurrent-Regular.ttf"), fonts.Find("я", "/gone.ttf")?.Path);
+        }
+    }
+
+    [Fact]
+    public void The_fonts_to_choose_from_are_those_with_the_language_s_letters()
+    {
+        var folder = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            File.WriteAllBytes(Path.Combine(folder, "latin.ttf"), SyntheticFont.Latin("Mg"));
+            File.WriteAllBytes(Path.Combine(folder, "cyrillic.ttf"), SyntheticFont.Latin("Mgжя"));
+            File.WriteAllBytes(Path.Combine(folder, "notes.txt"), "not a font"u8.ToArray());
+            using var fonts = new UnicodeFonts(null, folder, []);
+
+            // Punctuation does not count: few fonts have every sign a translation uses.
+            var choices = fonts.Choices("Mg жя «…»", [folder]);
+
+            Assert.Equal([Path.Combine(folder, "cyrillic.ttf")], choices.Select(choice => choice.Path));
+            Assert.Equal("cyrillic", choices[0].Name);
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
         }
     }
 

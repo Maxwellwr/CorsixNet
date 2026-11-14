@@ -106,9 +106,14 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
 /// <c>sound_setting.lua</c>): sound effects and their volume, screen shake, edge scrolling, scroll speeds and the
 /// autosave frequency, and the language among the installed ones (CorsixTH's <c>options.lua</c> language list). Changes
 /// are kept in a draft until Apply, which saves <c>config.txt</c> and uses them at once; the screen size takes effect on
-/// the next start.
+/// the next start. A language drawn with a TrueType font also gets a choice of font among the system's fonts that
+/// have its letters (<c>unicode_fonts</c>), "System" leaving it to be found as before.
 /// </summary>
-internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null) : UiWindow
+/// <param name="fonts">
+/// The fonts the language can be drawn with, by name; null for a language the game's font draws, empty while they are
+/// still being looked for.
+/// </param>
+internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, IReadOnlyList<(string Name, string Path)>?>? fonts = null) : UiWindow
 {
     private readonly IReadOnlyList<string> _languages = languages ?? [];
 
@@ -132,6 +137,10 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return _languages.Count > 1
             ? Stepper("Language", _draft.Language, () => StepLanguage(-1), () => StepLanguage(+1))
             : WindowRow.Of("Language", _draft.Language);
+        if (fonts?.Invoke(_draft.Language) is { } choices)
+        {
+            yield return Stepper("Font", FontName(choices), () => StepFont(fonts(_draft.Language) ?? [], -1), () => StepFont(fonts(_draft.Language) ?? [], +1));
+        }
         if (hotkeys is not null)
         {
             // buttonHotkey: the options close for the hotkey assignment dialog, which opens them again.
@@ -167,6 +176,40 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
 
         var next = index < 0 ? 0 : (index + step + _languages.Count) % _languages.Count;
         _draft = _draft with { Language = _languages[next] };
+    }
+
+    /// <summary>The name of the font chosen for the draft's language, or "System" for none.</summary>
+    private string FontName(IReadOnlyList<(string Name, string Path)> choices)
+    {
+        if (_draft.LanguageFont([_draft.Language]) is not { } path)
+        {
+            return "System";
+        }
+
+        foreach (var (name, choice) in choices)
+        {
+            if (string.Equals(choice, path, StringComparison.OrdinalIgnoreCase))
+            {
+                return name;
+            }
+        }
+
+        return Path.GetFileNameWithoutExtension(path);
+    }
+
+    /// <summary>The next or previous font for the draft's language, "System" coming before the first.</summary>
+    private void StepFont(IReadOnlyList<(string Name, string Path)> choices, int step)
+    {
+        if (choices.Count == 0)
+        {
+            return;
+        }
+
+        List<string?> paths = [null, .. choices.Select(choice => choice.Path)];
+        var chosen = _draft.LanguageFont([_draft.Language]);
+        var index = paths.FindIndex(path => string.Equals(path, chosen, StringComparison.OrdinalIgnoreCase));
+        var next = ((index < 0 ? 0 : index) + step + paths.Count) % paths.Count;
+        _draft = _draft.WithLanguageFont(_draft.Language, paths[next]);
     }
 
     private static string Percent(decimal fraction) => string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(fraction * 100)} %");

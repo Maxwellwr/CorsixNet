@@ -680,7 +680,9 @@ and it exists) and `player_name`. Command-line options still win.
 
 Translations whose `Font(...)` is "unicode" or "mik" (Russian; the Russian original's own bitmap font is not read)
 are drawn with a TrueType font, as CorsixTH's `freetype_font`. `UnicodeFonts` (client) finds it as
-`Graphics:loadFontFile` does: `unicode_font`, then `CorsixTHUnicode.ttf` or `GoNotoKurrent-Regular.ttf` beside the
+`Graphics:loadFontFile` does, after the font chosen for the language (`unicode_fonts = { Russian = [[...]] }` in
+`config.txt`, CorsixNet's own, set by the options window's Font row, which lists the system fonts with every letter
+of the language, `UnicodeFonts.Choices`, looked for in the background): `unicode_font`, then `CorsixTHUnicode.ttf` or `GoNotoKurrent-Regular.ttf` beside the
 game, and, since CorsixNet bundles no font, the first system font (Tahoma, Verdana, Segoe UI, Arial, ..., then the
 Chinese, Japanese and Korean ones) that has every character of the translation. `TrueTypeFace` reads it with
 StbTrueTypeSharp (which characters it has, kerning, letter heights) and draws it with FreeType (FreeTypeSharp, native
