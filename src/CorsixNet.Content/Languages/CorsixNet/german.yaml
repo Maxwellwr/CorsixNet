@@ -158,7 +158,7 @@ strings:
     custom_game:
       none: 'Keine Level gefunden: Legen Sie .level- und .map-Dateien in den Level-Ordner (levels in config.yaml).'
     custom_campaign:
-      none: 'Keine Kampagnen gefunden: Legen Sie .campaign-Dateien in den Kampagnen-Ordner (campaigns in config.yaml).'
+      none: 'Keine Kampagnen gefunden: Legen Sie .campaign.yaml- oder .campaign-Dateien in den Kampagnen-Ordner (campaigns in config.yaml).'
     information:
       caption: Information
     confirm:

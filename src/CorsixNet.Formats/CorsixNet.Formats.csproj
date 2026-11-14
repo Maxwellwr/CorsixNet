@@ -8,4 +8,8 @@
     <InternalsVisibleTo Include="CorsixNet.Formats.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
 </Project>
