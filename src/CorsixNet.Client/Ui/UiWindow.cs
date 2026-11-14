@@ -198,6 +198,12 @@ internal abstract class UiWindow
     /// </summary>
     public virtual bool IsFullscreen(IWindowHost host) => false;
 
+    /// <summary>The size of the window drawn by itself: 640 by 480 for a fullscreen dialog, its own for a smaller one.</summary>
+    public virtual Point FullscreenSize => new(640, 480);
+
+    /// <summary>Where a window drawn by itself opens from the top left of the screen's free area; null centres it.</summary>
+    public virtual Point? FullscreenPosition => null;
+
     /// <summary>Draws the fullscreen dialog with its top left corner at <paramref name="origin"/>.</summary>
     public virtual void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
     {

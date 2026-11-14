@@ -4,6 +4,7 @@ using CorsixNet.Client.Rendering;
 using CorsixNet.Sim.Staff;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -18,8 +19,27 @@ internal sealed class HireWindow : UiWindow
 
     private StaffClass _category = StaffClass.Doctor;
 
-    /// <summary>The class of candidates shown.</summary>
-    public StaffClass Category => _category;
+    /// <summary>The class of candidates shown (none yet in the original's look until a tab is chosen).</summary>
+    public StaffClass? Category => _drawn ? _screen.Category : _category;
+
+    private readonly HireScreen _screen = new();
+
+    /// <summary>Whether the window was last drawn in the original's look.</summary>
+    private bool _drawn;
+
+    /// <summary>The original's look (<see cref="HireScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => _drawn = HireScreen.IsAvailable(host);
+
+    public override Point FullscreenSize => HireScreen.Size;
+
+    /// <summary>UIHireStaff:setDefaultPosition(100, 100).</summary>
+    public override Point? FullscreenPosition => new(100, 100);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
 
     /// <summary>The candidate whose portrait shows, by index in the class's list.</summary>
     private int _selected;
