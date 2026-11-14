@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using CorsixNet.Client.Ui;
 using CorsixNet.Content.Languages;
@@ -25,6 +26,7 @@ public partial class UiTextTests
     [Theory]
     [InlineData("Russian")]
     [InlineData("German")]
+    [InlineData("French")]
     public void ATranslationHasEveryOwnStringTheClientUses(string language)
     {
         var strings = CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")).Load(language, _ => null);
@@ -46,12 +48,8 @@ public partial class UiTextTests
     /// <summary>The <c>corsixnet.*</c> names in the client's code.</summary>
     private static SortedSet<string> OwnNames()
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CorsixNet.slnx")))
-        {
-            directory = directory.Parent;
-        }
-
+        // The build output may lie outside the checkout (--artifacts-path), so this file's own path is tried too.
+        var directory = RepositoryRoot(AppContext.BaseDirectory) ?? RepositoryRoot(ThisFile());
         Assert.NotNull(directory);
         var names = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var file in Directory.EnumerateFiles(Path.Combine(directory.FullName, "src", "CorsixNet.Client"), "*.cs", SearchOption.AllDirectories))
@@ -65,6 +63,20 @@ public partial class UiTextTests
         Assert.NotEmpty(names);
         return names;
     }
+
+    /// <summary>The checkout holding a path: the nearest folder above it with CorsixNet.slnx, or null.</summary>
+    private static DirectoryInfo? RepositoryRoot(string path)
+    {
+        var directory = new DirectoryInfo(path);
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "CorsixNet.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory;
+    }
+
+    private static string ThisFile([CallerFilePath] string path = "") => Path.GetDirectoryName(path) ?? path;
 
     [GeneratedRegex("\"(corsixnet\\.[a-z0-9_.]+)\"")]
     private static partial Regex OwnName();
