@@ -6,6 +6,7 @@ using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Staff;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui;
 
@@ -132,6 +133,9 @@ internal interface IWindowHost
 
     /// <summary>The key given to an action in the hotkeys file, as the player reads it (such as F1), or null.</summary>
     string? HotkeyText(string action);
+
+    /// <summary>The fullscreen dialogs' pictures, sprites and fonts, or null without the original's graphics.</summary>
+    OriginalGraphics? Graphics => null;
 }
 
 /// <summary>
@@ -184,4 +188,23 @@ internal abstract class UiWindow
     public virtual void DrawCanvas(SpriteBatch batch, Rectangle area, Texture2D pixel, TextRenderer text)
     {
     }
+
+    /// <summary>
+    /// Whether the window draws itself as the original's 640 by 480 fullscreen dialog (CorsixTH's <c>UIFullscreen</c>),
+    /// centred, without a title bar, instead of its table; false where the dialog's graphics are missing.
+    /// </summary>
+    public virtual bool IsFullscreen(IWindowHost host) => false;
+
+    /// <summary>Draws the fullscreen dialog with its top left corner at <paramref name="origin"/>.</summary>
+    public virtual void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
+    {
+    }
+
+    /// <summary>The mouse over the fullscreen dialog, at <paramref name="local"/> from its top left corner.</summary>
+    public virtual void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+    }
+
+    /// <summary>The fullscreen dialog's tooltip at <paramref name="local"/>, if any.</summary>
+    public virtual string? FullscreenTooltip(IWindowHost host, Point local) => null;
 }

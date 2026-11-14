@@ -138,9 +138,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 **Has:** balance and transaction log per player, level costs of rooms and objects, room purchase
 rules, wages, patient payments with inflation and insurers, drug cost.
 
-- The bank manager and bank statement screens as the original draws them (`fullscreen/bank_manager.lua`,
-  `bank_statement.lua`). Loans, their limit, interest and overdraft interest are done, and F1 and F2 show them as text
-  windows with buttons (`BankManagerWindow`, `BankStatementWindow`).
+- Bank manager: drawn as the original's (`BankManagerScreen` over Bank01V and Stat01V: the face's animation, loans,
+  insurance with its graph picture, rates, the statement page, tooltips). Missing: the bank and pie chart cursors, real
+  insurance company names (CorsixTH picks three at random, here the first three); F2 still opens the statement as a
+  text window. Fullscreen dialogs now draw themselves where `UiWindow.IsFullscreen` says so (`OriginalGraphics`).
 - The casebook as the original draws it (`fullscreen/drug_casebook.lua`); F5 is a text window with prices to set and
   research to concentrate (`CasebookWindow`).
 - Reputation: changes from the year-end award and staff kicked out;
@@ -178,7 +179,7 @@ fonts, faces) and the details listed.
   edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
   editing, `ReturnToBlueprintCommand`).
 - Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
-- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
+- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
 - Adviser: done, the figure too (`AdviserFigure`: getting up, talking with the balloon, waiting, getting down,
   clicks on him). The announcer's queue is done (`Audio/Announcer`: priorities,

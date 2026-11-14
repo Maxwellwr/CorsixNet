@@ -287,6 +287,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The original's bottom panel, or null where its graphics could not be read (the text panel then).</summary>
     private readonly OriginalBottomPanel? _bottomPanel;
 
+    /// <summary>The fullscreen dialogs' graphics, loaded as they are first shown.</summary>
+    private readonly OriginalGraphics _graphics;
+
     /// <summary>The bottom panel's sprites (<c>Data/Panel02V</c>), for the adviser's balloon.</summary>
     private readonly SpriteAtlas? _panelSprites;
 
@@ -388,6 +391,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _blackText = null;
         }
 
+        _graphics = new OriginalGraphics(device, install);
         Ui.StaffFaces.Current = Ui.StaffFaces.Load(device, install, palette);
         _unicodeFonts = new UnicodeFonts(_config.UnicodeFont, AppContext.BaseDirectory);
         _texts = LoadTexts(install, _config);
@@ -947,6 +951,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _cursors?.Dispose();
         _panelSprites?.Dispose();
         _bottomPanel?.Dispose();
+        _graphics.Dispose();
         _blackText?.Dispose();
         _animations.Dispose();
         _blocks.Dispose();
@@ -3007,6 +3012,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     void IWindowHost.CenterOn(TilePosition tile) => _camera.Center = Camera.TileCenter(tile.X, tile.Y);
 
     bool IWindowHost.HasNextLevel => _session is LocalSession && _levelIndex + 1 < _levels.Count;
+
+    OriginalGraphics? IWindowHost.Graphics => _graphics;
 
     string? IWindowHost.HotkeyText(string action) => _hotkeys[action]?.ToString();
 

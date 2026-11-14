@@ -33,7 +33,8 @@ internal static class MoneyPanels
         }
     }
 
-    private static string Describe(Transaction transaction) => transaction.Kind switch
+    /// <summary>What a transaction was for, as the statement reads it.</summary>
+    public static string Describe(Transaction transaction) => transaction.Kind switch
     {
         TransactionKind.BuyObject => $"Buy {transaction.Subject}",
         TransactionKind.SellObject => $"Sell {transaction.Subject}",

@@ -1,3 +1,4 @@
+using CorsixNet.Client.Input;
 using CorsixNet.Client.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -110,6 +111,11 @@ internal sealed class WindowLayer
     public string? TooltipAt(Point mouse)
     {
         var hit = _open.LastOrDefault(open => open.Layout is { } layout && layout.Bounds.Contains(mouse));
+        if (hit?.Layout is { Fullscreen: true } full && _host is { } host)
+        {
+            return hit.Window.FullscreenTooltip(host, mouse - full.Bounds.Location);
+        }
+
         return hit?.Layout!.Cells.FirstOrDefault(cell => cell.Area.Contains(mouse)).Cell?.Tooltip;
     }
 
@@ -148,6 +154,7 @@ internal sealed class WindowLayer
     /// <returns>Whether the mouse is over a window (or dragging one), so that the map should ignore it.</returns>
     public bool Update(IWindowHost host, MouseState mouse, MouseState previous, Rectangle screen)
     {
+        _host = host;
         _open.RemoveAll(open => open.Window.IsDone(host));
         foreach (var open in _open)
         {
@@ -174,6 +181,19 @@ internal sealed class WindowLayer
         if (hit is null)
         {
             return false;
+        }
+
+        if (hit.Layout is { Fullscreen: true } full)
+        {
+            // UIFullscreen: the dialog handles its own buttons over its picture.
+            if (pressed && !hit.Window.IsPinned)
+            {
+                _open.Remove(hit);
+                _open.Add(hit);
+            }
+
+            hit.Window.FullscreenMouse(host, point - full.Bounds.Location, mouse, previous);
+            return true;
         }
 
         var wheel = mouse.ScrollWheelValue - previous.ScrollWheelValue;
@@ -237,6 +257,16 @@ internal sealed class WindowLayer
                 continue;
             }
 
+            if (layout.Fullscreen)
+            {
+                if (_host is { } host)
+                {
+                    open.Window.DrawFullscreen(batch, host, layout.Bounds.Location, InputScript.Mouse());
+                }
+
+                continue;
+            }
+
             batch.Draw(pixel, layout.Bounds, PanelColor);
             if (!open.Window.IsPinned)
             {
@@ -290,6 +320,18 @@ internal sealed class WindowLayer
     /// <summary>Lays out a window's table: columns as wide as their widest cell, buttons padded, kept on screen.</summary>
     private WindowLayout Lay(OpenWindow open, IWindowHost host, Rectangle screen)
     {
+        if (open.Window.IsFullscreen(host))
+        {
+            // UIFullscreen: 640 by 480, centred on the screen, and kept on it from the top left.
+            var full = new Rectangle(
+                screen.X + Math.Max(0, (screen.Width - FullscreenWidth) / 2),
+                screen.Y + Math.Max(0, (screen.Height - FullscreenHeight) / 2),
+                FullscreenWidth,
+                FullscreenHeight);
+            open.Position = full.Location;
+            return new WindowLayout(full, Rectangle.Empty, Rectangle.Empty, open.Window.Title, [], 0, 0, Rectangle.Empty, Fullscreen: true);
+        }
+
         var rows = open.Window.Rows(host).ToList();
         var columns = new List<int>();
         var spanWidth = 0;
@@ -384,6 +426,15 @@ internal sealed class WindowLayer
         _ => start + (int)value,
     };
 
+    /// <summary>The size of the original's fullscreen dialogs.</summary>
+    public const int FullscreenWidth = 640;
+
+    /// <inheritdoc cref="FullscreenWidth"/>
+    public const int FullscreenHeight = 480;
+
+    /// <summary>The host of the last <see cref="Update"/>, for the fullscreen dialogs' drawing and tooltips.</summary>
+    private IWindowHost? _host;
+
     private int CellWidth(WindowCell cell) => _measure(cell.Text) + (cell.IsButton ? 12 : 0);
 
     private sealed class OpenWindow(UiWindow window)
@@ -408,5 +459,6 @@ internal sealed class WindowLayer
         IReadOnlyList<(Rectangle Area, WindowCell Cell)> Cells,
         int VisibleRows,
         int MaxScroll,
-        Rectangle Canvas);
+        Rectangle Canvas,
+        bool Fullscreen = false);
 }
