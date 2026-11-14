@@ -699,7 +699,7 @@ public sealed class ResearchDepartment
     /// <c>Hospital:canConcentrateResearch</c>: a disease whose room is not discovered yet, a drug not fully effective, or
     /// a disease whose machine is not as strong as it gets. Only diseases whose last room is in the game's content count.
     /// </summary>
-    internal bool CanConcentrate(Simulation simulation, Hospital hospital, DiseaseDefinition disease)
+    public bool CanConcentrate(Simulation simulation, Hospital hospital, DiseaseDefinition disease)
     {
         if (ConcentrationRoom(simulation, disease) is not { } room)
         {

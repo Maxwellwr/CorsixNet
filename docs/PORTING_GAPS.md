@@ -144,8 +144,10 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   insurance with its graph picture, rates, the statement page, tooltips). Missing: the bank and pie chart cursors, real
   insurance company names (CorsixTH picks three at random, here the first three); F2 still opens the statement as a
   text window. Fullscreen dialogs now draw themselves where `UiWindow.IsFullscreen` says so (`OriginalGraphics`).
-- The casebook as the original draws it (`fullscreen/drug_casebook.lua`); F5 is a text window with prices to set and
-  research to concentrate (`CasebookWindow`).
+- Casebook: drawn as the original's (`CasebookScreen` over DrugN01V: the list with diagnoses first, the figures, the
+  charge as a percentage for a moment after a change, the cure's kind and whether it can be cured, research, repeat
+  buttons with Shift and Ctrl, the wheel, clicks on the list, tooltips). Missing: the staff part of the cure
+  requirements' tooltip (only rooms are named).
 - Reputation: changes from the year-end award and staff kicked out;
   the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
   price, prices far from what patients expect, and the price rise above 500 are done.
@@ -181,7 +183,7 @@ fonts, faces) and the details listed.
   edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
   editing, `ReturnToBlueprintCommand`).
 - Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
-- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
+- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager and the casebook are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
 - Adviser: done, the figure too (`AdviserFigure`: getting up, talking with the balloon, waiting, getting down,
   clicks on him). The announcer's queue is done (`Audio/Announcer`: priorities,
