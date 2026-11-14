@@ -52,7 +52,7 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
             _ => "medium",
         };
 
-        yield return WindowRow.Of(Text("player_name", "Player name"), string.IsNullOrEmpty(playerName) ? UiText.Get("corsixnet.new_game.player_name_hint", "(player_name in config.txt)") : playerName);
+        yield return WindowRow.Of(Text("player_name", "Player name"), string.IsNullOrEmpty(playerName) ? UiText.Get("corsixnet.new_game.player_name_hint", "(player_name in config.yaml)") : playerName);
         yield return WindowRow.Of(
             [
                 Text("difficulty", "Difficulty"),

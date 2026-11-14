@@ -668,10 +668,11 @@ and `--continue` (the newest autosave) start the client on a saved game. Network
 
 ## Settings
 
-`GameConfig` (`CorsixNet.Content`, after CorsixTH's `config_finder.lua`) reads and writes `config.txt` in CorsixTH's
-format, Lua assignments with CorsixTH's names, in `%AppData%/CorsixNet` on Windows and
+`GameConfig` (`CorsixNet.Content`, after CorsixTH's `config_finder.lua`) reads and writes `config.yaml`, a YAML
+mapping (YamlDotNet) with CorsixTH's setting names, in `%AppData%/CorsixNet` on Windows and
 `$XDG_CONFIG_HOME/CorsixNet` or `~/.config/CorsixNet` elsewhere (or `CORSIXNET_CONFIG`, or `--config FILE`). A
-missing file is written with the defaults. Only the settings the client acts on are kept: `language` (the
+missing file is written with the defaults, or imported once from a `config.txt` in CorsixTH's format (Lua
+assignments, read by `LuaAssignments`) beside it; `Hotkeys` does the same with `hotkeys.yaml` and `hotkeys.txt`. Only the settings the client acts on are kept: `language` (the
 original's `LANG-n.DAT` for English, French, German, Italian, Spanish or Swedish, with CorsixTH's translation from
 `Languages/*.yaml` beside the game laid over it, and CorsixNet's own strings from `Languages/CorsixNet/*.yaml` over that; CorsixTH's other translations are offered too), `unicode_font`,
 `fullscreen`, `width` and
@@ -681,7 +682,7 @@ and it exists) and `player_name`. Command-line options still win.
 Translations whose `Font(...)` is "unicode" or "mik" (Russian; the Russian original's own bitmap font is not read)
 are drawn with a TrueType font, as CorsixTH's `freetype_font`. `UnicodeFonts` (client) finds it as
 `Graphics:loadFontFile` does, after the font chosen for the language (`unicode_fonts = { Russian = [[...]] }` in
-`config.txt`, CorsixNet's own, set by the options window's Font row, which lists the system fonts with every letter
+`config.yaml`, CorsixNet's own, set by the options window's Font row, which lists the system fonts with every letter
 of the language, `UnicodeFonts.Choices`, looked for in the background): `unicode_font`, then `CorsixTHUnicode.ttf` or `GoNotoKurrent-Regular.ttf` beside the
 game, and, since CorsixNet bundles no font, the first system font (Tahoma, Verdana, Segoe UI, Arial, ..., then the
 Chinese, Japanese and Korean ones) that has every character of the translation. `TrueTypeFace` reads it with

@@ -203,7 +203,7 @@ internal static class ClientCommandLine
 
     private static readonly Option<string?> ConfigOption = new("--config")
     {
-        Description = "Use another settings file (default: config.txt in the CorsixNet settings folder)",
+        Description = "Use another settings file (default: config.yaml in the CorsixNet settings folder)",
         HelpName = "FILE",
     };
 

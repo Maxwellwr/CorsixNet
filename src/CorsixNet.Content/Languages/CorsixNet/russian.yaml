@@ -74,11 +74,11 @@ strings:
       game_font: Шрифт игры
       system_font: Системный
     new_game:
-      player_name_hint: (player_name в config.txt)
+      player_name_hint: (player_name в config.yaml)
     custom_game:
-      none: 'Уровни не найдены: положите файлы .level и .map в папку уровней (levels в config.txt).'
+      none: 'Уровни не найдены: положите файлы .level и .map в папку уровней (levels в config.yaml).'
     custom_campaign:
-      none: 'Кампании не найдены: положите файлы .campaign в папку кампаний (campaigns в config.txt).'
+      none: 'Кампании не найдены: положите файлы .campaign в папку кампаний (campaigns в config.yaml).'
     information:
       caption: Информация
     confirm:
@@ -443,7 +443,7 @@ strings:
       status_paste: Щелчок левой вставляет скопированное; протягивание левой заполняет им область.
       status_default: Выберите страницу; протягивание правой кнопкой по карте копирует область.
       load_map_caption: Загрузить карту
-      no_maps: 'Карты не найдены: карты сохраняются в папку уровней (levels в config.txt).'
+      no_maps: 'Карты не найдены: карты сохраняются в папку уровней (levels в config.yaml).'
     status:
       cannot_load_level: 'Не удалось загрузить %1%: %2%'
       no_levels: Уровни не найдены.

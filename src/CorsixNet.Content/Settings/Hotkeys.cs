@@ -5,39 +5,33 @@
 
 using System.Collections.Frozen;
 using System.Text;
-using CorsixNet.Formats;
 
 namespace CorsixNet.Content.Settings;
 
 /// <summary>A key with the modifier keys held with it, such as <c>f1</c> or Ctrl+H, by CorsixTH's key names.</summary>
 public sealed record Hotkey(string Key, bool Ctrl = false, bool Shift = false, bool Alt = false)
 {
-    /// <summary>How the hotkeys file writes it: <c>"f1"</c>, or <c>{"ctrl", "h"}</c> with modifiers.</summary>
-    public string ToLua()
+    /// <summary>The key as the hotkeys file writes it: <c>'f1'</c>, or <c>['ctrl', 'h']</c> with modifiers.</summary>
+    public string ToYaml()
     {
-        if (!Ctrl && !Shift && !Alt)
-        {
-            return $"\"{Key}\"";
-        }
-
         var parts = new List<string>();
         if (Ctrl)
         {
-            parts.Add("\"ctrl\"");
+            parts.Add("ctrl");
         }
 
         if (Shift)
         {
-            parts.Add("\"shift\"");
+            parts.Add("shift");
         }
 
         if (Alt)
         {
-            parts.Add("\"alt\"");
+            parts.Add("alt");
         }
 
-        parts.Add($"\"{Key}\"");
-        return "{" + string.Join(", ", parts) + "}";
+        parts.Add(Key);
+        return parts.Count == 1 ? SettingsYaml.Quote(Key) : "[" + string.Join(", ", parts.Select(SettingsYaml.Quote)) + "]";
     }
 
     /// <summary>As shown to the player, such as F1 or Ctrl+H.</summary>
@@ -71,7 +65,10 @@ public sealed record Hotkey(string Key, bool Ctrl = false, bool Shift = false, b
 public sealed class Hotkeys
 {
     /// <summary>The hotkeys file's name, next to the settings file.</summary>
-    public const string FileName = "hotkeys.txt";
+    public const string FileName = "hotkeys.yaml";
+
+    /// <summary>The file it replaces, in CorsixTH's format (Lua assignments), imported once.</summary>
+    public const string LegacyFileName = "hotkeys.txt";
 
     private static readonly string[] Modifiers = ["ctrl", "shift", "alt"];
 
@@ -196,14 +193,18 @@ public sealed class Hotkeys
     }
 
     /// <summary>
-    /// <c>load_hotkeys</c>: reads the hotkeys file, writing one with the defaults first if there is none.
+    /// <c>load_hotkeys</c>: reads the hotkeys file, writing one first if there is none: from the old hotkeys.txt beside
+    /// it when there is one, else with the defaults.
     /// </summary>
     /// <exception cref="InvalidDataException">The file is not a hotkeys file.</exception>
     public static Hotkeys Load(string path)
     {
         if (!File.Exists(path))
         {
-            var defaults = new Hotkeys();
+            var legacy = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".", LegacyFileName);
+            var defaults = string.Equals(Path.GetFileName(path), FileName, StringComparison.OrdinalIgnoreCase) && File.Exists(legacy)
+                ? ParseLegacy(File.ReadAllText(legacy))
+                : new Hotkeys();
             try
             {
                 defaults.Save(path);
@@ -221,9 +222,14 @@ public sealed class Hotkeys
 
     /// <summary>Reads the hotkeys from a hotkeys file's text.</summary>
     /// <exception cref="InvalidDataException">The text is not a hotkeys file.</exception>
-    public static Hotkeys Parse(string text)
+    public static Hotkeys Parse(string text) => FromValues(SettingsYaml.Parse(text));
+
+    /// <summary>Reads the hotkeys from the old hotkeys.txt's text (CorsixTH's Lua assignments).</summary>
+    /// <exception cref="InvalidDataException">The text is not a hotkeys file.</exception>
+    public static Hotkeys ParseLegacy(string text) => FromValues(SettingsYaml.FromLua(text));
+
+    private static Hotkeys FromValues(Dictionary<string, object?> values)
     {
-        var values = LuaAssignments.Parse(text);
         var keys = new Dictionary<string, Hotkey>(DefaultMap, StringComparer.Ordinal);
         foreach (var (name, value) in values)
         {
@@ -252,15 +258,15 @@ public sealed class Hotkeys
     {
         var text = new StringBuilder();
         text.Append("""
-            ----------------------------------------------- Hotkeys ---------------------------------------------------
-            -- Each action takes a key, such as "f1", or a table with modifiers first, such as {"ctrl", "h"}.
-            -- Keys are letters, digits, f1 to f12, and escape, return, space, tab, delete, up, down, left, right, = and -.
-            -- Modifiers are ctrl, shift and alt. Delete a line to get its default back.
+            #---------------------------------------------- Hotkeys ---------------------------------------------------
+            # Each action takes a key, such as 'f1', or a list with modifiers first, such as ['ctrl', 'h'].
+            # Keys are letters, digits, f1 to f12, and escape, return, space, tab, delete, up, down, left, right, = and -.
+            # Modifiers are ctrl, shift and alt. Delete a line to get its default back. This is YAML.
 
             """);
         foreach (var (name, _) in Defaults)
         {
-            text.Append(name).Append(" = ").Append(_keys[name].ToLua()).Append('\n');
+            text.Append(name).Append(": ").Append(_keys[name].ToYaml()).Append('\n');
         }
 
         return text.ToString();
@@ -272,8 +278,8 @@ public sealed class Hotkeys
         {
             case string key when IsKeyName(key):
                 return new Hotkey(key.ToLowerInvariant());
-            case LuaTable { Fields.Count: 0, Items.Count: > 0 } table when table.Items.All(item => item is string):
-                var parts = table.Items.Cast<string>().Select(part => part.ToLowerInvariant()).ToList();
+            case List<object?> { Count: > 0 } list when list.All(item => item is string):
+                var parts = list.Cast<string>().Select(part => part.ToLowerInvariant()).ToList();
                 var last = parts[^1];
                 var modifiers = parts[..^1];
                 if (!IsKeyName(last) || modifiers.Any(m => !Modifiers.Contains(m)))

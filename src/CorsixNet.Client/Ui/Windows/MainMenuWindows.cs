@@ -59,7 +59,7 @@ internal sealed class CustomLevelWindow(IReadOnlyList<CustomLevelEntry> levels, 
     {
         if (levels.Count == 0)
         {
-            yield return WindowCell.Line(UiText.Get("corsixnet.custom_game.none", "No levels found: put .level and .map files in the levels folder (levels in config.txt)."), dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.custom_game.none", "No levels found: put .level and .map files in the levels folder (levels in config.yaml)."), dim: true);
         }
 
         foreach (var level in levels)
@@ -103,7 +103,7 @@ internal sealed class CustomCampaignWindow(IReadOnlyList<CustomCampaignEntry> ca
     {
         if (campaigns.Count == 0)
         {
-            yield return WindowCell.Line(UiText.Get("corsixnet.custom_campaign.none", "No campaigns found: put .campaign files in the campaigns folder (campaigns in config.txt)."), dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.custom_campaign.none", "No campaigns found: put .campaign files in the campaigns folder (campaigns in config.yaml)."), dim: true);
         }
 
         foreach (var campaign in campaigns)
