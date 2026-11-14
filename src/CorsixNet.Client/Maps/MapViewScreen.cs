@@ -2771,7 +2771,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// The town map's blue, green and red warmth colours (CorsixTH's th_lua_ui.cpp, <c>temperature_theme::multi_colour</c>):
     /// blue below 11 °C, green up to 18 °C, red above.
     /// </summary>
-    private static Color TemperatureColor(ushort temperature)
+    internal static Color TemperatureColor(ushort temperature)
     {
         // 4 °C and below is 0, 25 °C and above 255.
         var scaled = temperature < 5200 ? 0 : temperature > 32767 ? 255 : (temperature - 5200) / 108;
@@ -3588,6 +3588,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _text.UseTrueType(null);
             _blackText?.UseTrueType(null);
             _bottomPanel?.UseTrueType(null);
+            _graphics.UseTrueType(null);
             _unicodeFonts.Dispose();
             _unicodeFonts = new UnicodeFonts(config.UnicodeFont, AppContext.BaseDirectory);
         }
@@ -4297,6 +4298,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _text.UseTrueType(face);
         _blackText?.UseTrueType(face);
         _bottomPanel?.UseTrueType(face);
+        _graphics.UseTrueType(face);
         _windows.Origin = new Point(8, StatusHeight + 8);
     }
 

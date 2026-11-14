@@ -20,6 +20,10 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     private readonly Dictionary<string, TextRenderer?> _fonts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Palette?> _palettes = new(StringComparer.OrdinalIgnoreCase);
     private Texture2D? _pixel;
+    private TrueTypeFace? _face;
+
+    /// <summary>The name that stands for the game's main palette, <c>Data/MPalette.dat</c>.</summary>
+    public const string MainPalette = "MPALETTE";
 
     /// <summary>A white pixel, for the dialogs' coloured panels and lines.</summary>
     public Texture2D Pixel
@@ -68,10 +72,24 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
         if (!_fonts.TryGetValue(key, out var font))
         {
             font = Palette(palette) is { } colours ? Try(() => new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", name, complex: false)), colours)) : null;
+            font?.UseTrueType(_face);
             _fonts[key] = font;
         }
 
         return font;
+    }
+
+    /// <summary>
+    /// Draws the dialogs' text with the face from now on (a language the game's fonts cannot draw), sized and coloured
+    /// after each bitmap font, or the bitmap fonts again (null).
+    /// </summary>
+    public void UseTrueType(TrueTypeFace? face)
+    {
+        _face = face;
+        foreach (var font in _fonts.Values)
+        {
+            font?.UseTrueType(face);
+        }
     }
 
     public void Dispose()
@@ -97,7 +115,10 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     {
         if (!_palettes.TryGetValue(name, out var palette))
         {
-            palette = Try(() => install.LoadPalette("QDATA", name + ".PAL"));
+            // MPalette is the game's main palette, which a font loaded without one of its own takes.
+            palette = string.Equals(name, MainPalette, StringComparison.OrdinalIgnoreCase)
+                ? Try(() => install.LoadPalette("DATA", "MPALETTE.DAT"))
+                : Try(() => install.LoadPalette("QDATA", name + ".PAL"));
             _palettes[name] = palette;
         }
 
