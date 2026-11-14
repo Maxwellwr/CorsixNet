@@ -1707,7 +1707,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (pressed(Keys.M) && (_pickedUpStaff is null ? _hoveredTile : _staffTile) is { } handPoint)
         {
             var hand = new TilePosition(handPoint.X, handPoint.Y);
-            if (_pickedUpStaff is { } carried)
+            if (_pickedUpStaff is not null && StaffPlacing.Click(candidateGone: false, left: true, right: false, _session.IsPaused) == StaffPlacingClick.Paused)
+            {
+                // UIPlaceStaff:onMouseUp: nothing while paused; they stay on the cursor.
+                ShowNotice("The game is paused: unpause it to put the member of staff down");
+                _sounds.Play("wrong2.wav");
+            }
+            else if (_pickedUpStaff is { } carried)
             {
                 // UIPlaceStaff:close: put down or not, the member of staff is let go.
                 _pickedUpStaff = null;
@@ -3716,13 +3722,25 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var index = simulation.AvailableStaff(hiring.Class).ToList().IndexOf(hiring.Profile);
-        if (index < 0 || (mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released))
+        var click = StaffPlacing.Click(
+            candidateGone: index < 0,
+            left: mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released,
+            right: mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released,
+            paused: _session!.IsPaused);
+        if (click == StaffPlacingClick.Cancel)
         {
             _hiring = null;
             return true;
         }
 
-        if (mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released && _staffTile is { } point)
+        if (click == StaffPlacingClick.Paused)
+        {
+            ShowNotice("The game is paused: unpause it to place the new member of staff");
+            _sounds.Play("wrong2.wav");
+            return true;
+        }
+
+        if (click == StaffPlacingClick.Place && _staffTile is { } point)
         {
             var tile = new TilePosition(point.X, point.Y);
             var problem = StaffHiring.Check(simulation, hiring.Class, index, tile, _session!.Player);
