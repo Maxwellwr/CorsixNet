@@ -3644,7 +3644,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 ToggleRoomList();
                 break;
             case "corridor":
-                _windows.Open(new FurnishCorridorWindow(definition => _furnishTool.Start(definition)));
+                _windows.Open(new FurnishCorridorWindow(definition => _furnishTool.Start(definition)) { BuyMany = list => _furnishTool.Start(list) });
                 break;
             case "edit":
                 // CorsixTH's edit room button: the next click on a room of the hospital edits it.

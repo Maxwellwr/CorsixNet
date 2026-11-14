@@ -3,6 +3,9 @@ using CorsixNet.Client.Maps;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -78,6 +81,21 @@ internal sealed class FurnishCorridorWindow(Action<ObjectDefinition> buy) : UiWi
 {
     public override string Title => "Furnish corridor";
 
+    private readonly FurnishCorridorScreen _screen = new();
+
+    /// <summary>Puts several objects on the cursor one after the other (the original's look's confirm); one at a time without it.</summary>
+    public Action<IReadOnlyList<ObjectDefinition>>? BuyMany { get; init; }
+
+    /// <summary>The original's look (<see cref="FurnishCorridorScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => BuyMany is not null && FurnishCorridorScreen.IsAvailable(host);
+
+    public override Point FullscreenSize => FurnishCorridorScreen.Size;
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous, BuyMany!);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => FurnishCorridorScreen.Tooltip(host, local);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var simulation = host.Simulation;
