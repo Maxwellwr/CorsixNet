@@ -3052,6 +3052,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             else
             {
                 _windows.Open(new LevelEndWindow());
+                if (hospital.Outcome == EndOutcome.Lost)
+                {
+                    // World:loseGame: the information dialog says the level is lost and why.
+                    _windows.Open(new InformationWindow(LevelEndWindow.LostLines(_texts, hospital.LostTo)));
+                }
             }
         }
 

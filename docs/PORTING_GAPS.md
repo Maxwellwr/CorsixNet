@@ -211,7 +211,7 @@ fonts, faces) and the details listed.
 rules, `popn`, disease frequencies and availability, win and lose criteria), switching levels with Page Up/Down.
 Hospitals win and lose by the level's criteria (`endconditions.lua`), and the progress report's content is computed.
 
-- Win and lose screens: the lose movie and CorsixTH's return to the main menu on losing (`world.lua`). The winning letter on the fax (one of the original's letters, the translation's when it has them, with the salary and the next town; on to the next level or stay) is done (`FaxWindow.WinLetterLines`); losing opens the level end window.
+- Win and lose screens: the lose movie and CorsixTH's return to the main menu on losing (`world.lua`). The winning letter on the fax (one of the original's letters, the translation's when it has them, with the salary and the next town; on to the next level or stay) is done (`FaxWindow.WinLetterLines`); losing shows the original's message (`information.level_lost`: why, and the limit passed) over the level end window.
 - Playing a campaign through, the original's (12 levels in order) or a CorsixTH one (the fax offering the next level,
   `world.lua`'s winning letter, `fax.lua`), choosing a custom level or campaign in a menu, briefings shown (`app.lua`,
   `Campaigns/`, `Levels/`). Loading a custom level (`.level` + `.map`, with overlays) and reading a campaign file are
