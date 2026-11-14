@@ -1,6 +1,7 @@
 using CorsixNet.Client.Maps;
 using CorsixNet.Client.Ui;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
@@ -111,6 +112,57 @@ public class BuildRoomToolTests
             tool.Update(simulation, 0, Mouse(new(6, 5)));
             Assert.Equal(extra, tool.Ghost?.ObjectType);
         }
+    }
+
+    [Fact]
+    public void EscDropsAnExtraObjectFromTheCursorAndPicksUpSellBack()
+    {
+        var host = new WindowTestHost(new LevelRules(100_000, [], [KeyValuePair.Create("sink", 300)]));
+        var simulation = host.Simulation;
+        var definition = simulation.Content.FindRoom("toilets")!;
+        host.Submit(new BuildRoomCommand(new RoomPlan("toilets", new TileRect(4, 4, 4, 4), new DoorPlacement(new(5, 4), EdgeOrientation.North))));
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+        foreach (var needed in new[] { "loo", "sink" })
+        {
+            var spot = Enumerable.Range(4, 4).SelectMany(x => Enumerable.Range(4, 4).Select(y => new TilePosition(x, y)))
+                .First(tile => ObjectPlacer.Check(simulation, needed, tile, Direction.North, 0) == ObjectPlacementProblem.None);
+            host.Submit(new PlaceObjectCommand(needed, spot, Direction.North));
+        }
+
+        var hospital = simulation.Hospitals[0];
+        var balance = hospital.Balance;
+        var tool = new BuildRoomTool();
+        tool.StartEditing(definition, room.Id, simulation.Tick);
+        tool.PlaceExtra(simulation.Content.FindObject("sink")!);
+        tool.Update(simulation, 0, Mouse(new(6, 5)));
+        Assert.Equal("sink", tool.Ghost?.ObjectType);
+
+        // Esc cancels the purchase: nothing is paid and the room stays as it is.
+        Assert.Null(tool.Update(simulation, 0, Back()));
+        Assert.Null(tool.Ghost);
+        Assert.True(tool.IsFurnishing);
+        Assert.Equal(balance, hospital.Balance);
+        Assert.Null(tool.Update(simulation, 0, Mouse(new(6, 5))));
+        Assert.Null(tool.Ghost);
+
+        // Bought and placed, then picked up again: it is sold back and Esc takes it off the cursor.
+        tool.PlaceExtra(simulation.Content.FindObject("sink")!);
+        var spot2 = Enumerable.Range(4, 4).SelectMany(x => Enumerable.Range(4, 4).Select(y => new TilePosition(x, y)))
+            .First(tile => ObjectPlacer.Check(simulation, "sink", tile, Direction.North, 0) == ObjectPlacementProblem.None);
+        tool.Update(simulation, 0, Mouse(spot2));
+        host.Submit(Assert.IsType<PlaceObjectCommand>(tool.Update(simulation, 0, Mouse(spot2, down: true, pressed: true))));
+        Assert.Equal(balance - 300, hospital.Balance);
+        tool.Update(simulation, 0, Mouse(spot2));
+
+        tool.Update(simulation, 0, new BuildInput(spot2, 128, 128, false, false, false, false, false, false, true));
+        host.Submit(Assert.IsType<PickUpObjectCommand>(tool.Update(simulation, 0, Mouse(spot2, down: true, pressed: true))));
+        Assert.Equal(balance, hospital.Balance);
+        Assert.Equal("sink", tool.Ghost?.ObjectType);
+
+        Assert.Null(tool.Update(simulation, 0, Back()));
+        Assert.Null(tool.Ghost);
+        Assert.True(tool.IsFurnishing);
+        Assert.Equal(balance, hospital.Balance);
     }
     [Fact]
     public void ACopiedRoomGetsTheOriginalsDoorAndObjects()

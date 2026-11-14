@@ -790,6 +790,16 @@ internal sealed class BuildRoomTool
                 return null;
             }
 
+            // An object the room does not need (bought from the edit panel's list, or picked up off the floor) comes off
+            // the cursor first, as CorsixTH's UIPlaceObjects:removeObject cancels a purchase: it is paid for only when
+            // placed, and one picked up was already sold back by PickUpObjectCommand. A needed object stays: Esc then
+            // takes the room down below.
+            if (_placing is not null && (_placingExtra || !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id)))
+            {
+                StopPlacing();
+                return null;
+            }
+
             // As in CorsixTH (UIEditRoom:cancel, returnToDoorPhase), cancelling the furnishing takes the room down and goes
             // back to placing its door: a new room sells its objects back, a paid one keeps being paid for.
             _phase = Phase.Door;

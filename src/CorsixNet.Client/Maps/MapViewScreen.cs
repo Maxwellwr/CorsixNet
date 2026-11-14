@@ -529,6 +529,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             {
                 _pickingRoomToEdit = false;
             }
+            else if (_buildTool.IsFurnishing && _windows.Windows.LastOrDefault(window => !window.IsPinned) is RoomEditWindow)
+            {
+                // The edit panel is the furnishing itself (CorsixTH's UIEditRoom): closing it would only reopen it, so Esc
+                // goes to the build tool, which drops an extra object from the cursor or takes the room down.
+                _buildBack = true;
+            }
             else if (_windows.Any)
             {
                 _windows.CloseTop();
