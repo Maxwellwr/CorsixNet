@@ -84,6 +84,28 @@ public class QueueWindowTests
     }
 
     [Fact]
+    public void APatientInTheQueueCanBeSentBackToReception()
+    {
+        var simulation = NewStaffedHospital();
+        var room = simulation.Entities.OfType<Room>().Single();
+        var queue = room.DoorQueue!;
+        for (var hour = 0; hour < 200 * GameDate.HoursPerDay && queue.Count < 1; hour++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(queue.Count >= 1, "Nobody queued at the GP's door.");
+        var patient = (Humanoid)simulation.FindEntity(queue.Members[^1])!;
+        var behaviour = (PatientBehaviour)patient.Behaviour!;
+        Run(simulation, new SendPatientToReceptionCommand(patient.Id));
+        Assert.DoesNotContain(patient.Id, queue.Members);
+        Assert.Contains(behaviour.Phase, new[] { PatientPhase.SeekReception, PatientPhase.WalkingToReception, PatientPhase.InReceptionQueue });
+
+        // Back at the desk, they go on as before.
+        StepFor(simulation, 20 * GameDate.HoursPerDay);
+        Assert.False(patient.IsDespawning && behaviour.Phase == PatientPhase.SeekReception);
+    }
+    [Fact]
     public void ARoomWhoseDoctorArrivesTakesPatientsFromTheBackOfALongQueue()
     {
         var simulation = NewStaffedHospital();

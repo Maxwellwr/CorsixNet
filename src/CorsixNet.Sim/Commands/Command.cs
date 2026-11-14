@@ -60,6 +60,7 @@ public enum CommandKind : ushort
     IncreaseHandymanPriority = 45,
     HoldOpeningWatch = 46,
     CloseReport = 47,
+    SendPatientToReception = 48,
 }
 
 /// <summary>
@@ -131,6 +132,7 @@ public abstract record Command
             CommandKind.IncreaseHandymanPriority => new IncreaseHandymanPriorityCommand(reader.ReadInt32(), (HandymanTaskType)reader.ReadByte()),
             CommandKind.HoldOpeningWatch => new HoldOpeningWatchCommand(reader.ReadBool()),
             CommandKind.CloseReport => new CloseReportCommand((FaxReport)reader.ReadByte()),
+            CommandKind.SendPatientToReception => new SendPatientToReceptionCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -1018,6 +1020,25 @@ public sealed record SendPatientHomeCommand(int PatientId) : Command
         if (simulation.FindEntity(PatientId) is Humanoid { Behaviour: PatientBehaviour patient, IsDespawning: false } humanoid && humanoid.HospitalPlayer == player)
         {
             patient.SendHome(simulation, humanoid);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(PatientId);
+}
+
+/// <summary>
+/// Sends a patient of the issuing player's hospital queueing for a room, or on the way to it, back to reception (the
+/// queue window's popup, CorsixTH's <c>UIQueuePopup:sendToReception</c>).
+/// </summary>
+public sealed record SendPatientToReceptionCommand(int PatientId) : Command
+{
+    public override CommandKind Kind => CommandKind.SendPatientToReception;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(PatientId) is Humanoid { Behaviour: PatientBehaviour patient, IsDespawning: false } humanoid && humanoid.HospitalPlayer == player)
+        {
+            patient.SendToReception(simulation, humanoid);
         }
     }
 
