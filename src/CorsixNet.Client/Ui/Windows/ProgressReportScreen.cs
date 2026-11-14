@@ -55,6 +55,12 @@ internal sealed class ProgressReportScreen
         return (int)Math.Clamp(Math.Floor(height), 0, 50);
     }
 
+    /// <summary>
+    /// Which warning the report may show this month (CorsixTH's <c>show_progress_screen_warnings</c>, drawn 1 to 3 each
+    /// month): 1 the warmth, 2 the thirst, 3 the happiness. Picked here from the month, the same for every viewer.
+    /// </summary>
+    public static int WarningKind(int monthOfGame) => (int)((((uint)monthOfGame * 2654435761u) >> 16) % 3) + 1;
+
     /// <summary><c>UIPatient.normaliseWarmth</c>: 0.08 and below is 0, 0.5 and above is 1.</summary>
     public static decimal NormaliseWarmth(decimal? warmth) =>
         warmth is not { } value ? 0.5m : value < 0.08m ? 0 : value > 0.5m ? 1 : (value - 0.08m) / (0.5m - 0.08m);
@@ -109,11 +115,13 @@ internal sealed class ProgressReportScreen
             sheet.Draw(batch, 5, origin.X + 455 + (int)Math.Floor(96 * value), origin.Y + y, Color.White);
         }
 
-        var warning = warmth < 0.3m ? (6, "Your patients are too cold. Put more radiators in.")
-            : warmth > 0.7m ? (5, "Your patients are too hot. Turn the heating down.")
-            : thirst > 0.7m ? (4, "Your patients are thirsty. Put more drinks machines in.")
-            : happiness < 0.6m ? (2, "Your patients are very unhappy.")
-            : happiness < 0.8m ? (3, "Your patients are quite unhappy.")
+        // Only one kind of warning a month (show_progress_screen_warnings): the warmth, the thirst or the happiness.
+        var kind = WarningKind(simulation.Date.MonthOfGame);
+        var warning = kind == 1 && warmth < 0.3m ? (6, "Your patients are too cold. Put more radiators in.")
+            : kind == 1 && warmth > 0.7m ? (5, "Your patients are too hot. Turn the heating down.")
+            : kind == 2 && thirst > 0.7m ? (4, "Your patients are thirsty. Put more drinks machines in.")
+            : kind == 3 && happiness < 0.6m ? (2, "Your patients are very unhappy.")
+            : kind == 3 && happiness < 0.8m ? (3, "Your patients are quite unhappy.")
             : ((int, string)?)null;
         if (warning is { } shown)
         {

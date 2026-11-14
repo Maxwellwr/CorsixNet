@@ -26,4 +26,13 @@ public sealed class ProgressReportScreenTests
         Assert.Equal(0.5m, ProgressReportScreen.NormaliseWarmth(0.29m));
         Assert.Equal(0.5m, ProgressReportScreen.NormaliseWarmth(null));
     }
+
+    [Fact]
+    public void EachMonthOneKindOfWarningMayShow()
+    {
+        var kinds = Enumerable.Range(1, 36).Select(ProgressReportScreen.WarningKind).ToList();
+        Assert.All(kinds, kind => Assert.InRange(kind, 1, 3));
+        Assert.Equal(3, kinds.Distinct().Count());
+        Assert.Equal(ProgressReportScreen.WarningKind(5), ProgressReportScreen.WarningKind(5));
+    }
 }
