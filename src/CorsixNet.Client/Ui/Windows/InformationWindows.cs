@@ -4,6 +4,8 @@
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -21,6 +23,32 @@ internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string
     /// <summary>Each information window stands alone; opening another does not replace this one.</summary>
     public override bool IsSameAs(UiWindow other) => ReferenceEquals(other, this);
 
+    private readonly InformationScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="InformationScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host)
+    {
+        if (!InformationScreen.IsAvailable(host))
+        {
+            return false;
+        }
+
+        _screen.Measure(host, paragraphs);
+        return true;
+    }
+
+    public override Point FullscreenSize => _screen.Size;
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse, paragraphs);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        if (_screen.Clicked(local, mouse, previous))
+        {
+            host.PlaySound("no4.wav");
+            host.Close(this);
+        }
+    }
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var first = true;
@@ -53,6 +81,41 @@ internal sealed class ConfirmWindow(string question, Action ok) : UiWindow
 {
     public override string Title => "Confirm";
 
+    private readonly ConfirmScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="ConfirmScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host)
+    {
+        if (!ConfirmScreen.IsAvailable(host))
+        {
+            return false;
+        }
+
+        _screen.Measure(host, question);
+        return true;
+    }
+
+    public override Point FullscreenSize => _screen.Size;
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse, question);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        switch (_screen.Clicked(local, mouse, previous))
+        {
+            case "ok":
+                host.PlaySound("YesX.wav");
+                host.Close(this);
+                ok();
+                break;
+            case "cancel":
+                host.PlaySound("No4.wav");
+                host.Close(this);
+                break;
+        }
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
     /// <summary>Centred, as CorsixTH's <c>UIConfirmDialog</c>.</summary>
     public override Vector2? DefaultPosition => new(0.5f, 0.5f);
 

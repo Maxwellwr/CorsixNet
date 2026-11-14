@@ -191,7 +191,7 @@ fonts, faces) and the details listed.
   clicks on him). The announcer's queue is done (`Audio/Announcer`: priorities,
   expiry, the staffed-desk rule, random announcements, `play_announcements`, `announcement_volume`); the queue, history and much
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
-- Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
+- Information and confirm dialogs are drawn as the original's (`InformationScreen` PulldV, `ConfirmScreen` Req04V); the tip of the day is a text window (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
 - Cursors: the original's (DATA/MPointer, `CursorDrawing`) are drawn for the map's hover cases (patient, staff, queue at a
   door or desk, machine repair, rat, infected patient), editing a room, waiting while it empties, carrying staff and a pressed button; the blueprint's move, resize and arrow cursors are done (`BuildRoomTool.Cursor`); not yet the bank's SPointer ones; people and placed objects are picked by their sprites' pixels (`HumanoidDrawing.HumanoidAt`,
