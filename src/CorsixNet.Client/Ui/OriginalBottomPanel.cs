@@ -20,6 +20,7 @@ namespace CorsixNet.Client.Ui;
 /// <param name="Faxes">The kinds of the faxes waiting (<see cref="OriginalBottomPanel.FaxIcon"/>), at most five shown.</param>
 /// <param name="IsOn">Whether a button's dialog is open, so the button shows pressed (toggle buttons).</param>
 /// <param name="IsLit">Whether the tutorial's flashing button is lit now.</param>
+/// <param name="FaxKeys">What tells each fax apart (<see cref="Ui.Windows.FaxWindow.Pending"/>), so its icon keeps its place; by default its kind and place.</param>
 internal sealed record BottomPanelState(
     long Balance,
     int Reputation,
@@ -28,7 +29,8 @@ internal sealed record BottomPanelState(
     string? Pause,
     IReadOnlyList<string> Faxes,
     Func<string, bool> IsOn,
-    Func<string, bool> IsLit);
+    Func<string, bool> IsLit,
+    IReadOnlyList<string>? FaxKeys = null);
 
 /// <summary>
 /// The original's bottom panel, 640 by 48 pixels at the bottom middle of the screen: the bank button, the balance and
@@ -72,6 +74,7 @@ internal sealed class OriginalBottomPanel : IDisposable
     private readonly TextRenderer _whiteFont;
     private readonly TextRenderer _pauseFont;
     private string? _pressed;
+    private readonly FaxDrawer _drawer = new();
 
     public OriginalBottomPanel(GraphicsDevice device, ThemeHospitalInstall install, Palette palette)
     {
@@ -128,7 +131,8 @@ internal sealed class OriginalBottomPanel : IDisposable
 
     /// <summary>
     /// Follows the mouse: a button pressed and let go over it gives its key to <paramref name="act"/>, as does a fax
-    /// icon ("fax"); a right click on the bank opens the statement ("bankstats").
+    /// icon ("fax"); a right click on the bank opens the statement ("bankstats"), on a fax icon dismisses that fax
+    /// ("faxdismiss:" and its place, UIMessage:dismissMessage).
     /// </summary>
     /// <returns>Whether the mouse is over the panel or a fax icon, so the map does not get it.</returns>
     public bool Update(Viewport viewport, MouseState mouse, MouseState previous, int faxes, Action<string> act)
@@ -153,9 +157,16 @@ internal sealed class OriginalBottomPanel : IDisposable
             _pressed = null;
         }
 
-        if (mouse.RightButton == ButtonState.Pressed && previous.RightButton == ButtonState.Released && button?.Key == "bank")
+        if (mouse.RightButton == ButtonState.Pressed && previous.RightButton == ButtonState.Released)
         {
-            act("bankstats");
+            if (button?.Key == "bank")
+            {
+                act("bankstats");
+            }
+            else if (FaxAt(viewport, at, faxes) is { } fax)
+            {
+                act(string.Create(CultureInfo.InvariantCulture, $"faxdismiss:{fax}"));
+            }
         }
 
         return over;
@@ -239,13 +250,41 @@ internal sealed class OriginalBottomPanel : IDisposable
 
         _sprites.Draw(batch, 36, x + ReputationX(state.Reputation), y + 35, Color.White);
 
-        // The fax icons on the left, standing above the panel.
-        for (var i = 0; i < Math.Min(MaxFaxes, state.Faxes.Count); i++)
+        // The fax icons, sliding up out of the door and then left to their places above the panel (UIMessage:onTick);
+        // until one is up it shows only above the panel's edge. The emergency's siren turns.
+        var shown = Math.Min(MaxFaxes, state.Faxes.Count);
+        _drawer.Sync(Enumerable.Range(0, shown).Select(i => state.FaxKeys is { } keys && i < keys.Count ? keys[i] : state.Faxes[i] + ":" + i).ToList());
+        _drawer.Advance(Environment.TickCount64);
+        var strip = new Rectangle(0, bounds.Y - FaxRise, viewport.Width, FaxHeight);
+        for (var i = 0; i < shown; i++)
         {
             var icon = FaxIcon(state.Faxes[i]);
-            var area = FaxArea(viewport, i);
+            var (_, fx, fy) = _drawer.Icons[i];
+            var area = new Rectangle(bounds.X + fx, bounds.Y + fy, FaxWidth, FaxHeight);
             var down = state.IsOn("fax") || (_pressed == "fax" && area.Contains(mouse) && buttons.LeftButton == ButtonState.Pressed);
-            _sprites.Draw(batch, down ? icon + 1 : icon, area.X, area.Y, Color.White);
+            var sprite = down ? icon + 1 : icon;
+            var up = fy == FaxDrawer.StopY;
+            if (up)
+            {
+                _sprites.Draw(batch, sprite, area.X, area.Y, Color.White);
+            }
+            else
+            {
+                _sprites.DrawClipped(batch, sprite, area.X, area.Y, strip, Color.White);
+            }
+
+            if (icon == 43)
+            {
+                var siren = 57 + (int)(Environment.TickCount64 / FaxDrawer.TickMilliseconds % 4);
+                if (up)
+                {
+                    _sprites.Draw(batch, siren, area.X + 10, area.Y + 8, Color.White);
+                }
+                else
+                {
+                    _sprites.DrawClipped(batch, siren, area.X + 10, area.Y + 8, strip, Color.White);
+                }
+            }
         }
     }
 
@@ -320,11 +359,16 @@ internal sealed class OriginalBottomPanel : IDisposable
         return new Rectangle(bounds.X + 1 + (index * FaxWidth), bounds.Y - FaxRise, FaxWidth, FaxHeight);
     }
 
-    private static int? FaxAt(Viewport viewport, Point at, int faxes)
+    /// <summary>The fax icon under the mouse, where the icons are now (in their places before they are first drawn).</summary>
+    private int? FaxAt(Viewport viewport, Point at, int faxes)
     {
+        var bounds = Bounds(viewport);
         for (var i = 0; i < Math.Min(MaxFaxes, faxes); i++)
         {
-            if (FaxArea(viewport, i).Contains(at))
+            var area = i < _drawer.Icons.Count
+                ? new Rectangle(bounds.X + _drawer.Icons[i].X, bounds.Y + _drawer.Icons[i].Y, FaxWidth, FaxHeight)
+                : FaxArea(viewport, i);
+            if (area.Contains(at))
             {
                 return i;
             }
@@ -342,4 +386,73 @@ internal sealed class OriginalBottomPanel : IDisposable
     /// the hotkey action that opens it too.
     /// </summary>
     private sealed record PanelButton(string Key, string Label, int Sprite, int X, Rectangle Hit, int Pressed, bool Hover, string Tooltip, string? Lit, string Hotkey);
+}
+
+/// <summary>
+/// Where the fax icons are (CorsixTH's UIMessage positions): a new one starts in the fax door (175, 4), rises 8 pixels a
+/// tick to 24 above the panel, then moves left 3 a tick to its place, 30 pixels for each icon before it; when one goes,
+/// those after it move left to their new places.
+/// </summary>
+internal sealed class FaxDrawer
+{
+    /// <summary>One of CorsixTH's UI ticks.</summary>
+    public const long TickMilliseconds = 1000 / 18;
+
+    public const int StartX = 175;
+    public const int StartY = 4;
+    public const int StopY = -24;
+
+    private readonly List<(string Key, int X, int Y)> _icons = [];
+    private long _last;
+
+    public IReadOnlyList<(string Key, int X, int Y)> Icons => _icons;
+
+    /// <summary>The place an icon slides to: 1 + 30 for each before it (setXLimit).</summary>
+    public static int StopX(int index) => 1 + (index * 30);
+
+    /// <summary>Keeps the icons of the faxes shown, in their order: new ones start in the door, gone ones are dropped.</summary>
+    public void Sync(IReadOnlyList<string> keys)
+    {
+        var old = _icons.ToDictionary(icon => icon.Key, StringComparer.Ordinal);
+        _icons.Clear();
+        foreach (var key in keys)
+        {
+            _icons.Add(old.TryGetValue(key, out var icon) ? icon : (key, StartX, StartY));
+        }
+    }
+
+    /// <summary>Moves the icons on by the ticks that have passed since the last call.</summary>
+    public void Advance(long now)
+    {
+        if (_last == 0)
+        {
+            _last = now;
+        }
+
+        var ticks = Math.Min(100, (now - _last) / TickMilliseconds);
+        _last += ticks * TickMilliseconds;
+        for (var i = 0; i < ticks; i++)
+        {
+            Tick();
+        }
+    }
+
+    /// <summary>UIMessage:onTick for each icon.</summary>
+    public void Tick()
+    {
+        for (var i = 0; i < _icons.Count; i++)
+        {
+            var (key, x, y) = _icons[i];
+            if (y > StopY)
+            {
+                y = Math.Max(StopY, y - 8);
+            }
+            else if (x > StopX(i))
+            {
+                x = Math.Max(StopX(i), x - 3);
+            }
+
+            _icons[i] = (key, x, y);
+        }
+    }
 }

@@ -40,4 +40,38 @@ public sealed class OriginalBottomPanelTests
         Assert.Equal(new Point(320 + 322 + 18, 752 + 24), OriginalBottomPanel.FindButton(viewport, "Hire"));
         Assert.Null(OriginalBottomPanel.FindButton(viewport, "Nothing"));
     }
+
+    [Fact]
+    public void AFaxIconRisesOutOfTheDoorThenSlidesToItsPlace()
+    {
+        var drawer = new FaxDrawer();
+        drawer.Sync(["a"]);
+        Assert.Equal(("a", 175, 4), drawer.Icons[0]);
+        for (var i = 0; i < 3; i++)
+        {
+            drawer.Tick();
+        }
+
+        Assert.Equal(("a", 175, -20), drawer.Icons[0]);
+        drawer.Tick();
+        Assert.Equal(("a", 175, -24), drawer.Icons[0]);
+        drawer.Tick();
+        Assert.Equal(("a", 172, -24), drawer.Icons[0]);
+        for (var i = 0; i < 100; i++)
+        {
+            drawer.Tick();
+        }
+
+        Assert.Equal(("a", 1, -24), drawer.Icons[0]);
+        drawer.Sync(["a", "b"]);
+        for (var i = 0; i < 100; i++)
+        {
+            drawer.Tick();
+        }
+
+        Assert.Equal(("b", 31, -24), drawer.Icons[1]);
+        drawer.Sync(["b"]);
+        drawer.Tick();
+        Assert.Equal(("b", 28, -24), drawer.Icons[0]);
+    }
 }

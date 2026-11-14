@@ -4350,6 +4350,22 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>A button of the original bottom panel: the dialog it opens or closes, or the tool it starts.</summary>
     private void BottomPanelButton(string key)
     {
+        if (key.StartsWith("faxdismiss:", StringComparison.Ordinal))
+        {
+            // UIMessage:dismissMessage: a fax with only one choice is taken by a right click on its icon; Wrong2.wav otherwise.
+            var index = int.Parse(key["faxdismiss:".Length..], CultureInfo.InvariantCulture);
+            var messages = new FaxWindow().Messages(this);
+            if (index < messages.Count && messages[index].Choices is [{ Enabled: true } only])
+            {
+                only.Choose();
+            }
+            else
+            {
+                _sounds.Play("wrong2.wav");
+            }
+
+            return;
+        }
         // research and edit room have no click sound (setSound()).
         if (key is not ("edit" or "research"))
         {
@@ -4417,7 +4433,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _session.IsPaused ? _texts?.String(3, 22) ?? "Pause" : null,
             PanelFaxes(),
             PanelDialogOpen,
-            Tutorial.Lit);
+            Tutorial.Lit,
+            FaxWindow.Pending(simulation, _session.Player).ToList());
         _bottomPanel.Draw(batch, viewport, state, mouse, InputScript.Mouse());
     }
 
