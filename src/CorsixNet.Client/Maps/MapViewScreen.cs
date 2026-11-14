@@ -1681,8 +1681,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             session.SetSpeed(GameSpeed.Insane);
         }
 
-        // While building, P is the pick-up key.
-        if (pressed(Keys.Space) || (HotkeyInput.Pressed(_hotkeys["ingame_pause"], keys, pressed) && !_buildTool.IsActive))
+        // While building, P is the pick-up key; while placing an object the rotate object key (space) turns it.
+        var rotating = IsPlacingObject && HotkeyInput.Pressed(_hotkeys["ingame_rotateobject"], keys, pressed);
+        if ((pressed(Keys.Space) && !rotating) || (HotkeyInput.Pressed(_hotkeys["ingame_pause"], keys, pressed) && !_buildTool.IsActive && !rotating))
         {
             if (session.IsPaused)
             {
@@ -1952,7 +1953,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 rightClicked,
                 pressed(Keys.Enter) || TakeButton(BuildButton.Confirm),
                 back || TakeButton(BuildButton.Back),
-                pressed(Keys.P) || TakeButton(BuildButton.PickUp));
+                pressed(Keys.P) || TakeButton(BuildButton.PickUp),
+                IsPlacingObject && HotkeyInput.Pressed(_hotkeys["ingame_rotateobject"], keys, pressed));
             var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
             if (tool is { } command)
             {
@@ -3294,6 +3296,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>Whether the fax's 24328 has put the cheats menu on the bar (<c>app.cheats_menu_unlocked</c>), until the game is left.</summary>
     private bool _cheatsMenuUnlocked;
+
+    /// <summary>Whether an object is being placed, in a room or the corridor (UIPlaceObjects is open).</summary>
+    private bool IsPlacingObject => _buildTool.IsPlacingObject || _furnishTool.IsActive;
 
     void IWindowHost.UnlockCheatsMenu() => _cheatsMenuUnlocked = true;
 

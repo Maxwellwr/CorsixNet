@@ -23,6 +23,7 @@ namespace CorsixNet.Client.Maps;
 /// <param name="Confirm">The player confirms the current step (Enter).</param>
 /// <param name="Back">The player steps back (Esc).</param>
 /// <param name="PickUp">The player toggles picking objects up (P).</param>
+/// <param name="Rotate">The rotate object key was pressed (<c>ingame_rotateobject</c>, space by default).</param>
 internal readonly record struct BuildInput(
     TilePosition? Hovered,
     int FractionX,
@@ -33,7 +34,8 @@ internal readonly record struct BuildInput(
     bool RightClicked,
     bool Confirm,
     bool Back,
-    bool PickUp);
+    bool PickUp,
+    bool Rotate = false);
 
 /// <summary>
 /// The player's room building flow, after the original game and CorsixTH's <c>UIEditRoom</c>:
@@ -190,6 +192,9 @@ internal sealed class BuildRoomTool
 
     /// <summary>Whether the room is being furnished: the step with the edit panel's items and buttons.</summary>
     public bool IsFurnishing => _phase == Phase.Objects;
+
+    /// <summary>Whether an object follows the cursor to be placed in the room, so the rotate object key turns it.</summary>
+    public bool IsPlacingObject => _phase == Phase.Objects && _placing is not null;
 
     /// <summary>Whether the pick up button is down.</summary>
     public bool IsPickingUp => _pickingUp;
@@ -912,9 +917,9 @@ internal sealed class BuildRoomTool
             return null;
         }
 
-        if (input.RightClicked)
+        if (input.RightClicked || input.Rotate)
         {
-            // UIPlaceObjects:tryNextOrientation.
+            // UIPlaceObjects:tryNextOrientation, on a right click or the rotate object key.
             PlaySound?.Invoke("swoosh.wav");
             Turn();
         }
