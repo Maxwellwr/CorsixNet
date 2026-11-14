@@ -708,6 +708,14 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     }
                 }
 
+                if (IsFedUp && Next != AfterRoom.Die)
+                {
+                    // Fed up while in the room: home now (CorsixTH sends them at once; here once the visit is over).
+                    IsFedUp = false;
+                    GoHome(simulation, humanoid, ReputationChange.Kicked);
+                    break;
+                }
+
                 switch (Next)
                 {
                     case AfterRoom.SeekRoom:
@@ -2941,6 +2949,16 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Waiting--;
     }
 
+    /// <summary>Whether the patient gave up while in a room and goes home once out of it (fed up near death).</summary>
+    public bool IsFedUp { get; private set; }
+
+    /// <summary>
+    /// <c>Patient:_checkIfCureRoom</c>: whether the room the patient is in is one of their disease's treatment rooms.
+    /// </summary>
+    private bool IsCureRoom(Simulation simulation) =>
+        IsInRoom && Disease is { } disease && simulation.FindEntity(TargetId) is Room room
+        && disease.TreatmentRooms.Contains(room.RoomType, StringComparer.Ordinal);
+
     /// <summary>Entering, in or leaving a room (CorsixTH's <c>getRoom</c>, <c>is_entering</c> or <c>is_leaving</c>).</summary>
     private bool IsInRoom => Phase is >= PatientPhase.EnteringRoom and <= PatientPhase.LeavingRoom;
 
@@ -2995,11 +3013,19 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             // Entered the road of deterioration: waiting too long makes sad.
             Feelings.ChangeHappiness(simulation, humanoid, -0.0002m);
 
-            // CorsixTH also lets a patient in another room give up; here only those outside rooms do (see remarks).
-            if (!IsInRoom && simulation.Random.NextInclusive(1, 30) == 1)
+            // A 1 in 30 chance each of these days (about a third in all) that the patient gives up, unless they are in a
+            // room that cures them (_checkIfCureRoom); one in another room leaves for home once out of it.
+            if (!IsCureRoom(simulation) && simulation.Random.NextInclusive(1, 30) == 1)
             {
-                LeaveQueue(simulation, humanoid);
-                GoHome(simulation, humanoid, ReputationChange.Kicked);
+                if (IsInRoom)
+                {
+                    IsFedUp = true;
+                }
+                else
+                {
+                    LeaveQueue(simulation, humanoid);
+                    GoHome(simulation, humanoid, ReputationChange.Kicked);
+                }
             }
         }
 
@@ -3412,6 +3438,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         writer.WriteInt32(_benchDrink);
         writer.WriteBool(_kingChange);
         writer.WriteByte((byte)HomeMood);
+        writer.WriteBool(IsFedUp);
     }
 
     internal static PatientBehaviour ReadState(SimReader reader)
@@ -3555,6 +3582,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         {
             var mood = reader.ReadByte();
             patient.HomeMood = mood <= (byte)PatientHomeMood.SadMoney ? (PatientHomeMood)mood : throw new InvalidDataException($"Unknown home mood {mood}.");
+        }
+
+        if (reader.Version is 0 or >= 92)
+        {
+            patient.IsFedUp = reader.ReadBool();
         }
 
         return patient;
