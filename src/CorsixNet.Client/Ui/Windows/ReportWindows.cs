@@ -288,6 +288,39 @@ internal sealed class AnnualReportWindow : UiWindow
 /// </summary>
 internal sealed class LevelEndWindow : UiWindow
 {
+    /// <summary>
+    /// World:loseGame's message (<c>information.level_lost</c>): the level is lost, the reason, and the goal passed with
+    /// its limit; or, lost by the cheat, the cheat's line.
+    /// </summary>
+    public static IReadOnlyList<string> LostLines(CorsixNet.Content.OriginalTexts? texts, EndGoal? goal)
+    {
+        string Named(string key, string fallback) => texts?.Named("information.level_lost." + key) ?? fallback;
+        var lines = new List<string> { Named("1", "Bummer! You failed the level. Better luck next time!") };
+        if (goal is not { } lost)
+        {
+            lines.Add(Named("cheat", "Hope you didn't click the Lose Level button by accident!"));
+            return lines;
+        }
+
+        lines.Add(Named("2", "The reason you lost:"));
+        var (key, fallback) = lost.Criterion switch
+        {
+            EndCriterion.Reputation => ("reputation", "Your reputation fell below %d."),
+            EndCriterion.Balance => ("balance", "Your bank balance fell below %d."),
+            EndCriterion.PercentageKilled => ("percentage_killed", "You killed more than %d percent of the patients."),
+            EndCriterion.StaffHappiness => ("staff_happiness", "Your average staff happiness fell below %d%."),
+            EndCriterion.PatientHappiness => ("patient_happiness", "Your average patient happiness fell below %d%."),
+            EndCriterion.MonthsPlayed => ("months_played", "You didn't meet the level goals within %d months."),
+            _ => (string.Empty, string.Empty),
+        };
+        if (key.Length > 0)
+        {
+            lines.Add(Named(key, fallback).Replace("%d", lost.Value.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal));
+        }
+
+        return lines;
+    }
+
     public override string Title => UiText.Get("corsixnet.progress.level_over", "Level over");
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
