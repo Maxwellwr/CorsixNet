@@ -19,6 +19,34 @@ public sealed class GameConfigTests : IDisposable
     public void ReadsCorsixThsSettingsAndIgnoresTheOthers()
     {
         var config = GameConfig.Parse("""
+            # Lines starting with # are ignored.
+            language: 'German'
+            fullscreen: true
+            width: 1024
+            height: 768
+            audio: true
+            sound_volume: 0.25
+            play_sounds: false
+            prevent_edge_scrolling: true
+            scrolling_momentum: 0.5
+            zoom_speed: 120
+            scroll_speed: 3
+            shift_scroll_speed: 6.5
+            midi_api: ~
+            enable_screen_shake: false
+            autosave_frequency: 3
+            theme_hospital_install: 'D:\Games\Theme Hospital\data\Game'
+            player_name: Maxim
+            free_build_mode: true
+            """);
+
+        AssertReadSettings(config);
+    }
+
+    [Fact]
+    public void ImportsCorsixThsConfigTxt()
+    {
+        var config = GameConfig.ParseLegacy("""
             ------------------------- CorsixTH configuration file -------------------------
             -- Lines starting with two dashes (like this one) are ignored.
             language = [[German]]
@@ -39,8 +67,35 @@ public sealed class GameConfigTests : IDisposable
             theme_hospital_install = [[D:\Games\Theme Hospital\data\Game]]
             player_name = [[Maxim]]
             free_build_mode = true
+            unicode_fonts = { Russian = [[C:\Fonts\tahoma.ttf]] }
             """);
 
+        AssertReadSettings(config);
+        Assert.Equal(@"C:\Fonts\tahoma.ttf", config.LanguageFont(["Russian"]));
+    }
+
+    [Fact]
+    public void TheOldConfigTxtIsImportedOnceIntoConfigYaml()
+    {
+        var folder = Path.Combine(_folder, "CorsixNet");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, GameConfig.LegacyFileName), "width = 900\nlanguage = [[Russian]]\n");
+        var path = Path.Combine(folder, GameConfig.FileName);
+
+        var config = GameConfig.Load(path);
+
+        Assert.Equal(900, config.Width);
+        Assert.Equal("Russian", config.Language);
+        Assert.True(File.Exists(path));
+        Assert.Equal(config, GameConfig.Parse(File.ReadAllText(path)));
+
+        // From then on config.yaml is read.
+        File.WriteAllText(path, "width: 1000");
+        Assert.Equal(1000, GameConfig.Load(path).Width);
+    }
+
+    private static void AssertReadSettings(GameConfig config)
+    {
         Assert.Equal("German", config.Language);
         Assert.Equal(StringTable.German, config.OriginalLanguageNumber());
         Assert.True(config.Fullscreen);
@@ -59,7 +114,7 @@ public sealed class GameConfigTests : IDisposable
     [Fact]
     public void KeepsTheDefaultsForMissingSettingsAndValuesOfTheWrongType()
     {
-        var config = GameConfig.Parse("width = [[wide]]\nheight = 600.5\nfullscreen = 1\nsound_volume = [[loud]]\n");
+        var config = GameConfig.Parse("width: wide\nheight: 600.5\nfullscreen: 1\nsound_volume: 'loud'\nlanguage: 12\n");
 
         Assert.Equal(new GameConfig(), config);
         Assert.Equal("English", config.Language);
@@ -72,6 +127,7 @@ public sealed class GameConfigTests : IDisposable
     public void RefusesAFileThatIsNotASettingsFile()
     {
         Assert.Throws<InvalidDataException>(() => GameConfig.Parse("print('hello')"));
+        Assert.Throws<InvalidDataException>(() => GameConfig.Parse("width: [1, 2"));
     }
 
     [Fact]
@@ -95,7 +151,7 @@ public sealed class GameConfigTests : IDisposable
             ShiftScrollSpeed = 8,
             ThemeHospitalInstall = @"C:\Games\Theme Hospital",
             UnicodeFont = @"C:\Windows\Fonts\arial.ttf",
-            PlayerName = "Name with ]] and ]=] in it]",
+            PlayerName = "Name with 'quotes', ]] and # in it",
         };
 
         Assert.Equal(config, GameConfig.Parse(config.ToText()));
@@ -112,7 +168,7 @@ public sealed class GameConfigTests : IDisposable
         Assert.True(File.Exists(path));
         Assert.Equal(config, GameConfig.Parse(File.ReadAllText(path)));
 
-        File.WriteAllText(path, "width = 900");
+        File.WriteAllText(path, "width: 900");
         Assert.Equal(900, GameConfig.Load(path).Width);
     }
 

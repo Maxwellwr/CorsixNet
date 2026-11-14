@@ -53,7 +53,7 @@ public sealed class HotkeyAssignWindowTests
     public void ResetGoesBackToTheDefaultsAndCancelKeepsTheOldKeys()
     {
         var host = new WindowTestHost();
-        var current = Hotkeys.Parse("ingame_panel_bankManager = \"g\"");
+        var current = Hotkeys.Parse("ingame_panel_bankManager: g");
         Hotkeys? accepted = null;
         var window = new HotkeyAssignWindow(current, keys => accepted = keys);
         host.Opened.Add(window);

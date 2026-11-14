@@ -3817,7 +3817,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         OpenMainMenu();
     }
 
-    /// <summary>The options window's Apply: the new settings are saved to <c>config.txt</c> and used at once.</summary>
+    /// <summary>The options window's Apply: the new settings are saved to <c>config.yaml</c> and used at once.</summary>
     private void ApplyConfig(GameConfig config)
     {
         _config = config;

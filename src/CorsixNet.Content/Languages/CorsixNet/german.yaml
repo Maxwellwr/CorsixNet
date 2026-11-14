@@ -154,11 +154,11 @@ strings:
       game_font: Spielschrift
       system_font: System
     new_game:
-      player_name_hint: (player_name in config.txt)
+      player_name_hint: (player_name in config.yaml)
     custom_game:
-      none: 'Keine Level gefunden: Legen Sie .level- und .map-Dateien in den Level-Ordner (levels in config.txt).'
+      none: 'Keine Level gefunden: Legen Sie .level- und .map-Dateien in den Level-Ordner (levels in config.yaml).'
     custom_campaign:
-      none: 'Keine Kampagnen gefunden: Legen Sie .campaign-Dateien in den Kampagnen-Ordner (campaigns in config.txt).'
+      none: 'Keine Kampagnen gefunden: Legen Sie .campaign-Dateien in den Kampagnen-Ordner (campaigns in config.yaml).'
     information:
       caption: Information
     confirm:
@@ -523,7 +523,7 @@ strings:
       status_paste: Linksklick fügt den kopierten Bereich ein; Ziehen mit links füllt einen Bereich damit.
       status_default: Wählen Sie eine Seite; Ziehen mit rechts auf der Karte kopiert einen Bereich.
       load_map_caption: Karte laden
-      no_maps: 'Keine Karten gefunden: Karten werden im Level-Ordner gespeichert (levels in config.txt).'
+      no_maps: 'Keine Karten gefunden: Karten werden im Level-Ordner gespeichert (levels in config.yaml).'
     status:
       cannot_load_level: '%1% konnte nicht geladen werden: %2%'
       no_levels: Keine Level gefunden.

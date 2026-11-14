@@ -211,7 +211,7 @@ internal sealed class MapListWindow(IReadOnlyList<string> paths, Action<string> 
     {
         if (paths.Count == 0)
         {
-            yield return WindowCell.Line(UiText.Get("corsixnet.map_editor.no_maps", "No maps found: maps are saved in the levels folder (levels in config.txt)."), dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.map_editor.no_maps", "No maps found: maps are saved in the levels folder (levels in config.yaml)."), dim: true);
         }
 
         foreach (var path in paths)

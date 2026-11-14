@@ -30,7 +30,7 @@ first original level:
 
 | Key | Action |
 |---|---|
-| Arrows / WASD, screen edges, right or middle drag | Pan (Shift: faster; speeds in `config.txt`) |
+| Arrows / WASD, screen edges, right or middle drag | Pan (Shift: faster; speeds in `config.yaml`) |
 | Mouse wheel, = / - (Shift: five times as far) | Zoom |
 | 0 | Original size |
 | Alt+0-9 / Ctrl+0, Ctrl+5-9 | Remember the view / go back to it |

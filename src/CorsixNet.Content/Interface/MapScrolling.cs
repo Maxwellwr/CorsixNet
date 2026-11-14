@@ -4,7 +4,7 @@
 
 namespace CorsixNet.Content.Interface;
 
-/// <summary>The player's scrolling settings, as in CorsixTH's <c>config.txt</c>.</summary>
+/// <summary>The player's scrolling settings, as in the settings file (<c>config.yaml</c>).</summary>
 /// <param name="ScrollSpeed"><c>scroll_speed</c>: how fast the arrow keys and the screen edges scroll.</param>
 /// <param name="ShiftScrollSpeed"><c>shift_scroll_speed</c>: the same with Shift held.</param>
 /// <param name="ZoomSpeed"><c>zoom_speed</c>: how far a turn of the mouse wheel zooms.</param>

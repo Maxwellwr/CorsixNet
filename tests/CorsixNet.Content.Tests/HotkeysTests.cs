@@ -18,10 +18,11 @@ public sealed class HotkeysTests : IDisposable
     public void ReadsKeysAndModifiersAndKeepsTheDefaultsForTheRest()
     {
         var hotkeys = Hotkeys.Parse("""
-            -- My keys.
-            ingame_panel_bankManager = "B"
-            ingame_panel_adviserHistory = {"alt", "shift", "m"}
-            ingame_pause = "space"
+            # My keys.
+            ingame_panel_bankManager: B
+            ingame_panel_adviserHistory: [alt, shift, m]
+            ingame_pause: 'space'
+
             """);
 
         Assert.Equal(new Hotkey("b"), hotkeys["ingame_panel_bankManager"]);
@@ -35,10 +36,10 @@ public sealed class HotkeysTests : IDisposable
     public void IgnoresUnknownActionsAndValuesThatAreNotKeys()
     {
         var hotkeys = Hotkeys.Parse("""
-            ingame_panel_casebook = "printscreen"
-            ingame_panel_research = {"hyper", "r"}
-            ingame_panel_policy = 9
-            ingame_poopLog = "f12"
+            ingame_panel_casebook: printscreen
+            ingame_panel_research: [hyper, r]
+            ingame_panel_policy: 9
+            ingame_poopLog: f12
             """);
 
         Assert.Equal(new Hotkey("f5"), hotkeys["ingame_panel_casebook"]);
@@ -91,7 +92,7 @@ public sealed class HotkeysTests : IDisposable
 
     [Fact]
     public void RejectsTextThatIsNotAHotkeysFile() =>
-        Assert.Throws<InvalidDataException>(() => Hotkeys.Parse("print('hello')"));
+        Assert.Throws<InvalidDataException>(() => Hotkeys.Parse("[print, hello]"));
 
     [Fact]
     public void WritesTheDefaultsWhenThereIsNoFileAndReadsThemBack()
@@ -113,9 +114,9 @@ public sealed class HotkeysTests : IDisposable
     public void TheCameraAndSpeedKeysAreCorsixThsAndCanBeChanged()
     {
         var hotkeys = Hotkeys.Parse("""
-            ingame_zoom_in = "up"
-            ingame_recallPosition_7 = {"shift", "7"}
-            ingame_gamespeed_normal = "f12"
+            ingame_zoom_in: up
+            ingame_recallPosition_7: [shift, '7']
+            ingame_gamespeed_normal: f12
             """);
 
         Assert.Equal(new Hotkey("up"), hotkeys["ingame_zoom_in"]);
@@ -130,12 +131,26 @@ public sealed class HotkeysTests : IDisposable
     [Fact]
     public void ARewrittenFileKeepsTheChangedKeys()
     {
-        var hotkeys = Hotkeys.Parse("""ingame_quickSave = {"ctrl", "s"}""");
+        var hotkeys = Hotkeys.Parse("ingame_quickSave: [ctrl, s]\ningame_zoom_out_more: ['shift', '-']");
 
         var reread = Hotkeys.Parse(hotkeys.ToText());
 
         Assert.Equal(new Hotkey("s", Ctrl: true), reread["ingame_quickSave"]);
-        Assert.Contains("""ingame_quickSave = {"ctrl", "s"}""", hotkeys.ToText(), StringComparison.Ordinal);
+        Assert.Equal(new Hotkey("-", Shift: true), reread["ingame_zoom_out_more"]);
+        Assert.Contains("ingame_quickSave: ['ctrl', 's']", hotkeys.ToText(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheOldHotkeysTxtIsImportedOnce()
+    {
+        Directory.CreateDirectory(_folder);
+        File.WriteAllText(Path.Combine(_folder, Hotkeys.LegacyFileName), "ingame_pause = {\"ctrl\", \"q\"}\n");
+        var path = Path.Combine(_folder, Hotkeys.FileName);
+
+        var hotkeys = Hotkeys.Load(path);
+
+        Assert.Equal(new Hotkey("q", Ctrl: true), hotkeys["ingame_pause"]);
+        Assert.Equal(new Hotkey("q", Ctrl: true), Hotkeys.Parse(File.ReadAllText(path))["ingame_pause"]);
     }
 
     [Theory]

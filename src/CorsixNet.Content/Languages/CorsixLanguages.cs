@@ -20,7 +20,7 @@ public sealed record CorsixLanguage(IReadOnlyList<string> Names, string? Font)
     /// <summary>The name in the language itself.</summary>
     public string NativeName => Names[0];
 
-    /// <summary>The English name, as config.txt's <c>language</c> takes it.</summary>
+    /// <summary>The English name, as config.yaml's <c>language</c> takes it.</summary>
     public string EnglishName => Names.Count > 1 ? Names[1] : Names[0];
 
     /// <summary>Whether the original's bitmap font draws it (code page 437).</summary>

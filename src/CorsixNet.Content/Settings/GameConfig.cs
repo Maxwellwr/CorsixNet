@@ -1,5 +1,5 @@
 // The settings file, ported from CorsixTH CorsixTH/Lua/config_finder.lua (find_config, new_config_defaults,
-// config_contents, load_config, save_config) for the settings CorsixNet uses so far.
+// config_contents, load_config, save_config) for the settings CorsixNet uses so far, kept as YAML.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -10,8 +10,9 @@ using CorsixNet.Formats;
 namespace CorsixNet.Content.Settings;
 
 /// <summary>
-/// The player's settings, kept in <c>config.txt</c> in CorsixTH's format: Lua assignments such as
-/// <c>width = 800</c> and <c>language = [[English]]</c>, with CorsixTH's setting names and defaults.
+/// The player's settings, kept in <c>config.yaml</c>: a YAML mapping such as <c>width: 800</c> and
+/// <c>language: 'English'</c>, with CorsixTH's setting names and defaults. A <c>config.txt</c> of CorsixTH's format
+/// (Lua assignments) beside it is imported once when there is no <c>config.yaml</c> yet.
 /// </summary>
 /// <remarks>
 /// Only the settings CorsixNet acts on are read and written; CorsixTH's others (music, movies, the
@@ -20,7 +21,10 @@ namespace CorsixNet.Content.Settings;
 public sealed record GameConfig
 {
     /// <summary>The settings file's name.</summary>
-    public const string FileName = "config.txt";
+    public const string FileName = "config.yaml";
+
+    /// <summary>The file it replaces, in CorsixTH's format, imported once.</summary>
+    public const string LegacyFileName = "config.txt";
 
     /// <summary>An environment variable naming another settings file.</summary>
     public const string PathVariable = "CORSIXNET_CONFIG";
@@ -170,15 +174,19 @@ public sealed record GameConfig
     }
 
     /// <summary>
-    /// <c>load_config</c>: reads the settings file, writing one with the defaults first if there is none. Settings the
-    /// file leaves out or gives a value of the wrong type keep their defaults.
+    /// <c>load_config</c>: reads the settings file, writing one first if there is none: from the old config.txt beside
+    /// it when there is one, else with the defaults. Settings the file leaves out or gives a value of the wrong type
+    /// keep their defaults.
     /// </summary>
     /// <exception cref="InvalidDataException">The file is not a settings file.</exception>
     public static GameConfig Load(string path)
     {
         if (!File.Exists(path))
         {
-            var defaults = new GameConfig();
+            var legacy = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".", LegacyFileName);
+            var defaults = string.Equals(Path.GetFileName(path), FileName, StringComparison.OrdinalIgnoreCase) && File.Exists(legacy)
+                ? ParseLegacy(File.ReadAllText(legacy))
+                : new GameConfig();
             try
             {
                 defaults.Save(path);
@@ -196,9 +204,14 @@ public sealed record GameConfig
 
     /// <summary>Reads the settings from a settings file's text.</summary>
     /// <exception cref="InvalidDataException">The text is not a settings file.</exception>
-    public static GameConfig Parse(string text)
+    public static GameConfig Parse(string text) => FromValues(SettingsYaml.Parse(text));
+
+    /// <summary>Reads the settings from the old config.txt's text (CorsixTH's Lua assignments).</summary>
+    /// <exception cref="InvalidDataException">The text is not a settings file.</exception>
+    public static GameConfig ParseLegacy(string text) => FromValues(SettingsYaml.FromLua(text));
+
+    private static GameConfig FromValues(Dictionary<string, object?> values)
     {
-        var values = LuaAssignments.Parse(text);
         var defaults = new GameConfig();
         bool Bool(string name, bool fallback) => values.GetValueOrDefault(name) is bool value ? value : fallback;
         int Int(string name, int fallback) => values.GetValueOrDefault(name) is decimal value && value == decimal.Truncate(value) && value is >= int.MinValue and <= int.MaxValue ? (int)value : fallback;
@@ -216,8 +229,8 @@ public sealed record GameConfig
             AutosaveFrequency = Int("autosave_frequency", defaults.AutosaveFrequency),
             ThemeHospitalInstall = Text("theme_hospital_install", defaults.ThemeHospitalInstall),
             UnicodeFont = Text("unicode_font", defaults.UnicodeFont),
-            LanguageFonts = values.GetValueOrDefault("unicode_fonts") is LuaTable fonts
-                ? new LanguageFonts(fonts.Fields.Where(field => field.Value is string).Select(field => KeyValuePair.Create(field.Key, (string)field.Value!)))
+            LanguageFonts = values.GetValueOrDefault("unicode_fonts") is Dictionary<string, object?> fonts
+                ? new LanguageFonts(fonts.Where(field => field.Value is string).Select(field => KeyValuePair.Create(field.Key, (string)field.Value!)))
                 : defaults.LanguageFonts,
             Levels = Text("levels", defaults.Levels),
             Campaigns = Text("campaigns", defaults.Campaigns),
@@ -253,215 +266,211 @@ public sealed record GameConfig
     {
         var text = new StringBuilder();
         text.Append("""
-            ------------------------- CorsixNet configuration file -------------------------
-            -- Lines starting with two dashes (like this one) are ignored.
-            -- Text settings should have their values between double square braces, e.g.
-            --  setting = [[value]]
-            -- Number settings should not have anything around their value,
-            -- e.g. setting = 42
-            -- If you wish to go back to the default settings for everything, you can delete
-            -- this text file and it will be re-created when you play the game.
-            -- The settings and their meaning are CorsixTH's.
-            -------------------------------------------------------------------------------
-            -- Language to use for ingame text. Between the square braces should be one of:
-            --  English  / en / eng
-            --  French   / fr / fre / fra
-            --  German   / de / ger / deu
-            --  Italian  / it / ita
-            --  Spanish  / es / spa
-            --  Swedish  / sv / swe
-            -- or one of CorsixTH's translations the game's font can draw:
-            --  Brazilian Portuguese / pt_br / br    Danish / da / dk    Dutch / nl / dut
-            --  Finnish / fi / fin    Norwegian / nb / nob    Portuguese / pt
-            -- or one drawn with a Unicode font (see unicode_font below):
-            --  Russian / ru / rus    Ukrainian / uk / ukr    Polish / pl / pol
-            --  Czech / cs / cze    Hungarian / hu / hun    Greek / el / gre
-            --  Chinese (simplified) / zh(s)    Chinese (traditional) / zh(t)
-            --  Japanese / ja / jp    Korean / ko / kor
-            -- The game's own language files (LANG-n.DAT) are used where installed, with
-            -- CorsixTH's translation laid over them; otherwise English, or the first one
-            -- installed, is used.
-            --
+            #------------------------ CorsixNet configuration file -------------------------
+            # Lines starting with # (like this one) are ignored. This is YAML.
+            # Text settings have their values between single quotes, e.g.
+            #  setting: 'value'
+            # (a quote inside is written twice). Number settings have nothing around their
+            # value, e.g. setting: 42; true and false are written as they are.
+            # If you wish to go back to the default settings for everything, you can delete
+            # this text file and it will be re-created when you play the game.
+            # The settings and their meaning are CorsixTH's.
+            #------------------------------------------------------------------------------
+            # Language to use for ingame text. Between the square braces should be one of:
+            #  English  / en / eng
+            #  French   / fr / fre / fra
+            #  German   / de / ger / deu
+            #  Italian  / it / ita
+            #  Spanish  / es / spa
+            #  Swedish  / sv / swe
+            # or one of CorsixTH's translations the game's font can draw:
+            #  Brazilian Portuguese / pt_br / br    Danish / da / dk    Dutch / nl / dut
+            #  Finnish / fi / fin    Norwegian / nb / nob    Portuguese / pt
+            # or one drawn with a Unicode font (see unicode_font below):
+            #  Russian / ru / rus    Ukrainian / uk / ukr    Polish / pl / pol
+            #  Czech / cs / cze    Hungarian / hu / hun    Greek / el / gre
+            #  Chinese (simplified) / zh(s)    Chinese (traditional) / zh(t)
+            #  Japanese / ja / jp    Korean / ko / kor
+            # The game's own language files (LANG-n.DAT) are used where installed, with
+            # CorsixTH's translation laid over them; otherwise English, or the first one
+            # installed, is used.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"language = {Quote(Language)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"language: {Quote(Language)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Fullscreen mode. If this is set to false, then the game will run in a window.
-            --
+            #------------------------------------------------------------------------------
+            # Fullscreen mode. If this is set to false, then the game will run in a window.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"fullscreen = {Lua(Fullscreen)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"fullscreen: {Yaml(Fullscreen)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Screen size. Must be at least 640 by 480.
-            --
+            #------------------------------------------------------------------------------
+            # Screen size. Must be at least 640 by 480.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"width = {Width}\nheight = {Height}\n");
+        text.Append(CultureInfo.InvariantCulture, $"width: {Width}\nheight: {Height}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Screen shake during earthquakes. If this is set to false, the screen keeps
-            -- still.
-            --
+            #------------------------------------------------------------------------------
+            # Screen shake during earthquakes. If this is set to false, the screen keeps
+            # still.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"enable_screen_shake = {Lua(EnableScreenShake)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"enable_screen_shake: {Yaml(EnableScreenShake)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Adviser. If set to true, the adviser does not give any advice.
-            --
+            #------------------------------------------------------------------------------
+            # Adviser. If set to true, the adviser does not give any advice.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"adviser_disabled = {Lua(AdviserDisabled)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"adviser_disabled: {Yaml(AdviserDisabled)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Room information dialogs. If set to true, a room's description is shown the
-            -- first time one is built.
-            --
+            #------------------------------------------------------------------------------
+            # Room information dialogs. If set to true, a room's description is shown the
+            # first time one is built.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"room_information_dialogs = {Lua(RoomInformationDialogs)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"room_information_dialogs: {Yaml(RoomInformationDialogs)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- How often the game saves itself:
-            --  0 never, 1 monthly (default), 2 weekly, 3 daily
-            --
+            #------------------------------------------------------------------------------
+            # How often the game saves itself:
+            #  0 never, 1 monthly (default), 2 weekly, 3 daily
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"autosave_frequency = {AutosaveFrequency}\n");
+        text.Append(CultureInfo.InvariantCulture, $"autosave_frequency: {AutosaveFrequency}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Free build mode: levels from a map file (--map), but not campaign levels, are
-            -- played without money. Building and staff cost nothing and there are no goals.
-            --
+            #------------------------------------------------------------------------------
+            # Free build mode: levels from a map file (--map), but not campaign levels, are
+            # played without money. Building and staff cost nothing and there are no goals.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"free_build_mode = {Lua(FreeBuildMode)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"free_build_mode: {Yaml(FreeBuildMode)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- By default destroyed rooms can't be removed. If you would like the game to
-            -- give you the option of removing a destroyed room change this option to true.
-            --
+            #------------------------------------------------------------------------------
+            # By default destroyed rooms can't be removed. If you would like the game to
+            # give you the option of removing a destroyed room change this option to true.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"remove_destroyed_rooms = {Lua(RemoveDestroyedRooms)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"remove_destroyed_rooms: {Yaml(RemoveDestroyedRooms)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Theme Hospital install folder: the folder with the game's DATA, LEVELS and
-            -- QDATA folders. When it is not there, the game is looked for in the usual places.
-            --
+            #------------------------------------------------------------------------------
+            # Theme Hospital install folder: the folder with the game's DATA, LEVELS and
+            # QDATA folders. When it is not there, the game is looked for in the usual places.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"theme_hospital_install = {Quote(ThemeHospitalInstall)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"theme_hospital_install: {Quote(ThemeHospitalInstall)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Font file setting.
-            -- Specify a font file here if you wish to play the game in a language not
-            -- present in the original game. Examples include Russian, Chinese and Polish.
-            -- When it is not there, CorsixTHUnicode.ttf or GoNotoKurrent-Regular.ttf beside
-            -- the game is used, else a font of the system that has the language's letters.
-            --
+            #------------------------------------------------------------------------------
+            # Font file setting.
+            # Specify a font file here if you wish to play the game in a language not
+            # present in the original game. Examples include Russian, Chinese and Polish.
+            # When it is not there, CorsixTHUnicode.ttf or GoNotoKurrent-Regular.ttf beside
+            # the game is used, else a font of the system that has the language's letters.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"unicode_font = {Quote(UnicodeFont)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"unicode_font: {Quote(UnicodeFont)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- A font file for each language, by the language's name, chosen in the
-            -- options window or written here, e.g.
-            --  unicode_fonts = { Russian = [[C:\Windows\Fonts\tahoma.ttf]] }
-            -- A language without one is drawn with the game's own font, or, when that
-            -- has not its letters, with unicode_font above, else a font of the system.
-            --
+            #------------------------------------------------------------------------------
+            # A font file for each language, by the language's name, chosen in the
+            # options window or written here, e.g.
+            #  unicode_fonts:
+            #    Russian: 'C:\Windows\Fonts\tahoma.ttf'
+            # A language without one is drawn with the game's own font, or, when that
+            # has not its letters, with unicode_font above, else a font of the system.
+            #
 
             """);
-        text.Append("unicode_fonts = {");
+        text.Append(LanguageFonts.Count > 0 ? "unicode_fonts:\n" : "unicode_fonts: {}\n");
         foreach (var (language, path) in LanguageFonts.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase))
         {
-            var key = language.Length > 0 && !char.IsAsciiDigit(language[0]) && language.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')
-                ? language
-                : $"[\"{language.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal)}\"]";
-            text.Append(CultureInfo.InvariantCulture, $"\n  {key} = {Quote(path)},");
+            text.Append(CultureInfo.InvariantCulture, $"  {Quote(language)}: {Quote(path)}\n");
         }
-
-        text.Append(LanguageFonts.Count > 0 ? "\n}\n" : " }\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Folders of your own levels and campaigns, listed by the main menu's Single
-            -- Scenario and Custom Campaign. Left empty, they are the Levels and Campaigns
-            -- folders beside the saves folder.
-            --
+            #------------------------------------------------------------------------------
+            # Folders of your own levels and campaigns, listed by the main menu's Single
+            # Scenario and Custom Campaign. Left empty, they are the Levels and Campaigns
+            # folders beside the saves folder.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"levels = {Quote(Levels)}\ncampaigns = {Quote(Campaigns)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"levels: {Quote(Levels)}\ncampaigns: {Quote(Campaigns)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Sounds: By default enabled and set at level 0.5
-            --
+            #------------------------------------------------------------------------------
+            # Sounds: By default enabled and set at level 0.5
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"play_sounds = {Lua(PlaySounds)}\n");
-        text.Append(CultureInfo.InvariantCulture, $"sound_volume = {Number(SoundVolume)}\n");
-        text.Append(CultureInfo.InvariantCulture, $"play_announcements = {Lua(PlayAnnouncements)}\n");
-        text.Append(CultureInfo.InvariantCulture, $"announcement_volume = {Number(AnnouncementVolume)}\n");
-        text.Append(CultureInfo.InvariantCulture, $"enable_announcer_subtitles = {Lua(EnableAnnouncerSubtitles)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"play_sounds: {Yaml(PlaySounds)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"sound_volume: {Number(SoundVolume)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"play_announcements: {Yaml(PlayAnnouncements)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"announcement_volume: {Number(AnnouncementVolume)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"enable_announcer_subtitles: {Yaml(EnableAnnouncerSubtitles)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Edge scrolling: By default enabled (prevent_edge_scrolling = false).
-            --
+            #------------------------------------------------------------------------------
+            # Edge scrolling: By default enabled (prevent_edge_scrolling = false).
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"prevent_edge_scrolling = {Lua(PreventEdgeScrolling)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"prevent_edge_scrolling: {Yaml(PreventEdgeScrolling)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Scrolling Momentum.
-            -- Determines the amount of momentum when scrolling the map with the mouse.
-            -- This should be a value between 0 and 1 where 0 is no momentum
-            --
+            #------------------------------------------------------------------------------
+            # Scrolling Momentum.
+            # Determines the amount of momentum when scrolling the map with the mouse.
+            # This should be a value between 0 and 1 where 0 is no momentum
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"scrolling_momentum = {Number(ScrollingMomentum)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"scrolling_momentum: {Number(ScrollingMomentum)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Zoom Speed: By default this is set at 80
-            -- Any number value between 10 and 1000, 10 is very slow and 1000 is very fast!
-            --
+            #------------------------------------------------------------------------------
+            # Zoom Speed: By default this is set at 80
+            # Any number value between 10 and 1000, 10 is very slow and 1000 is very fast!
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"zoom_speed = {Number(ZoomSpeed)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"zoom_speed: {Number(ZoomSpeed)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Scroll Speeds: The speed of scrolling with and without shift being held.
-            -- Any number value between 1 and 10, 1 is very slow and 10 is fast!
-            --
+            #------------------------------------------------------------------------------
+            # Scroll Speeds: The speed of scrolling with and without shift being held.
+            # Any number value between 1 and 10, 1 is very slow and 10 is fast!
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"scroll_speed = {Number(ScrollSpeed)}\nshift_scroll_speed = {Number(ShiftScrollSpeed)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"scroll_speed: {Number(ScrollSpeed)}\nshift_scroll_speed: {Number(ShiftScrollSpeed)}\n");
         text.Append("""
 
-            -------------------------------------------------------------------------------
-            -- Your name in network games, between the brace brackets like [[NAME]].
-            --
+            #------------------------------------------------------------------------------
+            # Your name in network games, between single quotes like 'NAME'.
+            #
 
             """);
-        text.Append(CultureInfo.InvariantCulture, $"player_name = {Quote(PlayerName)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"player_name: {Quote(PlayerName)}\n");
         return text.ToString();
     }
 
@@ -494,7 +503,7 @@ public sealed record GameConfig
     public static string? OriginalLanguageName(int number) =>
         OriginalLanguages.FirstOrDefault(language => language.Number == number).Names?[0];
 
-    private static string Lua(bool value) => value ? "true" : "false";
+    private static string Yaml(bool value) => value ? "true" : "false";
 
     private static string Number(decimal value) => value.ToString(CultureInfo.InvariantCulture);
 
@@ -507,15 +516,6 @@ public sealed record GameConfig
             ? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(savesFolder)) ?? savesFolder, name)
             : configured;
 
-    /// <summary>A Lua long string, with enough '=' signs that the text can't close it.</summary>
-    private static string Quote(string value)
-    {
-        var level = string.Empty;
-        while (value.Contains($"]{level}]", StringComparison.Ordinal) || value.EndsWith($"]{level}", StringComparison.Ordinal))
-        {
-            level += "=";
-        }
-
-        return $"[{level}[{value}]{level}]";
-    }
+    /// <summary>A text as a YAML single-quoted scalar.</summary>
+    private static string Quote(string value) => SettingsYaml.Quote(value);
 }
