@@ -1709,22 +1709,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var hand = new TilePosition(handPoint.X, handPoint.Y);
             if (_pickedUpStaff is { } carried)
             {
-                // UIPlaceStaff:close: put down or not, the member of staff is let go.
-                _pickedUpStaff = null;
-                _sounds.Play("plac_st2.wav");
-                if (simulation.FindEntity(carried) is Humanoid held && held.Tile != hand)
-                {
-                    var problem = StaffMoving.Check(simulation, carried, hand, _session.Player);
-                    if (problem == StaffHireProblem.None)
-                    {
-                        AdviseOnPlacement(simulation, held.Profile, hand, carried);
-                        _session.Submit(new MoveStaffCommand(carried, hand));
-                    }
-                    else
-                    {
-                        ShowNotice($"Cannot put the member of staff down there: {problem}");
-                    }
-                }
+                PutDownCarried(simulation, carried, hand, StaffPlacing.Click(candidateGone: false, left: true, right: false, _session.IsPaused));
             }
             else
             {
@@ -1737,7 +1722,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 if (_pickedUpStaff is not null)
                 {
                     _sounds.Play("pickup.wav"); // the pickup action
-                    ShowNotice("Picked up; M puts them down at the cursor");
+                    ShowNotice("Picked up: click to put them down, right click lets them go");
                 }
             }
         }
@@ -1854,7 +1839,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _furnishTool.Cycle(simulation.Content, backwards: shift);
         }
 
-        if (UpdateHiring(simulation, mouse))
+        if (UpdateHiring(simulation, mouse) || UpdateCarrying(simulation, mouse))
         {
             return;
         }
@@ -3016,7 +3001,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _pickedUpStaff = staffId;
         _sounds.Play("pickup.wav");
-        ShowNotice("Picked up; M puts them down at the cursor");
+        ShowNotice("Picked up: click to put them down, right click lets them go");
     }
 
     void IWindowHost.CenterOn(TilePosition tile) => _camera.Center = Camera.TileCenter(tile.X, tile.Y);
@@ -3716,13 +3701,25 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var index = simulation.AvailableStaff(hiring.Class).ToList().IndexOf(hiring.Profile);
-        if (index < 0 || (mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released))
+        var click = StaffPlacing.Click(
+            candidateGone: index < 0,
+            left: mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released,
+            right: mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released,
+            paused: _session!.IsPaused);
+        if (click == StaffPlacingClick.Cancel)
         {
             _hiring = null;
             return true;
         }
 
-        if (mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released && _staffTile is { } point)
+        if (click == StaffPlacingClick.Paused)
+        {
+            ShowNotice("The game is paused: unpause it to place the new member of staff");
+            _sounds.Play("wrong2.wav");
+            return true;
+        }
+
+        if (click == StaffPlacingClick.Place && _staffTile is { } point)
         {
             var tile = new TilePosition(point.X, point.Y);
             var problem = StaffHiring.Check(simulation, hiring.Class, index, tile, _session!.Player);
@@ -3741,6 +3738,74 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// <c>UIPlaceStaff</c> for a member of staff picked up (the staff window's Pick up, or M): a left click puts them
+    /// down on the tile under the cursor, a right click lets them go where they are.
+    /// </summary>
+    /// <returns>Whether someone is being carried, so the click was for that.</returns>
+    private bool UpdateCarrying(Simulation simulation, MouseState mouse)
+    {
+        if (_pickedUpStaff is not { } carried)
+        {
+            return false;
+        }
+
+        var click = StaffPlacing.Click(
+            candidateGone: simulation.FindEntity(carried) is not Humanoid { IsDespawning: false, IsFired: false },
+            left: mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released,
+            right: mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released,
+            paused: _session!.IsPaused);
+        if (click == StaffPlacingClick.Place && _staffTile is null)
+        {
+            return true;
+        }
+
+        PutDownCarried(simulation, carried, _staffTile is { } at ? new TilePosition(at.X, at.Y) : default, click);
+        return true;
+    }
+
+    /// <summary>
+    /// <c>UIPlaceStaff:onMouseUp</c> and <c>close</c> for the member of staff carried: put down on <paramref name="hand"/>
+    /// if they may stand there (on their own tile, simply let go), else they stay on the cursor and the adviser says so;
+    /// a cancel lets them go where they are. Nothing happens while paused.
+    /// </summary>
+    private void PutDownCarried(Simulation simulation, int carried, TilePosition hand, StaffPlacingClick click)
+    {
+        switch (click)
+        {
+            case StaffPlacingClick.Paused:
+                ShowNotice("The game is paused: unpause it to put the member of staff down");
+                _sounds.Play("wrong2.wav");
+                return;
+            case StaffPlacingClick.Cancel:
+                _pickedUpStaff = null;
+                _sounds.Play("plac_st2.wav");
+                return;
+            case StaffPlacingClick.Place:
+                break;
+            default:
+                return;
+        }
+
+        if (simulation.FindEntity(carried) is Humanoid held && held.Tile != hand)
+        {
+            var problem = StaffMoving.Check(simulation, carried, hand, _session!.Player);
+            if (problem != StaffHireProblem.None)
+            {
+                // _A.placement_info.staff_cannot_place: they stay on the cursor.
+                ShowNotice($"Cannot put the member of staff down there: {problem}");
+                _sounds.Play("wrong2.wav");
+                return;
+            }
+
+            AdviseOnPlacement(simulation, held.Profile, hand, carried);
+            _session.Submit(new MoveStaffCommand(carried, hand));
+        }
+
+        _pickedUpStaff = null;
+        _sounds.Play("plac_st2.wav");
     }
 
     private void ShowNotice(string text)
