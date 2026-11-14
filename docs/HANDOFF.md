@@ -267,8 +267,10 @@ Done and committed:
   Content/Languages/CorsixTH (copied to Languages/ beside the game); `LuaChunk` parses them and `CorsixLanguages`
   evaluates them as strings.lua (merging assignments, Inherit, original_strings' S[s][i] names). `OriginalTexts.String`,
   disease texts, VIP names, introduction texts and room descriptions come from the translation where it has them, so
-  english.lua's corrections apply too. The options list CorsixTH's languages drawn with the game's font (cp437);
-  Russian (Font "mik") and the Unicode-font languages are left out until those fonts are drawn. CorsixTH's own adviser
+  english.lua's corrections apply too. The options list CorsixTH's languages drawn with the game's font (cp437),
+  and since 2026-11-14 (cloud) also Russian (Font "mik") and the Unicode-font languages, drawn with a TrueType font
+  (unicode_font, else CorsixTHUnicode.ttf/GoNotoKurrent-Regular.ttf beside the game, else a system font with the
+  language's letters; see ARCHITECTURE.md, "Settings"). Not looked at live yet: wants a look on MSI with Russian. CorsixTH's own adviser
   messages (no_desk_*, another_desk, *_needs_desk_*, not_enough_lecture_chairs) carry their names (`Advice.Name`), and
   the main menu and the new game window take main_menu.*, new_game_window.* and their tooltips (`CorsixText.Get`). Staff
   names, descriptions and professions come from the translation's humanoid_name_starts/_ends, staff_descriptions and

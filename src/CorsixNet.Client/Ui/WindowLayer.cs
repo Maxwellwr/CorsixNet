@@ -25,17 +25,24 @@ internal sealed class WindowLayer
 
     private readonly List<OpenWindow> _open = [];
     private readonly Func<string, int> _measure;
-    private readonly int _lineHeight;
+    private readonly Func<int> _textHeight;
     private OpenWindow? _dragging;
     private Point _dragOffset;
 
     /// <param name="measure">The width of a text in pixels.</param>
-    /// <param name="textHeight">The height of a line of text.</param>
-    public WindowLayer(Func<string, int> measure, int textHeight)
+    /// <param name="textHeight">The height of a line of text, which changes with the language's font.</param>
+    public WindowLayer(Func<string, int> measure, Func<int> textHeight)
     {
         _measure = measure;
-        _lineHeight = textHeight + 6;
+        _textHeight = textHeight;
     }
+
+    public WindowLayer(Func<string, int> measure, int textHeight)
+        : this(measure, () => textHeight)
+    {
+    }
+
+    private int RowHeight => _textHeight() + 6;
 
     /// <summary>The open windows, back to front.</summary>
     public IEnumerable<UiWindow> Windows => _open.Select(open => open.Window);
@@ -260,8 +267,8 @@ internal sealed class WindowLayer
             var screen = _open.Select(open => open.Layout?.Bounds ?? Rectangle.Empty).Aggregate(Rectangle.Union);
             var width = _measure(tooltip) + (2 * 4);
             var x = Math.Clamp(mouse.X - (width / 2), 0, Math.Max(0, screen.Right - width));
-            var y = Math.Max(0, mouse.Y - _lineHeight - 8);
-            batch.Draw(pixel, new Rectangle(x, y, width, _lineHeight), TooltipColor);
+            var y = Math.Max(0, mouse.Y - RowHeight - 8);
+            batch.Draw(pixel, new Rectangle(x, y, width, RowHeight), TooltipColor);
             text.Draw(batch, tooltip, new Vector2(x + 4, y + 3));
         }
     }
@@ -297,15 +304,15 @@ internal sealed class WindowLayer
         }
 
         var pinned = open.Window.IsPinned;
-        var titleHeight = pinned ? 0 : _lineHeight;
+        var titleHeight = pinned ? 0 : RowHeight;
         var title = open.Window.Hotkey is { } key ? $"{open.Window.Title}  ({key})" : open.Window.Title;
         var tableWidth = columns.Count == 0 ? 0 : columns.Sum() + (ColumnGap * (columns.Count - 1));
         var canvas = open.Window.CanvasSize ?? Point.Zero;
-        var width = Math.Max(Math.Max(Math.Max(tableWidth, spanWidth), canvas.X), pinned ? 0 : _measure(title) + _lineHeight + Padding) + (2 * Padding);
+        var width = Math.Max(Math.Max(Math.Max(tableWidth, spanWidth), canvas.X), pinned ? 0 : _measure(title) + RowHeight + Padding) + (2 * Padding);
         width = pinned ? screen.Width : Math.Min(width, screen.Width);
         var canvasHeight = canvas.Y > 0 ? canvas.Y + Padding : 0;
-        var visibleRows = Math.Max(1, Math.Min(rows.Count, ((screen.Height - titleHeight - canvasHeight - (2 * Padding)) / _lineHeight) - 1));
-        var height = titleHeight + (visibleRows * _lineHeight) + canvasHeight + (2 * Padding);
+        var visibleRows = Math.Max(1, Math.Min(rows.Count, ((screen.Height - titleHeight - canvasHeight - (2 * Padding)) / RowHeight) - 1));
+        var height = titleHeight + (visibleRows * RowHeight) + canvasHeight + (2 * Padding);
         if (pinned)
         {
             open.Position = new Point(screen.X, screen.Bottom - height);
@@ -329,23 +336,23 @@ internal sealed class WindowLayer
         var y = Math.Clamp(open.Position.Y, screen.Y, Math.Max(screen.Y, screen.Bottom - height));
         open.Position = new Point(x, y);
         var bounds = new Rectangle(x, y, width, height);
-        var titleBar = pinned ? Rectangle.Empty : new Rectangle(x, y, width - _lineHeight, _lineHeight);
-        var close = pinned ? Rectangle.Empty : new Rectangle(x + width - _lineHeight, y, _lineHeight, _lineHeight);
+        var titleBar = pinned ? Rectangle.Empty : new Rectangle(x, y, width - RowHeight, RowHeight);
+        var close = pinned ? Rectangle.Empty : new Rectangle(x + width - RowHeight, y, RowHeight, RowHeight);
         var cells = new List<(Rectangle Area, WindowCell Cell)>();
         for (var i = 0; i < visibleRows && i + open.Scroll < rows.Count; i++)
         {
-            var rowY = y + titleHeight + Padding + (i * _lineHeight);
+            var rowY = y + titleHeight + Padding + (i * RowHeight);
             var cellX = x + Padding;
             var column = 0;
             foreach (var cell in rows[i + open.Scroll].Cells)
             {
                 if (cell.Span)
                 {
-                    cells.Add((new Rectangle(cellX, rowY, bounds.Right - Padding - cellX, _lineHeight - 2), cell));
+                    cells.Add((new Rectangle(cellX, rowY, bounds.Right - Padding - cellX, RowHeight - 2), cell));
                     break;
                 }
 
-                cells.Add((new Rectangle(cellX, rowY, columns[column], _lineHeight - 2), cell));
+                cells.Add((new Rectangle(cellX, rowY, columns[column], RowHeight - 2), cell));
                 cellX += columns[column] + ColumnGap;
                 column++;
             }

@@ -56,7 +56,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>How far an earthquake at full strength moves the view, in map pixels (CorsixTH's <c>shake_screen_max_movement</c>).</summary>
     private const float ShakeMaxMovement = 50f;
-    private const int StatusHeight = 36;
 
     private static readonly Color Background = Color.Black;
     private static readonly Color HoverTint = new Color(255, 255, 255) * 0.35f;
@@ -127,6 +126,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly BlueprintDrawing _blueprints;
     private readonly MapRenderer _renderer;
     private readonly TextRenderer _text;
+    private UnicodeFonts _unicodeFonts;
     private readonly Texture2D _diamond;
     private readonly Texture2D _cellOutline;
     private readonly Texture2D _pixel;
@@ -325,7 +325,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _blocks = new SpriteAtlas(device, install.LoadSpriteSheet("DATA", "VBLK-0", complex: false), palette, upscale, sprite => sprite.Width == 64 && sprite.Height == 32);
         _renderer = new MapRenderer(_blocks);
         _text = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT01V", complex: false)), palette);
-        _windows = new WindowLayer(text => _text.Measure(text).Width, _text.LineHeight) { Origin = new Point(8, StatusHeight + 8) };
+        _windows = new WindowLayer(text => _text.Measure(text).Width, () => _text.LineHeight) { Origin = new Point(8, StatusHeight + 8) };
         InputScript.ButtonFinder = _windows.FindButton;
         _windows.Open(new BottomPanel(BottomPanelAction));
         var sprites = install.LoadSpriteSheet("DATA", "VSPR-0", complex: false);
@@ -344,7 +344,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _cursors = null;
         }
         Ui.StaffFaces.Current = Ui.StaffFaces.Load(device, install, palette);
+        _unicodeFonts = new UnicodeFonts(_config.UnicodeFont, AppContext.BaseDirectory);
         _texts = LoadTexts(install, _config);
+        ApplyLanguageFont();
         _sounds = SoundEffects.Load(install, _config);
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
@@ -877,6 +879,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _animations.Dispose();
         _blocks.Dispose();
         _text.Dispose();
+        _unicodeFonts.Dispose();
         _diamond.Dispose();
         _cellOutline.Dispose();
         _pixel.Dispose();
@@ -889,6 +892,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var topLeft = _camera.TopLeft(ViewSize);
         return (Camera.TileCenter(tile.X, tile.Y) - topLeft.ToVector2()) * _camera.Zoom;
     }
+
+    /// <summary>The status bar's height: two lines of text, taller with a TrueType font.</summary>
+    private int StatusHeight => Math.Max(36, (2 * _text.LineHeight) + 10);
 
     private Point ViewSize => new(_device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight));
 
@@ -3314,7 +3320,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
         _sounds = SoundEffects.Load(_install, config);
+        if (!string.Equals(config.UnicodeFont, _unicodeFonts.Configured, StringComparison.Ordinal))
+        {
+            _text.UseTrueType(null);
+            _unicodeFonts.Dispose();
+            _unicodeFonts = new UnicodeFonts(config.UnicodeFont, AppContext.BaseDirectory);
+        }
+
         _texts = LoadTexts(_install, config);
+        ApplyLanguageFont();
         if (_configPath is not null)
         {
             try
@@ -3795,17 +3809,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private static readonly Lazy<CorsixLanguages> TranslationFiles = new(() => CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")));
 
     /// <summary>
-    /// The languages to choose from, as the settings take them: CorsixTH's translations the game's font can draw, by
-    /// English name, then any installed original language none of them names. Translations needing the Russian or a
-    /// Unicode font are left out until those fonts are drawn.
+    /// The languages to choose from, as the settings take them: CorsixTH's translations, by English name, that the
+    /// game's font can draw or a Unicode font can (<c>Graphics:hasLanguageFont</c>; the Russian original's own font,
+    /// "mik", is not read, so Russian takes the Unicode font too), then any installed original language none of them
+    /// names.
     /// </summary>
-    private static List<string> InstalledLanguageNames(ThemeHospitalInstall install)
+    private List<string> InstalledLanguageNames(ThemeHospitalInstall install)
     {
         var translations = TranslationFiles.Value;
-        List<string> names = [.. translations.Languages.Where(language => language.UsesGameFont).Select(language => language.EnglishName)];
+        List<string> names = [.. translations.Languages.Where(CanDraw).Select(language => language.EnglishName)];
         foreach (var original in install.InstalledLanguages().Order().Select(GameConfig.OriginalLanguageName).OfType<string>())
         {
-            if (translations.Find(original) is not { UsesGameFont: true })
+            if (translations.Find(original) is not { } translation || !CanDraw(translation))
             {
                 names.Add(original);
             }
@@ -3814,12 +3829,33 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         return names;
     }
 
+    /// <summary>Whether the language can be shown: with the game's font, or with a Unicode font that has its name's characters.</summary>
+    private bool CanDraw(CorsixLanguage language) => language.UsesGameFont || _unicodeFonts.CanDraw(language.NativeName);
+
+    /// <summary>
+    /// Draws text in the settings' language with the game's font, or with the Unicode font found for the language when
+    /// its translation asks for one (<c>App:initLanguage</c>, <c>Graphics:onChangeLanguage</c>); the status bar and the
+    /// windows below it follow the font's height.
+    /// </summary>
+    private void ApplyLanguageFont()
+    {
+        TrueTypeFace? face = null;
+        if (TranslationFiles.Value.Find(_config.Language) is { UsesGameFont: false } translation)
+        {
+            var sample = translation.NativeName + string.Concat(_texts?.Language?.Strings.Values ?? []);
+            face = _unicodeFonts.Find(sample)?.Face;
+        }
+
+        _text.UseTrueType(face);
+        _windows.Origin = new Point(8, StatusHeight + 8);
+    }
+
     /// <summary>
     /// The texts in the settings' language: the original's strings in that language if installed (or in the one its
     /// CorsixTH translation inherits), else in English, else in the first installed language, with the translation laid
-    /// over them when the game's font can draw it.
+    /// over them when the game's font or a Unicode font can draw it.
     /// </summary>
-    private static OriginalTexts? LoadTexts(ThemeHospitalInstall install, GameConfig config)
+    private OriginalTexts? LoadTexts(ThemeHospitalInstall install, GameConfig config)
     {
         var languages = install.InstalledLanguages();
         if (languages.Count == 0)
@@ -3828,7 +3864,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var translations = TranslationFiles.Value;
-        var translation = translations.Find(config.Language) is { UsesGameFont: true } found ? found : null;
+        var translation = translations.Find(config.Language) is { } found && CanDraw(found) ? found : null;
         var wanted = config.OriginalLanguageNumber() ?? (translation is null ? null : translations.OriginalStringsNumber(translation.EnglishName));
         var language = wanted is { } number && languages.Contains(number) ? number
             : languages.Contains(StringTable.English) ? StringTable.English

@@ -94,6 +94,7 @@ public sealed class GameConfigTests : IDisposable
             ScrollSpeed = 1.5m,
             ShiftScrollSpeed = 8,
             ThemeHospitalInstall = @"C:\Games\Theme Hospital",
+            UnicodeFont = @"C:\Windows\Fonts\arial.ttf",
             PlayerName = "Name with ]] and ]=] in it]",
         };
 
