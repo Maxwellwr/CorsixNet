@@ -104,6 +104,44 @@ public sealed class SettingsWindowTests : IDisposable
     }
 
     [Fact]
+    public void TheLanguageIsTriedOutAtOnceAndGivenBackOnCancel()
+    {
+        var host = new WindowTestHost();
+        var shown = new List<GameConfig>();
+        GameConfig? applied = null;
+        var current = new GameConfig { Language = "English" };
+        var window = new OptionsWindow(current, config => applied = config, ["English", "Français"], preview: shown.Add);
+
+        host.Click(window, "Off");
+        host.Click(window, "+", skip: 4);
+        var tried = Assert.Single(shown);
+        Assert.Equal("Français", tried.Language);
+        Assert.True(tried.PlaySounds); // only the language is tried out, not the rest of the draft
+
+        host.Click(window, "Cancel");
+        window.Closed();
+        Assert.Equal(2, shown.Count);
+        Assert.Equal(current, shown[1]);
+        Assert.Null(applied);
+    }
+
+    [Fact]
+    public void AnAppliedLanguageIsNotGivenBack()
+    {
+        var host = new WindowTestHost();
+        var shown = new List<GameConfig>();
+        GameConfig? applied = null;
+        var window = new OptionsWindow(new GameConfig { Language = "English" }, config => applied = config, ["English", "Français"], preview: shown.Add);
+
+        host.Click(window, "+", skip: 4);
+        host.Click(window, "Apply");
+        window.Closed();
+
+        Assert.Single(shown);
+        Assert.Equal("Français", applied?.Language);
+    }
+
+    [Fact]
     public void TheMenuPassesOnQuitting()
     {
         var host = new WindowTestHost();

@@ -207,6 +207,14 @@ internal abstract class UiWindow
     /// <summary>Whether the window has nothing more to show, such as a patient who has gone home; it is closed then.</summary>
     public virtual bool IsDone(IWindowHost host) => false;
 
+    /// <summary>
+    /// The window has been closed, by a button of its own, its close box, Esc or with every dialog, such as to give
+    /// back settings it tried out while open.
+    /// </summary>
+    public virtual void Closed()
+    {
+    }
+
     /// <summary>The window's table, built afresh each frame from the game's state.</summary>
     public abstract IEnumerable<WindowRow> Rows(IWindowHost host);
 

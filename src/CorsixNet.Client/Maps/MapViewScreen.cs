@@ -3347,7 +3347,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The options, with the hotkey assignment dialog (<c>UIOptions:buttonHotkey</c>), which goes back to them.</summary>
     private OptionsWindow NewOptionsWindow() =>
-        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices);
+        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage);
 
     /// <summary>
     /// The system's fonts with every character of the language's translation, for the options window's font choice:
@@ -3803,6 +3803,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         ShowNotice("Settings saved; the screen size changes on the next start");
+    }
+
+    /// <summary>
+    /// The options window's language and font tried out: the texts and the TrueType font are those of
+    /// <paramref name="config"/>'s language at once, without saving; Apply or closing the window settles them.
+    /// </summary>
+    private void PreviewLanguage(GameConfig config)
+    {
+        _config = _config with { Language = config.Language, LanguageFonts = config.LanguageFonts };
+        _texts = LoadTexts(_install, _config);
+        ApplyLanguageFont();
     }
 
     /// <summary>Whether the room edit panel's <paramref name="button"/> was pressed; it counts once.</summary>

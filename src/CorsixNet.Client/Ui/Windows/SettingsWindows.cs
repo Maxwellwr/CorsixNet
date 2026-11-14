@@ -107,18 +107,29 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
 /// autosave frequency, and the language among the installed ones (CorsixTH's <c>options.lua</c> language list). Changes
 /// are kept in a draft until Apply, which saves <c>config.txt</c> and uses them at once; the screen size takes effect on
 /// the next start. A language drawn with a TrueType font also gets a choice of font among the system's fonts that
-/// have its letters (<c>unicode_fonts</c>), "System" leaving it to be found as before.
+/// have its letters (<c>unicode_fonts</c>), "System" leaving it to be found as before. The language and the font are
+/// tried out as soon as they are stepped to, as CorsixTH's language list changes the language on a click; closing the
+/// window without Apply gives the ones it opened with back.
 /// </summary>
 /// <param name="fonts">
 /// The fonts the language can be drawn with, by name; null for a language the game's font draws, empty while they are
 /// still being looked for.
 /// </param>
-internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, IReadOnlyList<(string Name, string Path)>?>? fonts = null) : UiWindow
+/// <param name="preview">
+/// Shows the game in a language and font without saving them: the settings the window opened with but for the draft's
+/// language and fonts, or those it opened with when it closes without Apply.
+/// </param>
+internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, IReadOnlyList<(string Name, string Path)>?>? fonts = null, Action<GameConfig>? preview = null) : UiWindow
 {
     private readonly IReadOnlyList<string> _languages = languages ?? [];
 
     private readonly GameConfig _current = current;
     private GameConfig _draft = current;
+
+    /// <summary>Whether the game shows a language or font other than the one the window opened with.</summary>
+    private bool _previewing;
+
+    private bool _applied;
 
     public override string Title => "Options";
 
@@ -135,11 +146,11 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return Stepper("Autosave", _draft.AutosaveFrequency switch { 0 => "off", 1 => "monthly", 2 => "weekly", _ => "daily" }, () => _draft = _draft with { AutosaveFrequency = Math.Max(0, _draft.AutosaveFrequency - 1) }, () => _draft = _draft with { AutosaveFrequency = Math.Min(3, _draft.AutosaveFrequency + 1) });
         yield return WindowRow.Of("Screen", string.Create(CultureInfo.InvariantCulture, $"{_draft.Width} x {_draft.Height}{(_draft.Fullscreen ? ", fullscreen" : string.Empty)}"));
         yield return _languages.Count > 1
-            ? Stepper("Language", _draft.Language, () => StepLanguage(-1), () => StepLanguage(+1))
+            ? Stepper("Language", _draft.Language, () => Preview(() => StepLanguage(-1)), () => Preview(() => StepLanguage(+1)))
             : WindowRow.Of("Language", _draft.Language);
         if (fonts?.Invoke(_draft.Language) is { } choices)
         {
-            yield return Stepper("Font", FontName(choices), () => StepFont(fonts(_draft.Language) ?? [], -1), () => StepFont(fonts(_draft.Language) ?? [], +1));
+            yield return Stepper("Font", FontName(choices), () => Preview(() => StepFont(fonts(_draft.Language) ?? [], -1)), () => Preview(() => StepFont(fonts(_draft.Language) ?? [], +1)));
         }
         if (hotkeys is not null)
         {
@@ -156,10 +167,35 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return WindowRow.Of(
             WindowCell.Button("Apply", () =>
             {
+                _applied = true;
                 apply(_draft);
                 host.Close(this);
             }, _draft != _current),
             WindowCell.Button("Cancel", () => host.Close(this)));
+    }
+
+    /// <summary>Gives back the language and font the window opened with unless the draft was applied.</summary>
+    public override void Closed()
+    {
+        if (_previewing && !_applied)
+        {
+            _previewing = false;
+            preview?.Invoke(_current);
+        }
+    }
+
+    /// <summary>Steps the language or font and shows the game in it at once.</summary>
+    private void Preview(Action step)
+    {
+        var before = (_draft.Language, _draft.LanguageFonts);
+        step();
+        if (preview is null || (_draft.Language, _draft.LanguageFonts).Equals(before))
+        {
+            return;
+        }
+
+        _previewing = true;
+        preview(_current with { Language = _draft.Language, LanguageFonts = _draft.LanguageFonts });
     }
 
     /// <summary>The next or previous installed language; a language not on the list goes to its first.</summary>
