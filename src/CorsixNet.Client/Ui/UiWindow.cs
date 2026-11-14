@@ -136,6 +136,9 @@ internal interface IWindowHost
 
     /// <summary>The fullscreen dialogs' pictures, sprites and fonts, or null without the original's graphics.</summary>
     OriginalGraphics? Graphics => null;
+
+    /// <summary>The player's name, which their hospital goes by (CorsixTH's <c>player_name</c>).</summary>
+    string PlayerName => "Player";
 }
 
 /// <summary>

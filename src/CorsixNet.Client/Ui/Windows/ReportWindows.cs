@@ -2,6 +2,9 @@ using System.Globalization;
 using CorsixNet.Client.Maps;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -89,6 +92,16 @@ internal sealed class ProgressReportWindow : UiWindow
 
     public override string? Hotkey => "F7";
 
+    private readonly ProgressReportScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="ProgressReportScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => ProgressReportScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => ProgressReportScreen.Tooltip(host, local);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var simulation = host.Simulation;

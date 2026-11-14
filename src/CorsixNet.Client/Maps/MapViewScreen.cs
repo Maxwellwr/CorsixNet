@@ -3025,6 +3025,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     OriginalGraphics? IWindowHost.Graphics => _graphics;
 
+    string IWindowHost.PlayerName => _config.PlayerName is { Length: > 0 } name ? name : "Player";
+
     string? IWindowHost.HotkeyText(string action) => _hotkeys[action]?.ToString();
 
     void IWindowHost.StartLevel(bool next)
