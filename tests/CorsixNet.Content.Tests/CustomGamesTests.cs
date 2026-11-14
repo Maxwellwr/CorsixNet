@@ -31,18 +31,17 @@ public sealed class CustomGamesTests : IDisposable
     [Fact]
     public void FindsCampaignsLeavingOutEmptyOnesAndSecondsOfAName()
     {
-        Write("one.campaign", "name = \"Example\"\ndescription = \"First.\"\nlevels = { \"a.level\" }\n");
-        Write("two/one.campaign", "name = \"Example\"\nlevels = { \"b.level\" }\n");
-        Write("empty.campaign", "name = \"Empty\"\nlevels = {}\n");
-        Write("other.campaign", "levels = { \"c.level\" }\n");
-        Write("mine" + CustomCampaign.YamlExtension, "name: Mine\nlevels: [d.level]\n");
-        Write("again" + CustomCampaign.YamlExtension, "name: Example\nlevels: [e.level]\n");
+        Write("one" + CustomCampaign.YamlExtension, "name: Example\ndescription: First.\nlevels: [a.level]\n");
+        Write("two/one" + CustomCampaign.YamlExtension, "name: Example\nlevels: [b.level]\n");
+        Write("empty" + CustomCampaign.YamlExtension, "name: Empty\nlevels: []\n");
+        Write("other" + CustomCampaign.YamlExtension, "levels: [c.level]\n");
+        Write("lua.campaign", "name = \"Lua\"\nlevels = { \"d.level\" }\n");
 
         var campaigns = CustomGames.FindCampaigns(_folder);
 
-        // A YAML campaign comes before a Lua one of the same name.
-        Assert.Equal(["Example", "Mine", null], campaigns.Select(campaign => campaign.Campaign.Name));
-        Assert.Equal(["e.level"], campaigns[0].Campaign.Levels);
+        // CorsixTH's Lua campaigns are left to the converter.
+        Assert.Equal(["Example", null], campaigns.Select(campaign => campaign.Campaign.Name));
+        Assert.Equal("First.", campaigns[0].Campaign.Description);
     }
 
     [Fact]

@@ -1,6 +1,6 @@
 // CorsixTH's own translations and CorsixNet's own strings, as YAML: each file declares its language and the steps
 // CorsixTH's strings.lua takes for it (Inherit, the original's strings by name, strings set, removed and copied), in
-// order. tools/CorsixNet.LanguageImport writes CorsixTH's files (CorsixTH/Lua/languages/*.lua) out this way.
+// order. tools/CorsixNet.LuaConverter writes CorsixTH's files (CorsixTH/Lua/languages/*.lua) out this way.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;

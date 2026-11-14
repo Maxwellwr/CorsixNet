@@ -11,8 +11,8 @@ namespace CorsixNet.Content.Settings;
 
 /// <summary>
 /// The player's settings, kept in <c>config.yaml</c>: a YAML mapping such as <c>width: 800</c> and
-/// <c>language: 'English'</c>, with CorsixTH's setting names and defaults. A <c>config.txt</c> of CorsixTH's format
-/// (Lua assignments) beside it is imported once when there is no <c>config.yaml</c> yet.
+/// <c>language: 'English'</c>, with CorsixTH's setting names and defaults. CorsixTH's <c>config.txt</c> (Lua) is turned
+/// into one by <c>tools/CorsixNet.LuaConverter</c>.
 /// </summary>
 /// <remarks>
 /// Only the settings CorsixNet acts on are read and written; CorsixTH's others (music, movies, the
@@ -23,8 +23,6 @@ public sealed record GameConfig
     /// <summary>The settings file's name.</summary>
     public const string FileName = "config.yaml";
 
-    /// <summary>The file it replaces, in CorsixTH's format, imported once.</summary>
-    public const string LegacyFileName = "config.txt";
 
     /// <summary>An environment variable naming another settings file.</summary>
     public const string PathVariable = "CORSIXNET_CONFIG";
@@ -174,19 +172,15 @@ public sealed record GameConfig
     }
 
     /// <summary>
-    /// <c>load_config</c>: reads the settings file, writing one first if there is none: from the old config.txt beside
-    /// it when there is one, else with the defaults. Settings the file leaves out or gives a value of the wrong type
-    /// keep their defaults.
+    /// <c>load_config</c>: reads the settings file, writing one with the defaults first if there is none. Settings
+    /// the file leaves out or gives a value of the wrong type keep their defaults.
     /// </summary>
     /// <exception cref="InvalidDataException">The file is not a settings file.</exception>
     public static GameConfig Load(string path)
     {
         if (!File.Exists(path))
         {
-            var legacy = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".", LegacyFileName);
-            var defaults = string.Equals(Path.GetFileName(path), FileName, StringComparison.OrdinalIgnoreCase) && File.Exists(legacy)
-                ? ParseLegacy(File.ReadAllText(legacy))
-                : new GameConfig();
+            var defaults = new GameConfig();
             try
             {
                 defaults.Save(path);
@@ -206,11 +200,8 @@ public sealed record GameConfig
     /// <exception cref="InvalidDataException">The text is not a settings file.</exception>
     public static GameConfig Parse(string text) => FromValues(SettingsYaml.Parse(text));
 
-    /// <summary>Reads the settings from the old config.txt's text (CorsixTH's Lua assignments).</summary>
-    /// <exception cref="InvalidDataException">The text is not a settings file.</exception>
-    public static GameConfig ParseLegacy(string text) => FromValues(SettingsYaml.FromLua(text));
 
-    private static GameConfig FromValues(Dictionary<string, object?> values)
+    internal static GameConfig FromValues(Dictionary<string, object?> values)
     {
         var defaults = new GameConfig();
         bool Bool(string name, bool fallback) => values.GetValueOrDefault(name) is bool value ? value : fallback;

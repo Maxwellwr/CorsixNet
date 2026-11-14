@@ -266,7 +266,7 @@ public static class LevelMapLoader
     /// <exception cref="FileNotFoundException">A level file is not there.</exception>
     public static (CustomCampaign Campaign, IReadOnlyList<string> LevelPaths) LoadCampaign(string campaignPath)
     {
-        var campaign = CustomCampaign.Read(campaignPath, System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(campaignPath)));
+        var campaign = CustomCampaign.ParseYaml(System.Text.Encoding.UTF8.GetString(File.ReadAllBytes(campaignPath)));
         if (campaign.Levels.Count == 0)
         {
             throw new InvalidDataException($"The campaign {campaignPath} names no levels.");

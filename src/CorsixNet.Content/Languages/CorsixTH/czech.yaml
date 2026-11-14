@@ -1,4 +1,4 @@
-# CorsixTH's czech.lua (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LanguageImport.
+# CorsixTH's czech.lua (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LuaConverter.
 # Fix a translation upstream in CorsixTH and import it again, or add CorsixNet's own strings in Languages/CorsixNet.
 #
 # Copyright (c) 2011, 2012 <Zbyněk "teh dude :D" Schwarz>, 2021-2026 <Jan "jansakos" Sako>

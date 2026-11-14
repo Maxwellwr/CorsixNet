@@ -1,4 +1,4 @@
-// What a campaign file holds, ported from CorsixTH CorsixTH/Lua/app.lua (App:readCampaignFile, App:loadCampaign),
+// What a campaign file holds, after CorsixTH CorsixTH/Lua/app.lua (App:readCampaignFile, App:loadCampaign),
 // CorsixTH/Lua/strings.lua (Strings:getLocalisedText) and CorsixTH/Campaigns/example.campaign.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -22,22 +22,12 @@ namespace CorsixNet.Formats;
 /// movie: true
 /// </code>
 /// where a description or winning text is a text or a mapping of texts by language. CorsixTH's own files
-/// (<c>.campaign</c>) are still read: CorsixTH runs them as Lua, and they only assign strings (joined with <c>..</c>),
-/// numbers, booleans and tables of them to names and table fields, so that much of Lua is read and anything else
-/// refused.
+/// (<c>.campaign</c>, Lua) are turned into these by <c>tools/CorsixNet.LuaConverter</c>.
 /// </remarks>
 public sealed record CustomCampaign(string? Name, string? Description, IReadOnlyList<string> Levels, string? WinningText, bool Movie)
 {
-    /// <summary>CorsixTH's campaign files, Lua.</summary>
-    public const string LuaExtension = ".campaign";
-
     /// <summary>CorsixNet's campaign files, YAML.</summary>
     public const string YamlExtension = ".campaign.yaml";
-
-    /// <summary>Reads a campaign file of either kind, by its name.</summary>
-    /// <exception cref="InvalidDataException">The file is not a campaign file.</exception>
-    public static CustomCampaign Read(string path, string text, string language = "en") =>
-        path.EndsWith(YamlExtension, StringComparison.OrdinalIgnoreCase) ? ParseYaml(text, language) : Parse(text, language);
 
     /// <summary>
     /// Reads a YAML campaign file, with the description and winning text in <paramref name="language"/> where the file
@@ -75,33 +65,5 @@ public sealed record CustomCampaign(string? Name, string? Description, IReadOnly
 
         static string? Text(YamlMappingNode mapping, string key) =>
             mapping.Children.TryGetValue(new YamlScalarNode(key.ToLower(CultureInfo.InvariantCulture)), out var node) ? (node as YamlScalarNode)?.Value : null;
-    }
-
-    /// <summary>
-    /// Reads a campaign file, with the description and winning text in <paramref name="language"/> where the file gives
-    /// them (<c>description_table</c>, <c>winning_text_table</c>), else in English, else the plain ones.
-    /// </summary>
-    /// <exception cref="InvalidDataException">The file is not a campaign file of the kind CorsixTH ships.</exception>
-    public static CustomCampaign Parse(string text, string language = "en")
-    {
-        var globals = LuaAssignments.Parse(text);
-        string? Localised(string plain, string table)
-        {
-            var value = globals.GetValueOrDefault(plain) as string;
-            if (globals.GetValueOrDefault(table) is not LuaTable localised)
-            {
-                return value;
-            }
-
-            return localised.Fields.GetValueOrDefault(language) as string ?? localised.Fields.GetValueOrDefault("en") as string ?? value;
-        }
-
-        var levels = globals.GetValueOrDefault("levels") is LuaTable table ? table.Items.OfType<string>().ToList() : [];
-        return new CustomCampaign(
-            globals.GetValueOrDefault("name") as string,
-            Localised("description", "description_table"),
-            levels,
-            Localised("winning_text", "winning_text_table"),
-            globals.GetValueOrDefault("movie") is true);
     }
 }

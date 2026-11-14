@@ -1,4 +1,4 @@
-# CorsixTH's ukrainian.lua (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LanguageImport.
+# CorsixTH's ukrainian.lua (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LuaConverter.
 # Fix a translation upstream in CorsixTH and import it again, or add CorsixNet's own strings in Languages/CorsixNet.
 #
 # Copyright (c) 2024 by Yurii (JurecStrongman)

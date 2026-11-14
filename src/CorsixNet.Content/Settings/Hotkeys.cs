@@ -67,8 +67,6 @@ public sealed class Hotkeys
     /// <summary>The hotkeys file's name, next to the settings file.</summary>
     public const string FileName = "hotkeys.yaml";
 
-    /// <summary>The file it replaces, in CorsixTH's format (Lua assignments), imported once.</summary>
-    public const string LegacyFileName = "hotkeys.txt";
 
     private static readonly string[] Modifiers = ["ctrl", "shift", "alt"];
 
@@ -193,18 +191,14 @@ public sealed class Hotkeys
     }
 
     /// <summary>
-    /// <c>load_hotkeys</c>: reads the hotkeys file, writing one first if there is none: from the old hotkeys.txt beside
-    /// it when there is one, else with the defaults.
+    /// <c>load_hotkeys</c>: reads the hotkeys file, writing one with the defaults first if there is none.
     /// </summary>
     /// <exception cref="InvalidDataException">The file is not a hotkeys file.</exception>
     public static Hotkeys Load(string path)
     {
         if (!File.Exists(path))
         {
-            var legacy = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".", LegacyFileName);
-            var defaults = string.Equals(Path.GetFileName(path), FileName, StringComparison.OrdinalIgnoreCase) && File.Exists(legacy)
-                ? ParseLegacy(File.ReadAllText(legacy))
-                : new Hotkeys();
+            var defaults = new Hotkeys();
             try
             {
                 defaults.Save(path);
@@ -224,11 +218,8 @@ public sealed class Hotkeys
     /// <exception cref="InvalidDataException">The text is not a hotkeys file.</exception>
     public static Hotkeys Parse(string text) => FromValues(SettingsYaml.Parse(text));
 
-    /// <summary>Reads the hotkeys from the old hotkeys.txt's text (CorsixTH's Lua assignments).</summary>
-    /// <exception cref="InvalidDataException">The text is not a hotkeys file.</exception>
-    public static Hotkeys ParseLegacy(string text) => FromValues(SettingsYaml.FromLua(text));
 
-    private static Hotkeys FromValues(Dictionary<string, object?> values)
+    internal static Hotkeys FromValues(Dictionary<string, object?> values)
     {
         var keys = new Dictionary<string, Hotkey>(DefaultMap, StringComparer.Ordinal);
         foreach (var (name, value) in values)

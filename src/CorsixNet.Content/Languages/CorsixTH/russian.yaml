@@ -1,4 +1,4 @@
-# CorsixTH's russian.lua (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LanguageImport.
+# CorsixTH's russian.lua (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LuaConverter.
 # Fix a translation upstream in CorsixTH and import it again, or add CorsixNet's own strings in Languages/CorsixNet.
 #
 # Copyright (c) 2011 Sergei Larionov, Alexey Pinyagin, 2021-2025 "Matroftt", 2024-2025 Artem Argus (ARGAMX)

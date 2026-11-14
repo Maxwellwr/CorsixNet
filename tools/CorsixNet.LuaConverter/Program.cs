@@ -1,71 +1,93 @@
-// Writes CorsixTH's language files (CorsixTH/Lua/languages/*.lua) out as the YAML CorsixLanguages reads, then loads
-// every language both ways and checks they give the same strings.
+// Turns CorsixTH's Lua files into the YAML CorsixNet reads; the game itself reads no Lua.
 //
-//   dotnet run --project tools/CorsixNet.LanguageImport -- <folder of .lua files> <folder for the .yaml files>
+//   dotnet run --project tools/CorsixNet.LuaConverter -- languages <folder of .lua files> <folder for the .yaml files>
+//   dotnet run --project tools/CorsixNet.LuaConverter -- campaign <file.campaign> [<file.campaign.yaml>]
+//   dotnet run --project tools/CorsixNet.LuaConverter -- config <config.txt> [<config.yaml>]
+//   dotnet run --project tools/CorsixNet.LuaConverter -- hotkeys <hotkeys.txt> [<hotkeys.yaml>]
 //
+// languages also loads every language both ways and checks they give the same strings.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
 using System.Text;
 using CorsixNet.Content.Languages;
 using CorsixNet.Formats;
-using CorsixNet.LanguageImport;
+using CorsixNet.LuaConverter;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
-if (args.Length != 2)
-{
-    Console.Error.WriteLine("usage: CorsixNet.LanguageImport <folder of .lua language files> <folder for the .yaml files>");
-    return 2;
-}
+const string Usage = """
+    usage: CorsixNet.LuaConverter languages <folder of .lua language files> <folder for the .yaml files>
+           CorsixNet.LuaConverter campaign <file.campaign> [<file.campaign.yaml>]
+           CorsixNet.LuaConverter config <config.txt> [<config.yaml>]
+           CorsixNet.LuaConverter hotkeys <hotkeys.txt> [<hotkeys.yaml>]
+    """;
 
-var (input, output) = (args[0], args[1]);
-var files = Directory.EnumerateFiles(input, "*.lua").Select(path => (Path.GetFileName(path), File.ReadAllText(path))).ToList();
-var lua = new LuaLanguages(files);
-Directory.CreateDirectory(output);
-foreach (var file in lua.Record())
+try
 {
-    var path = Path.Combine(output, Path.ChangeExtension(file.FileName, CorsixLanguages.Extension));
-    var header = LicenceHeader(files.First(lua => lua.Item1 == file.FileName).Item2);
-    File.WriteAllText(path, YamlWriter.Write(file, header), new UTF8Encoding(false));
-    Console.WriteLine($"{file.FileName} -> {path}");
-}
-
-// The same strings both ways, with the original's strings and without.
-var yaml = CorsixLanguages.Load(output);
-var failures = 0;
-foreach (var language in lua.Languages)
-{
-    foreach (var (label, originals) in new (string, Func<int, StringTable?>)[] { ("with LANG files", n => SyntheticStrings(n)), ("without", _ => null) })
+    switch (args)
     {
-        var expected = lua.Load(language.EnglishName, originals).Strings;
-        var actual = yaml.Load(language.EnglishName, originals).Strings;
-        var differences = expected.Keys.Union(actual.Keys)
-            .Where(key => !string.Equals(expected.GetValueOrDefault(key), actual.GetValueOrDefault(key), StringComparison.Ordinal))
-            .ToList();
-        if (differences.Count > 0)
+        case ["languages", var input, var output]:
+            return Languages(input, output);
+        case ["campaign", var input, ..] when args.Length <= 3:
+            return Convert(input, args.Length > 2 ? args[2] : Path.ChangeExtension(input, null) + CustomCampaign.YamlExtension, LuaFiles.Campaign);
+        case ["config", var input, ..] when args.Length <= 3:
+            return Convert(input, args.Length > 2 ? args[2] : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(input)) ?? ".", CorsixNet.Content.Settings.GameConfig.FileName), LuaFiles.Config);
+        case ["hotkeys", var input, ..] when args.Length <= 3:
+            return Convert(input, args.Length > 2 ? args[2] : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(input)) ?? ".", CorsixNet.Content.Settings.Hotkeys.FileName), LuaFiles.Hotkeys);
+        default:
+            Console.Error.WriteLine(Usage);
+            return 2;
+    }
+}
+catch (InvalidDataException e)
+{
+    Console.Error.WriteLine(e.Message);
+    return 1;
+}
+
+static int Convert(string input, string output, Func<string, string> convert)
+{
+    File.WriteAllText(output, convert(File.ReadAllText(input)), new UTF8Encoding(false));
+    Console.WriteLine($"{input} -> {output}");
+    return 0;
+}
+
+static int Languages(string input, string output)
+{
+    var files = Directory.EnumerateFiles(input, "*.lua").Select(path => (Path.GetFileName(path), File.ReadAllText(path))).ToList();
+    var lua = new LuaLanguages(files);
+    Directory.CreateDirectory(output);
+    foreach (var file in lua.Record())
+    {
+        var path = Path.Combine(output, Path.ChangeExtension(file.FileName, CorsixLanguages.Extension));
+        var header = LuaFiles.LicenceHeader(files.First(lua => lua.Item1 == file.FileName).Item2);
+        File.WriteAllText(path, YamlWriter.Write(file, header), new UTF8Encoding(false));
+        Console.WriteLine($"{file.FileName} -> {path}");
+    }
+
+    // The same strings both ways, with the original's strings and without.
+    var yaml = CorsixLanguages.Load(output);
+    var failures = 0;
+    foreach (var language in lua.Languages)
+    {
+        foreach (var (label, originals) in new (string, Func<int, StringTable?>)[] { ("with LANG files", n => SyntheticStrings(n)), ("without", _ => null) })
         {
-            failures++;
-            Console.Error.WriteLine($"{language.EnglishName} ({label}): {differences.Count} differ, e.g. {string.Join(", ", differences.Take(5))}");
+            var expected = lua.Load(language.EnglishName, originals).Strings;
+            var actual = yaml.Load(language.EnglishName, originals).Strings;
+            var differences = expected.Keys.Union(actual.Keys)
+                .Where(key => !string.Equals(expected.GetValueOrDefault(key), actual.GetValueOrDefault(key), StringComparison.Ordinal))
+                .ToList();
+            if (differences.Count > 0)
+            {
+                failures++;
+                Console.Error.WriteLine($"{language.EnglishName} ({label}): {differences.Count} differ, e.g. {string.Join(", ", differences.Take(5))}");
+            }
         }
     }
-}
 
-Console.WriteLine(failures == 0 ? $"{lua.Languages.Count} languages give the same strings from YAML." : $"{failures} differences.");
-return failures == 0 ? 0 : 1;
-
-// The comment the Lua file starts with: its translators' copyright and licence, kept in the YAML.
-static string LicenceHeader(string text)
-{
-    var trimmed = text.TrimStart('\uFEFF', ' ', '\t', '\r', '\n');
-    var block = System.Text.RegularExpressions.Regex.Match(trimmed, @"^--\[(=*)\[(.*?)\]\1\]", System.Text.RegularExpressions.RegexOptions.Singleline);
-    if (block.Success)
-    {
-        return block.Groups[2].Value.Trim().TrimEnd('-').TrimEnd();
-    }
-
-    var lines = trimmed.Split('\n').TakeWhile(line => line.StartsWith("--", StringComparison.Ordinal)).Select(line => line[2..].TrimEnd('\r'));
-    return string.Join('\n', lines).Trim();
+    Console.WriteLine(failures == 0 ? $"{lua.Languages.Count} languages give the same strings from YAML." : $"{failures} differences.");
+    return failures == 0 ? 0 : 1;
 }
 
 // Every string "n section.index", 64 sections of 230, as LANG-n.DAT stands in.
@@ -166,7 +188,7 @@ internal static class YamlWriter
         }
 
         var text = new StringWriter();
-        text.WriteLine($"# CorsixTH's {file.FileName} (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LanguageImport.");
+        text.WriteLine($"# CorsixTH's {file.FileName} (CorsixTH/Lua/languages, MIT), written out as YAML by tools/CorsixNet.LuaConverter.");
         text.WriteLine("# Fix a translation upstream in CorsixTH and import it again, or add CorsixNet's own strings in Languages/CorsixNet.");
         if (header.Length > 0)
         {

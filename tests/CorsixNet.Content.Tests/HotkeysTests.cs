@@ -140,19 +140,6 @@ public sealed class HotkeysTests : IDisposable
         Assert.Contains("ingame_quickSave: ['ctrl', 's']", hotkeys.ToText(), StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void TheOldHotkeysTxtIsImportedOnce()
-    {
-        Directory.CreateDirectory(_folder);
-        File.WriteAllText(Path.Combine(_folder, Hotkeys.LegacyFileName), "ingame_pause = {\"ctrl\", \"q\"}\n");
-        var path = Path.Combine(_folder, Hotkeys.FileName);
-
-        var hotkeys = Hotkeys.Load(path);
-
-        Assert.Equal(new Hotkey("q", Ctrl: true), hotkeys["ingame_pause"]);
-        Assert.Equal(new Hotkey("q", Ctrl: true), Hotkeys.Parse(File.ReadAllText(path))["ingame_pause"]);
-    }
-
     [Theory]
     [InlineData("f1", true)]
     [InlineData("F12", true)]
