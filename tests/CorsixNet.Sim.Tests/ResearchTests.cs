@@ -200,6 +200,21 @@ public class ResearchTests
         Assert.Equal(1_000, loaded.Rules.Research.ExpertiseRequired(UltrascanExpertise));
     }
 
+    [Fact]
+    public void OnlyObjectsTheLevelHasAndResearchHasFoundCanBeBought()
+    {
+        var simulation = NewSimulation();
+        var research = simulation.Hospitals[0].Research;
+
+        // UIEditRoom:purchaseItems: an undiscovered machine is not offered, a discovered one and plain furniture are.
+        Assert.False(research.CanBuy(simulation.Rules, "ultrascanner"));
+        Assert.True(research.CanBuy(simulation.Rules, "inflator"));
+        Assert.True(research.CanBuy(simulation.Rules, "cabinet"));
+
+        var level = new LevelRules(1000, [], [], objectAvailability: [KeyValuePair.Create("analyser", new ObjectAvailability(ForLevel: false, AtStart: false))]);
+        Assert.False(research.CanBuy(level, "analyser"));
+    }
+
     private static void Run(Simulation simulation, Command command)
     {
         simulation.Schedule(0, command);

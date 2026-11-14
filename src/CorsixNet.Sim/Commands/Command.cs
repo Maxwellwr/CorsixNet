@@ -359,7 +359,8 @@ public sealed record PlaceObjectCommand(string ObjectType, TilePosition Tile, Di
         // The objects a room needs were bought with the room; corridor objects and a room's extra objects are bought
         // as they are placed.
         var extra = RoomPurchases.IsExtra(simulation, simulation.Map[Tile.X, Tile.Y].RoomId, ObjectType);
-        if (extra && !RoomPurchases.CanAffordObject(simulation, ObjectType, player))
+        if (extra && (!RoomPurchases.CanAffordObject(simulation, ObjectType, player)
+            || (player >= 0 && player < simulation.Hospitals.Count && !simulation.Hospitals[player].Research.CanBuy(simulation.Rules, ObjectType))))
         {
             return;
         }

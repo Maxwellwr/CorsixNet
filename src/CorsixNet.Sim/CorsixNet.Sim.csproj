@@ -8,6 +8,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="CorsixNet.Sim.Tests" />
     <InternalsVisibleTo Include="CorsixNet.Client.Tests" />
+    <InternalsVisibleTo Include="CorsixNet.Content.Tests" />
   </ItemGroup>
 
 </Project>
