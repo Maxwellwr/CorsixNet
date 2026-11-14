@@ -53,6 +53,17 @@ internal sealed class PatientWindow(int patientId) : UiWindow
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) =>
         Patient(host) is { Behaviour: PatientBehaviour patient } ? Screen.Tooltip(host, local, patient) : null;
+
+    /// <summary>ingame_patient_gohome (H): sends the patient home, as the button does.</summary>
+    public override bool TakesKey(string action) => action == "ingame_patient_gohome";
+
+    public override void FullscreenKey(IWindowHost host, string action)
+    {
+        if (Patient(host) is { } humanoid)
+        {
+            PatientScreen.GoHome(host, this, humanoid);
+        }
+    }
     public override string Title => "Patient";
 
     public override bool IsSameAs(UiWindow other) => other is PatientWindow window && window.PatientId == PatientId;
