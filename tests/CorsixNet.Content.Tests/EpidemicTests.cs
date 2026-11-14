@@ -143,6 +143,36 @@ public class EpidemicTests
         {
             Assert.Contains(hospital.Transactions, t => t.Kind == TransactionKind.EpidemicCoverUpFine && t.Amount == -epidemic.CoverUpFine);
         }
+
+        // sendResultFax: the result waits on the fax until it is closed.
+        var report = Assert.NotNull(hospital.Epidemics.Report);
+        Assert.Equal((epidemic.DiseaseId, epidemic.Outcome), (report.DiseaseId, report.Outcome));
+        Assert.Equal(epidemic.Outcome == EpidemicOutcome.CoveredUp ? epidemic.Compensation : epidemic.CoverUpFine, report.Amount);
+        Run(simulation, new CloseReportCommand(FaxReport.Epidemic));
+        Assert.Null(hospital.Epidemics.Report);
+    }
+
+    [Fact]
+    public void ANewlyDiscoveredDiseaseIsFaxedUntilClosedOrTwentyFiveDaysPass()
+    {
+        var simulation = NewEpidemicHospital(known: false);
+        var hospital = simulation.Hospitals[0];
+        var epidemic = RevealEpidemic(simulation);
+        var report = Assert.Single(hospital.DiseaseReports);
+        Assert.Equal(epidemic.DiseaseId, report.DiseaseId);
+        Run(simulation, new CloseReportCommand(FaxReport.Disease));
+        Assert.Empty(hospital.DiseaseReports);
+
+        var other = NewEpidemicHospital(known: false);
+        RevealEpidemic(other);
+        var expires = Assert.Single(other.Hospitals[0].DiseaseReports).Expires;
+        while (other.Tick < expires)
+        {
+            other.Step();
+        }
+
+        other.Step();
+        Assert.Empty(other.Hospitals[0].DiseaseReports);
     }
 
     [Fact]
@@ -240,9 +270,9 @@ public class EpidemicTests
         return Assert.IsType<Epidemic>(epidemics.Current);
     }
 
-    private static Simulation NewEpidemicHospital(int spreadFactor = 25)
+    private static Simulation NewEpidemicHospital(int spreadFactor = 25, bool known = true)
     {
-        var simulation = NewStaffedHospital(Rules(spreadFactor));
+        var simulation = NewStaffedHospital(Rules(spreadFactor, known));
         BuildPharmacy(simulation);
 
         // Without diagnosis rooms, patients the GP diagnosed halfway have their disease guessed.
@@ -250,13 +280,13 @@ public class EpidemicTests
         return simulation;
     }
 
-    private static LevelRules Rules(int spreadFactor)
+    private static LevelRules Rules(int spreadFactor, bool known = true)
     {
         var nonVisuals = new int[DiseaseRules.NonVisualsCount];
         nonVisuals[DiseaseCatalog.Find("broken_wind")!.NonVisualsId!.Value] = 1;
         var diseases = new DiseaseRules(
             Enumerable.Repeat(100, DiseaseRules.ExpertiseCount + 1).ToArray(),
-            Enumerable.Repeat(true, DiseaseRules.ExpertiseCount + 1).ToArray(),
+            Enumerable.Repeat(known, DiseaseRules.ExpertiseCount + 1).ToArray(),
             Enumerable.Repeat(0, DiseaseRules.ExpertiseCount + 1).ToArray(),
             new int[DiseaseRules.VisualsCount],
             nonVisuals,

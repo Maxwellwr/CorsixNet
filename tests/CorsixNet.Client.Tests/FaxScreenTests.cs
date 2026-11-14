@@ -27,4 +27,23 @@ public sealed class FaxScreenTests
         Assert.Null(hospital.Vips.Report);
         Assert.False(fax.IsFullscreen(host));
     }
+
+    [Fact]
+    public void TheEpidemicResultSaysHowTheCoverUpEnded()
+    {
+        var host = new WindowTestHost();
+        var worked = FaxWindow.EpidemicReportLines(host, new CorsixNet.Sim.Disasters.EpidemicReport("broken_wind", CorsixNet.Sim.Disasters.EpidemicOutcome.CoveredUp, 2500, 0)).ToList();
+        Assert.Equal(3, worked.Count);
+        Assert.Contains("2500", worked[2], StringComparison.Ordinal);
+        var evacuated = FaxWindow.EpidemicReportLines(host, new CorsixNet.Sim.Disasters.EpidemicReport("broken_wind", CorsixNet.Sim.Disasters.EpidemicOutcome.Evacuated, 9000, 0)).ToList();
+        Assert.Equal("Your hospital is being evacuated.", evacuated[2]);
+    }
+
+    [Fact]
+    public void ADiscoveredDiseaseIsAFaxOfItsOwn()
+    {
+        var host = new WindowTestHost();
+        var lines = FaxWindow.DiseaseReportLines(host, new CorsixNet.Sim.Economy.DiseaseReport("broken_wind", 0)).ToList();
+        Assert.Contains("broken_wind", lines[0], StringComparison.Ordinal);
+    }
 }

@@ -4264,7 +4264,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         return FaxWindow.Pending(simulation, _session.Player).Select(key => key[..key.IndexOf(':', StringComparison.Ordinal)] switch
         {
             "vip" => "personality",
-            "vipreport" or "emergencyreport" => "report",
+            "vipreport" or "emergencyreport" or "epidemicreport" => "report",
+            "diseasereport" => "disease",
             "emergency" => "emergency",
             "epidemic" => "epidemy",
             _ => "information",

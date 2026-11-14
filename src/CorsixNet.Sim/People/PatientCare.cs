@@ -289,6 +289,7 @@ public static class PatientCare
         if (!entry.Discovered)
         {
             entry.Discovered = true;
+            hospital.AdviseDiscoverDisease(simulation, disease.Id);
             hospital.Research.OnDiseaseDiscovered(simulation, hospital, disease);
         }
     }
