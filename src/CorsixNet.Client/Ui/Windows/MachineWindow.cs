@@ -31,7 +31,7 @@ internal sealed class MachineWindow(int machineId) : UiWindow
     public override Point FullscreenSize => MachineScreen.Size;
 
     /// <summary>UIMachine:setDefaultPosition(-20, 30).</summary>
-    public override Point? FullscreenPosition => new(-20, 30);
+    public override Vector2? FullscreenPosition => new(-20, 30);
 
     public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
     {

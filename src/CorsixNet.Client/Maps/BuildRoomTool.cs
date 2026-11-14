@@ -273,6 +273,29 @@ internal sealed class BuildRoomTool
         _placingExtra = true;
     }
 
+    /// <summary>The object on the cursor, or null.</summary>
+    public string? PlacingId => _placing?.Id;
+
+    /// <summary>
+    /// UIPlaceObjects' list button: puts a needed object on the cursor (picking up stops), or turns the one on the
+    /// cursor when it is the same (<c>nextOrientation</c>).
+    /// </summary>
+    public void Choose(ObjectDefinition definition)
+    {
+        if (_phase != Phase.Objects || definition.Orientations.Count == 0)
+        {
+            return;
+        }
+
+        if (_placing?.Id == definition.Id)
+        {
+            Turn();
+            return;
+        }
+
+        _pickingUp = false;
+        StartPlacing(definition, Turns.First(definition.Orientations.ContainsKey));
+    }
     /// <summary>How many of an extra object have been bought from the list and are still to be placed, the one on the cursor included.</summary>
     public int ExtrasToPlace(string objectType) => _extras.Count(e => e.Id == objectType);
 

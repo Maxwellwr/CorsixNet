@@ -18,7 +18,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// with Ctrl, up to 99), the hovered object's price and preview, the total, cancel and confirm. Confirm puts the
 /// objects on the cursor one after the other.
 /// </summary>
-internal sealed class FurnishCorridorScreen
+internal sealed class FurnishCorridorScreen(Func<IWindowHost, List<ObjectDefinition>>? source = null)
 {
     public static readonly Point Size = new(360, 274);
 
@@ -49,13 +49,16 @@ internal sealed class FurnishCorridorScreen
         host.Graphics is { } graphics && graphics.Sheet("REQ10V", OriginalGraphics.MainPalette) is not null
         && graphics.Font("FONT01V", OriginalGraphics.MainPalette) is not null && graphics.Font("FONT02V", OriginalGraphics.MainPalette) is not null;
 
+    /// <summary>The objects offered: the corridor's, or those <paramref name="source"/> gives (a room's extras).</summary>
+    private List<ObjectDefinition> List(IWindowHost host) => source?.Invoke(host) ?? Objects(host);
+
     /// <summary>The corridor's objects the game has, in order.</summary>
     public static List<ObjectDefinition> Objects(IWindowHost host) =>
         Order.Select(host.Simulation.Content.FindObject).OfType<ObjectDefinition>().Where(o => o.CorridorObject).ToList();
 
     /// <summary>The total of what is chosen, at the hospital's prices.</summary>
     public long Total(IWindowHost host) =>
-        Objects(host).Sum(o => (long)_quantities.GetValueOrDefault(o.Id) * Price(host, o));
+        List(host).Sum(o => (long)_quantities.GetValueOrDefault(o.Id) * Price(host, o));
 
     public void Draw(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
     {
@@ -86,7 +89,7 @@ internal sealed class FurnishCorridorScreen
         // The tutorial lights the reception desk, then confirm once one is chosen.
         var deskChosen = _quantities.GetValueOrDefault("reception_desk") > 0;
         Panel(Down("confirm", Confirm) || (deskChosen && Tutorial.Lit("buy:reception_desk")) ? 238 : 237, Confirm.X, Confirm.Y);
-        var objects = Objects(host);
+        var objects = List(host);
         for (var i = 0; i < 10; i++)
         {
             var y = 34 + (i * 19);
@@ -120,7 +123,7 @@ internal sealed class FurnishCorridorScreen
 
     public void Mouse(IWindowHost host, UiWindow window, Point local, MouseState mouse, MouseState previous, Action<IReadOnlyList<ObjectDefinition>> buy)
     {
-        var objects = Objects(host);
+        var objects = List(host);
         var now = Environment.TickCount64;
         var hovered = local.X >= 158 && local.X < 346 && local.Y >= 34 && local.Y < 224 ? ((local.Y - 15) / 19) - 1 : -1;
         if (hovered != _hovered && hovered >= 0 && hovered < objects.Count)
@@ -191,10 +194,10 @@ internal sealed class FurnishCorridorScreen
         }
     }
 
-    public static string? Tooltip(IWindowHost host, Point local)
+    public string? Tooltip(IWindowHost host, Point local)
     {
         string Tip(int index, string fallback) => OriginalTooltips.Get(host, index, fallback);
-        var objects = Objects(host);
+        var objects = List(host);
         var under = ButtonAt(local, objects.Count);
         return under switch
         {

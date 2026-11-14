@@ -33,7 +33,7 @@ internal sealed class HireWindow : UiWindow
     public override Point FullscreenSize => HireScreen.Size;
 
     /// <summary>UIHireStaff:setDefaultPosition(100, 100).</summary>
-    public override Point? FullscreenPosition => new(100, 100);
+    public override Vector2? FullscreenPosition => new(100, 100);
 
     public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
 

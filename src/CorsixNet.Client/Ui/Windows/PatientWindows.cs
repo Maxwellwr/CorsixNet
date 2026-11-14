@@ -33,7 +33,7 @@ internal sealed class PatientWindow(int patientId) : UiWindow
     public override Point FullscreenSize => PatientScreen.Size;
 
     /// <summary>UIPatient:setDefaultPosition(-20, 30).</summary>
-    public override Point? FullscreenPosition => new(-20, 30);
+    public override Vector2? FullscreenPosition => new(-20, 30);
 
     public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
     {

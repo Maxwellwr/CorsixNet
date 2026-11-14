@@ -222,7 +222,7 @@ internal abstract class UiWindow
     public virtual Point FullscreenSize => new(640, 480);
 
     /// <summary>Where a window drawn by itself opens from the top left of the screen's free area; null centres it.</summary>
-    public virtual Point? FullscreenPosition => null;
+    public virtual Vector2? FullscreenPosition => null;
 
     /// <summary>Whether the window takes the mouse wherever it is (dragging something out of it), not only over it.</summary>
     public virtual bool CapturesMouse => false;

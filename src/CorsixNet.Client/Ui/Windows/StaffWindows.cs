@@ -216,7 +216,7 @@ internal sealed class StaffWindow(int staffId) : UiWindow
     public override Point FullscreenSize => StaffScreen.Size(_handyman);
 
     /// <summary>UIStaff:setDefaultPosition(-20, 30).</summary>
-    public override Point? FullscreenPosition => new(-20, 30);
+    public override Vector2? FullscreenPosition => new(-20, 30);
 
     public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
     {

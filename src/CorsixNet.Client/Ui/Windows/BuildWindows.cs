@@ -28,6 +28,32 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
 
     public override bool IsDone(IWindowHost host) => !tool.IsFurnishing;
 
+    private readonly RoomEditScreen _screen = new(tool, press);
+    private int _lines;
+
+    /// <summary>The original's look (<see cref="RoomEditScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host)
+    {
+        if (!RoomEditScreen.IsAvailable(host))
+        {
+            return false;
+        }
+
+        _lines = _screen.Lines(host).Count;
+        return true;
+    }
+
+    public override Point FullscreenSize => new(RoomEditScreen.Width, RoomEditScreen.Height(_lines));
+
+    /// <summary>UIPlaceObjects:setDefaultPosition(0.9, 0.1).</summary>
+    public override Vector2? FullscreenPosition => new(0.9f, 0.1f);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => RoomEditScreen.Tooltip(host, local);
+
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var simulation = host.Simulation;
@@ -95,7 +121,7 @@ internal sealed class FurnishCorridorWindow(Action<ObjectDefinition> buy) : UiWi
 
     public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous, BuyMany!);
 
-    public override string? FullscreenTooltip(IWindowHost host, Point local) => FurnishCorridorScreen.Tooltip(host, local);
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var simulation = host.Simulation;
