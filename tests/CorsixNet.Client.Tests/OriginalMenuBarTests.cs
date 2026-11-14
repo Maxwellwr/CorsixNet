@@ -21,9 +21,9 @@ public sealed class OriginalMenuBarTests
         Assert.Equal(56, titles[1].X);
 
         var area = OriginalMenuBar.MenuArea(titles[0], menus[0], Measure);
-        Assert.Equal(new Rectangle(0, 15, 34, 34), area);
+        Assert.Equal(new Rectangle(0, 15, 48, 34), area);
         Assert.Equal(0, OriginalMenuBar.ItemAt(area, 2, new Point(5, 20)));
         Assert.Equal(1, OriginalMenuBar.ItemAt(area, 2, new Point(5, 34)));
-        Assert.Equal(-1, OriginalMenuBar.ItemAt(area, 2, new Point(50, 20)));
+        Assert.Equal(-1, OriginalMenuBar.ItemAt(area, 2, new Point(60, 20)));
     }
 }

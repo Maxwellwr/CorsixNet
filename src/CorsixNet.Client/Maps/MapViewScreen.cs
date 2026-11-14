@@ -3276,6 +3276,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         static string Item(string name, string fallback) => UiText.Get(name, fallback).Replace("(%1%)", string.Empty, StringComparison.Ordinal).Replace("%1%", string.Empty, StringComparison.Ordinal).Replace("%s", string.Empty, StringComparison.Ordinal).Trim();
         MenuBarItem Open(string name, string fallback, Func<UiWindow> window) => new(Item(name, fallback), () => _windows.Open(window()));
         MenuBarItem Do(string name, string fallback, string action) => new(Item(name, fallback), () => MenuAction(action));
+
+        // The game speed menu's check items (rate): the speed ticked is the one running.
+        MenuBarItem Speed(string name, string fallback, GameSpeed speed) => new(Item(name, fallback), () => _session?.SetSpeed(speed), () => _session?.Speed == speed);
         return
         [
             new(Item("menu.file", "FILE"), [
@@ -3287,7 +3290,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Do("menu_file.quit", "QUIT", "quit")]),
             new(Item("menu.options", "OPTIONS"), [
                 Do("corsixnet.menu.settings", "Settings", "options"),
-                Do("corsixnet.menu.levels", "Levels", "levels")]),
+                Do("corsixnet.menu.levels", "Levels", "levels"),
+                new(Item("menu_options.adviser_disabled", "ADVISER"), ToggleAdviser, () => !_config.AdviserDisabled),
+                new(Item("menu_debug.transparent_walls", "TRANSPARENT WALLS"), () => _wallsTransparentToggled = !_wallsTransparentToggled, () => _wallsTransparentToggled),
+                Speed("menu_options_game_speed.pause", "PAUSE", GameSpeed.Pause),
+                Speed("menu_options_game_speed.slowest", "SLOWEST", GameSpeed.Slowest),
+                Speed("menu_options_game_speed.slower", "SLOWER", GameSpeed.Slower),
+                Speed("menu_options_game_speed.normal", "NORMAL", GameSpeed.Normal),
+                Speed("menu_options_game_speed.max_speed", "MAX SPEED", GameSpeed.MaxSpeed),
+                Speed("menu_options_game_speed.and_then_some_more", "AND THEN SOME MORE", GameSpeed.AndThenSomeMore)]),
             new(Item("menu.charts", "CHARTS"), [
                 Open("menu_charts.bank_manager", "BANK MANAGER", () => new BankManagerWindow()),
                 Open("menu_charts.statement", "STATEMENT", () => new BankStatementWindow()),
