@@ -13,7 +13,7 @@ internal sealed class VoiceManifest
 
     public string Voice { get; set; } = string.Empty;
 
-    public string Piper { get; set; } = string.Empty;
+    public string Settings { get; set; } = string.Empty;
 
     public string Effect { get; set; } = string.Empty;
 
@@ -28,7 +28,7 @@ internal sealed class VoiceManifest
     {
         var yaml = new SerializerBuilder().WithNamingConvention(UnderscoredNamingConvention.Instance).Build().Serialize(this);
         var header = $"# The announcer's speech in {language}, written by tools/CorsixNet.AnnouncerVoice from the translation's subtitles:\n"
-            + "# the Piper voice and settings used, and what each sound says. Speak them again with that tool, not by hand.\n";
+            + "# the voice and settings used, and what each sound says. Speak them again with that tool, not by hand.\n";
         File.WriteAllText(path, header + yaml.ReplaceLineEndings("\n"));
     }
 }

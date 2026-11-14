@@ -1,7 +1,7 @@
 # The announcer's speech in Russian, written by tools/CorsixNet.AnnouncerVoice from the translation's subtitles:
-# the Piper voice and settings used, and what each sound says. Speak them again with that tool, not by hand.
+# the voice and settings used, and what each sound says. Speak them again with that tool, not by hand.
 voice: ru_RU-denis-medium
-piper: length scale 0.9
+settings: piper, length scale 0.9
 effect: rate 22050, band 380-3400 Hz, presence 1900 Hz +5 dB, compressor 0.08:4, drive 1.8, echoes 0.055s*0.22 0.12s*0.14 0.205s*0.08 0.31s*0.04, hiss 0.004, lead 0.08s, tail 0.4s, peak 0.9
 files:
   alien001: Красная тревога! Инопланетная атака!
