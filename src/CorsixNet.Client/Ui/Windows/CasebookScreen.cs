@@ -315,6 +315,26 @@ internal sealed class CasebookScreen
         }
     }
 
+    /// <summary>The casebook's key handlers: up and down go through the diseases, left and right change the price.</summary>
+    public void Key(IWindowHost host, string action)
+    {
+        switch (action)
+        {
+            case "ingame_scroll_up":
+                Scroll(host, -1);
+                break;
+            case "ingame_scroll_down":
+                Scroll(host, 1);
+                break;
+            case "ingame_scroll_left":
+                ChangePrice(host, -1);
+                break;
+            case "ingame_scroll_right":
+                ChangePrice(host, 1);
+                break;
+        }
+    }
+
     /// <summary>scrollUp and scrollDown: pagetur2.wav, or Wrong2.wav at the end of the list.</summary>
     private void Scroll(IWindowHost host, int by)
     {

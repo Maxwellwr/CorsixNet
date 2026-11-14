@@ -239,4 +239,15 @@ internal abstract class UiWindow
 
     /// <summary>The fullscreen dialog's tooltip at <paramref name="local"/>, if any.</summary>
     public virtual string? FullscreenTooltip(IWindowHost host, Point local) => null;
+
+    /// <summary>
+    /// Whether the window, on top in its original look, handles a key action (CorsixTH's <c>addKeyHandler</c> on the
+    /// window: <c>ingame_scroll_up</c> and the other scroll actions, <c>global_confirm</c>); the map does not see it then.
+    /// </summary>
+    public virtual bool TakesKey(string action) => false;
+
+    /// <summary>A key action the window takes (<see cref="TakesKey"/>) was pressed.</summary>
+    public virtual void FullscreenKey(IWindowHost host, string action)
+    {
+    }
 }

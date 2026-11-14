@@ -570,6 +570,31 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
+        // A window on top in its original look takes the keys it handles (CorsixTH's key handlers on the window): the map
+        // sees none of them while it is open.
+        if (IsWindowHostReady && _windows.Windows.LastOrDefault(window => !window.IsPinned) is { } top && top.IsFullscreen(this))
+        {
+            var taken = new List<Keys>();
+            foreach (var (action, key) in WindowKeys())
+            {
+                if (!top.TakesKey(action))
+                {
+                    continue;
+                }
+
+                taken.Add(key);
+                if (Pressed(key))
+                {
+                    top.FullscreenKey(this, action);
+                }
+            }
+
+            if (taken.Count > 0)
+            {
+                keys = new KeyboardState(keys.GetPressedKeys().Where(key => !taken.Contains(key)).ToArray());
+            }
+        }
+
         // The level list (F3): a click on a level starts it; a click elsewhere, F3 or Esc closes the list.
         if (_levels.Count > 0 && Pressed(Keys.F3) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
         {
@@ -1504,6 +1529,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Ctrl+1 to Ctrl+4, which hire staff for now.</summary>
     private static bool IsDebugHireKey(Hotkey? key) =>
         key is { Ctrl: true, Shift: false, Alt: false, Key: "1" or "2" or "3" or "4" };
+
+    /// <summary>The key actions a window can take (<see cref="UiWindow.TakesKey"/>) and the key for each.</summary>
+    private IEnumerable<(string Action, Keys Key)> WindowKeys()
+    {
+        foreach (var action in new[] { "ingame_scroll_up", "ingame_scroll_down", "ingame_scroll_left", "ingame_scroll_right" })
+        {
+            if (_hotkeys[action] is { } key && HotkeyInput.ToKeys(key.Key) is { } down)
+            {
+                yield return (action, down);
+            }
+        }
+
+        yield return ("global_confirm", Keys.Enter);
+    }
 
     /// <summary>An <c>ingame_scroll_*</c> key held; Shift (<c>ingame_scroll_shift</c>) only makes it faster, so modifiers do not matter.</summary>
     private bool ScrollKeyHeld(string action, KeyboardState keys) =>
