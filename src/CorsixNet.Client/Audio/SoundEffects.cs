@@ -61,6 +61,9 @@ internal sealed class SoundEffects : IDisposable
     /// <returns>How long it lasts, or zero when it is not heard.</returns>
     public TimeSpan PlayAnnouncement(string name) => PlayAtVolume(name, _announcementVolume);
 
+    /// <summary>The sound last played, its wildcards resolved (<c>resolveFilenameWildcard</c>), as the subtitles need it.</summary>
+    public string? LastPlayed { get; private set; }
+
     /// <summary>
     /// <c>Entity:playSound</c>: a sound at a point of the view, quieter away from its centre and not heard off it
     /// (<c>sound_player::play_at</c>).
@@ -154,6 +157,8 @@ internal sealed class SoundEffects : IDisposable
         {
             return TimeSpan.Zero;
         }
+
+        LastPlayed = name;
 
         try
         {

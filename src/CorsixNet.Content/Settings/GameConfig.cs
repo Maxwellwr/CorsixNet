@@ -118,6 +118,9 @@ public sealed record GameConfig
     /// <summary>Whether the announcer speaks (<c>play_announcements</c>).</summary>
     public bool PlayAnnouncements { get; init; } = true;
 
+    /// <summary>Whether the announcer's words show as subtitles (<c>enable_announcer_subtitles</c>).</summary>
+    public bool EnableAnnouncerSubtitles { get; init; }
+
     /// <summary>The announcer's volume, from 0 to 1 (<c>announcement_volume</c>).</summary>
     public decimal AnnouncementVolume { get; init; } = 0.5m;
 
@@ -223,6 +226,7 @@ public sealed record GameConfig
             PlaySounds = Bool("play_sounds", defaults.PlaySounds),
             SoundVolume = Number("sound_volume", defaults.SoundVolume),
             PlayAnnouncements = Bool("play_announcements", defaults.PlayAnnouncements),
+            EnableAnnouncerSubtitles = Bool("enable_announcer_subtitles", defaults.EnableAnnouncerSubtitles),
             AnnouncementVolume = Number("announcement_volume", defaults.AnnouncementVolume),
             PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
             ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
@@ -412,6 +416,7 @@ public sealed record GameConfig
         text.Append(CultureInfo.InvariantCulture, $"sound_volume = {Number(SoundVolume)}\n");
         text.Append(CultureInfo.InvariantCulture, $"play_announcements = {Lua(PlayAnnouncements)}\n");
         text.Append(CultureInfo.InvariantCulture, $"announcement_volume = {Number(AnnouncementVolume)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"enable_announcer_subtitles = {Lua(EnableAnnouncerSubtitles)}\n");
         text.Append("""
 
             -------------------------------------------------------------------------------
