@@ -210,6 +210,9 @@ public sealed class Epidemic
     /// <summary>Whether the cover-up is under way: chosen, and the inspector not called yet (<c>_isCoverUpActive</c>).</summary>
     public bool IsCoverUpActive => IsCoverUp && InspectorId == 0;
 
+    /// <summary>Whether the show infected cheat makes its infected patients show their icon before it shows (<c>cheat_always_show_mood</c>).</summary>
+    public bool CheatAlwaysShowMood { get; internal set; }
+
     internal void Write(SimWriter writer)
     {
         writer.WriteString(DiseaseId);
@@ -233,6 +236,7 @@ public sealed class Epidemic
         writer.WriteInt32(Compensation);
         writer.WriteInt32(ReputationHit);
         writer.WriteByte((byte)Outcome);
+        writer.WriteBool(CheatAlwaysShowMood);
     }
 
     internal static Epidemic Read(SimReader reader)
@@ -264,6 +268,7 @@ public sealed class Epidemic
         epidemic.ReputationHit = reader.ReadInt32();
         var outcome = reader.ReadByte();
         epidemic.Outcome = outcome <= (byte)EpidemicOutcome.Evacuated ? (EpidemicOutcome)outcome : throw new InvalidDataException($"Unknown epidemic outcome {outcome}.");
+        epidemic.CheatAlwaysShowMood = reader.Version is 0 or >= 94 && reader.ReadBool();
         return epidemic;
     }
 }

@@ -31,6 +31,22 @@ public class EpidemicTests
     }
 
     [Fact]
+    public void TheShowInfectedCheatShowsTheHiddenEpidemicsPatients()
+    {
+        var simulation = NewEpidemicHospital();
+        var hospital = simulation.Hospitals[0];
+        Run(simulation, new CheatCommand(CheatKind.ShowInfected));
+        Assert.False(hospital.Cheated);
+
+        Run(simulation, new CheatCommand(CheatKind.Epidemic));
+        var future = Assert.Single(hospital.Epidemics.Future);
+        Run(simulation, new CheatCommand(CheatKind.ShowInfected));
+        Assert.True(future.CheatAlwaysShowMood);
+        Assert.True(hospital.Cheated);
+        Run(simulation, new CheatCommand(CheatKind.ShowInfected));
+        Assert.False(future.CheatAlwaysShowMood);
+    }
+    [Fact]
     public void TurningEpidemicsOffCancelsThemAndStopsTheCheat()
     {
         var simulation = NewEpidemicHospital();

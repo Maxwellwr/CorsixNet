@@ -37,7 +37,8 @@ internal sealed class CheatsWindow : UiWindow
             Cheat(host, "Lose level", CheatKind.LoseLevel));
         yield return WindowRow.Of(
             Cheat(host, "Repair all machines", CheatKind.RepairAllMachines),
-            Toggle(host, "Invulnerable machines", CheatKind.ToggleInvulnerableMachines, hospital.ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines)));
+            Toggle(host, "Invulnerable machines", CheatKind.ToggleInvulnerableMachines, hospital.ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines)),
+            Cheat(host, "Show infected", CheatKind.ShowInfected));
     }
 
     /// <summary>The cheats' tooltips (<c>tooltip.cheats_window.cheats</c>); the fax code toggles have our own.</summary>
@@ -62,6 +63,7 @@ internal sealed class CheatsWindow : UiWindow
         CheatKind.MaxReputation => "Set the hospital reputation to the maximum",
         CheatKind.RepairAllMachines => "Repairs all machines in the hospital",
         CheatKind.ToggleInvulnerableMachines => "Toggle whether machines wear down when used",
+        CheatKind.ShowInfected => "Shows all infected patients' contagious icon",
         CheatKind.ToggleSpawnRate => "Toggle Roujin's challenge: many more patients arrive",
         CheatKind.ToggleNoRest => "Toggle whether staff never get tired",
         CheatKind.ToggleQueueJump => "Toggle whether new patients go to the front of every queue",

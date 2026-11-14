@@ -117,9 +117,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   the helicopter's sound is its frames' (`FrameSounds`). The planned and random emergencies, the fax offer, helicopter, watch, bonus,
   reputation and the result on the fax window (`HospitalEmergencies.Report`, `makeEmergencyEndFax`) are done
   (`Emergencies`).
-- Epidemics: vaccinating patients on benches, the infected mood icons, the adviser's warnings, the
-  announcements and the inspector's, and showing the infected by cheat (`epidemic.lua`,
-  `entities/humanoids/inspector.lua`). Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
+- Epidemics: vaccinating patients on benches (`epidemic.lua`). The infected mood icons, the adviser's warnings, the
+  announcements and the inspector's, and showing the infected by cheat (`CheatKind.ShowInfected`) are done. Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
   the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
   evacuation and the result fax (`HospitalEpidemics.Report`) are done (`Epidemics`, `InspectorBehaviour`). The fax
   telling of a newly discovered disease is done too (`Hospital.DiseaseReports`, `adviseDiscoverDisease`).
