@@ -142,6 +142,30 @@ public sealed class SettingsWindowTests : IDisposable
     }
 
     [Fact]
+    public void ALanguageTheGameFontDrawsCanHaveAFontChosenAndGoBackToTheGameFont()
+    {
+        var host = new WindowTestHost();
+        GameConfig? applied = null;
+        var window = new OptionsWindow(
+            new GameConfig { Language = "Spanish" },
+            config => applied = config,
+            ["Spanish"],
+            fonts: _ => new LanguageFontChoices(LanguageFontChoices.GameFont, [("Arial", @"C:\Fonts\arial.ttf")]));
+
+        Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Game font");
+        host.Click(window, "+", skip: 4);
+        Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Arial");
+        host.Click(window, "Apply");
+        Assert.Equal(@"C:\Fonts\arial.ttf", applied?.LanguageFont(["Spanish"]));
+
+        var again = new OptionsWindow(applied!, config => applied = config, ["Spanish"], fonts: _ => new LanguageFontChoices(LanguageFontChoices.GameFont, [("Arial", @"C:\Fonts\arial.ttf")]));
+        host.Click(again, "+", skip: 4);
+        Assert.Contains(again.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Game font");
+        host.Click(again, "Apply");
+        Assert.Null(applied?.LanguageFont(["Spanish"]));
+    }
+
+    [Fact]
     public void TheMenuPassesOnQuitting()
     {
         var host = new WindowTestHost();
