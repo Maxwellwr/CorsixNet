@@ -19,14 +19,16 @@ internal sealed class SoundEffects : IDisposable
 {
     private readonly SoundChoice? _choice;
     private readonly float _volume;
+    private readonly float _announcementVolume;
     private readonly Dictionary<string, SoundEffect?> _loaded = new(StringComparer.OrdinalIgnoreCase);
     private readonly Random _random = new();
     private bool _broken;
 
-    private SoundEffects(SoundChoice? choice, float volume)
+    private SoundEffects(SoundChoice? choice, float volume, float announcementVolume = 0.5f)
     {
         _choice = choice;
         _volume = volume;
+        _announcementVolume = announcementVolume;
     }
 
     /// <summary>The sound archive of the settings' language (the English one if it has none), if sounds are on.</summary>
@@ -47,12 +49,16 @@ internal sealed class SoundEffects : IDisposable
             Console.Error.WriteLine($"The sound effects could not be loaded: {e.Message}");
         }
 
-        return new SoundEffects(archive is null ? null : new SoundChoice(archive), (float)Math.Clamp(config.SoundVolume, 0m, 1m));
+        return new SoundEffects(archive is null ? null : new SoundChoice(archive), (float)Math.Clamp(config.SoundVolume, 0m, 1m), (float)Math.Clamp(config.AnnouncementVolume, 0m, 1m));
     }
 
     /// <summary><c>UI:playSound</c>: a sound heard everywhere alike; the name may hold <c>*</c> wildcards.</summary>
     /// <returns>How long the sound lasts, or zero when it is not heard.</returns>
     public TimeSpan Play(string name) => PlayAtVolume(name, _volume);
+
+    /// <summary>An announcement, at the announcer's volume (<c>Audio:playSound</c> with <c>is_announcement</c>).</summary>
+    /// <returns>How long it lasts, or zero when it is not heard.</returns>
+    public TimeSpan PlayAnnouncement(string name) => PlayAtVolume(name, _announcementVolume);
 
     /// <summary>
     /// <c>Entity:playSound</c>: a sound at a point of the view, quieter away from its centre and not heard off it
