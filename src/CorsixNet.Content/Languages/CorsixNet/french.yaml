@@ -1,0 +1,536 @@
+# CorsixNet's own interface strings in French: the texts CorsixTH has no string for (corsixnet.*), and French
+# for the CorsixTH strings its French translation leaves in English. Laid over CorsixTH's translation by
+# CorsixLanguages; the English stand-ins live in the code. Placeholders: %1%, %2%... by number, %% for a percent sign.
+# Only characters of code page 437, as the game's bitmap font draws French.
+language: [Français, French, fr, fre, fra]
+strings:
+  accessibility_window:
+    enable_screen_shake: Tremblement de l'écran
+    scroll_speed: Vitesse de défilement
+    shift_scroll_speed: Vitesse de défilement avec Maj
+  adviser:
+    cheats:
+      queuejump_off_cheat: Les gens sont devenus égoïstes et ne laissent plus passer les patients presque morts.
+      queuejump_on_cheat: 'Vos patients savent faire la queue : ils laissent passer devant les patients presque morts.'
+      superdoctor_off_cheat: Le directeur de l'école de médecine ne vous recommande plus à ses diplômés.
+      superdoctor_on_cheat: Une excellente école de médecine vous a recommandé à ses diplômés ! Regardez le personnel à embaucher.
+  bank_manager:
+    statistics_page:
+      date: Date
+  hotkey_window:
+    ingame_setTransparent: Transparence
+  machine_menu:
+    machine: Machine
+  tooltip:
+    status:
+      over:
+        months_played: Vous devez atteindre la fin de %s %d. Nous sommes en %s %d
+        years_played: Vous devez atteindre l'année %d. Nous sommes en %d
+        patient_happiness: Le bonheur moyen de vos patients doit dépasser %d%. Il est de %d%
+        staff_happiness: Le bonheur moyen de votre personnel doit dépasser %d%. Il est de %d%
+      under:
+        months_played: Vous devez gagner avant la fin de %s %d. Nous sommes en %s %d
+        years_played: Vous devez atteindre l'année %d. Nous sommes en %d
+        patient_happiness: Le bonheur moyen de vos patients ne doit pas descendre sous %d%. Il est de %d%
+        staff_happiness: Le bonheur moyen de votre personnel ne doit pas descendre sous %d%. Il est de %d%
+  corsixnet:
+    hospital_number: Hôpital %1%
+    main_menu:
+      caption: Menu principal
+    menu:
+      caption: Menu
+      file: Fichier
+      new_game: Nouvelle partie
+      save: Sauvegarder
+      load: Charger
+      quick_save: Sauvegarde rapide
+      quick_load: Chargement rapide
+      restart: Relancer
+      quit: Quitter
+      replays: Rediffusions
+      save_replay: Enregistrer la rediffusion
+      watch_replay: Voir une rediffusion
+      options: Options
+      settings: Paramètres
+      levels: Niveaux
+      charts: Tableaux
+      bank: Banque
+      statement: Relevé
+      staff: Personnel
+      town_map: Carte de la ville
+      casebook: Dossier médical
+      research: Recherche
+      status: Statut
+      graphs: Graphiques
+      policy: Politique
+      annual_report: Rapport annuel
+      debug: Débogage
+      cheats: Triches
+    replays:
+      none: "Pas encore de rediffusion : \"Enregistrer la rediffusion\" dans le menu garde la partie jouée jusqu'ici."
+      watch: Voir
+    save_game:
+      file_name: Année %1% mois %2% jour %3%
+      save_as: Sauvegarder sous "%1%"
+      none: Pas encore de partie sauvegardée.
+      name: Sauvegarde
+      saved_at: Date
+      confirm_overwrite: Sûr ? Écraser
+      overwrite: Écraser
+      quick_save: Sauvegarde rapide
+    options:
+      sound_effects: Effets sonores
+      adviser: Conseiller
+      room_information: Informations des salles
+      edge_scrolling: Défilement au bord de l'écran
+      screen: Écran
+      screen_fullscreen: '%1%, plein écran'
+      assign: Attribuer
+      game_font: Police du jeu
+      system_font: Système
+    new_game:
+      player_name_hint: (player_name dans config.yaml)
+    custom_game:
+      none: 'Aucun niveau trouvé : placez les fichiers .level et .map dans le dossier des niveaux (levels dans config.yaml).'
+    custom_campaign:
+      none: 'Aucune campagne trouvée : placez les fichiers .campaign dans le dossier des campagnes (campaigns dans config.yaml).'
+    information:
+      caption: Information
+    confirm:
+      caption: Confirmer
+    tips:
+      caption: Astuce du jour
+      options: Les sons, le défilement, la sauvegarde automatique et d'autres réglages se changent dans la fenêtre des paramètres, accessible depuis le menu (Échap).
+    toolbar:
+      build: Construire
+      corridor: Couloir
+      edit: Modifier
+      hire: Embaucher
+      faxes: Fax
+      faxes_count: Fax (%1%)
+      faxes_tooltip: Fax en attente de réponse (%s)
+      bank_tooltip: Gestion bancaire (%s)
+      town: Ville
+      charts: Graphiques
+      machines: Machines
+      messages: Messages
+      messages_tooltip: Les messages du conseiller (%s)
+    bank:
+      bank_manager_caption: Gestion bancaire
+      most_you_can_borrow: Emprunt maximal
+      interest_a_year: Intérêts par an
+      borrow: Emprunter %1%
+      borrow_all: Emprunter le maximum
+      repay: Rembourser %1%
+      repay_all: Rembourser le plus possible
+      insurance_owed: Dû par les assurances
+      company: Compagnie %1%
+      statement_caption: Relevé bancaire
+      loan: Prêt
+      graph_figures_caption: Chiffres des graphiques
+      month: Mois
+      month_number: Mois %1%
+      start: Début
+      in: Entrées
+      out: Sorties
+      wages: Salaires
+      visitors: Visiteurs
+      cures: Guérisons
+      deaths: Décès
+      reputation: Répu.
+    staff:
+      unnamed: '%1% %2%'
+      surgeon_lower: chirurgien
+      psychiatrist_lower: psychiatre
+      researcher_lower: chercheur
+      working_in: 'Travaille : %1%'
+      at_reception: Au bureau de réception
+      looking_for_work: Cherche du travail
+      leaving: S'en va
+      idle: Inactif
+      management_caption: Gestion du personnel
+      name: Nom
+      wage: Salaire
+      skill: Compétence
+      tired: Fatigué
+      happy: Content
+      abilities: Aptitudes
+      raise_asked_for: Augmentation demandée
+      none_hired: Personne n'est embauché.
+      choose_hint: Cliquez sur un nom pour choisir un membre du personnel.
+      bonus: Prime %1%
+      raise_salary: Augmenter de %1%
+      staff_window: Fenêtre du personnel
+      show: Montrer
+      confirm_fire: Sûr ? Renvoyer
+      fire: Renvoyer
+      asks_raise_or_quits: Demande %1% d'augmentation, sinon démissionne
+      grant: Accorder
+      refuse: Refuser (démission)
+      doctors: Médecins
+      nurses: Infirmières
+      handymen: Agents de maintenance
+      receptionists: Réceptionnistes
+      rank: Rang
+      doing: Occupation
+      asks_for_raise: Demande une augmentation
+      looks_after: S'occupe de
+      parcel: Terrain %1%
+      next_parcel: Terrain suivant
+      litter: Déchets
+      plants: Plantes
+      machines: Machines
+      more: Plus
+    hire:
+      caption: Embaucher du personnel
+      nobody: Personne ne cherche de travail ce mois-ci.
+      portrait: Montrer le portrait
+      candidate: Candidat %1%
+      candidate_name: Candidat
+      cannot_afford: 'Vous ne pouvez pas vous offrir %1% : un mois de salaire coûte %2%'
+    build:
+      room: Salle
+      all_in_place: Tout le nécessaire est en place.
+      still_needed: 'Il manque encore :'
+      buy_more: 'Acheter plus :'
+      buy: Acheter
+      confirm_cost: Confirmer, %1%
+      stop_picking_up: Arrêter de ramasser
+      take_down: Démolir
+      furnish_corridor: Meubler le couloir
+      object: Objet
+      price: Prix
+      have: Possédés
+      build_room: Construire une salle
+    build_tool:
+      drag_out: '%1% : étirez le plan, au moins %2% sur %3%%4%   Échap : annuler'
+      resize: '%1% : tirez les bords du plan pour le redimensionner, le milieu pour le déplacer%2%%3%   Entrée : terminé   Échap : annuler'
+      resize_rebuild: '%1% : tirez les bords du plan pour le redimensionner, le milieu pour le déplacer%2%%3%   Entrée : terminé   Échap : détruire la salle (moitié du prix rendue)'
+      door: '%1% : placez la porte%2%%3%   Échap : retour au plan'
+      windows: '%1% : placez des fenêtres si vous voulez, un nouveau clic en retire une%2%%3%   Entrée : terminé   Échap : retour au plan'
+      waiting: '%1% : on attend que tout le monde quitte le chantier   Échap : retour au plan'
+      building: '%1% : construction...'
+      copy: "%1% : copie d'une salle, même taille, porte et objets ; cliquez pour la poser%2%%3%   Échap ou clic droit : annuler"
+      picking_up: '%1% : cliquez sur un objet pour le ramasser   P ou Échap : arrêter de ramasser'
+      waiting_to_edit: '%1% : on attend que tout le monde quitte la salle avant de la modifier'
+      enter_confirm: 'Entrée : confirmer'
+      place_list: placez %1%
+      editing: '%1% : modification, déplacez, achetez ou vendez des objets   %2%   P : ramasser   Échap : retour au plan, pour changer la taille ou la porte'
+      can_confirm: '%1% : vous pouvez confirmer la salle (%2%) ou déplacer des objets   Entrée : confirmer   P : ramasser   Échap : démolir la salle et revendre les objets'
+      placing: '   placement : %1%%2%'
+      place_objects: '%1% : placez les objets (%2%)%3%   Clic droit : tourner   P : ramasser   Échap : démolir la salle et revendre les objets'
+      room_costs: "pas assez d'argent : la salle coûte %1%"
+      cannot_build_there: la salle ne peut pas être construite ici
+      not_enough_money: pas assez d'argent
+      corridor_object: "%1%%2% : cliquez pour l'acheter et le placer, clic droit pour tourner, Tab : objet suivant%3%   Échap : annuler"
+      too_small: trop petite
+      outside_map: hors de la carte
+      not_buildable: construction impossible ici
+      not_owned: pas votre terrain
+      overlaps_room: empiète sur une salle
+      wall_inside: un mur gêne
+      not_on_perimeter: visez les murs de la salle
+      in_corner: pas dans un coin
+      door_in_wall: pas de porte possible dans ce mur
+      window_in_wall: pas de fenêtre possible dans ce mur
+      window_on_door: la porte est ici
+      door_blocked: la porte s'ouvrirait sur une case occupée
+      no_windows: cette salle n'a pas de fenêtres
+      too_many_windows: trop de fenêtres
+      unknown_room: salle inconnue
+      point_into_room: visez l'intérieur de la salle
+      must_stand_inside: doit être dans la salle
+      blocked: quelque chose gêne
+      would_block_access: bloquerait le passage
+    buy_objects:
+      caption: Acheter des objets
+    casebook:
+      caption: Dossier médical
+      show_charges: Afficher les prix
+      show_percent: Afficher les pourcentages
+      disease: Maladie
+      charge: Prix
+      earned: Gagné
+      cured: Guéris
+      died: Morts
+      away: Renvoyés
+      cure: Traitement
+      stop: Arrêter
+      concentrate: Concentrer
+    research:
+      area: Domaine
+      working_on: En cours
+      done: Fait
+      share: Part
+      finished: Tout est trouvé
+      nothing_yet: Rien pour l'instant
+      total: Total
+      concentrating: Concentré sur %1% (le dossier médical l'arrête)
+      progress: 'Progrès vers la prochaine découverte : %1% %%'
+    town_map:
+      patients: Patients
+      radiators: Radiateurs
+      fire_extinguishers: Extincteurs
+      heating: Chauffage
+      boiler_broken: La chaudière est en panne
+      radiators_at: Radiateurs à %1% %%
+      colder: Plus froid
+      warmer: Plus chaud
+      heating_bill: Facture de chauffage ce mois-ci
+      land: Terrains
+      parcel: Terrain
+      owner: Propriétaire
+      you: Vous
+      player: Joueur %1%
+      not_for_sale_yet: Pas encore en vente
+      cannot_afford: "Pas assez d'argent pour le terrain %1% : il coûte %2%"
+    graphs:
+      months: Mois
+      years: Années
+      four_years: 4 ans
+      figures: Chiffres
+      figures_tooltip: Afficher les chiffres des graphiques
+      empty: Les graphiques commencent après le premier mois.
+    policy:
+      caption: Politique de l'hôpital
+      diagnosis: Diagnostic
+      send_home: Renvoyer en dessous de
+      guess_cure: Deviner le traitement dès
+      stop_procedure: Arrêter la procédure à
+      staff_room: Salle de repos si fatigué
+      staff_leave: Le personnel quitte les salles
+      allowed: Autorisé
+      not_allowed: Interdit
+      raises: Augmentations demandées
+      ask_me: Me demander
+      grant_tooltip: Les augmentations demandées par le personnel sont accordées tout de suite (demandes de salaire du menu des options)
+      ask_me_tooltip: On vous demande pour chaque augmentation
+    machines:
+      none: L'hôpital n'a aucune machine.
+      smoking: 'Elle fume : il faut bientôt un agent de maintenance.'
+      call_handyman: Appeler un agent
+      replace: Remplacer (%1%)
+      uses_of: '%1% sur %2%'
+    patient:
+      caption: Patient
+      not_diagnosed: Pas encore diagnostiqué
+      health: Santé
+      warmth: Chaleur
+      thirst: Soif
+      toilet: Toilettes
+      sad: Triste
+      to_pay: A payer
+      contagious: Contagieux
+      vaccinated: Vacciné
+      waiting_for_nurse: Attend une infirmière
+      not_vaccinated: Pas vacciné
+      been_to: Passé par
+      asks_no_diagnosis: 'Demande quoi faire : plus de salle de diagnostic'
+      asks_no_treatment: 'Demande quoi faire : aucune salle pour le soigner'
+      confirm_send_home: Sûr ? Renvoyer chez lui
+      send_home: Renvoyer chez lui
+      guess_cure: Deviner le traitement
+      vaccinate: Vacciner
+      vaccinate_tooltip: Une infirmière vaccinera ce patient pendant l'épidémie
+      diagnosed: 'diagnostic : %1%'
+      nobody_queueing: Personne ne fait la queue.
+      number: Patient %1%
+      front: Devant
+      back: Derrière
+      to_room: Vers la salle %1%
+    queue:
+      caption: File d'attente
+      home: Maison
+    adviser_history:
+      caption: Messages du conseiller
+      none: Le conseiller n'a encore rien dit.
+      delete: Effacer
+      delete_all: Tout effacer
+    watch:
+      caption: Montre
+      opening_in: Ouverture dans %1% jours
+      open_now: Ouvrir maintenant
+      emergency: 'Urgence : %1% guéris, %2% perdus sur %3%'
+      epidemic: "Épidémie : %1% infectés, l'inspecteur arrive"
+    annual_report:
+      charts: Classement %1%
+    progress:
+      caption: Rapport d'avancement
+      no_goals: Ce niveau n'a pas d'objectifs.
+      goal: Objectif
+      now: Actuel
+      target: Cible
+      at_least: au moins %1%
+      at_most: au plus %1%
+      lose_above: perdu au-dessus de %1%
+      lose_below: perdu en dessous de %1%
+      warning: alerte %1% %%
+      met: atteint
+      bank_balance: Solde bancaire
+      patients_cured: Patients guéris
+      number_cured: Nombre de guéris
+      patients_killed: Patients morts
+      staff_happiness: Bonheur du personnel
+      patient_happiness: Bonheur des patients
+      months_played: Mois joués
+      no_awards: Aucun trophée ni récompense cette année.
+      award: Trophée ou récompense
+      money: Argent
+      your_salary: Votre salaire
+      level_over: Niveau terminé
+      won: Félicitations ! Vous avez atteint tous les objectifs de ce niveau.
+      new_salary: Votre nouveau salaire
+      next_level: Niveau suivant
+      next_level_tooltip: Passer au niveau suivant
+      stay: Rester ici
+      stay_tooltip: Continuer ce niveau
+      lost: Vous avez perdu ce niveau.
+      because_of: A cause de
+      restart: Recommencer le niveau
+      restart_tooltip: Rejouer ce niveau depuis le début
+      goes_on: Le niveau continue.
+    cheats:
+      marked: Les triches utilisées sont notées sur l'hôpital.
+      roujin: Défi de Roujin
+      no_rest: Sans repos
+      queue_jump: Passe-droit
+      super_doctors: Super médecins
+      roujin_tooltip: 'Active/désactive le défi de Roujin : beaucoup plus de patients arrivent'
+      no_rest_tooltip: "Active/désactive : le personnel n'est jamais fatigué"
+      queue_jump_tooltip: 'Active/désactive : les nouveaux patients passent devant dans chaque file'
+      super_doctors_tooltip: 'Active/désactive : les médecins ont les meilleures compétences'
+      used: 'Triche : %1%'
+      toggle_on: '%1% : oui'
+      toggle_off: '%1% : non'
+    fax:
+      vip_number: VIP %1%
+      vip_visit: '%1% aimerait visiter votre hôpital.'
+      invite: Inviter
+      invite_tooltip: Inviter le VIP à visiter votre hôpital
+      refuse: Refuser
+      refuse_tooltip: Éconduire le VIP
+      close_tooltip: Fermer ce fax
+      emergency_offer: 'Urgence : %1% patients atteints de %2%, guérir %3% %%, %4% chacun.'
+      accept: Accepter
+      accept_tooltip: Prendre l'urgence en charge
+      refuse_emergency_tooltip: Envoyer l'urgence ailleurs
+      epidemic_offer: "Épidémie de %1% : déclarez-la et payez %2%, ou essayez de l'étouffer."
+      declare: Déclarer
+      declare_tooltip: Déclarer l'épidémie et payer l'amende
+      cover_up: Étouffer
+      cover_up_tooltip: Essayer de guérir tous les infectés avant la venue de l'inspecteur
+      patient_no_diagnosis: 'Patient %1% : plus de salle de diagnostic, diagnostic sûr à %2% %%.'
+      patient_no_treatment: 'Patient %1% : aucune salle pour soigner %2%.'
+      wait: Attendre
+      wait_tooltip: Demander au patient d'attendre à l'hôpital
+      guess_cure_tooltip: Soigner le patient pour la maladie la plus probable
+      research_tooltip: Envoyer le patient au département de recherche
+      patient_tooltip: Voir le patient
+      none: Aucun fax en attente.
+      code: Code
+      clear_tooltip: Effacer le code
+      correct: Corriger
+      correct_tooltip: Effacer le dernier chiffre
+      validate: Valider
+      validate_tooltip: Envoyer le code
+      type_digit: Taper %1%
+      remark_superb: Un hôpital superbe. J'ai été très impressionné.
+      remark_good: Un bon hôpital, bien géré.
+      remark_average: Un hôpital moyen. Il pourrait mieux faire.
+      remark_poor: Un piètre hôpital. Les choses doivent s'améliorer.
+    map_editor:
+      one_player: 1 joueur
+      players: '%1% joueurs'
+      parcel_typing: 'Terrain : %1%_'
+      set_parcel: 'Choisir le terrain : %1%'
+      save_map: Sauvegarder la carte
+      save_map_tooltip: Sauvegarder la carte dans le dossier des cartes
+      load_map: Charger une carte
+      load_map_tooltip: Charger une carte du dossier des cartes
+      new_map: Nouvelle carte
+      new_map_tooltip: Recommencer avec une carte vierge
+      quit_tooltip: Retour au menu principal
+      status_sprite: Glisser avec le bouton gauche peint ; un clic droit en glissant peint par blocs ; glisser avec le bouton droit copie.
+      status_delete_wall: Glisser avec le bouton gauche retire murs et portes d'entrée.
+      status_parcel: Glisser avec le bouton gauche range les cases dans le terrain %1%.
+      status_camera: Cliquez sur la case où commence la vue du joueur %1% (%2%).
+      status_heliport: Cliquez sur la case où se pose l'hélicoptère du joueur %1% (%2%).
+      status_paste: Un clic gauche colle la zone copiée ; glisser avec le bouton gauche en remplit une zone.
+      status_default: Choisissez une page ; glisser avec le bouton droit sur la carte copie une zone.
+      load_map_caption: Charger une carte
+      no_maps: 'Aucune carte trouvée : les cartes sont sauvegardées dans le dossier des niveaux (levels dans config.yaml).'
+    status:
+      cannot_load_level: 'Impossible de charger %1% : %2%'
+      no_levels: Aucun niveau trouvé.
+      finish_building_first: Terminez la construction avant de sauvegarder ou de charger
+      no_quick_save: Il n'y avait pas de sauvegarde rapide à charger, alors une a été faite
+      quick_saved: Sauvegarde rapide faite
+      cannot_save: 'Impossible de sauvegarder : %1%'
+      cannot_load: 'Impossible de charger %1% : %2%'
+      loaded: '%1% chargé'
+      picked_up: 'Ramassé : cliquez pour le poser, clic droit pour le lâcher'
+      boiler_broken: "La chaudière est en panne : le chauffage ne se règle qu'après sa réparation"
+      heating: 'Chauffage : %1% %%'
+      parcel_not_for_sale: Le terrain %1% n'est pas à vendre
+      cannot_hire: 'Embauche impossible (%1%) : %2%'
+      only_local_save: Seules les parties locales se sauvegardent et se chargent
+      only_local_replay: Seules les parties locales sont enregistrées
+      replay_saved: Rediffusion %1% enregistrée
+      cannot_save_replay: "Impossible d'enregistrer la rediffusion : %1%"
+      cannot_watch: 'Impossible de voir %1% : %2%'
+      watching_replay: 'Rediffusion en cours : vos ordres ne sont pas pris ; choisissez un niveau ou chargez une partie pour rejouer'
+      saved: '%1% sauvegardé'
+      cannot_save_settings: 'Impossible de sauvegarder les paramètres : %1%'
+      adviser_back: Le conseiller est de retour
+      adviser_quiet: Le conseiller se tait
+      cannot_save_hotkeys: 'Impossible de sauvegarder les raccourcis : %1%'
+      no_new_game_in_network: Une nouvelle partie ne peut commencer qu'en dehors d'une partie en réseau
+      no_original_levels: Les niveaux originaux ne sont pas installés
+      tutorial_done: Voilà les bases pour monter un hôpital. Construisez des salles de diagnostic et de traitement, embauchez du personnel et surveillez votre réputation.
+      confirm_exit: Vous allez quitter CorsixNet. Etes-vous sûr de le vouloir ?
+      cannot_start_campaign: 'Impossible de lancer la campagne : %1%'
+      map_saved: Carte sauvegardée sous %1%
+      cannot_save_map: 'Impossible de sauvegarder la carte : %1%'
+      confirm_new_map: Recommencer avec une carte vierge ? Les changements non sauvegardés seront perdus.
+      confirm_leave_editor: Quitter l'éditeur de cartes ? Les changements non sauvegardés seront perdus.
+      cannot_load_map: 'Impossible de charger la carte : %1%'
+      settings_saved: Paramètres sauvegardés ; la taille de l'écran change au prochain lancement
+      edit_room_hint: Cliquez sur une salle pour la modifier ; clic droit ou Échap pour annuler
+      place_staff_hint: Cliquez dans l'hôpital pour placer la nouvelle recrue ; clic droit ou Échap pour annuler
+      paused_place_staff: 'Le jeu est en pause : reprenez pour placer la nouvelle recrue'
+      cannot_place_staff: 'Impossible de le placer ici : %1%'
+      paused_put_down_staff: 'Le jeu est en pause : reprenez pour poser le membre du personnel'
+      cannot_put_down_staff: 'Impossible de poser le membre du personnel ici : %1%'
+      new_map: nouvelle carte
+      no_game: Pas de partie.
+      money: '   %1%   guéris %2%   morts %3%   réputation %4%   valeur %5%'
+      status_emergency_offer: '   URGENCE : %1% avec %2%, %3% %% à guérir (E accepter, Maj+E refuser)'
+      status_emergency: '   URGENCE : guéris %1%, perdus %2% sur %3%, reste %4%/13'
+      status_epidemic_offer: '   ÉPIDÉMIE de %1% : déclarer pour %2% (Maj+I) ou étouffer (I)'
+      status_epidemic: '   ÉPIDÉMIE : %1% infectés, reste %2%/13 (J vacciner)'
+      status_inspector_coming: "   ÉPIDÉMIE : l'inspecteur arrive"
+      status_asking_diagnosis: '   %1% DEMANDENT : pas de salle de diagnostic pour %2% (%3% %%) (K attendre, Maj+K renvoyer, Ctrl+K deviner)'
+      status_asking_treatment: '   %1% DEMANDENT : aucune salle pour soigner %2% (K attendre, Maj+K renvoyer)'
+      status_vip: '   VIP %1% demande à visiter (V inviter, Maj+V refuser)'
+      status_loan: '   prêt %1%'
+      status_level_won: '   NIVEAU GAGNÉ'
+      status_level_lost: '   NIVEAU PERDU (%1%)'
+      status_level_of: '   (%1% sur %2%)'
+      status_levels_key: '   F3 : niveaux'
+      status_autosave_failed: '   ÉCHEC DE LA SAUVEGARDE AUTO : %1%'
+      line: '%1% personnes%2%   calque %3%   zoom x%4%   lissage x%5%%6%   O : calque   U : lissage   Échap : quitter'
+      wandering: ' en promenade'
+      status_opens_in: ', ouvre dans %1% jours (Maj+O : maintenant)'
+      choose_level: Choisissez un niveau (cliquez-en un ; F3 ou Échap ferme)
+      campaign_level: Niveau de campagne %1%   (%2%)
+      level_number: Niveau %1%   (%2%)
+      not_on_level: pas sur ce niveau
+      not_researched: pas encore découvert
+      build_room_list: Construire une salle (cliquez-en une ; B ou Échap ferme)
+      date: '%1% %2% année %3%'
+      editor_keys: 'Vue : flèches, WASD, bouton du milieu   Molette : zoom   Glisser gauche : peindre, effacer ou coller   Glisser droit : copier une zone'
+      finish_room_first: " (terminez ou annulez la salle pour utiliser d'autres touches)"
+      build_mode: CONSTRUCTION%1%   %2%
+      build_mode_furnish: CONSTRUCTION   %1%
+      speed_keys: '   Espace P : pause   1-6 : vitesse   Z : maintenir pour accélérer'
+      keys: 'Vue : flèches, WASD, bouton droit   Molette : zoom   B : construire une salle   F : acheter un bureau de réception   H : visiteur   G : 10 visiteurs   Ctrl+1-4 : embaucher   Clic : choisir ou marcher   R : promenade%1%'
