@@ -132,14 +132,14 @@ internal sealed class FaxWindow : UiWindow
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
         {
             messages.Add(new FaxMessage(
-                [EmergencyOfferText(host, offer)],
+                [.. EmergencyStartLines(host, offer)],
                 [(host.Texts?.String(44, 15) ?? "Accept the emergency", true, () => host.Submit(new AnswerEmergencyCommand(true))), (host.Texts?.String(44, 16) ?? UiText.Get("corsixnet.fax.refuse_emergency_tooltip", "Send the emergency elsewhere"), true, () => host.Submit(new AnswerEmergencyCommand(false)))]));
         }
 
         if (hospital.Epidemics.Current is { FaxExpires: > 0 } epidemic)
         {
             messages.Add(new FaxMessage(
-                [EpidemicOfferText(host, epidemic)],
+                [.. EpidemicStartLines(host, epidemic)],
                 [(host.Texts?.String(44, 165) ?? "Declare the epidemic", true, () => host.Submit(new AnswerEpidemicCommand(false))), (host.Texts?.String(44, 166) ?? "Try to cover it up", true, () => host.Submit(new AnswerEpidemicCommand(true)))]));
         }
 
@@ -376,6 +376,63 @@ internal sealed class FaxWindow : UiWindow
         {
             yield return new Advice(44, 40, "The most you could have earned was %d. You earned %d.").Text(host.Texts, report.MaxBonus, report.Earned);
         }
+    }
+
+    /// <summary>
+    /// makeEmergencyStartFax's lines: where it is, how many have the disease, whether it can be cured (the drug's
+    /// effectiveness, or the room to build and the staff to hire for the last treatment room), and the bonus.
+    /// </summary>
+    internal static IEnumerable<string> EmergencyStartLines(IWindowHost host, Sim.Disasters.Emergency offer)
+    {
+        string S(int index, string fallback, params object[] arguments) => new Advice(44, index, fallback).Text(host.Texts, arguments);
+        var simulation = host.Simulation;
+        var name = DiseaseName(host, offer.DiseaseId);
+
+        // _S.fax.emergency.locations[math.random(1, 9)]: here the same place for the same emergency.
+        var location = S(27 + (int)((ulong)offer.OfferExpires % 9), "a nearby town");
+        yield return S(18, "There has been an emergency at %s.", location);
+        yield return offer.Victims == 1
+            ? host.Texts?.Named("fax.emergency.num_disease_singular")?.Replace("%s", name, StringComparison.Ordinal) ?? $"There is 1 person with {name} needing immediate attention."
+            : S(19, "There are %d people with %s needing immediate attention.", offer.Victims, name);
+        var info = S(21, "You can cure this.");
+        if (Sim.Diseases.DiseaseCatalog.Find(offer.DiseaseId) is { } disease && disease.TreatmentRooms.Count > 0)
+        {
+            var hospital = simulation.Hospitals[host.Player];
+            if (disease.TreatmentRooms is ["pharmacy"])
+            {
+                info = S(20, "You can cure %s with %d%% efficiency.", name, hospital.PeekCase(disease, simulation.Rules.Diseases).CureEffectiveness).Replace("%%", "%", StringComparison.Ordinal);
+            }
+
+            var roomType = disease.TreatmentRooms[^1];
+            var roomMissing = !simulation.Entities.OfType<Room>().Any(room => room.RoomType == roomType && room.IsActive && RoomVisits.Owner(simulation, room) == host.Player);
+            var staff = RoomStaff(roomType);
+            var staffAvailable = staff is not { } kind || StaffOfCategory(simulation, host.Player, kind.Kind) > 0;
+            var roomName = simulation.Content.FindRoom(roomType)?.Name ?? roomType;
+            var staffName = staff is { } needed ? StaffTitle(host, needed.Kind) : string.Empty;
+            if (roomMissing)
+            {
+                info = staffAvailable ? S(23, "You need to build a %s", roomName) + "." : S(22, "You need to build a %s and employ a %s", roomName, staffName) + ".";
+            }
+            else if (!staffAvailable)
+            {
+                info = S(24, "You need to employ a %s", staffName) + ".";
+            }
+        }
+
+        yield return info;
+        yield return simulation.Rules.FreeBuild
+            ? host.Texts?.Named("fax.emergency.free_build") ?? "If you are successful your reputation will increase, but if you fail your reputation will be seriously dented."
+            : S(26, "The bonus is %d for each patient you cure.", offer.Bonus * offer.Victims);
+    }
+
+    /// <summary>The epidemic's fax (Epidemic:sendFax): the disease, the fine to declare it, and what covering it up means.</summary>
+    internal static IEnumerable<string> EpidemicStartLines(IWindowHost host, Sim.Disasters.Epidemic epidemic)
+    {
+        string S(int index, string fallback, params object[] arguments) => new Advice(44, index, fallback).Text(host.Texts, arguments);
+        yield return S(168, "Your hospital has an epidemic of %s.", DiseaseName(host, epidemic.DiseaseId));
+        yield return S(169, "Declaring it costs a fine of %d.", epidemic.DeclareFine);
+        yield return S(170, "If you cover it up, you must cure everyone infected before the health inspector arrives.");
+        yield return S(171, "If anyone infected is found, you will be fined and your reputation will suffer.");
     }
 
     /// <summary>
