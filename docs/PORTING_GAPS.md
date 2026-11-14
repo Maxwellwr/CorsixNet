@@ -110,8 +110,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
   (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers
   (`PatientBehaviour.Question`, `AnswerPatientCommand`; K, Shift+K and Ctrl+K in the client) are done.
-- Emergencies: the end-of-emergency announcements, the helicopter's sound and depth sorting (`world.lua`,
-  `objects/helicopter.lua`). The planned and random emergencies, the fax offer, helicopter, watch, bonus,
+- Emergencies: the helicopter's depth sorting (`objects/helicopter.lua`); CorsixTH has no end-of-emergency announcement, and
+  the helicopter's sound is its frames' (`FrameSounds`). The planned and random emergencies, the fax offer, helicopter, watch, bonus,
   reputation and the result on the fax window (`HospitalEmergencies.Report`, `makeEmergencyEndFax`) are done
   (`Emergencies`).
 - Epidemics: clicking patients to vaccinate them (J picks every infected patient for now) and the vaccination
@@ -131,7 +131,6 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   patients dropping rubbish, people minding litter and rats are done (`Littering`, `Feelings`, `Rats`).
 - Patient AI in multi-hospital games: choosing between hospitals by reputation and price (`gbv.AllocDelay`,
   `AllocRand`, `AllocIndRep`), which CorsixTH has commented out; today the hospitals take turns, as in CorsixTH.
-- Falling, shaking a fist, on-ground and get-up animations (`humanoid_actions/falling.lua`, `shake_fist.lua`, `on_ground.lua`, `get_up.lua`).
 - Floating dollar signs are done for treatments and cans from the drinks machine.
 
 ## 5. Economy, bank, loans, prices
@@ -176,7 +175,7 @@ fonts, faces) and the details listed.
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
   edit panel are text windows. Resizing a finished room or moving its door is not done.
 - Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
-- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of shame is missing.
+- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
 - Adviser: the speaking figure and the announcer (`dialogs/adviser.lua`, `announcer.lua`); the queue, history and much
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
