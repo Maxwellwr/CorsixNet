@@ -287,7 +287,7 @@ public sealed class Hospital
     private const int InsuranceMonths = 3;
 
     /// <summary>Yearly inflation of prices (CorsixTH's <c>inflation_rate</c>).</summary>
-    private const decimal InflationRate = 0.045m;
+    public const decimal InflationRate = 0.045m;
 
     private const int MaxCases = 256;
 
