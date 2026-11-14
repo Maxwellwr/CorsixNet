@@ -40,6 +40,27 @@ internal sealed class FurnishCorridorTool
             ? (_placing.Id, tile, _orientation, _problem == ObjectPlacementProblem.None && !_cannotAfford ? Color.White : BlockedGhost)
             : null;
 
+    /// <summary>The objects still to place after the one on the cursor (UIPlaceObjects' list), bought as each is placed.</summary>
+    private readonly Queue<ObjectDefinition> _queue = new();
+
+    /// <summary>How many objects are still to place after the one on the cursor.</summary>
+    public int Queued => _queue.Count;
+
+    /// <summary>Puts the first of the objects on the cursor and the rest in line after it (the buy window's confirm).</summary>
+    public void Start(IEnumerable<ObjectDefinition> definitions)
+    {
+        _queue.Clear();
+        foreach (var definition in definitions)
+        {
+            _queue.Enqueue(definition);
+        }
+
+        if (_queue.TryDequeue(out var first))
+        {
+            Start(first);
+        }
+    }
+
     public void Start(ObjectDefinition definition)
     {
         _placing = definition;
@@ -47,7 +68,11 @@ internal sealed class FurnishCorridorTool
         _ghostTile = null;
     }
 
-    public void Stop() => _placing = null;
+    public void Stop()
+    {
+        _placing = null;
+        _queue.Clear();
+    }
 
     /// <summary>Switches to the next (or previous) object that may stand in a corridor.</summary>
     public void Cycle(GameContent content, bool backwards)
@@ -95,7 +120,20 @@ internal sealed class FurnishCorridorTool
         if (input.LeftPressed && _ghostTile is { } target && _problem == ObjectPlacementProblem.None && !_cannotAfford)
         {
             var command = new PlaceObjectCommand(_placing.Id, target, _orientation);
-            Stop();
+            if (_queue.TryDequeue(out var next))
+            {
+                // The next object of the list comes onto the cursor, turned as the last one was if it can be.
+                var orientation = _orientation;
+                Start(next);
+                if (next.Orientations.ContainsKey(orientation))
+                {
+                    _orientation = orientation;
+                }
+            }
+            else
+            {
+                Stop();
+            }
             PlaySound?.Invoke("place_r.wav"); // UIPlaceObjects:placeObject
             return command;
         }
