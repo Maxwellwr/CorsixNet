@@ -1,6 +1,9 @@
 using System.Globalization;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Research;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -15,6 +18,16 @@ internal sealed class ResearchWindow : UiWindow
 
     public override string? Hotkey => "F6";
 
+    private readonly ResearchScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="ResearchScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => ResearchScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => ResearchScreen.Tooltip(host, local);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var simulation = host.Simulation;

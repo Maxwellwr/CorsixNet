@@ -48,14 +48,17 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
             var research = simulation.Hospitals[host.Player].Research;
             foreach (var definition in extras.Select(simulation.Content.FindObject).OfType<ObjectDefinition>().Where(o => research.CanBuy(simulation.Rules, o.Id)))
             {
+                // CorsixTH's place objects list: how many are bought and still to place, one more with each Buy.
                 var price = research.ObjectCost(simulation.Rules, definition.Id);
+                var toPlace = tool.ExtrasToPlace(definition.Id);
                 yield return WindowRow.Of(
                     "  " + definition.Name,
+                    WindowCell.Number(toPlace > 0 ? toPlace.ToString(CultureInfo.InvariantCulture) : string.Empty),
                     WindowCell.Number(MoneyText.Format(price)),
                     WindowCell.Button("Buy", () =>
                     {
                         tool.PlaceExtra(definition);
-                    }, simulation.Hospitals[host.Player].Balance >= price));
+                    }, simulation.Hospitals[host.Player].Balance >= price * (toPlace + 1)));
             }
         }
 
