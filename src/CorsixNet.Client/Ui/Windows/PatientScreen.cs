@@ -213,10 +213,7 @@ internal sealed class PatientScreen(int patientId)
                 host.Open(new CasebookWindow());
                 break;
             case "home":
-                // goHome: sack.wav, and the window closes.
-                host.PlaySound("sack.wav");
-                host.Submit(new SendPatientHomeCommand(humanoid.Id));
-                host.Close(window);
+                GoHome(host, window, humanoid);
                 break;
             case "guess":
                 host.PlaySound(WindowLayer.DefaultButtonSound);
@@ -244,6 +241,21 @@ internal sealed class PatientScreen(int patientId)
         };
     }
 
+    /// <summary>
+    /// goHome (the button, or ingame_patient_gohome's key): sack.wav, the patient is sent home and the window closes;
+    /// nothing for a patient already leaving or dying.
+    /// </summary>
+    public static void GoHome(IWindowHost host, UiWindow window, Humanoid humanoid)
+    {
+        if (humanoid.Behaviour is not PatientBehaviour patient || !Shown(host, patient).Home)
+        {
+            return;
+        }
+
+        host.PlaySound("sack.wav");
+        host.Submit(new SendPatientHomeCommand(humanoid.Id));
+        host.Close(window);
+    }
     /// <summary>updateInformation: which of the casebook, send home and guess cure buttons apply.</summary>
     private static (bool Casebook, bool Home, bool Guess) Shown(IWindowHost host, PatientBehaviour patient)
     {

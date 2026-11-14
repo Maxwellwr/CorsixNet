@@ -1534,7 +1534,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The key actions a window can take (<see cref="UiWindow.TakesKey"/>) and the key for each.</summary>
     private IEnumerable<(string Action, Keys Key)> WindowKeys()
     {
-        foreach (var action in new[] { "ingame_scroll_up", "ingame_scroll_down", "ingame_scroll_left", "ingame_scroll_right" })
+        foreach (var action in new[] { "ingame_scroll_up", "ingame_scroll_down", "ingame_scroll_left", "ingame_scroll_right", "ingame_patient_gohome" })
         {
             if (_hotkeys[action] is { } key && HotkeyInput.ToKeys(key.Key) is { } down)
             {

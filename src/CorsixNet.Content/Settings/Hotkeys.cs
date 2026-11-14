@@ -112,6 +112,7 @@ public sealed class Hotkeys
         ("ingame_setTransparent", new("x")),
         ("ingame_toggleTransparent", new("x", Shift: true)),
         ("ingame_toggleAdvisor", new("a", Shift: true)),
+        ("ingame_patient_gohome", new("h")),
         ("ingame_quickSave", new("s", Shift: true, Alt: true)),
         ("ingame_quickLoad", new("l", Shift: true, Alt: true)),
         ("ingame_storePosition_1", new("1", Alt: true)),
