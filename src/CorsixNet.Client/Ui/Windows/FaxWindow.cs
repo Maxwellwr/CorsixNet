@@ -6,6 +6,9 @@ using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -27,6 +30,122 @@ internal sealed class FaxWindow : UiWindow
 
     public override string? Hotkey => "C";
 
+    private readonly FaxScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="FaxScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => FaxScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) =>
+        _screen.Draw(batch, host, origin, mouse, Messages(host).FirstOrDefault());
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        var message = Messages(host).FirstOrDefault();
+        switch (_screen.Clicked(local, mouse, previous, message))
+        {
+            case "close":
+                host.PlaySound("no4.wav");
+                host.Close(this);
+                break;
+            case "cancel":
+                _code = string.Empty;
+                break;
+            case "correct":
+                _code = _code.Length > 0 ? _code[..^1] : _code;
+                break;
+            case "validate":
+                if (_code.Length > 0)
+                {
+                    Validate(host);
+                }
+
+                break;
+            case { } key when key.StartsWith("key", StringComparison.Ordinal):
+                // appendNumber, with the key's tone (Fax_0 to Fax_9.wav).
+                var typed = key[3..];
+                if (char.IsDigit(typed[0]))
+                {
+                    host.PlaySound("Fax_" + typed + ".wav");
+                }
+
+                if (_code.Length < 10)
+                {
+                    _code += typed;
+                }
+
+                break;
+            case { } choice when choice.StartsWith("choice", StringComparison.Ordinal) && message is not null:
+                // UIFax:choice: the answer, and the fax goes; with no other fax waiting the window closes.
+                host.PlaySound(WindowLayer.DefaultButtonSound);
+                message.Choices[int.Parse(choice[6..], CultureInfo.InvariantCulture)].Choose();
+                if (Pending(host.Simulation, host.Player).Count() <= 1)
+                {
+                    host.Close(this);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The faxes waiting, one message each, in the order the table lists them: the VIP's invitation, the reports, the
+    /// emergency, the epidemic and the patients asking what to do; each with its choices.
+    /// </summary>
+    internal List<FaxMessage> Messages(IWindowHost host)
+    {
+        var simulation = host.Simulation;
+        var hospital = simulation.Hospitals[host.Player];
+        var messages = new List<FaxMessage>();
+        if (hospital.Vips.IsInvitationPending)
+        {
+            var name = host.Texts?.VipName(hospital.Vips.InvitedName) ?? string.Create(CultureInfo.InvariantCulture, $"VIP {hospital.Vips.InvitedName}");
+            messages.Add(new FaxMessage(
+                [host.Texts?.String(44, 187)?.Replace("%s", name, StringComparison.Ordinal) ?? $"{name} would like to visit your hospital."],
+                [(host.Texts?.String(44, 184) ?? "Invite the VIP", true, () => host.Submit(new AnswerVipCommand(true))), (host.Texts?.String(44, 185) ?? "Turn the VIP down", true, () => host.Submit(new AnswerVipCommand(false)))]));
+        }
+
+        if (hospital.Vips.Report is { } report)
+        {
+            messages.Add(new FaxMessage([.. VipReportLines(host, report)], [(host.Texts?.String(44, 189) ?? "Close", true, () => host.Submit(new CloseReportCommand(FaxReport.Vip)))]));
+        }
+
+        if (hospital.Emergencies.Report is { } result)
+        {
+            messages.Add(new FaxMessage([.. EmergencyReportLines(host, result)], [(host.Texts?.String(44, 38) ?? "Close", true, () => host.Submit(new CloseReportCommand(FaxReport.Emergency)))]));
+        }
+
+        if (hospital.Emergencies.Current is { IsAccepted: false } offer)
+        {
+            messages.Add(new FaxMessage(
+                [string.Create(CultureInfo.InvariantCulture, $"Emergency: {offer.Victims} patients with {DiseaseName(host, offer.DiseaseId)}, cure {offer.Percentage} % for {MoneyText.Format(offer.Bonus)} each.")],
+                [(host.Texts?.String(44, 15) ?? "Accept the emergency", true, () => host.Submit(new AnswerEmergencyCommand(true))), (host.Texts?.String(44, 16) ?? "Send the emergency elsewhere", true, () => host.Submit(new AnswerEmergencyCommand(false)))]));
+        }
+
+        if (hospital.Epidemics.Current is { FaxExpires: > 0 } epidemic)
+        {
+            messages.Add(new FaxMessage(
+                [$"Epidemic of {DiseaseName(host, epidemic.DiseaseId)}: declare it and pay {MoneyText.Format(epidemic.DeclareFine)}, or try to cover it up."],
+                [(host.Texts?.String(44, 165) ?? "Declare the epidemic", true, () => host.Submit(new AnswerEpidemicCommand(false))), (host.Texts?.String(44, 166) ?? "Try to cover it up", true, () => host.Submit(new AnswerEpidemicCommand(true)))]));
+        }
+
+        foreach (var humanoid in Asking(simulation, host.Player))
+        {
+            var patient = (PatientBehaviour)humanoid.Behaviour!;
+            var noDiagnosis = patient.Question == PatientQuestion.NoDiagnosisRoom;
+            var text = noDiagnosis
+                ? string.Create(CultureInfo.InvariantCulture, $"A patient has no diagnosis room left to visit; diagnosed {Math.Min(100, patient.DiagnosisProgress / 10)} %.")
+                : $"A patient has no room to treat {DiseaseName(host, patient.DiseaseId)}.";
+            var id = humanoid.Id;
+            var third = noDiagnosis
+                ? (host.Texts?.String(44, 213) ?? "Guess the cure", true, (Action)(() => host.Submit(new AnswerPatientCommand(id, PatientAnswer.GuessCure))))
+                : (host.Texts?.String(44, 45) ?? "Send them to research", PatientBehaviour.CanGoToResearch(simulation, humanoid), (Action)(() => host.Submit(new AnswerPatientCommand(id, PatientAnswer.Research))));
+            messages.Add(new FaxMessage(
+                [text],
+                [(host.Texts?.String(44, noDiagnosis ? 214 : 44) ?? "Ask them to wait", true, () => host.Submit(new AnswerPatientCommand(id, PatientAnswer.Wait))), (host.Texts?.String(44, noDiagnosis ? 212 : 43) ?? "Send them home", true, () => host.Submit(new AnswerPatientCommand(id, PatientAnswer.SendHome))), third]));
+        }
+
+        return messages;
+    }
     /// <summary>The faxes waiting, as keys to tell new ones apart: what they are about and for whom.</summary>
     public static IEnumerable<string> Pending(Simulation simulation, int player)
     {
