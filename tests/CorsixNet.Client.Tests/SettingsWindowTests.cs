@@ -34,7 +34,7 @@ public sealed class SettingsWindowTests : IDisposable
         var saving = new SaveLoadWindow(store, saving: true, Save, path => false);
         host.Opened.Add(saving);
         Assert.Contains("No saved games yet.", host.Lines(saving));
-        host.Click(saving, host.Lines(saving)[0]);
+        host.Click(saving, host.Lines(saving).First(line => line.StartsWith("Save as", StringComparison.Ordinal)));
         Assert.True(File.Exists(Assert.Single(saved)));
         Assert.Empty(host.Opened);
 
@@ -47,6 +47,32 @@ public sealed class SettingsWindowTests : IDisposable
         Assert.Equal(saved, loaded);
     }
 
+    [Fact]
+    public void ANewSaveCanBeGivenAName()
+    {
+        var host = new WindowTestHost();
+        var store = new SaveGameStore(_folder);
+        var saved = new List<string>();
+        var window = new SaveLoadWindow(store, saving: true, p =>
+        {
+            saved.Add(p);
+            return true;
+        }, p => false);
+        host.Opened.Add(window);
+
+        host.Click(window, "Type a name for a new save");
+        Assert.True(window.IsCapturing);
+        foreach (var key in new[] { new Hotkey("m", Shift: true), new("y"), new("space"), new("x"), new("backspace"), new("2"), new("-", Shift: true), new("a") })
+        {
+            window.Capture(key);
+        }
+
+        Assert.Equal("My 2_a", window.TypedName);
+        window.Capture(new Hotkey("return"));
+        Assert.False(window.IsCapturing);
+        _ = host.Lines(window);
+        Assert.Equal([Path.Combine(_folder, "My 2_a.sav")], saved);
+    }
     [Fact]
     public void OverwritingAsksFirst()
     {
