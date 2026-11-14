@@ -84,6 +84,9 @@ internal sealed class FaxWindow : UiWindow
             {
                 yield return WindowCell.Line(line);
             }
+
+            // The fax's one choice, close (fax.vip_visit_result.close_text).
+            yield return WindowCell.Button(host.Texts?.String(44, 189) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Vip))) with { Tooltip = "Close this fax" };
         }
 
         if (hospital.Emergencies.Report is { } result)
@@ -93,6 +96,9 @@ internal sealed class FaxWindow : UiWindow
             {
                 yield return WindowCell.Line(line);
             }
+
+            // fax.emergency_result.close_text.
+            yield return WindowCell.Button(host.Texts?.String(44, 38) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Emergency))) with { Tooltip = "Close this fax" };
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
