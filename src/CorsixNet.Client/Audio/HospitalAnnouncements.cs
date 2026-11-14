@@ -1,6 +1,7 @@
 // Announcements the hospital's events make, ported from CorsixTH CorsixTH/Lua/calls_dispatcher.lua (callForStaff's
 // room call_sound, once until staff come: room.sound_played), epidemic.lua (announceStartOfEpidemic,
-// announceEndOfEpidemic), cheats.lua (announceCheat) and hospital.lua (Hospital:tick's background sounds).
+// announceEndOfEpidemic, markForVaccination), cheats.lua (announceCheat), hospital.lua (Hospital:tick's background sounds),
+// player_hospital.lua (msgCured's cheer, msgKilled's boo, announceStaffLeave) and the staff's leave_sounds.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim;
@@ -8,6 +9,7 @@ using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 using CorsixNet.Sim.Rooms;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Client.Audio;
 
@@ -50,6 +52,10 @@ internal sealed class HospitalAnnouncements(Random random)
     private bool _revealed;
     private bool _cheated;
     private long _hours;
+    private int _cured;
+    private int _deaths;
+    private HashSet<int> _marked = [];
+    private HashSet<int> _fired = [];
 
     /// <summary>Forgets what was seen, for a new or loaded game.</summary>
     public void Reset() => _watching = false;
@@ -92,6 +98,38 @@ internal sealed class HospitalAnnouncements(Random random)
             sounds.Add($"cheat00{random.Next(1, 4)}.wav");
         }
 
+        // msgCured and msgKilled: the cheer and the boo, always heard.
+        if (_watching && hospital.Cured > _cured)
+        {
+            sounds.Add("cheer.wav");
+        }
+
+        if (_watching && hospital.Deaths > _deaths)
+        {
+            sounds.Add("boo.wav");
+        }
+
+        // Epidemic:markForVaccination.
+        var marked = simulation.Entities.OfType<Humanoid>()
+            .Where(h => h.HospitalPlayer == player && h.Behaviour is PatientBehaviour { IsMarkedForVaccination: true })
+            .Select(h => h.Id)
+            .ToHashSet();
+        if (_watching && marked.Except(_marked).Any())
+        {
+            sounds.Add("vaccin.wav");
+        }
+
+        // Staff:fire's announceStaffLeave: one of the leaver's leave_sounds.
+        var fired = new HashSet<int>();
+        foreach (var leaver in simulation.Entities.OfType<Humanoid>().Where(h => h is { IsFired: true, Profile: not null } && h.Employer == player))
+        {
+            fired.Add(leaver.Id);
+            if (_watching && !_fired.Contains(leaver.Id) && LeaveSounds(leaver.Profile!.Class) is { Length: > 0 } leave)
+            {
+                sounds.Add(leave[random.Next(leave.Length)]);
+            }
+        }
+
         // Hospital:tick: one hour in a hundred, with a GP's office and more than two patients, a background sound.
         if (_watching && simulation.Hours > _hours && random.Next(1, 101) == 3
             && simulation.Entities.OfType<Room>().Any(room => room.RoomType == "gp" && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
@@ -106,8 +144,22 @@ internal sealed class HospitalAnnouncements(Random random)
         _revealed = epidemic?.IsRevealed ?? false;
         _cheated = hospital.Cheated;
         _hours = simulation.Hours;
+        _cured = hospital.Cured;
+        _deaths = hospital.Deaths;
+        _marked = marked;
+        _fired = fired;
         return sounds;
     }
+
+    /// <summary>The staff classes' leave_sounds (doctor.lua, nurse.lua, handyman.lua, receptionist.lua).</summary>
+    private static string[] LeaveSounds(StaffClass staffClass) => staffClass switch
+    {
+        StaffClass.Doctor => ["sack001.wav", "sack002.wav", "sack003.wav"],
+        StaffClass.Nurse => ["sack004.wav", "sack005.wav"],
+        StaffClass.Handyman => ["sack006.wav"],
+        StaffClass.Receptionist => ["sack007.wav", "sack008.wav"],
+        _ => [],
+    };
 
     /// <summary>
     /// Whether the room is short of the staff it needs (Room:getMissingStaff): two surgeons for the operating theatre,
