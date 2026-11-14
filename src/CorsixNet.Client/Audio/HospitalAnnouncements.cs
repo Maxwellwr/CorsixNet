@@ -1,7 +1,8 @@
 // Announcements the hospital's events make, ported from CorsixTH CorsixTH/Lua/calls_dispatcher.lua (callForStaff's
 // room call_sound, once until staff come: room.sound_played), epidemic.lua (announceStartOfEpidemic,
 // announceEndOfEpidemic, markForVaccination), cheats.lua (announceCheat), hospital.lua (Hospital:tick's background sounds),
-// player_hospital.lua (msgCured's cheer, msgKilled's boo, announceStaffLeave) and the staff's leave_sounds.
+// player_hospital.lua (msgCured's cheer, msgKilled's boo, announceStaffLeave, onEndDay's VIP announcement), the staff's
+// leave_sounds and inspector.lua (Inspector:announce, from Epidemic:tryAnnounceInspector).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim;
@@ -56,6 +57,7 @@ internal sealed class HospitalAnnouncements(Random random)
     private int _deaths;
     private HashSet<int> _marked = [];
     private HashSet<int> _fired = [];
+    private readonly HashSet<int> _announcedVisitors = [];
 
     /// <summary>Forgets what was seen, for a new or loaded game.</summary>
     public void Reset() => _watching = false;
@@ -130,6 +132,20 @@ internal sealed class HospitalAnnouncements(Random random)
             }
         }
 
+        // onEndDay: a VIP walking into the hospital is announced (vip001 to vip005), once; tryAnnounceInspector: the
+        // Health Inspector (vip008).
+        foreach (var visitor in simulation.Entities.OfType<Humanoid>().Where(h => h.Behaviour is VipBehaviour or InspectorBehaviour))
+        {
+            if (!_announcedVisitors.Contains(visitor.Id) && InHospital(simulation, player, visitor.Tile))
+            {
+                _announcedVisitors.Add(visitor.Id);
+                if (_watching)
+                {
+                    sounds.Add(visitor.Behaviour is VipBehaviour ? $"vip00{random.Next(1, 6)}.wav" : "vip008.wav");
+                }
+            }
+        }
+
         // Hospital:tick: one hour in a hundred, with a GP's office and more than two patients, a background sound.
         if (_watching && simulation.Hours > _hours && random.Next(1, 101) == 3
             && simulation.Entities.OfType<Room>().Any(room => room.RoomType == "gp" && RoomBuilder.IsOwnedBy(simulation.Map, room, player))
@@ -149,6 +165,12 @@ internal sealed class HospitalAnnouncements(Random random)
         _marked = marked;
         _fired = fired;
         return sounds;
+    }
+
+    private static bool InHospital(Simulation simulation, int player, Sim.Maps.TilePosition tile)
+    {
+        var map = simulation.Map;
+        return map.Contains(tile.X, tile.Y) && map[tile.X, tile.Y].Has(Sim.Maps.TileFlags.Hospital) && map.GetParcelOwner(map[tile.X, tile.Y].Parcel) == player + 1;
     }
 
     /// <summary>The staff classes' leave_sounds (doctor.lua, nurse.lua, handyman.lua, receptionist.lua).</summary>
