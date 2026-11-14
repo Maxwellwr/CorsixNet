@@ -305,7 +305,8 @@ A CorsixTH custom level (`--map island.level` in the client and server) is a `.l
 `%MapFile` and briefings `CustomLevelInfo` reads and whose `#` settings are read on CorsixTH's defaults
 (`LevelMapLoader.LoadCustom`, `LevelRulesLoader.LoadCustom`). Its map lies beside it, or is an original map such as
 `LEVEL.L5` from the game; an `overlay.difficulty` and `overlay.level_number` read that campaign level's files on top,
-at that difficulty. A campaign (`--campaign file.campaign` in the client) is a Lua file of which `CustomCampaign`
+at that difficulty. A campaign (`--campaign file.campaign.yaml` in the client) is a YAML file (`name`, `description`, `levels`,
+`winning_text`, `movie`; texts plain or by language), or one of CorsixTH's `.campaign` Lua files, of which `CustomCampaign`
 reads the part CorsixTH's campaigns use (assignments of strings, numbers, booleans and tables): its name, description,
 levels and winning text. `LevelMapLoader.LoadCampaign` finds its levels beside it or in the `Levels` and `Campaigns`
 folders next to it; the client puts them first in its level list. Moving on to the next level on winning is not there

@@ -25,16 +25,17 @@ public static class CustomGames
             .OrderBy(entry => entry.Info.Name, StringComparer.OrdinalIgnoreCase)];
 
     /// <summary>
-    /// The <c>.campaign</c> files in the folders and their subfolders, by name; unreadable ones, those naming no level and
+    /// The campaign files in the folders and their subfolders (CorsixNet's <c>.campaign.yaml</c> and CorsixTH's
+    /// <c>.campaign</c>), by name; unreadable ones, those naming no level and
     /// a second campaign of a name already found are left out (<c>duplicates_warning</c>).
     /// </summary>
     public static IReadOnlyList<CustomCampaignEntry> FindCampaigns(params IEnumerable<string> folders)
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var found = new List<CustomCampaignEntry>();
-        foreach (var path in Files(folders, "*.campaign"))
+        foreach (var path in Files(folders, "*" + CustomCampaign.YamlExtension).Concat(Files(folders, "*" + CustomCampaign.LuaExtension)))
         {
-            if (Read(path, text => CustomCampaign.Parse(text)) is { Levels.Count: > 0 } campaign
+            if (Read(path, text => CustomCampaign.Read(path, text)) is { Levels.Count: > 0 } campaign
                 && seen.Add(campaign.Name ?? System.IO.Path.GetFileNameWithoutExtension(path)))
             {
                 found.Add(new CustomCampaignEntry(path, campaign));

@@ -78,7 +78,7 @@ strings:
     custom_game:
       none: 'Уровни не найдены: положите файлы .level и .map в папку уровней (levels в config.yaml).'
     custom_campaign:
-      none: 'Кампании не найдены: положите файлы .campaign в папку кампаний (campaigns в config.yaml).'
+      none: 'Кампании не найдены: положите файлы .campaign.yaml или .campaign в папку кампаний (campaigns в config.yaml).'
     information:
       caption: Информация
     confirm:

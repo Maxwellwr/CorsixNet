@@ -1,6 +1,7 @@
 using CorsixNet.Content.Levels;
 using CorsixNet.Content.Saves;
 using CorsixNet.Content.Settings;
+using CorsixNet.Formats;
 
 namespace CorsixNet.Content.Tests;
 
@@ -34,11 +35,14 @@ public sealed class CustomGamesTests : IDisposable
         Write("two/one.campaign", "name = \"Example\"\nlevels = { \"b.level\" }\n");
         Write("empty.campaign", "name = \"Empty\"\nlevels = {}\n");
         Write("other.campaign", "levels = { \"c.level\" }\n");
+        Write("mine" + CustomCampaign.YamlExtension, "name: Mine\nlevels: [d.level]\n");
+        Write("again" + CustomCampaign.YamlExtension, "name: Example\nlevels: [e.level]\n");
 
         var campaigns = CustomGames.FindCampaigns(_folder);
 
-        Assert.Equal(["Example", null], campaigns.Select(campaign => campaign.Campaign.Name));
-        Assert.Equal("First.", campaigns[0].Campaign.Description);
+        // A YAML campaign comes before a Lua one of the same name.
+        Assert.Equal(["Example", "Mine", null], campaigns.Select(campaign => campaign.Campaign.Name));
+        Assert.Equal(["e.level"], campaigns[0].Campaign.Levels);
     }
 
     [Fact]
