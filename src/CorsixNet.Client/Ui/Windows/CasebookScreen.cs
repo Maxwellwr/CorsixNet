@@ -379,6 +379,9 @@ internal sealed class CasebookScreen
         }
     }
 
+    /// <summary>Opens the casebook at a disease next time (<c>UICasebook(ui, disease_selection)</c>).</summary>
+    public static void Remember(string diseaseId) => _chosen = diseaseId;
+
     private void Choose(DiseaseDefinition disease)
     {
         _chosen = disease.Id;
