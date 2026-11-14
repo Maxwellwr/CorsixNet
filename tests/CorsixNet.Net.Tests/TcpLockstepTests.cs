@@ -25,13 +25,20 @@ public class TcpLockstepTests
         a.Submit(new SpawnHumanoidCommand(new(1, 1)));
         b.Submit(new SpawnHumanoidCommand(new(5, 5)));
         a.Submit(new WalkToCommand(1, new(6, 1)));
-        await PumpUntil(() => a.Simulation!.Tick >= 128 && b.Simulation!.Tick >= 128, cancellation, a, b);
+
+        // The server runs on its own clock and schedules a command at the tick it receives it,
+        // which on a slow machine can be well past any fixed tick. Wait for the commands to have
+        // run on both clients, then let both run on for a while from there.
+        await PumpUntil(() => a.Simulation!.Entities.Count == 2 && b.Simulation!.Entities.Count == 2, cancellation, a, b);
+        var target = Math.Max(a.Simulation!.Tick, b.Simulation!.Tick) + 128;
+        await PumpUntil(() => a.Simulation.Tick >= target && b.Simulation!.Tick >= target, cancellation, a, b);
 
         Assert.Null(a.Problem);
         Assert.Null(b.Problem);
         Assert.Null(a.LastDesync);
         Assert.Null(b.LastDesync);
-        Assert.Equal(2, a.Simulation!.Entities.Count);
+        Assert.Equal(2, a.Simulation.Entities.Count);
+        Assert.Equal(2, b.Simulation!.Entities.Count);
 
         // Freeze the client that is ahead, bring the other to exactly the same tick, compare.
         var (ahead, behind) = a.Simulation.Tick >= b.Simulation!.Tick ? (a, b) : (b, a);
