@@ -7,9 +7,19 @@ using CorsixNet.Formats;
 
 namespace CorsixNet.Client.Rendering;
 
-/// <summary>A bitmap font's standard character size and its most telling colour.</summary>
+/// <summary>
+/// A bitmap font's standard character size and its most telling colour, and how tall its letters are drawn: the inked
+/// rows of its capital and small letters ('M' and 'x', or '0' alone for fonts of digits), and the baseline under them
+/// from the sprites' top; zero where the font has no such letter.
+/// </summary>
 internal readonly record struct BitmapFontMatch(int Width, int Height, PaletteColor Color)
 {
+    public int CapitalHeight { get; init; }
+
+    public int SmallHeight { get; init; }
+
+    public int Baseline { get; init; }
+
     /// <summary>
     /// <c>match_bitmap_font</c>: the size and colour of 'M', or of '0' for fonts of digits only; failing both, the
     /// average size of all characters with the colour of the last one that has any.
@@ -25,7 +35,14 @@ internal readonly record struct BitmapFontMatch(int Width, int Height, PaletteCo
             var sprite = character - BitmapFont.FirstCharacter;
             if (sprite < sheet.Count && sheet[sprite] is { Width: > 1, Height: > 1 } image && AverageColour(image, palette) is { } color)
             {
-                return new BitmapFontMatch(image.Width, image.Height, color);
+                var (top, bottom) = Ink(image, palette);
+                var (smallTop, smallBottom) = character == 'M' && 'x' - BitmapFont.FirstCharacter < sheet.Count ? Ink(sheet['x' - BitmapFont.FirstCharacter], palette) : (0, -1);
+                return new BitmapFontMatch(image.Width, image.Height, color)
+                {
+                    CapitalHeight = bottom - top + 1,
+                    SmallHeight = smallBottom >= smallTop ? smallBottom - smallTop + 1 : 0,
+                    Baseline = bottom + 1,
+                };
             }
         }
 
@@ -46,6 +63,26 @@ internal readonly record struct BitmapFontMatch(int Width, int Height, PaletteCo
         }
 
         return count == 0 ? null : new BitmapFontMatch((widths + (count / 2)) / count, (heights + (count / 2)) / count, last!.Value);
+    }
+
+    /// <summary>The first and last rows with an opaque pixel; (0, -1) for a blank image.</summary>
+    private static (int Top, int Bottom) Ink(IndexedImage image, Palette palette)
+    {
+        int top = image.Height, bottom = -1;
+        for (var y = 0; y < image.Height; y++)
+        {
+            for (var x = 0; x < image.Width; x++)
+            {
+                if (!palette[image[x, y]].IsTransparent)
+                {
+                    top = Math.Min(top, y);
+                    bottom = y;
+                    break;
+                }
+            }
+        }
+
+        return bottom < 0 ? (0, -1) : (top, bottom);
     }
 
     /// <summary>

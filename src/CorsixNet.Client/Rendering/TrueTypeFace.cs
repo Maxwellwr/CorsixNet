@@ -1,5 +1,6 @@
 // A TrueType face standing in for the game's bitmap font, ported from CorsixTH CorsixTH/Src/th_gfx_font.cpp
-// (freetype_font::set_face, set_ideal_character_size, draw_text_wrapped) with stb_truetype in place of FreeType 2.
+// (freetype_font::set_face, set_ideal_character_size, draw_text_wrapped), with FreeType 2 drawing the glyphs where its
+// library is there and stb_truetype otherwise.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Text;
@@ -8,29 +9,50 @@ using StbTrueTypeSharp;
 namespace CorsixNet.Client.Rendering;
 
 /// <summary>
-/// The first face of a TrueType or OpenType font file (or collection), sized as CorsixTH's <c>freetype_font</c> sizes
-/// it to replace a bitmap font, laying out and rasterising single lines of text.
+/// The first face of a TrueType or OpenType font file (or collection), sized to stand in for a bitmap font, laying out
+/// and rasterising single lines of text.
 /// </summary>
 /// <remarks>
-/// FreeType's bitmap strikes are not looked for: stb_truetype draws outlines only, so a small font is always scaled up
-/// as CorsixTH does when a face has no strike of the size.
+/// stb_truetype reads the file (which characters it has, kerning, the heights of its letters); FreeType, when its
+/// library loads, draws the glyphs hinted to the pixel grid as CorsixTH's do. Without it the outlines are scaled
+/// only, which blurs text this small.
 /// </remarks>
 internal sealed unsafe class TrueTypeFace : IDisposable
 {
     private readonly StbTrueType.stbtt_fontinfo _info;
     private readonly Dictionary<int, int> _glyphIndices = [];
-    private readonly Dictionary<int, GlyphMetrics> _metrics = [];
-    private float _scaleX;
-    private float _scaleY;
+    private readonly Dictionary<(int Size, bool Monochrome, int Index), GlyphMetrics> _metrics = [];
+    private readonly FreeTypeGlyphs? _hinted;
+    private float _scale;
 
-    private TrueTypeFace(StbTrueType.stbtt_fontinfo info)
+    private TrueTypeFace(StbTrueType.stbtt_fontinfo info, FreeTypeGlyphs? hinted)
     {
         _info = info;
-        SetIdealCharacterSize(9, 14);
+        _hinted = hinted;
+        SetPixelSize(14);
     }
 
-    /// <summary>The pixel size asked of <see cref="SetIdealCharacterSize"/> after CorsixTH's adjustments.</summary>
-    public (int Width, int Height) PixelSize { get; private set; }
+    /// <summary>The height and width of the em square in pixels.</summary>
+    public int PixelSize { get; private set; }
+
+    /// <summary>Whether FreeType draws the glyphs, hinted to the pixel grid.</summary>
+    public bool IsHinted => _hinted is not null;
+
+    /// <summary>
+    /// Whether glyphs are drawn one bit a pixel with full hinting, as crisp as the game's own fonts, rather than
+    /// anti-aliased; only when <see cref="IsHinted"/>.
+    /// </summary>
+    public bool Monochrome
+    {
+        get => _hinted?.Monochrome ?? false;
+        set
+        {
+            if (_hinted is not null && _hinted.Monochrome != value)
+            {
+                _hinted.Monochrome = value;
+            }
+        }
+    }
 
     /// <summary>Reads a font file's first face (FreeType's <c>FT_New_Memory_Face</c> with index 0); null if it is not a font.</summary>
     public static TrueTypeFace? Load(byte[] data)
@@ -53,7 +75,7 @@ internal sealed unsafe class TrueTypeFace : IDisposable
 
         try
         {
-            return StbTrueType.CreateFont(data, offset) is { } info ? new TrueTypeFace(info) : null;
+            return StbTrueType.CreateFont(data, offset) is { } info ? new TrueTypeFace(info, FreeTypeGlyphs.Open(data)) : null;
         }
         catch (Exception exception) when (exception is IndexOutOfRangeException or ArgumentException or NullReferenceException)
         {
@@ -82,29 +104,47 @@ internal sealed unsafe class TrueTypeFace : IDisposable
     }
 
     /// <summary>
-    /// <c>set_ideal_character_size</c> without bitmap strikes: the size of the bitmap font's standard character,
-    /// scaled up to at least 14 pixels high and 9 wide, as vector fonts look poor smaller (<c>FT_Set_Pixel_Sizes</c>).
+    /// The em size at which the face's capitals and small letters are as tall as a bitmap font's (taller of the two,
+    /// so that neither shrinks), and at least <paramref name="minimum"/> pixels.
     /// </summary>
-    public void SetIdealCharacterSize(int width, int height)
+    /// <remarks>
+    /// CorsixTH's <c>set_ideal_character_size</c> sets the em square to the bitmap font's 'M' sprite, 9 by 12 pixels for
+    /// the game's usual font, and then to at least 9 by 14, so that every face is squeezed to some 70% of its width and
+    /// drawn larger than the game's letters. Keeping the face's proportions and matching the letters' heights instead
+    /// draws text as tall as the game's own, which hinting keeps legible.
+    /// </remarks>
+    public int PixelSizeFor(int capitalHeight, int smallHeight, int minimum = 8)
     {
-        width = Math.Max(width, 1);
-        height = Math.Max(height, 1);
-        if (height < 14)
+        var unitsPerEm = 1 / StbTrueType.stbtt_ScaleForMappingEmToPixels(_info, 1);
+        var size = Math.Max(minimum, 1);
+        if (capitalHeight > 0 && Top('H') is > 0 and var capitals)
         {
-            width = width * 14 / height;
-            height = 14;
+            size = Math.Max(size, (int)MathF.Round(capitalHeight * unitsPerEm / capitals));
         }
 
-        if (width < 9)
+        if (smallHeight > 0 && Top('x') is > 0 and var small)
         {
-            height = height * 9 / width;
-            width = 9;
+            size = Math.Max(size, (int)MathF.Round(smallHeight * unitsPerEm / small));
         }
 
-        PixelSize = (width, height);
-        _scaleX = StbTrueType.stbtt_ScaleForMappingEmToPixels(_info, width);
-        _scaleY = StbTrueType.stbtt_ScaleForMappingEmToPixels(_info, height);
-        _metrics.Clear();
+        return size;
+    }
+
+    /// <summary>
+    /// Sizes the face's em square to so many pixels, high and wide (<c>FT_Set_Pixel_Sizes</c>), for what is laid out and
+    /// rasterised from now on; glyphs of other sizes stay cached.
+    /// </summary>
+    public void SetPixelSize(int size)
+    {
+        size = Math.Max(size, 1);
+        if (size == PixelSize)
+        {
+            return;
+        }
+
+        PixelSize = size;
+        _scale = StbTrueType.stbtt_ScaleForMappingEmToPixels(_info, size);
+        _hinted?.SetPixelSize(size);
     }
 
     /// <summary>Lays out one line of text as <c>draw_text_wrapped</c> does with no width limit.</summary>
@@ -120,7 +160,7 @@ internal sealed unsafe class TrueTypeFace : IDisposable
             var index = GlyphIndex(code);
             if (previous != 0 && index != 0)
             {
-                pen += (int)MathF.Round(StbTrueType.stbtt_GetGlyphKernAdvance(_info, previous, index) * _scaleX);
+                pen += (int)MathF.Round(StbTrueType.stbtt_GetGlyphKernAdvance(_info, previous, index) * _scale);
             }
 
             var metrics = Metrics(index);
@@ -150,6 +190,12 @@ internal sealed unsafe class TrueTypeFace : IDisposable
     /// <summary>A glyph's grey-scale coverage (0 to 255), row by row; empty for a blank glyph.</summary>
     public GlyphBitmap Rasterize(int glyphIndex)
     {
+        if (_hinted is not null)
+        {
+            var (hinted, coverage) = _hinted.Glyph(glyphIndex);
+            return new GlyphBitmap(hinted.Width, hinted.Height, coverage);
+        }
+
         var metrics = Metrics(glyphIndex);
         if (metrics.Width <= 0 || metrics.Height <= 0)
         {
@@ -159,13 +205,25 @@ internal sealed unsafe class TrueTypeFace : IDisposable
         var pixels = new byte[metrics.Width * metrics.Height];
         fixed (byte* output = pixels)
         {
-            StbTrueType.stbtt_MakeGlyphBitmapSubpixel(_info, output, metrics.Width, metrics.Height, metrics.Width, _scaleX, _scaleY, 0, 0, glyphIndex);
+            StbTrueType.stbtt_MakeGlyphBitmapSubpixel(_info, output, metrics.Width, metrics.Height, metrics.Width, _scale, _scale, 0, 0, glyphIndex);
         }
 
         return new GlyphBitmap(metrics.Width, metrics.Height, pixels);
     }
 
-    public void Dispose() => _info.Dispose();
+    public void Dispose()
+    {
+        _hinted?.Dispose();
+        _info.Dispose();
+    }
+
+    /// <summary>The top of the character's outline above the baseline, in font units; 0 if the face has no such glyph.</summary>
+    private int Top(char character)
+    {
+        var index = GlyphIndex(character);
+        int x0, y0, x1, y1;
+        return index != 0 && StbTrueType.stbtt_GetGlyphBox(_info, index, &x0, &y0, &x1, &y1) != 0 ? y1 : 0;
+    }
 
     private int GlyphIndex(int codepoint)
     {
@@ -180,18 +238,26 @@ internal sealed unsafe class TrueTypeFace : IDisposable
 
     private GlyphMetrics Metrics(int glyphIndex)
     {
-        if (_metrics.TryGetValue(glyphIndex, out var metrics))
+        var key = (PixelSize, Monochrome, glyphIndex);
+        if (_metrics.TryGetValue(key, out var metrics))
         {
+            return metrics;
+        }
+
+        if (_hinted is not null)
+        {
+            metrics = _hinted.Glyph(glyphIndex).Metrics;
+            _metrics[key] = metrics;
             return metrics;
         }
 
         int advance, bearing, x0, y0, x1, y1;
         StbTrueType.stbtt_GetGlyphHMetrics(_info, glyphIndex, &advance, &bearing);
-        StbTrueType.stbtt_GetGlyphBitmapBoxSubpixel(_info, glyphIndex, _scaleX, _scaleY, 0, 0, &x0, &y0, &x1, &y1);
+        StbTrueType.stbtt_GetGlyphBitmapBoxSubpixel(_info, glyphIndex, _scale, _scale, 0, 0, &x0, &y0, &x1, &y1);
 
         // FreeType's hinted advances are whole pixels; so are these.
-        metrics = new GlyphMetrics((int)MathF.Round(advance * _scaleX), x0, -y0, x1 - x0, y1 - y0);
-        _metrics[glyphIndex] = metrics;
+        metrics = new GlyphMetrics((int)MathF.Round(advance * _scale), x0, -y0, x1 - x0, y1 - y0);
+        _metrics[key] = metrics;
         return metrics;
     }
 }
