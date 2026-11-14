@@ -79,6 +79,9 @@ internal sealed class BuildRoomTool
     private ObjectDefinition? _placing;
     private Direction _orientation;
     private TilePosition? _ghostTile;
+
+    /// <summary>Whether the object on the cursor was bought from the list of extras (see <see cref="PlaceExtra"/>).</summary>
+    private bool _placingExtra;
     private ObjectPlacementProblem _placeProblem;
     private bool _pickingUp;
     private int _highlightedObject;
@@ -236,6 +239,7 @@ internal sealed class BuildRoomTool
 
         _pickingUp = false;
         StartPlacing(definition, Turns.First(definition.Orientations.ContainsKey));
+        _placingExtra = true;
     }
 
     public void Start(RoomDefinition room)
@@ -701,8 +705,9 @@ internal sealed class BuildRoomTool
         }
 
         // An object whose last missing piece got placed meanwhile (say, by a command still on its way) is dropped; an
-        // extra object the room does not need stays on the cursor until it is placed.
-        if (_placing is not null && (_room!.NeededObjects?.ContainsKey(_placing.Id) ?? false) && !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id))
+        // extra object bought from the list stays on the cursor until it is placed, even one the room needs some of
+        // (another toilet or sink).
+        if (_placing is not null && !_placingExtra && (_room!.NeededObjects?.ContainsKey(_placing.Id) ?? false) && !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id))
         {
             StopPlacing();
         }
@@ -815,6 +820,7 @@ internal sealed class BuildRoomTool
 
     private void StartPlacing(ObjectDefinition definition, Direction orientation)
     {
+        _placingExtra = false;
         _placing = definition;
         _orientation = orientation;
         _ghostTile = null;
@@ -823,6 +829,7 @@ internal sealed class BuildRoomTool
 
     private void StopPlacing()
     {
+        _placingExtra = false;
         _placing = null;
         _ghostTile = null;
         _highlightedObject = 0;
