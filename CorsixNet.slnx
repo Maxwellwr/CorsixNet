@@ -9,13 +9,14 @@
     <Project Path="src/CorsixNet.Sim/CorsixNet.Sim.csproj" />
   </Folder>
   <Folder Name="/tools/">
-    <Project Path="tools/CorsixNet.LanguageImport/CorsixNet.LanguageImport.csproj" />
+    <Project Path="tools/CorsixNet.LuaConverter/CorsixNet.LuaConverter.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CorsixNet.Analyzers.Tests/CorsixNet.Analyzers.Tests.csproj" />
     <Project Path="tests/CorsixNet.Client.Tests/CorsixNet.Client.Tests.csproj" />
     <Project Path="tests/CorsixNet.Content.Tests/CorsixNet.Content.Tests.csproj" />
     <Project Path="tests/CorsixNet.Formats.Tests/CorsixNet.Formats.Tests.csproj" />
+    <Project Path="tests/CorsixNet.LuaConverter.Tests/CorsixNet.LuaConverter.Tests.csproj" />
     <Project Path="tests/CorsixNet.Net.Tests/CorsixNet.Net.Tests.csproj" />
     <Project Path="tests/CorsixNet.Sim.Tests/CorsixNet.Sim.Tests.csproj" />
   </Folder>

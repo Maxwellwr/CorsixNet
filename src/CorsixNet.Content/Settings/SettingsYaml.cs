@@ -1,5 +1,4 @@
 using System.Globalization;
-using CorsixNet.Formats;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
@@ -7,8 +6,7 @@ namespace CorsixNet.Content.Settings;
 
 /// <summary>
 /// The settings files' values (config.yaml, hotkeys.yaml) as YAML, read with YamlDotNet: a top-level mapping of
-/// names to texts, numbers, true and false, lists and mappings; and the values of the files they replace
-/// (config.txt, hotkeys.txt, Lua assignments) in the same shapes, for importing those once.
+/// names to texts, numbers, true and false, lists and mappings.
 /// </summary>
 internal static class SettingsYaml
 {
@@ -40,19 +38,8 @@ internal static class SettingsYaml
             : throw new InvalidDataException("The settings are not a mapping of names to values.");
     }
 
-    /// <summary>The values of a file of Lua assignments (the old config.txt and hotkeys.txt) in the same shapes.</summary>
-    public static Dictionary<string, object?> FromLua(string text) =>
-        LuaAssignments.Parse(text).ToDictionary(pair => pair.Key, pair => FromLuaValue(pair.Value), StringComparer.Ordinal);
-
     /// <summary>A text as a YAML single-quoted scalar, which takes backslashes as they are.</summary>
     public static string Quote(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
-
-    private static object? FromLuaValue(object? value) => value switch
-    {
-        LuaTable { Fields.Count: 0 } table => table.Items.Select(FromLuaValue).ToList(),
-        LuaTable table => table.Fields.ToDictionary(pair => pair.Key, pair => FromLuaValue(pair.Value), StringComparer.Ordinal),
-        _ => value,
-    };
 
     private static Dictionary<string, object?> Mapping(YamlMappingNode mapping)
     {

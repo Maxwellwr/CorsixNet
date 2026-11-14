@@ -7,7 +7,7 @@ using System.Globalization;
 using CorsixNet.Content.Languages;
 using CorsixNet.Formats;
 
-namespace CorsixNet.LanguageImport;
+namespace CorsixNet.LuaConverter;
 
 /// <summary>
 /// The language files, read once: which language each declares, and their statements to evaluate when one is loaded.

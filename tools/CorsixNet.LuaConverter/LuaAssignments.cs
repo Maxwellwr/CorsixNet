@@ -5,7 +5,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace CorsixNet.Formats;
+namespace CorsixNet.LuaConverter;
 
 /// <summary>
 /// Reads Lua files that only assign strings (joined with <c>..</c>), numbers (as <see cref="decimal"/>), booleans,

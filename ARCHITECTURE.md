@@ -306,9 +306,8 @@ A CorsixTH custom level (`--map island.level` in the client and server) is a `.l
 (`LevelMapLoader.LoadCustom`, `LevelRulesLoader.LoadCustom`). Its map lies beside it, or is an original map such as
 `LEVEL.L5` from the game; an `overlay.difficulty` and `overlay.level_number` read that campaign level's files on top,
 at that difficulty. A campaign (`--campaign file.campaign.yaml` in the client) is a YAML file (`name`, `description`, `levels`,
-`winning_text`, `movie`; texts plain or by language), or one of CorsixTH's `.campaign` Lua files, of which `CustomCampaign`
-reads the part CorsixTH's campaigns use (assignments of strings, numbers, booleans and tables): its name, description,
-levels and winning text. `LevelMapLoader.LoadCampaign` finds its levels beside it or in the `Levels` and `Campaigns`
+`winning_text`, `movie`; texts plain or by language) that `CustomCampaign` reads: its name, description, levels and
+winning text. `LevelMapLoader.LoadCampaign` finds its levels beside it or in the `Levels` and `Campaigns`
 folders next to it; the client puts them first in its level list. Moving on to the next level on winning is not there
 yet.
 
@@ -669,11 +668,13 @@ and `--continue` (the newest autosave) start the client on a saved game. Network
 
 ## Settings
 
+CorsixNet reads no Lua. `tools/CorsixNet.LuaConverter` turns CorsixTH's Lua files into its YAML: the language files
+(`languages`), `.campaign` files (`campaign`), `config.txt` (`config`) and `hotkeys.txt` (`hotkeys`).
+
 `GameConfig` (`CorsixNet.Content`, after CorsixTH's `config_finder.lua`) reads and writes `config.yaml`, a YAML
 mapping (YamlDotNet) with CorsixTH's setting names, in `%AppData%/CorsixNet` on Windows and
 `$XDG_CONFIG_HOME/CorsixNet` or `~/.config/CorsixNet` elsewhere (or `CORSIXNET_CONFIG`, or `--config FILE`). A
-missing file is written with the defaults, or imported once from a `config.txt` in CorsixTH's format (Lua
-assignments, read by `LuaAssignments`) beside it; `Hotkeys` does the same with `hotkeys.yaml` and `hotkeys.txt`. Only the settings the client acts on are kept: `language` (the
+missing file is written with the defaults; `Hotkeys` does the same with `hotkeys.yaml`. Only the settings the client acts on are kept: `language` (the
 original's `LANG-n.DAT` for English, French, German, Italian, Spanish or Swedish, with CorsixTH's translation from
 `Languages/*.yaml` beside the game laid over it, and CorsixNet's own strings from `Languages/CorsixNet/*.yaml` over that; CorsixTH's other translations are offered too), `unicode_font`,
 `fullscreen`, `width` and
@@ -791,7 +792,7 @@ Format readers in `CorsixNet.Formats`:
 | `BitmapFont`, `Cp437` | Bitmap fonts: sprite `i` draws character `31 + i` in the game's code page |
 | `LevelConfig` | Level settings (`LEVELS/*.SAM`, CorsixTH `.level` files) as flat keys such as `towns[1].StartCash` |
 | `PaletteRemaps` | Colour remap tables (`QDATA/GHOST*.DAT`), for example the red room blueprint |
-| `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. `StaffTexts` (Content) names and describes staff from them: the simulation keeps no text, so the picks come from the profile's fixed random values; the client shows them for a member of staff under the cursor. `OriginalTexts` adds disease names, causes, symptoms and cures and the VIPs' names, which the client's status line uses. `CorsixLanguages` (Content) reads the language files as YAML (YamlDotNet): each declares its language and the steps CorsixTH's `strings.lua` takes for it, in order: strings merge into dotted names, `inherit` runs another language first, and original_strings' `original` steps name the original's `S[section][index]`. `tools/CorsixNet.LanguageImport` writes CorsixTH's Lua language files out as this YAML and checks every language gives the same strings both ways; `OriginalTexts` lays the chosen translation over the original's strings by those names |
+| `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. `StaffTexts` (Content) names and describes staff from them: the simulation keeps no text, so the picks come from the profile's fixed random values; the client shows them for a member of staff under the cursor. `OriginalTexts` adds disease names, causes, symptoms and cures and the VIPs' names, which the client's status line uses. `CorsixLanguages` (Content) reads the language files as YAML (YamlDotNet): each declares its language and the steps CorsixTH's `strings.lua` takes for it, in order: strings merge into dotted names, `inherit` runs another language first, and original_strings' `original` steps name the original's `S[section][index]`. `tools/CorsixNet.LuaConverter` writes CorsixTH's Lua language files out as this YAML and checks every language gives the same strings both ways; `OriginalTexts` lays the chosen translation over the original's strings by those names |
 | `SoundArchive` | The original's sound effects and speech (`SOUND/DATA/SOUND-n.DAT`): the table of WAV files by name, looked up in any case of letters, their durations from the WAV headers, and the names a `*` wildcard matches, as CorsixTH's `th_sound.cpp` and `audio.lua`; `ThemeHospitalInstall.LoadSounds` falls back to English as `Audio:initSpeech` does |
 | `Xmi` | The original's music (`SOUND/MIDI/*.XMI`) converted to a type 0 standard MIDI file as CorsixTH's `xmi2mid.cpp` does: times × 100, notes ending with a velocity-0 note-on, the first tempo setting the division; `ThemeHospitalInstall.MusicTracks` lists the tracks titled and ordered by `MIDI.TXT` |
 

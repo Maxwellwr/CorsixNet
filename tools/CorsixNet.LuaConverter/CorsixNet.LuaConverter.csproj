@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <Description>Writes CorsixTH's Lua language files out as the YAML CorsixNet reads, and checks both give the same strings.</Description>
+    <Description>Turns CorsixTH's Lua files (languages, campaigns, config.txt, hotkeys.txt) into the YAML CorsixNet reads.</Description>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/CorsixNet.Content/CorsixNet.Content.csproj" />
+    <InternalsVisibleTo Include="CorsixNet.LuaConverter.Tests" />
   </ItemGroup>
 
 </Project>

@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CorsixNet.Content.Tests" />
-    <InternalsVisibleTo Include="CorsixNet.LanguageImport" />
+    <InternalsVisibleTo Include="CorsixNet.LuaConverter" />
   </ItemGroup>
 
   <ItemGroup>
