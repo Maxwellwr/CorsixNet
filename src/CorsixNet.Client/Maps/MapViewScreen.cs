@@ -213,6 +213,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Announces machines that start needing a repair urgently (CorsixTH's <c>announceRepair</c>).</summary>
     private readonly RepairAnnouncer _repairs = new();
 
+    private readonly HospitalAnnouncements _announcements = new(new Random());
+
     private readonly GatesToHellSounds _hellSounds = new();
 
     private readonly FrameSounds _frameSounds = new();
@@ -2581,9 +2583,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             _repairSession = _session;
             _repairs.Reset();
+            _announcements.Reset();
         }
 
-        foreach (var sound in _repairs.Update(Simulation!, _session.Player))
+        foreach (var sound in _repairs.Update(Simulation!, _session.Player).Concat(_announcements.Update(Simulation!, _session.Player)))
         {
             _sounds.Play(sound);
         }
