@@ -23,6 +23,7 @@ internal sealed class SoundEffects : IDisposable
     private readonly Dictionary<string, SoundEffect?> _loaded = new(StringComparer.OrdinalIgnoreCase);
     private readonly Random _random = new();
     private bool _broken;
+    private (string Name, SoundEffectInstance? Instance)? _loop;
 
     private SoundEffects(SoundChoice? choice, float volume, float announcementVolume = 0.5f)
     {
@@ -86,8 +87,53 @@ internal sealed class SoundEffects : IDisposable
         }
     }
 
+    /// <summary>
+    /// Keeps one sound playing over and over (<c>UI:playSound</c> with loops -1, such as the research screen's
+    /// Research.wav), or stops it (null); the same name again leaves it playing.
+    /// </summary>
+    public void SetLoop(string? name)
+    {
+        if (string.Equals(_loop?.Name, name, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        StopLoop();
+        if (name is null || _choice is null || _broken || _volume <= 0 || Effect(_choice.Resolve(name, _random.Next)) is not { } effect)
+        {
+            _loop = name is null ? null : (name, null);
+            return;
+        }
+
+        try
+        {
+            var instance = effect.CreateInstance();
+            instance.IsLooped = true;
+            instance.Volume = Math.Clamp(_volume, 0f, 1f);
+            instance.Play();
+            _loop = (name, instance);
+        }
+        catch (Exception e) when (e is NoAudioHardwareException or InstancePlayLimitException or InvalidOperationException)
+        {
+            _broken = e is NoAudioHardwareException;
+            _loop = (name, null);
+        }
+    }
+
+    private void StopLoop()
+    {
+        if (_loop?.Instance is { } instance)
+        {
+            instance.Stop();
+            instance.Dispose();
+        }
+
+        _loop = null;
+    }
+
     public void Dispose()
     {
+        StopLoop();
         foreach (var effect in _loaded.Values)
         {
             effect?.Dispose();

@@ -639,6 +639,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var overWindow = IsWindowHostReady
             && (_windows.Update(this, mouse, _previousMouse, new Rectangle(0, StatusHeight, _device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight - panelHeight))) | overPanel);
         _cursorOverWindow = overWindow;
+
+        // UIResearch:_playBgSound: Research.wav loops while the research screen is open in its original look.
+        _sounds.SetLoop(_windows.Windows.Any(window => window is ResearchWindow && window.IsFullscreen(this)) ? "Research.wav" : null);
         if (overWindow)
         {
             mouse = new MouseState(mouse.X, mouse.Y, _previousMouse.ScrollWheelValue, _previousMouse.LeftButton, _previousMouse.MiddleButton, _previousMouse.RightButton, _previousMouse.XButton1, _previousMouse.XButton2);
