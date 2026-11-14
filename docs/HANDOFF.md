@@ -149,7 +149,8 @@ Done and committed:
   stand-ins for CorsixTH's dialogs with clickable buttons that send commands. F1 bank manager (loans,
   insurance owed), F2 bank statement, F5 casebook (prices, research concentration), F6 research shares,
   F8 graph figures, F9 hospital policy. Shift+F3 staff management (F3 stays the level list): staff by
-  class, bonus (a tenth of the wage), a tenth more salary, firing after a confirmation, raise answers;
+  class, bonus (a tenth of the wage), a tenth more salary, firing after a confirmation, raise answers
+  (in the original's look, `StaffManagementScreen`, where the graphics are there);
   clicking a member of staff opens their window (pick up, fire, a handyman's parcel).
   Clicking a patient opens the patient window (health, needs, history; send home, guess cure,
   vaccinate), clicking a room or a reception desk its queue window (size, front/back, another room of
