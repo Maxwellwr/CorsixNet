@@ -19,6 +19,9 @@ namespace CorsixNet.Client.Rendering;
 /// </remarks>
 internal sealed unsafe class TrueTypeFace : IDisposable
 {
+    /// <summary>The share of a bitmap font's average letter width a face's letters may take (<see cref="PixelSizeFor"/>).</summary>
+    private const double WidthShare = 0.9;
+
     private readonly StbTrueType.stbtt_fontinfo _info;
     private readonly Dictionary<int, int> _glyphIndices = [];
     private readonly Dictionary<(int Size, bool Monochrome, int Index), GlyphMetrics> _metrics = [];
@@ -104,19 +107,22 @@ internal sealed unsafe class TrueTypeFace : IDisposable
     }
 
     /// <summary>
-    /// The em size at which the face's capitals and small letters are as tall as a bitmap font's (taller of the two,
-    /// so that neither shrinks), and at least <paramref name="minimum"/> pixels.
+    /// The em size at which the face's letters are as tall as a bitmap font's capitals and small letters (the taller of
+    /// the two sizes, so that neither shrinks) but its small letters no wider on average than nine tenths of the bitmap
+    /// font's <paramref name="averageWidth"/>, so that text takes no more room than the game's own, which translations
+    /// longer than the English it was laid out for need; at least
+    /// <paramref name="minimum"/> pixels. A zero height or width is not matched.
     /// </summary>
     /// <remarks>
     /// CorsixTH's <c>set_ideal_character_size</c> sets the em square to the bitmap font's 'M' sprite, 9 by 12 pixels for
-    /// the game's usual font, and then to at least 9 by 14, so that every face is squeezed to some 70% of its width and
-    /// drawn larger than the game's letters. Keeping the face's proportions and matching the letters' heights instead
-    /// draws text as tall as the game's own, which hinting keeps legible.
+    /// the game's usual font, and then to at least 9 by 14, so that every face is squeezed to some 70% of its width.
+    /// Keeping the face's proportions and matching the game's letters instead draws text as the game's own, which
+    /// hinting keeps legible.
     /// </remarks>
-    public int PixelSizeFor(int capitalHeight, int smallHeight, int minimum = 8)
+    public int PixelSizeFor(int capitalHeight, int smallHeight, double averageWidth = 0, int minimum = 8)
     {
         var unitsPerEm = 1 / StbTrueType.stbtt_ScaleForMappingEmToPixels(_info, 1);
-        var size = Math.Max(minimum, 1);
+        var size = 0;
         if (capitalHeight > 0 && Top('H') is > 0 and var capitals)
         {
             size = Math.Max(size, (int)MathF.Round(capitalHeight * unitsPerEm / capitals));
@@ -127,7 +133,13 @@ internal sealed unsafe class TrueTypeFace : IDisposable
             size = Math.Max(size, (int)MathF.Round(smallHeight * unitsPerEm / small));
         }
 
-        return size;
+        if (averageWidth > 0 && AverageSmallAdvance() is > 0 and var advance)
+        {
+            var narrow = (int)Math.Floor((averageWidth * WidthShare * unitsPerEm / advance) + 1e-6);
+            size = size == 0 ? narrow : Math.Min(size, narrow);
+        }
+
+        return Math.Max(size == 0 ? 14 : size, Math.Max(minimum, 1));
     }
 
     /// <summary>
@@ -215,6 +227,28 @@ internal sealed unsafe class TrueTypeFace : IDisposable
     {
         _hinted?.Dispose();
         _info.Dispose();
+    }
+
+    /// <summary>The average advance of the small letters a to z the face has, in font units; 0 if it has none.</summary>
+    private double AverageSmallAdvance()
+    {
+        var total = 0;
+        var count = 0;
+        for (var character = 'a'; character <= 'z'; character++)
+        {
+            var index = GlyphIndex(character);
+            if (index == 0)
+            {
+                continue;
+            }
+
+            int advance, bearing;
+            StbTrueType.stbtt_GetGlyphHMetrics(_info, index, &advance, &bearing);
+            total += advance;
+            count++;
+        }
+
+        return count == 0 ? 0 : (double)total / count;
     }
 
     /// <summary>The top of the character's outline above the baseline, in font units; 0 if the face has no such glyph.</summary>

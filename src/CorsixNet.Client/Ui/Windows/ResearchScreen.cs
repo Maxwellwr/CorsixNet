@@ -75,7 +75,7 @@ internal sealed class ResearchScreen
             if (area.Current.IsNone)
             {
                 // updateCategories: a finished area's arrows are covered with a dark panel.
-                batch.Draw(Pixel(batch.GraphicsDevice), new Rectangle(origin.X + 372, origin.Y + 21 + (i * 41), 120, 30), new Color(24, 24, 20));
+                batch.Draw(graphics.Pixel, new Rectangle(origin.X + 372, origin.Y + 21 + (i * 41), 120, 30), new Color(24, 24, 20));
                 Centred(host.Texts?.String(3, 21) ?? "Done", 270, y, 300);
                 continue;
             }
@@ -226,18 +226,5 @@ internal sealed class ResearchScreen
         return points is { } done && research.Required(simulation, target) is { } required && required > 0
             ? (float)Math.Min(1m, done / required)
             : null;
-    }
-
-    private static Texture2D? _pixel;
-
-    private static Texture2D Pixel(GraphicsDevice device)
-    {
-        if (_pixel is null || _pixel.IsDisposed || _pixel.GraphicsDevice != device)
-        {
-            _pixel = new Texture2D(device, 1, 1);
-            _pixel.SetData([Color.White]);
-        }
-
-        return _pixel;
     }
 }

@@ -33,17 +33,11 @@ internal sealed class TextRenderer : IDisposable
     /// <summary>Whether text is drawn with a TrueType face rather than the bitmap font.</summary>
     public bool IsTrueType => _face is not null;
 
-    /// <summary>
-    /// Whether lines the bitmap font has every character of (Latin text, numbers) are still drawn with it while a
-    /// TrueType face is in use, standing on the face's baseline; true by default.
-    /// </summary>
-    public bool BitmapForLatin { get; set; } = Environment.GetEnvironmentVariable("CNET_NOLATIN") != "1";
-
     public int LineHeight => _face is null ? _font.MeasureLine("Mg").Height + _font.LineSpacing : _trueTypeLineHeight;
 
     /// <summary>
     /// Draws with the face from now on, coloured after the bitmap font (<c>freetype_font:setFontOptions</c>) and sized
-    /// so that its letters are as tall as the bitmap font's (see <see cref="TrueTypeFace.PixelSizeFor"/>), but at least
+    /// so that its letters are as tall and about as wide as the bitmap font's (see <see cref="TrueTypeFace.PixelSizeFor"/>), but at least
     /// <paramref name="minimumSize"/> pixels to the em, as ideograms need more pixels than letters; null goes back to
     /// the bitmap font.
     /// </summary>
@@ -59,7 +53,6 @@ internal sealed class TextRenderer : IDisposable
         if (face is not null)
         {
             _trueTypeSize = SizeFor(face, minimumSize);
-            face.Monochrome = Environment.GetEnvironmentVariable("CNET_MONO") == "1";
             face.SetPixelSize(_trueTypeSize);
             var standard = face.Layout("Mg");
             _trueTypeLineHeight = standard.Height;
@@ -67,8 +60,11 @@ internal sealed class TextRenderer : IDisposable
         }
     }
 
-    /// <summary>Whether the text is drawn with the TrueType face, rather than with the bitmap font.</summary>
-    public bool IsTrueTypeFor(string text) => _face is not null && !(BitmapForLatin && BitmapCanDraw(text));
+    /// <summary>
+    /// Whether the text is drawn with the TrueType face: only when one is in use and the text has characters the bitmap
+    /// font has not, so that Latin text and numbers keep the game's own letters, standing on the face's baseline.
+    /// </summary>
+    public bool IsTrueTypeFor(string text) => _face is not null && !BitmapCanDraw(_font, text);
 
     public (int Width, int Height) Measure(string text)
     {
@@ -166,7 +162,7 @@ internal sealed class TextRenderer : IDisposable
     }
 
     /// <summary>Whether every character of the text is one the bitmap font draws; white space is always.</summary>
-    private bool BitmapCanDraw(string text)
+    internal static bool BitmapCanDraw(BitmapFont font, string text)
     {
         foreach (var rune in text.EnumerateRunes())
         {
@@ -178,7 +174,7 @@ internal sealed class TextRenderer : IDisposable
             // Characters the code page has not come back as '?', which the font does have.
             var code = Cp437.FromUnicode(rune.Value);
             if (code > byte.MaxValue || Cp437.ToUnicode((byte)code) != rune.Value
-                || !_font.TryGetGlyph(rune, out var sprite) || _font.Sheet[sprite] is not { Width: > 1, Height: > 1 })
+                || !font.TryGetGlyph(rune, out var sprite) || font.Sheet[sprite] is not { Width: > 1, Height: > 1 })
             {
                 return false;
             }
@@ -188,7 +184,7 @@ internal sealed class TextRenderer : IDisposable
     }
 
     private int SizeFor(TrueTypeFace face, int minimumSize) => _match is { CapitalHeight: > 0 } match
-        ? face.PixelSizeFor(match.CapitalHeight, match.SmallHeight, minimumSize)
+        ? face.PixelSizeFor(match.CapitalHeight, match.SmallHeight, match.AverageSmallWidth, minimumSize)
         : Math.Max(14, minimumSize);
 
     private void DisposeTrueTypeGlyphs()

@@ -19,6 +19,27 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     private readonly Dictionary<string, SpriteAtlas?> _sheets = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TextRenderer?> _fonts = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Palette?> _palettes = new(StringComparer.OrdinalIgnoreCase);
+    private Texture2D? _pixel;
+    private TrueTypeFace? _face;
+    private int _minimumSize = 8;
+
+    /// <summary>The name that stands for the game's main palette, <c>Data/MPalette.dat</c>.</summary>
+    public const string MainPalette = "MPALETTE";
+
+    /// <summary>A white pixel, for the dialogs' coloured panels and lines.</summary>
+    public Texture2D Pixel
+    {
+        get
+        {
+            if (_pixel is null)
+            {
+                _pixel = new Texture2D(device, 1, 1);
+                _pixel.SetData([Microsoft.Xna.Framework.Color.White]);
+            }
+
+            return _pixel;
+        }
+    }
 
     /// <summary>A 640 by 480 picture (<c>loadRaw</c>) with its palette, both named <paramref name="name"/>.</summary>
     public Texture2D? Picture(string name)
@@ -52,14 +73,30 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
         if (!_fonts.TryGetValue(key, out var font))
         {
             font = Palette(palette) is { } colours ? Try(() => new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", name, complex: false)), colours)) : null;
+            font?.UseTrueType(_face, _minimumSize);
             _fonts[key] = font;
         }
 
         return font;
     }
 
+    /// <summary>
+    /// Draws the dialogs' text with the face from now on (a language the game's fonts cannot draw), sized and coloured
+    /// after each bitmap font and at least so many pixels to the em, or the bitmap fonts again (null).
+    /// </summary>
+    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8)
+    {
+        _face = face;
+        _minimumSize = minimumSize;
+        foreach (var font in _fonts.Values)
+        {
+            font?.UseTrueType(face, minimumSize);
+        }
+    }
+
     public void Dispose()
     {
+        _pixel?.Dispose();
         foreach (var picture in _pictures.Values)
         {
             picture?.Dispose();
@@ -80,7 +117,10 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     {
         if (!_palettes.TryGetValue(name, out var palette))
         {
-            palette = Try(() => install.LoadPalette("QDATA", name + ".PAL"));
+            // MPalette is the game's main palette, which a font loaded without one of its own takes.
+            palette = string.Equals(name, MainPalette, StringComparison.OrdinalIgnoreCase)
+                ? Try(() => install.LoadPalette("DATA", "MPALETTE.DAT"))
+                : Try(() => install.LoadPalette("QDATA", name + ".PAL"));
             _palettes[name] = palette;
         }
 

@@ -20,6 +20,9 @@ internal readonly record struct BitmapFontMatch(int Width, int Height, PaletteCo
 
     public int Baseline { get; init; }
 
+    /// <summary>The average width of the small letters' sprites, spacing included; zero for a font without them.</summary>
+    public double AverageSmallWidth { get; init; }
+
     /// <summary>
     /// <c>match_bitmap_font</c>: the size and colour of 'M', or of '0' for fonts of digits only; failing both, the
     /// average size of all characters with the colour of the last one that has any.
@@ -42,6 +45,7 @@ internal readonly record struct BitmapFontMatch(int Width, int Height, PaletteCo
                     CapitalHeight = bottom - top + 1,
                     SmallHeight = smallBottom >= smallTop ? smallBottom - smallTop + 1 : 0,
                     Baseline = bottom + 1,
+                    AverageSmallWidth = AverageWidth(sheet, palette, 'a', 'z'),
                 };
             }
         }
@@ -63,6 +67,24 @@ internal readonly record struct BitmapFontMatch(int Width, int Height, PaletteCo
         }
 
         return count == 0 ? null : new BitmapFontMatch((widths + (count / 2)) / count, (heights + (count / 2)) / count, last!.Value);
+    }
+
+    /// <summary>The average width of the characters' sprites that have any opaque pixel; 0 if none has.</summary>
+    private static double AverageWidth(SpriteSheet sheet, Palette palette, char first, char last)
+    {
+        var total = 0;
+        var count = 0;
+        for (var character = first; character <= last; character++)
+        {
+            var sprite = character - BitmapFont.FirstCharacter;
+            if (sprite < sheet.Count && sheet[sprite] is { Width: > 1 } image && Ink(image, palette).Bottom >= 0)
+            {
+                total += image.Width;
+                count++;
+            }
+        }
+
+        return count == 0 ? 0 : (double)total / count;
     }
 
     /// <summary>The first and last rows with an opaque pixel; (0, -1) for a blank image.</summary>

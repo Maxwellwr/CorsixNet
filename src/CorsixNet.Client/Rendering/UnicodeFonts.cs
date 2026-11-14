@@ -111,7 +111,7 @@ internal sealed class UnicodeFonts : IDisposable
             // Latin, Greek and Cyrillic first, Verdana and Tahoma before the rest as their wide letters, tall small
             // letters and hinting for the screen come nearest the game's own fonts; then Chinese (simplified,
             // traditional), Japanese and Korean.
-            return new[] { "verdana.ttf", "tahoma.ttf", "segoeui.ttf", "arial.ttf", "msyh.ttc", "msjh.ttc", "YuGothR.ttc", "meiryo.ttc", "msgothic.ttc", "malgun.ttf", "simsun.ttc", "gulim.ttc" }
+            return new[] { "tahoma.ttf", "verdana.ttf", "segoeui.ttf", "arial.ttf", "msyh.ttc", "msjh.ttc", "YuGothR.ttc", "meiryo.ttc", "msgothic.ttc", "malgun.ttf", "simsun.ttc", "gulim.ttc" }
                 .Select(name => Path.Combine(fonts, name));
         }
 

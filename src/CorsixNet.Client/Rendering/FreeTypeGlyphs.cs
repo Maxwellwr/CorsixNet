@@ -30,9 +30,9 @@ internal sealed unsafe class FreeTypeGlyphs : IDisposable
 
     /// <summary>
     /// Whether glyphs are drawn without anti-aliasing, one bit a pixel as the game's own fonts are, with the font's full
-    /// hinting; otherwise they are anti-aliased and hinted vertically only, as CorsixTH draws them.
+    /// hinting (the default); otherwise they are anti-aliased and hinted vertically only, as CorsixTH draws them.
     /// </summary>
-    public bool Monochrome { get; set; }
+    public bool Monochrome { get; set; } = true;
 
     /// <summary>Opens the file's first face; null if FreeType is not there or cannot read it.</summary>
     public static FreeTypeGlyphs? Open(byte[] data)

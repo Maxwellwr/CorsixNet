@@ -8,6 +8,7 @@ using CorsixNet.Client.Rendering;
 using CorsixNet.Sim.Economy;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -24,7 +25,7 @@ internal sealed class GraphWindow : UiWindow
     private const int Spacing = 25;
     private const int GraphHeight = 268;
 
-    private static readonly (string Name, Color Colour, Func<MonthStatistics, long> Value)[] Lines =
+    internal static readonly (string Name, Color Colour, Func<MonthStatistics, long> Value)[] Lines =
     [
         ("Money in", new Color(182, 32, 16), s => s.MoneyIn),
         ("Money out", new Color(215, 81, 8), s => s.MoneyOut),
@@ -44,6 +45,16 @@ internal sealed class GraphWindow : UiWindow
 
     public override string? Hotkey => "F8";
 
+    private readonly GraphsScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="GraphsScreen"/>) where its graphics are there; else the table and chart below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => GraphsScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => GraphsScreen.Tooltip(host, local);
     public override Point? CanvasSize => new((Points - 1) * Spacing + 120, GraphHeight + 20);
 
     /// <summary>
