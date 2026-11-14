@@ -350,6 +350,12 @@ internal abstract class UiWindow
     /// </summary>
     public virtual bool IsPinned => false;
 
+    /// <summary>Whether Esc closes the window (CorsixTH's <c>esc_closes</c>); a raise request must be answered.</summary>
+    public virtual bool ClosesWithEsc => true;
+
+    /// <summary>Whether the game stands still while the window is open (CorsixTH's <c>Window:mustPause</c>).</summary>
+    public virtual bool MustPause => false;
+
     /// <summary>
     /// Where the window first opens, as CorsixTH's <c>Window:setDefaultPosition</c>: for each of x and y a negative value
     /// is pixels from the right or bottom edge, a value from 0 up to 1 a share of the free space (0.5 centres it) and
