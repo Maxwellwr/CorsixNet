@@ -177,7 +177,7 @@ fonts, faces) and the details listed.
 
 - Bottom panel: drawn as the original's (`Ui/OriginalBottomPanel`: Panel02V buttons with the hover row, balance,
   date, reputation meter, fax door, dynamic info and pause text, fax icons by kind). The fax icons slide out of the door,
-  the emergency's siren turns and a right click dismisses a fax with one choice (`FaxDrawer`). Missing: the progress bars of the dynamic info, and CorsixTH's
+  the emergency's siren turns and a right click dismisses a fax with one choice (`FaxDrawer`). The dynamic info's lines and its diagnosis and tiredness bars are drawn (`DynamicInfoLines`). Missing: CorsixTH's
   machine menu button (aux_ui sprites); Machines and the adviser's messages are on their hotkeys only.
 - Top menu bar (`dialogs/menu.lua`); Esc opens a menu window with the file items, options, charts and debug.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
