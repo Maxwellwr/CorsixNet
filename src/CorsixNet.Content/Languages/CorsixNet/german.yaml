@@ -4,6 +4,13 @@
 # Only characters of code page 437, as the game's bitmap font draws German.
 language: [Deutsch, German, de, ger, deu]
 strings:
+  menu:
+    file: '  DATEI  '
+    options: '  OPTIONEN  '
+    charts: '  ÜBERSICHTEN  '
+    debug: '  DEBUG  '
+  menu_charts:
+    machine_menu: '  (%1%) GERÄTELISTE  '
   accessibility_window:
     enable_screen_shake: Bildschirmwackeln
     scroll_speed: Scrollgeschwindigkeit

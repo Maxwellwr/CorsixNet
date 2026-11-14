@@ -4,6 +4,11 @@
 # Only characters of code page 437, as the game's bitmap font draws French.
 language: [Français, French, fr, fre, fra]
 strings:
+  menu:
+    file: '  FICHIER  '
+    options: '  OPTIONS  '
+    charts: '  TABLEAUX  '
+    debug: '  DEBOGAGE  '
   accessibility_window:
     enable_screen_shake: Tremblement de l'écran
     scroll_speed: Vitesse de défilement

@@ -4,6 +4,11 @@
 # Only characters of code page 437, as the game's bitmap font draws Spanish.
 language: [Español, Spanish, es, spa]
 strings:
+  menu:
+    file: '  ARCHIVO  '
+    options: '  OPCIONES  '
+    charts: '  INFORMES  '
+    debug: '  DEPURACION  '
   accessibility_window:
     scroll_speed: 'Velocidad de desplazamiento'
     shift_scroll_speed: 'Velocidad de desplazamiento con Mayús'
