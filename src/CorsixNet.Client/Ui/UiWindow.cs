@@ -147,6 +147,14 @@ internal interface IWindowHost
     /// </summary>
     Texture2D? CloseUp(int entityId) => null;
 
+    /// <summary>Whether the epidemic's vaccination mode is on (<c>Epidemic.vaccination_mode_active</c>).</summary>
+    bool IsVaccinationMode => false;
+
+    /// <summary>The watch's vaccination button (<c>Epidemic:toggleVaccinationMode</c>).</summary>
+    void ToggleVaccinationMode()
+    {
+    }
+
     /// <summary>Draws a humanoid standing in the first frame of their idle animation facing west, as UIQueue:drawPatient.</summary>
     void DrawIdle(SpriteBatch batch, Humanoid humanoid, Point at)
     {

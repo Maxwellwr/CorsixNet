@@ -79,7 +79,8 @@ internal sealed class WatchScreen
         var hover = EndButton.Contains(local);
         if (countdown.Kind != WatchKind.Emergency)
         {
-            Panel(mouse.LeftButton == ButtonState.Pressed && _pressed == "end" && hover ? end + 1 : end, 4, 0);
+            var toggled = countdown.Kind == WatchKind.Epidemic && host.IsVaccinationMode;
+            Panel(toggled || (mouse.LeftButton == ButtonState.Pressed && _pressed == "end" && hover) ? end + 1 : end, 4, 0);
         }
 
         Panel(13, 0, 28);
@@ -119,11 +120,23 @@ internal sealed class WatchScreen
 
         var pressed = _pressed;
         _pressed = null;
-        if (pressed == "end" && EndButton.Contains(local) && Countdown(host.Simulation, host.Player) is { Kind: WatchKind.Opening })
+        if (pressed != "end" || !EndButton.Contains(local))
         {
-            // onCountdownEnd for the opening: the hospital opens now, with its fanfare.
-            host.PlaySound(WindowLayer.DefaultButtonSound);
-            host.Submit(new OpenHospitalCommand());
+            return;
+        }
+
+        switch (Countdown(host.Simulation, host.Player)?.Kind)
+        {
+            case WatchKind.Opening:
+                // onCountdownEnd for the opening: the hospital opens now, with its fanfare.
+                host.PlaySound(WindowLayer.DefaultButtonSound);
+                host.Submit(new OpenHospitalCommand());
+                break;
+            case WatchKind.Epidemic:
+                // UIWatch:toggleVaccinationMode: the button stays down while clicking patients picks them.
+                host.PlaySound(WindowLayer.DefaultButtonSound);
+                host.ToggleVaccinationMode();
+                break;
         }
     }
 
