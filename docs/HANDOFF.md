@@ -408,7 +408,8 @@ Next, in this order (2026-11-10):
    autopsy north, bed north and east, lecture chair north, X-ray viewer, cast remover and slicer east) and their users are
    drawn with the tile's north wall (`MapRenderer`'s `drawEarlyEntities`, level_map::draw's oEarlyEntities), so a patient
    at the north fixer's use position stands in front of its base. Transparent walls done 2026-11-13 (issue #94): X held or Shift+X toggled draws every wall at half alpha
-   (GameUI:setWallsTransparent, ingame_setTransparent/ingame_toggleTransparent hotkeys); rats are shot by clicking them
+   (GameUI:setWallsTransparent, ingame_setTransparent/ingame_toggleTransparent hotkeys); our own addition: while an object or
+   a member of staff is being put down, the walls up to three tiles in front of that tile are half transparent too; rats are shot by clicking them
    now, as Rat:onClick, since X is CorsixTH's transparency key. North room doors, swing doors included, are in the early list too
    (door.lua's Door:setAnimation; 2026-11-13).
 

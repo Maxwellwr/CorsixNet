@@ -43,6 +43,22 @@ internal sealed class MapRenderer
     /// </summary>
     public bool TransparentWalls { get; set; }
 
+    /// <summary>
+    /// The tile where something is being put (an object, a member of staff), or null: the walls standing in front of it,
+    /// which would hide it, are drawn half transparent too. CorsixTH has only the switch for every wall.
+    /// </summary>
+    public TilePosition? SeeThroughAt { get; set; }
+
+    /// <summary>
+    /// Whether a wall on tile (<paramref name="x"/>, <paramref name="y"/>) can hide <paramref name="target"/>: it stands up
+    /// to three tiles south or east of it, in front, and walls are about three tiles tall on the screen.
+    /// </summary>
+    public static bool HidesTile(int x, int y, TilePosition target)
+    {
+        int dx = x - target.X, dy = y - target.Y;
+        return dx >= 0 && dy >= 0 && dx + dy is >= 1 and <= 3;
+    }
+
     /// <summary>Draws the part of the map inside <paramref name="view"/> (world pixels). The batch must be begun.</summary>
     /// <param name="batch">A begun sprite batch.</param>
     /// <param name="map">The map to draw.</param>
@@ -163,7 +179,8 @@ internal sealed class MapRenderer
         if (height > 0)
         {
             var (left, top) = TileOrigin(x, y);
-            _blocks.Draw(batch, sprite, left, top - height + 32, TransparentWalls ? Color.White * 0.5f : Color.White);
+            var seeThrough = TransparentWalls || (SeeThroughAt is { } target && HidesTile(x, y, target));
+            _blocks.Draw(batch, sprite, left, top - height + 32, seeThrough ? Color.White * 0.5f : Color.White);
         }
 
         return height;
