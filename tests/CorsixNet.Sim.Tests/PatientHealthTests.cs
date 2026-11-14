@@ -3,6 +3,7 @@ using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.People;
+using CorsixNet.Sim.Rooms;
 
 namespace CorsixNet.Sim.Tests;
 
@@ -66,6 +67,35 @@ public class PatientHealthTests
         Assert.All(patients, entry => Assert.Equal(0.50478m, entry.Humanoid.Happiness));
     }
 
+    [Fact]
+    public void FedUpInARoomThatDoesNotCureThemTheyGoHomeOnceOut()
+    {
+        var simulation = NewSimulation();
+        Room Room(string type) => simulation.AddEntity(id => new Room(id, type, new TileRect(4, 4, 2, 2), Enumerable.Repeat(new OriginalTile(0, TileFlags.None), 4).ToList()));
+        var gp = Room("gp");
+        var pharmacy = Room("pharmacy");
+        var phase = typeof(PatientBehaviour).GetProperty(nameof(PatientBehaviour.Phase))!;
+        var target = typeof(PatientBehaviour).GetProperty(nameof(PatientBehaviour.TargetId))!;
+        var patients = Enumerable.Range(0, 400).Select(i => (Entry: AddPatient(simulation, new TilePosition(2, 2), 0.2m), Room: i % 2 == 0 ? gp : pharmacy)).ToList();
+        foreach (var ((humanoid, patient), room) in patients)
+        {
+            phase.SetValue(patient, PatientPhase.UsingObject);
+            target.SetValue(patient, room.Id);
+            Feelings.OnEndDay(simulation, humanoid);
+        }
+
+        // In the GP's office some give up, and stay until their visit is over; in the pharmacy, which cures a cold, none.
+        var fedUp = patients.Where(p => p.Entry.Patient.IsFedUp).ToList();
+        Assert.NotEmpty(fedUp);
+        Assert.All(fedUp, p => Assert.Same(gp, p.Room));
+        Assert.All(patients, p => Assert.Equal(PatientPhase.UsingObject, p.Entry.Patient.Phase));
+
+        var (leaving, quitter) = fedUp[0].Entry;
+        phase.SetValue(quitter, PatientPhase.LeavingRoom);
+        quitter.Update(simulation, leaving);
+        Assert.Equal(PatientPhase.GoingHome, quitter.Phase);
+        Assert.False(quitter.IsFedUp);
+    }
     [Fact]
     public void AtNoHealthAPatientDiesOnceOutOfTheRoom()
     {

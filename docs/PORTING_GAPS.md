@@ -91,8 +91,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   (`entities/humanoids/patient.lua`, `diseases/*.lua`).
 - Diagnosis by the other diagnosis rooms (`diagnosis/diag_*.lua`); treatment of all diseases except
   those cured in the pharmacy.
-- Patient needs: a patient getting fed up near death leaves from any room but the one that cures them in CorsixTH,
-  here only from outside rooms (`PatientBehaviour.OnEndDayHealth`; `entities/humanoids/patient.lua`). The rest
+- Patient needs: a patient fed up near death in a room that does not cure them goes home once their visit is over,
+  where CorsixTH sends them at once (`PatientBehaviour.IsFedUp`; `entities/humanoids/patient.lua`). The rest
   (warmth, thirst, toilets, happiness, prices, waiting, vomiting) is done (`Needs`, `Feelings`).
 - Health and death: the dying mood icons and the death sounds; the gates to hell blocking their tile and CorsixTH's check
   that they leave a way round. Health running down, the step aside, the fall, the trip to heaven and, for 65 % of the men,
