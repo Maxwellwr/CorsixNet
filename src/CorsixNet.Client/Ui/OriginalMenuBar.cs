@@ -11,8 +11,8 @@ using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui;
 
-/// <summary>One item of a menu: its text and what it does.</summary>
-internal sealed record MenuBarItem(string Title, Action Act);
+/// <summary>One item of a menu: its text, what it does, and for a check item whether it is ticked now.</summary>
+internal sealed record MenuBarItem(string Title, Action Act, Func<bool>? Checked = null);
 
 /// <summary>One menu of the bar: its title and items.</summary>
 internal sealed record MenuBarMenu(string Title, IReadOnlyList<MenuBarItem> Items);
@@ -27,6 +27,9 @@ internal sealed class OriginalMenuBar
     public const int Height = 16;
     private const int Padding = 6;
     private const int ItemHeight = 14;
+
+    /// <summary>Room before an item's text for the tick (CorsixTH's item texts start with spaces).</summary>
+    private const int TextIndent = 14;
 
     /// <summary>How long the bar stays after the cursor leaves it (disappear_counter's 100 ticks).</summary>
     private const long HideAfter = 100 * 1000 / 18;
@@ -61,7 +64,7 @@ internal sealed class OriginalMenuBar
 
     /// <summary>calculateMenuSize: as wide as the widest item and 10 more (at least 20), 14 a line and 6 more (at least 20).</summary>
     public static Rectangle MenuArea(Rectangle title, MenuBarMenu menu, Func<string, int> measure) =>
-        new(title.X, title.Y + Height - 2, Math.Max(20, menu.Items.Select(item => measure(item.Title) + 10).DefaultIfEmpty(0).Max()), Math.Max(20, 6 + (menu.Items.Count * ItemHeight)));
+        new(title.X, title.Y + Height - 2, Math.Max(20, menu.Items.Select(item => measure(item.Title) + TextIndent + 10).DefaultIfEmpty(0).Max()), Math.Max(20, 6 + (menu.Items.Count * ItemHeight)));
 
     /// <summary>UIMenu:hitTest: the item under the point, from 0, or -1.</summary>
     public static int ItemAt(Rectangle area, int count, Point at)
@@ -215,7 +218,12 @@ internal sealed class OriginalMenuBar
         Panel(9, area.Right - 10, area.Y + area.Height - 6);
         for (var i = 0; i < menu.Items.Count; i++)
         {
-            (i == _hovered ? blue : white).Draw(batch, menu.Items[i].Title, new Vector2(area.X, area.Y + 4 + (i * ItemHeight)));
+            (i == _hovered ? blue : white).Draw(batch, menu.Items[i].Title, new Vector2(area.X + TextIndent, area.Y + 4 + (i * ItemHeight)));
+            if (menu.Items[i].Checked?.Invoke() == true)
+            {
+                // A ticked check item: PullDV's tick (10) at the start of its line.
+                Panel(10, area.X, area.Y + 4 + (i * ItemHeight));
+            }
         }
     }
 
