@@ -140,17 +140,24 @@ internal sealed class FaxWindow : UiWindow
         foreach (var humanoid in Asking(simulation, host.Player))
         {
             var patient = (PatientBehaviour)humanoid.Behaviour!;
-            var noDiagnosis = patient.Question == PatientQuestion.NoDiagnosisRoom;
-            var text = noDiagnosis
-                ? string.Create(CultureInfo.InvariantCulture, $"A patient has no diagnosis room left to visit; diagnosed {Math.Min(100, patient.DiagnosisProgress / 10)} %.")
-                : $"A patient has no room to treat {DiseaseName(host, patient.DiseaseId)}.";
             var id = humanoid.Id;
-            var third = noDiagnosis
-                ? (host.Texts?.String(44, 213) ?? "Guess the cure", true, (Action)(() => host.Submit(new AnswerPatientCommand(id, PatientAnswer.GuessCure))))
-                : (host.Texts?.String(44, 45) ?? "Send them to research", PatientBehaviour.CanGoToResearch(simulation, humanoid), (Action)(() => host.Submit(new AnswerPatientCommand(id, PatientAnswer.Research))));
-            messages.Add(new FaxMessage(
-                [text],
-                [(host.Texts?.String(44, noDiagnosis ? 214 : 44) ?? "Ask them to wait", true, () => host.Submit(new AnswerPatientCommand(id, PatientAnswer.Wait))), (host.Texts?.String(44, noDiagnosis ? 212 : 43) ?? "Send them home", true, () => host.Submit(new AnswerPatientCommand(id, PatientAnswer.SendHome))), third]));
+            void Answer(PatientAnswer answer) => host.Submit(new AnswerPatientCommand(id, answer));
+            string S(int index, string fallback) => host.Texts?.String(44, index) ?? fallback;
+            if (patient.Question == PatientQuestion.NoDiagnosisRoom)
+            {
+                // makeNoDiagnosisRoomFax: send home, take a chance (once the disease is known) or wait.
+                var known = patient.Disease is { } disease && simulation.Hospitals[host.Player].PeekCase(disease, simulation.Rules.Diseases).Discovered;
+                messages.Add(new FaxMessage(
+                    [.. NoDiagnosisRoomLines(host, patient, known)],
+                    [(S(212, "Send them home"), true, () => Answer(PatientAnswer.SendHome)), (S(213, "Take a chance on the likeliest cure"), known, () => Answer(PatientAnswer.GuessCure)), (S(214, "Ask them to wait"), true, () => Answer(PatientAnswer.Wait))]));
+            }
+            else
+            {
+                // makeNoTreatmentRoomFax: send home, wait, or research (with a research room and a researcher).
+                messages.Add(new FaxMessage(
+                    [.. NoTreatmentRoomLines(host, patient)],
+                    [(S(43, "Send them home"), true, () => Answer(PatientAnswer.SendHome)), (S(44, "Ask them to wait"), true, () => Answer(PatientAnswer.Wait)), (S(45, "Send them to research"), PatientBehaviour.CanGoToResearch(simulation, humanoid), () => Answer(PatientAnswer.Research))]));
+            }
         }
 
         return messages;
@@ -364,6 +371,113 @@ internal sealed class FaxWindow : UiWindow
         }
     }
 
+    /// <summary>
+    /// makeNoTreatmentRoomFax's lines: the disease, then what is missing to cure it (the room to build, and the staff to
+    /// hire for it; the staff alone; or that it cannot be cured here) and the question.
+    /// </summary>
+    internal static IEnumerable<string> NoTreatmentRoomLines(IWindowHost host, PatientBehaviour patient)
+    {
+        string S(int index, string fallback, params object[] arguments) => new Advice(44, index, fallback).Text(host.Texts, arguments);
+        yield return S(51, "Disease: %s", DiseaseName(host, patient.DiseaseId));
+        yield return " ";
+        var missing = S(50, "You cannot cure this disease in your hospital.");
+        if (patient.Disease is { } disease && DiseaseRequirements(host.Simulation, host.Player, disease) is { } needs)
+        {
+            if (needs.Rooms.Count == 1)
+            {
+                var room = host.Simulation.Content.FindRoom(needs.Rooms[0])?.Name ?? needs.Rooms[0];
+                var staff = RoomStaff(needs.Rooms[0]);
+                missing = staff is { } kind && needs.Staff.Any(s => s.Kind == kind.Kind)
+                    ? S(47, "If you build a %s and employ a %s you can cure it.", room, StaffTitle(host, kind.Kind))
+                    : S(48, "You need to build a %s to cure it.", room);
+            }
+            else if (needs.Rooms.Count == 0 && needs.Staff.Count > 0)
+            {
+                missing = S(49, "You need to employ a %s to cure it.", StaffTitle(host, needs.Staff[0].Kind));
+            }
+        }
+
+        yield return missing;
+        yield return S(52, "What do you want to do?");
+    }
+
+    /// <summary>makeNoDiagnosisRoomFax's lines: the situation, how far the diagnosis got (once the disease is known), the question.</summary>
+    internal static IEnumerable<string> NoDiagnosisRoomLines(IWindowHost host, PatientBehaviour patient, bool known)
+    {
+        string S(int index, string fallback, params object[] arguments) => new Advice(44, index, fallback).Text(host.Texts, arguments);
+        yield return S(216, "This patient has been through every diagnosis room you have, without a diagnosis.");
+        yield return " ";
+        if (known)
+        {
+            yield return S(218, "The diagnosis is %d%% sure the patient has %s.", (int)Math.Round(Math.Min(1000, patient.DiagnosisProgress) / 10m), DiseaseName(host, patient.DiseaseId)).Replace("%%", "%", StringComparison.Ordinal);
+        }
+
+        yield return S(217, "What do you want to do?");
+    }
+
+    /// <summary>
+    /// Hospital:checkDiseaseRequirements: the disease's treatment rooms the hospital has none of, and the staff its rooms
+    /// need beyond those employed (the most any room needs of a kind), or null when nothing is missing.
+    /// </summary>
+    internal static (List<string> Rooms, List<(string Kind, int Count)> Staff)? DiseaseRequirements(Simulation simulation, int player, Sim.Diseases.DiseaseDefinition disease)
+    {
+        var rooms = new List<string>();
+        var staff = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var roomType in disease.TreatmentRooms)
+        {
+            if (!simulation.Entities.OfType<Room>().Any(room => room.RoomType == roomType && room.IsActive && RoomVisits.Owner(simulation, room) == player))
+            {
+                rooms.Add(roomType);
+            }
+
+            if (RoomStaff(roomType) is { } needed)
+            {
+                var available = StaffOfCategory(simulation, player, needed.Kind);
+                if (available < needed.Count)
+                {
+                    staff[needed.Kind] = Math.Max(staff.GetValueOrDefault(needed.Kind), needed.Count - available);
+                }
+            }
+        }
+
+        return rooms.Count == 0 && staff.Count == 0 ? null : (rooms, staff.Select(pair => (pair.Key, pair.Value)).ToList());
+    }
+
+    /// <summary>A room type's required_staff: the kind (Doctor, Nurse, Surgeon, Psychiatrist, Researcher) and how many.</summary>
+    private static (string Kind, int Count)? RoomStaff(string roomType) => roomType switch
+    {
+        "operating_theatre" => ("Surgeon", 2),
+        "psych" => ("Psychiatrist", 1),
+        "research" or "dna_fixer" => ("Researcher", 1),
+        _ => RoomVisits.RequiredStaff(roomType) switch
+        {
+            BehaviourKind.Doctor => ("Doctor", 1),
+            BehaviourKind.Nurse => ("Nurse", 1),
+            _ => null,
+        },
+    };
+
+    /// <summary>countStaffOfCategory: doctors, nurses, or doctors with the ability.</summary>
+    private static int StaffOfCategory(Simulation simulation, int player, string kind) =>
+        StaffLabels.Employed(simulation, player).Count(h => kind switch
+        {
+            "Nurse" => h.Profile!.Class == Sim.Staff.StaffClass.Nurse,
+            "Doctor" => h.Profile!.Class == Sim.Staff.StaffClass.Doctor,
+            "Surgeon" => h.Profile!.IsSurgeon,
+            "Psychiatrist" => h.Profile!.IsPsychiatrist,
+            "Researcher" => h.Profile!.IsResearcher,
+            _ => false,
+        });
+
+    /// <summary>StaffProfile.translateStaffClass: staff_title (S[34]).</summary>
+    private static string StaffTitle(IWindowHost host, string kind) => kind switch
+    {
+        "Nurse" => host.Texts?.String(34, 3) ?? "Nurse",
+        "Surgeon" => host.Texts?.String(34, 6) ?? "Surgeon",
+        "Psychiatrist" => host.Texts?.String(34, 7) ?? "Psychiatrist",
+        "Researcher" => host.Texts?.String(34, 9) ?? "Researcher",
+        _ => host.Texts?.String(34, 5) ?? "Doctor",
+    };
     /// <summary>
     /// adviseDiscoverDisease's fax: the staff have discovered the disease, then its cause, symptoms and cure.
     /// </summary>

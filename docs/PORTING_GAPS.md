@@ -107,7 +107,7 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   drawn (`dialogs/patient.lua`); what they show is kept (`PatientBehaviour.HealthHistory`, `TreatmentHistory`, and
   the sad mood `IsSad`). Its send home and guess cure buttons are done as commands (`SendPatientHomeCommand`,
   `GuessPatientCureCommand`; Q and Shift+Q in the client).
-- The fax window for patients asking what to do, its texts (what to build or hire) and the research choice, and the
+- The fax window for patients asking what to do (its texts, what to build or hire, are the original's: `NoTreatmentRoomLines`, `NoDiagnosisRoomLines`), and the
   policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
   (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers
   (`PatientBehaviour.Question`, `AnswerPatientCommand`; K, Shift+K and Ctrl+K in the client) are done.

@@ -76,6 +76,13 @@ internal sealed class FaxScreen
         var y = 40;
         foreach (var text in message.Lines)
         {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                // A line of a space ({text = " "}) is an empty line.
+                y += font.LineHeight;
+                continue;
+            }
+
             foreach (var line in MapViewScreen.WrapToWidth(text, 360, t => font.Measure(t).Width))
             {
                 font.Draw(batch, line, new Vector2(origin.X + 190 + ((360 - font.Measure(line).Width) / 2), origin.Y + y));

@@ -46,4 +46,20 @@ public sealed class FaxScreenTests
         var lines = FaxWindow.DiseaseReportLines(host, new CorsixNet.Sim.Economy.DiseaseReport("broken_wind", 0)).ToList();
         Assert.Contains("broken_wind", lines[0], StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void APatientsFaxSaysWhatIsMissingToCureThem()
+    {
+        var host = new WindowTestHost();
+        var patient = new CorsixNet.Sim.People.PatientBehaviour();
+        patient.SetDisease(CorsixNet.Sim.Diseases.DiseaseCatalog.Find("bloaty_head")!, 0, host.Simulation.Random);
+        var lines = FaxWindow.NoTreatmentRoomLines(host, patient).ToList();
+        Assert.Equal(4, lines.Count);
+        Assert.StartsWith("If you build a ", lines[2], StringComparison.Ordinal);
+        Assert.EndsWith("Doctor you can cure it.", lines[2], StringComparison.Ordinal);
+
+        patient.DiagnosisProgress = 420;
+        var diagnosis = FaxWindow.NoDiagnosisRoomLines(host, patient, known: true).ToList();
+        Assert.Contains("42%", diagnosis[2], StringComparison.Ordinal);
+    }
 }
