@@ -229,6 +229,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly WorldSounds _worldSounds = new(new Random());
 
     private readonly Announcer _announcer = new(new Random());
+    private readonly Subtitles _subtitles = new();
 
     private readonly GatesToHellSounds _hellSounds = new();
 
@@ -880,6 +881,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var pointer = InputScript.Mouse();
             DrawBottomPanel(batch, viewport, new Point(pointer.X, pointer.Y));
             DrawAdviser(batch, viewport);
+            DrawSubtitles(batch);
             _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
             if (_bottomPanel is not null && OriginalBottomPanel.TooltipAt(viewport, new Point(pointer.X, pointer.Y), ((IWindowHost)this).HotkeyText) is { } tooltip)
             {
@@ -2721,6 +2723,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// UIAdviser:draw: the adviser's animation, and while he talks the balloon (Panel02V's sprites 37 to 39, the middle
     /// one repeated to the balloon's width) with his speech in the black font.
     /// </summary>
+    /// <summary>Subtitles:draw: each subtitle shown on a line of its own at the top left, 16 pixels apart.</summary>
+    private void DrawSubtitles(SpriteBatch batch)
+    {
+        var lines = _subtitles.Shown;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            _text.Draw(batch, lines[i], new Vector2(5, StatusHeight + 5 + (i * 16)));
+        }
+    }
+
     private void DrawAdviser(SpriteBatch batch, Viewport viewport)
     {
         if (_adviserFigure.Animation is not { } animation)
@@ -2993,7 +3005,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _worldSounds.Update(Simulation!, Environment.TickCount64, _session.IsPaused, (name, tile) => _sounds.PlayAt(name, ScreenOf(tile), ViewSize), _sounds.Play, name => _announcer.Request(name, AnnouncementPriority.Critical, Simulation!.Hours, staffedDesk));
-        _announcer.Update(Environment.TickCount64, Simulation!.Hours, _session.IsPaused, staffedDesk, _config.PlayAnnouncements, _sounds.PlayAnnouncement);
+        _announcer.Update(Environment.TickCount64, Simulation!.Hours, _session.IsPaused, staffedDesk, _config.PlayAnnouncements, name =>
+        {
+            // Announcer:_play queues the announcement's subtitle.
+            var length = _sounds.PlayAnnouncement(name);
+            if (_config.EnableAnnouncerSubtitles && length > TimeSpan.Zero && _sounds.LastPlayed is { } played)
+            {
+                _subtitles.Queue(_texts, played, Environment.TickCount64);
+            }
+
+            return length;
+        });
+        _subtitles.Update(Environment.TickCount64);
 
         _hellSounds.Update(Simulation!, _session.Speed, Environment.TickCount64, hole => _sounds.PlayAt("LAVA00*.WAV", ScreenOf(hole), ViewSize));
         if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))

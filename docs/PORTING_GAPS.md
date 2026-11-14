@@ -32,8 +32,7 @@ objects from the level file.
   split over three tiles as CorsixTH does (drawn from its own tile for now).
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - Every object of the missing rooms (`objects/*.lua`), including the 15 machines in `objects/machines/`.
-- Machines: the gear icon over a machine a handyman was called to (`setRepairingStatus`, icon 4564; not drawn).
-  The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
+- Machines: the gear icon over a machine a handyman was called to is drawn. The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
   invulnerable and repair-all cheats are done. Strength, wear per use,
   smoking, explosion (room crash), repair by handymen and the machine window's call and replace (`MachineWindow`,
   `CallHandymanCommand`, `ReplaceMachineCommand`) are done (`Machines`, `HandymanBehaviour`).
@@ -70,8 +69,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   policy's automatic raise and quitting are in `StaffEmployment`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
   for working and waiting for a staff room (`Tiredness`); resting (`RestingBehaviour`), being on call in the staff
-  room, the no-rest cheat, the tired mood (`Humanoid.IsTiredMoodShown`, shown as text in the staff window; the icon
-  over the head is not drawn) and researchers and trainees going back to their room after resting are done.
+  room, the no-rest cheat, the tired mood (`Humanoid.IsTiredMoodShown`, with its icon over the head) and researchers and trainees going back to their room after resting are done.
 - Staff room idle actions (`meander.lua`, `use_staffroom.lua`, `seek_staffroom.lua`). Doctors, nurses, receptionists
   and handymen without a job meander (`Meandering`), so do the pharmacy's nurse and the general diagnosis doctor
   between patients, handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).
@@ -205,7 +203,7 @@ fonts, faces) and the details listed.
   showing them in windows (`strings.lua`, `languages/`). Reading the original's `LANG-*.DAT` is done (`StringTable`), and
   so are staff names, descriptions and professions (`StaffTexts`; the client's tile line shows them under the cursor),
   disease texts and VIP names (`OriginalTexts`, in the status line).
-- Subtitles for the announcer (`dialogs/subtitles.lua`).
+- (Done: subtitles for the announcer, `enable_announcer_subtitles`, `Subtitles`.)
 
 ## 7. Levels, goals, campaign
 
