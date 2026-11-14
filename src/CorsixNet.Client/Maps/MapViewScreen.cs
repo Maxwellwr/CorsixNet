@@ -215,6 +215,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private readonly HospitalAnnouncements _announcements = new(new Random());
 
+    private readonly WorldSounds _worldSounds = new(new Random());
+
     private readonly GatesToHellSounds _hellSounds = new();
 
     private readonly FrameSounds _frameSounds = new();
@@ -2590,12 +2592,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _repairSession = _session;
             _repairs.Reset();
             _announcements.Reset();
+            _worldSounds.Reset();
         }
 
         foreach (var sound in _repairs.Update(Simulation!, _session.Player).Concat(_announcements.Update(Simulation!, _session.Player)))
         {
             _sounds.Play(sound);
         }
+
+        _worldSounds.Update(Simulation!, Environment.TickCount64, _session.IsPaused, (name, tile) => _sounds.PlayAt(name, ScreenOf(tile), ViewSize), _sounds.Play);
 
         _hellSounds.Update(Simulation!, _session.Speed, Environment.TickCount64, hole => _sounds.PlayAt("LAVA00*.WAV", ScreenOf(hole), ViewSize));
         if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))

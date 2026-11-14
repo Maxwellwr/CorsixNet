@@ -51,7 +51,8 @@ internal sealed class SoundEffects : IDisposable
     }
 
     /// <summary><c>UI:playSound</c>: a sound heard everywhere alike; the name may hold <c>*</c> wildcards.</summary>
-    public void Play(string name) => PlayAtVolume(name, _volume);
+    /// <returns>How long the sound lasts, or zero when it is not heard.</returns>
+    public TimeSpan Play(string name) => PlayAtVolume(name, _volume);
 
     /// <summary>
     /// <c>Entity:playSound</c>: a sound at a point of the view, quieter away from its centre and not heard off it
