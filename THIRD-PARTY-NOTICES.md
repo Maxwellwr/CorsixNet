@@ -31,7 +31,7 @@ and `CorsixTH/Lua/dialogs/place_staff.lua`), walk timing and animation numbers (
 `CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and
 the RNC decompressor modifications (`Rnc.cs`).
 
-Included as YAML: CorsixTH's language files (`src/CorsixNet.Content/Languages/CorsixTH/*.yaml`, from
+Included as YAML: CorsixTH's language files (`src/CorsixNet.Content/Languages/*.yaml`, from
 `CorsixTH/Lua/languages` at commit 7639874, written out by `tools/CorsixNet.LuaConverter` with the same strings),
 each with its translators' copyright and the MIT license in its header, read by `CorsixLanguages.cs` (from
 `CorsixTH/Lua/strings.lua`).

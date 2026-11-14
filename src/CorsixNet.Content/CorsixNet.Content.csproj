@@ -10,10 +10,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- CorsixTH's language files (CorsixTH/Lua/languages, MIT) as YAML, read by CorsixLanguages. -->
-    <None Include="Languages/CorsixTH/*.yaml" Link="Languages/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <!-- CorsixNet's own interface strings in the same form, laid over CorsixTH's by CorsixLanguages. -->
-    <None Include="Languages/CorsixNet/*.yaml" Link="Languages/CorsixNet/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The language files beside the game: CorsixTH's translations (CorsixTH/Lua/languages, MIT) as YAML in Languages,
+         CorsixNet's own strings in Languages/CorsixNet; read by CorsixLanguages. -->
+    <None Include="Languages/**/*.yaml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
