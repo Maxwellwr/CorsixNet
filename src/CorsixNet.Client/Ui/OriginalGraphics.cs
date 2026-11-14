@@ -53,12 +53,12 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     }
 
     /// <summary>A sheet of sprites (<c>loadSpriteTable</c>, complex) with the palette named <paramref name="palette"/>.</summary>
-    public SpriteAtlas? Sheet(string name, string palette)
+    public SpriteAtlas? Sheet(string name, string palette, string folder = "QDATA")
     {
-        var key = name + "/" + palette;
+        var key = folder + "/" + name + "/" + palette;
         if (!_sheets.TryGetValue(key, out var sheet))
         {
-            sheet = Palette(palette) is { } colours ? Try(() => new SpriteAtlas(device, install.LoadSpriteSheet("QDATA", name, complex: true), colours)) : null;
+            sheet = Palette(palette) is { } colours ? Try(() => new SpriteAtlas(device, install.LoadSpriteSheet(folder, name, complex: true), colours)) : null;
             _sheets[key] = sheet;
         }
 
