@@ -59,6 +59,7 @@ public enum CommandKind : ushort
     AbandonRebuild = 44,
     IncreaseHandymanPriority = 45,
     HoldOpeningWatch = 46,
+    CloseReport = 47,
 }
 
 /// <summary>
@@ -129,6 +130,7 @@ public abstract record Command
             CommandKind.AbandonRebuild => new AbandonRebuildCommand(),
             CommandKind.IncreaseHandymanPriority => new IncreaseHandymanPriorityCommand(reader.ReadInt32(), (HandymanTaskType)reader.ReadByte()),
             CommandKind.HoldOpeningWatch => new HoldOpeningWatchCommand(reader.ReadBool()),
+            CommandKind.CloseReport => new CloseReportCommand((FaxReport)reader.ReadByte()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -889,6 +891,44 @@ public sealed record AnswerVipCommand(bool Accept) : Command
     protected override void WriteArguments(SimWriter writer) => writer.WriteBool(Accept);
 }
 
+/// <summary>The faxes that only report something, closed with their one choice.</summary>
+public enum FaxReport : byte
+{
+    /// <summary>The VIP's report on the visit (<c>makeVipEndFax</c>).</summary>
+    Vip = 0,
+
+    /// <summary>How the emergency went (<c>makeEmergencyEndFax</c>).</summary>
+    Emergency = 1,
+}
+
+/// <summary>
+/// Closes a fax that only reports something, before it expires (the <c>close</c> choice of CorsixTH's VIP visit result
+/// and emergency result faxes).
+/// </summary>
+public sealed record CloseReportCommand(FaxReport Report) : Command
+{
+    public override CommandKind Kind => CommandKind.CloseReport;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < 0 || player >= simulation.Hospitals.Count)
+        {
+            return;
+        }
+
+        var hospital = simulation.Hospitals[player];
+        if (Report == FaxReport.Vip)
+        {
+            hospital.Vips.Report = null;
+        }
+        else
+        {
+            hospital.Emergencies.Report = null;
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteByte((byte)Report);
+}
 /// <summary>
 /// Answers the fax offering the issuing player's hospital an emergency (CorsixTH's <c>accept_emergency</c> and
 /// <c>refuse_emergency</c> choices).

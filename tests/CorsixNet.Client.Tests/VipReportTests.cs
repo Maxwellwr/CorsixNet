@@ -59,4 +59,18 @@ public sealed class VipReportTests
 
         Assert.Equal(["You saved 3 of the 5 people in the emergency.", "The most you could have earned was 5000. You earned 3000."], FaxWindow.EmergencyReportLines(host, report));
     }
+
+    [Fact]
+    public void AReportFaxCanBeClosedWithItsOneChoice()
+    {
+        var host = new WindowTestHost();
+        var hospital = host.Simulation.Hospitals[0];
+        VipVisits.OnVipLeft(host.Simulation, hospital, new VipBehaviour(3, 2));
+        var fax = new FaxWindow();
+
+        host.Click(fax, "Close");
+
+        Assert.Null(hospital.Vips.Report);
+        Assert.DoesNotContain(FaxWindow.Pending(host.Simulation, 0), key => key.StartsWith("vipreport:", StringComparison.Ordinal));
+    }
 }
