@@ -39,6 +39,11 @@ internal sealed class HireWindow : UiWindow
 
     public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
 
+    /// <summary>global_confirm: Enter does what the confirm button does.</summary>
+    public override bool TakesKey(string action) => action == "global_confirm";
+
+    public override void FullscreenKey(IWindowHost host, string action) => _screen.Hire(host);
+
     public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
 
     /// <summary>The candidate whose portrait shows, by index in the class's list.</summary>

@@ -263,8 +263,8 @@ internal sealed class HireScreen
         host.PlaySound("wrong2.wav");
     }
 
-    /// <summary>hire: the candidate goes on the cursor (YesX.wav), unless there is none or a month's wage is too much.</summary>
-    private void Hire(IWindowHost host)
+    /// <summary>hire (the button, or Enter): the candidate goes on the cursor (YesX.wav), unless there is none or a month's wage is too much.</summary>
+    public void Hire(IWindowHost host)
     {
         if (Category is not { } staffClass || Profile(host) is not { } profile)
         {

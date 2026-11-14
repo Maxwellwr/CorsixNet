@@ -240,4 +240,17 @@ internal sealed class RoomBuyWindow(BuildRoomTool tool) : UiWindow
         });
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
+
+    /// <summary>global_confirm: Enter does what the confirm button does.</summary>
+    public override bool TakesKey(string action) => action == "global_confirm";
+
+    public override void FullscreenKey(IWindowHost host, string action) => _screen.Buy(host, this, PlaceAll);
+
+    private void PlaceAll(IReadOnlyList<ObjectDefinition> list)
+    {
+        foreach (var definition in list)
+        {
+            tool.PlaceExtra(definition);
+        }
+    }
 }
