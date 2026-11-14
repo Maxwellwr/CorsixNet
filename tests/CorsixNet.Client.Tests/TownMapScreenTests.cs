@@ -24,4 +24,11 @@ public sealed class TownMapScreenTests
         Assert.Equal(22, TownMapScreen.HeatingBill(3, 1, freeBuild: false));
         Assert.Equal(0, TownMapScreen.HeatingBill(5, 2, freeBuild: true));
     }
+
+    [Fact]
+    public void TheTownIsTheLevelsNameOrItsFilesName()
+    {
+        Assert.Null(CorsixNet.Client.Maps.MapViewScreen.LevelTitle("LEVEL.L3", null));
+        Assert.Equal("MY TOWN", CorsixNet.Client.Maps.MapViewScreen.LevelTitle("my town.level", null));
+    }
 }
