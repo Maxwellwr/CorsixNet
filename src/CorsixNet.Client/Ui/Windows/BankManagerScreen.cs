@@ -186,7 +186,7 @@ internal sealed class BankManagerScreen
                 "repay" => Tip(213, "Repay $5,000 of the loan"),
                 "graph1" or "graph2" or "graph3" => Format(Tip(220, "Show the graph of %s"), Company(host, key[^1] - '0')),
                 "ungraph" => Tip(222, "Back to the companies"),
-                "town" => "Town map",
+                "town" => UiText.Get("corsixnet.menu.town_map", "Town map"),
                 _ => null,
             };
         }

@@ -115,7 +115,7 @@ internal sealed class PatientScreen(int patientId)
             var y = 25;
             foreach (var entry in patient.TreatmentHistory)
             {
-                var text = (entry.Kind == TreatmentHistoryKind.Room ? host.Simulation.Content.FindRoom(entry.Id)?.Name ?? entry.Id : host.Texts?.DiseaseName(entry.Id) ?? entry.Id).ToUpperInvariant();
+                var text = (entry.Kind == TreatmentHistoryKind.Room ? UiText.RoomName(host.Simulation.Content, entry.Id) : host.Texts?.DiseaseName(entry.Id) ?? entry.Id).ToUpperInvariant();
                 foreach (var line in Maps.MapViewScreen.WrapToWidth(text, 95, t => font.Measure(t).Width))
                 {
                     font.Draw(batch, line, new Vector2(origin.X + 40, origin.Y + y));

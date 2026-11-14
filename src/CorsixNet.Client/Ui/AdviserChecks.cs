@@ -353,7 +353,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         {
             if (research.Discovered && !last.Discovered.Contains(id))
             {
-                Say(NewMachineResearched, simulation.Content.FindObject(id)?.Name ?? id);
+                Say(NewMachineResearched, UiText.ObjectName(simulation.Content, id));
             }
         }
 
@@ -362,7 +362,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
         {
             if (last.MachineImprovements.TryGetValue(id, out var before) && improvements > before)
             {
-                Say(MachineImproved, simulation.Content.FindObject(id)?.Name ?? id);
+                Say(MachineImproved, UiText.ObjectName(simulation.Content, id));
             }
         }
 
@@ -458,7 +458,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 }
                 else
                 {
-                    Say(VipArrived, texts?.VipName(behaviour.Name) ?? string.Create(CultureInfo.InvariantCulture, $"VIP {behaviour.Name}"));
+                    Say(VipArrived, texts?.VipName(behaviour.Name) ?? UiText.Format("corsixnet.fax.vip_number", "VIP %1%", behaviour.Name));
                 }
             }
         }
@@ -524,7 +524,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
                 // _warnForLongQueues: a room needing a doctor (or other staff but a nurse) asks for one two times in three.
                 if (RoomVisits.RequiredStaff(busy.RoomType) is { } required && required != BehaviourKind.Nurse && random.Next(1, 4) > 1)
                 {
-                    var roomName = simulation.Content.FindRoom(busy.RoomType)?.Name ?? busy.RoomType;
+                    var roomName = UiText.RoomName(simulation.Content, busy.RoomType);
                     if (random.Next(2) == 0)
                     {
                         Say(QueueTooLongSendDoctor, roomName);
@@ -800,7 +800,7 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
             return null;
         }
 
-        var name = simulation.Content.FindRoom(room.RoomType)?.Name ?? room.RoomType;
+        var name = UiText.RoomName(simulation.Content, room.RoomType);
         var doctor = profile.Class == StaffClass.Doctor;
         switch (room.RoomType)
         {

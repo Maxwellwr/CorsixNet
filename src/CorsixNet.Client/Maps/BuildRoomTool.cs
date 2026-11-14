@@ -1,3 +1,4 @@
+using CorsixNet.Client.Ui;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
@@ -414,20 +415,22 @@ internal sealed class BuildRoomTool
             return string.Empty;
         }
 
-        var name = simulation is null ? _room.Name : $"{_room.Name} ({MoneyText.Format(simulation.Rules.BuildCost(_room))})";
+        var name = simulation is null ? UiText.Room(_room) : $"{UiText.Room(_room)} ({MoneyText.Format(simulation.Rules.BuildCost(_room))})";
         var message = _message is null ? string.Empty : $"   ({_message})";
         return _phase switch
         {
             Phase.Blueprint => _area is null
-                ? $"{name}: drag out the blueprint, at least {_room.MinimumSize} by {_room.MinimumSize}{message}   Esc: cancel"
-                : $"{name}: drag the blueprint's edges to resize it, its middle to move it{Explain(_problem)}{message}   Enter: done   Esc: {(simulation is not null && IsRebuilding(simulation, _player) ? "delete the room (half its cost back)" : "cancel")}",
-            Phase.Door => $"{name}: place the door{Explain(_problem)}{message}   Esc: back to the blueprint",
-            Phase.Windows => $"{name}: place windows if you like, click one again to remove it{Explain(_problem)}{message}   Enter: done   Esc: back to the blueprint",
+                ? UiText.Format("corsixnet.build_tool.drag_out", "%1%: drag out the blueprint, at least %2% by %3%%4%   Esc: cancel", name, _room.MinimumSize, _room.MinimumSize, message)
+                : simulation is not null && IsRebuilding(simulation, _player)
+                    ? UiText.Format("corsixnet.build_tool.resize_rebuild", "%1%: drag the blueprint's edges to resize it, its middle to move it%2%%3%   Enter: done   Esc: delete the room (half its cost back)", name, Explain(_problem), message)
+                    : UiText.Format("corsixnet.build_tool.resize", "%1%: drag the blueprint's edges to resize it, its middle to move it%2%%3%   Enter: done   Esc: cancel", name, Explain(_problem), message),
+            Phase.Door => UiText.Format("corsixnet.build_tool.door", "%1%: place the door%2%%3%   Esc: back to the blueprint", name, Explain(_problem), message),
+            Phase.Windows => UiText.Format("corsixnet.build_tool.windows", "%1%: place windows if you like, click one again to remove it%2%%3%   Enter: done   Esc: back to the blueprint", name, Explain(_problem), message),
             Phase.Waiting => simulation is not null && ConstructionSite.Of(simulation, _player) is { IsWaiting: true, Watched.Count: > 0 }
-                ? $"{name}: waiting for people to leave the site   Esc: back to the blueprint"
-                : $"{name}: building...",
+                ? UiText.Format("corsixnet.build_tool.waiting", "%1%: waiting for people to leave the site   Esc: back to the blueprint", name)
+                : UiText.Format("corsixnet.build_tool.building", "%1%: building...", name),
             Phase.Objects => ObjectsStatus(simulation),
-            Phase.Copy => $"{name}: copy of a room, the same size, door and objects; click to put it down{Explain(_problem)}{message}   Esc or right click: cancel",
+            Phase.Copy => UiText.Format("corsixnet.build_tool.copy", "%1%: copy of a room, the same size, door and objects; click to put it down%2%%3%   Esc or right click: cancel", name, Explain(_problem), message),
             _ => string.Empty,
         };
     }
@@ -725,7 +728,7 @@ internal sealed class BuildRoomTool
     {
         if (!IsRebuilding(simulation, player) && !RoomPurchases.CanAfford(simulation, _room!, player))
         {
-            _message = $"not enough money: the room costs {MoneyText.Format(simulation.Rules.BuildCost(_room!))}";
+            _message = UiText.Format("corsixnet.build_tool.room_costs", "not enough money: the room costs %1%", MoneyText.Format(simulation.Rules.BuildCost(_room!)));
             return null;
         }
 
@@ -788,7 +791,7 @@ internal sealed class BuildRoomTool
         {
             // Something got there first, for example another player's room, or the money ran out.
             _phase = Phase.Blueprint;
-            _message = IsRebuilding(simulation, player) || RoomPurchases.CanAfford(simulation, _room!, player) ? "the room could not be built there" : "not enough money";
+            _message = IsRebuilding(simulation, player) || RoomPurchases.CanAfford(simulation, _room!, player) ? UiText.Get("corsixnet.build_tool.cannot_build_there", "the room could not be built there") : UiText.Get("corsixnet.build_tool.not_enough_money", "not enough money");
         }
 
         return null;
@@ -1037,10 +1040,10 @@ internal sealed class BuildRoomTool
 
     private string ObjectsStatus(Simulation? simulation)
     {
-        var name = _room!.Name;
+        var name = UiText.Room(_room!);
         if (_pickingUp)
         {
-            return $"{name}: click an object to pick it up   P or Esc: stop picking up";
+            return UiText.Format("corsixnet.build_tool.picking_up", "%1%: click an object to pick it up   P or Esc: stop picking up", name);
         }
 
         if (simulation?.FindEntity(_roomId) is not Room room)
@@ -1050,26 +1053,28 @@ internal sealed class BuildRoomTool
 
         if (room.IsActive || room.IsClosing)
         {
-            return $"{name}: waiting for everyone to leave the room before it can be edited";
+            return UiText.Format("corsixnet.build_tool.waiting_to_edit", "%1%: waiting for everyone to leave the room before it can be edited", name);
         }
 
         if (_editing)
         {
             var missing = Remaining(simulation, room);
-            var needs = missing.Count == 0 ? "Enter: confirm" : "place " + string.Join(", ", missing.Select(r => $"{simulation.Content.FindObject(r.ObjectType)?.Name ?? r.ObjectType} {r.Count}"));
-            return $"{name}: editing, move, buy or sell objects   {needs}   P: pick up   Esc: back to the blueprint, to resize it or move its door";
+            var needs = missing.Count == 0
+                ? UiText.Get("corsixnet.build_tool.enter_confirm", "Enter: confirm")
+                : UiText.Format("corsixnet.build_tool.place_list", "place %1%", string.Join(", ", missing.Select(r => $"{UiText.ObjectName(simulation.Content, r.ObjectType)} {r.Count}")));
+            return UiText.Format("corsixnet.build_tool.editing", "%1%: editing, move, buy or sell objects   %2%   P: pick up   Esc: back to the blueprint, to resize it or move its door", name, needs);
         }
 
         var remaining = Remaining(simulation, room);
         if (remaining.Count == 0 && _placing is null)
         {
-            var price = MoneyText.Format(simulation.Rules.RoomCost(_room.Id));
-            return $"{name}: you can confirm the room ({price}), or move objects   Enter: confirm   P: pick up   Esc: take the room down, selling the objects back";
+            var price = MoneyText.Format(simulation.Rules.RoomCost(_room!.Id));
+            return UiText.Format("corsixnet.build_tool.can_confirm", "%1%: you can confirm the room (%2%), or move objects   Enter: confirm   P: pick up   Esc: take the room down, selling the objects back", name, price);
         }
 
-        var list = string.Join(", ", remaining.Select(r => $"{simulation.Content.FindObject(r.ObjectType)?.Name ?? r.ObjectType} {r.Count}"));
-        var placing = _placing is null ? string.Empty : $"   placing {_placing.Name}{ExplainPlacement(_placeProblem)}";
-        return $"{name}: place the objects ({list}){placing}   Right click: turn   P: pick up   Esc: take the room down, selling the objects back";
+        var list = string.Join(", ", remaining.Select(r => $"{UiText.ObjectName(simulation.Content, r.ObjectType)} {r.Count}"));
+        var placing = _placing is null ? string.Empty : UiText.Format("corsixnet.build_tool.placing", "   placing %1%%2%", UiText.Object(_placing), ExplainPlacement(_placeProblem));
+        return UiText.Format("corsixnet.build_tool.place_objects", "%1%: place the objects (%2%)%3%   Right click: turn   P: pick up   Esc: take the room down, selling the objects back", name, list, placing);
     }
 
     private static void DrawDiamond(SpriteBatch batch, Texture2D diamond, TilePosition tile, Color tint)
@@ -1081,35 +1086,35 @@ internal sealed class BuildRoomTool
     {
         var text = problem switch
         {
-            RoomPlanProblem.TooSmall => "too small",
-            RoomPlanProblem.OutsideMap => "outside the map",
-            RoomPlanProblem.NotBuildable => "cannot build there",
-            RoomPlanProblem.NotOwned => "not your land",
-            RoomPlanProblem.OverlapsRoom => "overlaps a room",
-            RoomPlanProblem.WallInside => "a wall is in the way",
-            RoomPlanProblem.DoorNotOnPerimeter or RoomPlanProblem.WindowNotOnPerimeter => "point at the room's walls",
-            RoomPlanProblem.DoorInCorner or RoomPlanProblem.WindowInCorner => "not in a corner",
-            RoomPlanProblem.DoorInWall => "cannot put a door in that wall",
-            RoomPlanProblem.WindowInWall => "cannot put a window in that wall",
-            RoomPlanProblem.WindowOnDoor => "the door is there",
-            RoomPlanProblem.DoorBlocked => "the door would open onto a blocked tile",
-            RoomPlanProblem.NoWindows => "this room has no windows",
-            RoomPlanProblem.TooManyWindows => "too many windows",
-            RoomPlanProblem.UnknownRoomType => "unknown room",
+            RoomPlanProblem.TooSmall => UiText.Get("corsixnet.build_tool.too_small", "too small"),
+            RoomPlanProblem.OutsideMap => UiText.Get("corsixnet.build_tool.outside_map", "outside the map"),
+            RoomPlanProblem.NotBuildable => UiText.Get("corsixnet.build_tool.not_buildable", "cannot build there"),
+            RoomPlanProblem.NotOwned => UiText.Get("corsixnet.build_tool.not_owned", "not your land"),
+            RoomPlanProblem.OverlapsRoom => UiText.Get("corsixnet.build_tool.overlaps_room", "overlaps a room"),
+            RoomPlanProblem.WallInside => UiText.Get("corsixnet.build_tool.wall_inside", "a wall is in the way"),
+            RoomPlanProblem.DoorNotOnPerimeter or RoomPlanProblem.WindowNotOnPerimeter => UiText.Get("corsixnet.build_tool.not_on_perimeter", "point at the room's walls"),
+            RoomPlanProblem.DoorInCorner or RoomPlanProblem.WindowInCorner => UiText.Get("corsixnet.build_tool.in_corner", "not in a corner"),
+            RoomPlanProblem.DoorInWall => UiText.Get("corsixnet.build_tool.door_in_wall", "cannot put a door in that wall"),
+            RoomPlanProblem.WindowInWall => UiText.Get("corsixnet.build_tool.window_in_wall", "cannot put a window in that wall"),
+            RoomPlanProblem.WindowOnDoor => UiText.Get("corsixnet.build_tool.window_on_door", "the door is there"),
+            RoomPlanProblem.DoorBlocked => UiText.Get("corsixnet.build_tool.door_blocked", "the door would open onto a blocked tile"),
+            RoomPlanProblem.NoWindows => UiText.Get("corsixnet.build_tool.no_windows", "this room has no windows"),
+            RoomPlanProblem.TooManyWindows => UiText.Get("corsixnet.build_tool.too_many_windows", "too many windows"),
+            RoomPlanProblem.UnknownRoomType => UiText.Get("corsixnet.build_tool.unknown_room", "unknown room"),
             _ => null,
         };
         return text is null ? string.Empty : $"   ({text})";
     }
 
-    private static string ExplainPlacement(ObjectPlacementProblem problem)
+    internal static string ExplainPlacement(ObjectPlacementProblem problem)
     {
         var text = problem switch
         {
-            ObjectPlacementProblem.OutsideMap => "point into the room",
-            ObjectPlacementProblem.NotAllowedHere => "must stand inside the room",
-            ObjectPlacementProblem.NotOwned => "not your land",
-            ObjectPlacementProblem.Blocked => "something is in the way",
-            ObjectPlacementProblem.WouldBlockAccess => "would block access",
+            ObjectPlacementProblem.OutsideMap => UiText.Get("corsixnet.build_tool.point_into_room", "point into the room"),
+            ObjectPlacementProblem.NotAllowedHere => UiText.Get("corsixnet.build_tool.must_stand_inside", "must stand inside the room"),
+            ObjectPlacementProblem.NotOwned => UiText.Get("corsixnet.build_tool.not_owned", "not your land"),
+            ObjectPlacementProblem.Blocked => UiText.Get("corsixnet.build_tool.blocked", "something is in the way"),
+            ObjectPlacementProblem.WouldBlockAccess => UiText.Get("corsixnet.build_tool.would_block_access", "would block access"),
             _ => null,
         };
         return text is null ? string.Empty : $" ({text})";

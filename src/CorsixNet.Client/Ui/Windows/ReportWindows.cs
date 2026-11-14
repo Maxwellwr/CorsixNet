@@ -14,60 +14,60 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class CheatsWindow : UiWindow
 {
-    public override string Title => "Cheats";
+    public override string Title => UiText.Get("cheats_window.caption", "Cheats");
 
     public override string? Hotkey => "F11";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var hospital = host.Simulation.Hospitals[host.Player];
-        yield return hospital.Cheated ? WindowCell.Line("This hospital has cheated.", highlight: true) : WindowCell.Line("Cheats are marked on the hospital once used.", dim: true);
-        yield return WindowRow.Of(Cheat(host, "Money +$10,000", CheatKind.Money), Cheat(host, "All research", CheatKind.AllResearch), Cheat(host, "Create patient", CheatKind.CreatePatient));
-        yield return WindowRow.Of(Cheat(host, "VIP", CheatKind.Vip), Cheat(host, "Emergency", CheatKind.Emergency), Cheat(host, "Epidemic", CheatKind.Epidemic));
-        yield return WindowRow.Of(Cheat(host, "Earthquake", CheatKind.Earthquake), Cheat(host, "Earthquakes on/off", CheatKind.ToggleEarthquakes), Cheat(host, "Epidemics on/off", CheatKind.ToggleEpidemics));
-        yield return WindowRow.Of(Cheat(host, "Prices +50 %", CheatKind.IncreasePrices), Cheat(host, "Prices -50 %", CheatKind.DecreasePrices), Cheat(host, "Max reputation", CheatKind.MaxReputation));
-        yield return WindowRow.Of(Cheat(host, "Reset deaths", CheatKind.ResetDeathCount), Cheat(host, "End month", CheatKind.EndMonth), Cheat(host, "End year", CheatKind.EndYear));
+        yield return hospital.Cheated ? WindowCell.Line(UiText.Get("cheats_window.cheated.yes", "This hospital has cheated."), highlight: true) : WindowCell.Line(UiText.Get("corsixnet.cheats.marked", "Cheats are marked on the hospital once used."), dim: true);
+        yield return WindowRow.Of(Cheat(host, UiText.Get("cheats_window.cheats.money", "Money +$10,000"), CheatKind.Money), Cheat(host, UiText.Get("cheats_window.cheats.all_research", "All research"), CheatKind.AllResearch), Cheat(host, UiText.Get("cheats_window.cheats.create_patient", "Create patient"), CheatKind.CreatePatient));
+        yield return WindowRow.Of(Cheat(host, UiText.Get("cheats_window.cheats.vip", "VIP"), CheatKind.Vip), Cheat(host, UiText.Get("cheats_window.cheats.emergency", "Emergency"), CheatKind.Emergency), Cheat(host, UiText.Get("cheats_window.cheats.epidemic", "Epidemic"), CheatKind.Epidemic));
+        yield return WindowRow.Of(Cheat(host, UiText.Get("cheats_window.cheats.earthquake", "Earthquake"), CheatKind.Earthquake), Cheat(host, UiText.Get("cheats_window.cheats.toggle_earthquake", "Earthquakes on/off"), CheatKind.ToggleEarthquakes), Cheat(host, UiText.Get("cheats_window.cheats.toggle_epidemic", "Epidemics on/off"), CheatKind.ToggleEpidemics));
+        yield return WindowRow.Of(Cheat(host, UiText.Get("cheats_window.cheats.increase_prices", "Prices +50 %"), CheatKind.IncreasePrices), Cheat(host, UiText.Get("cheats_window.cheats.decrease_prices", "Prices -50 %"), CheatKind.DecreasePrices), Cheat(host, UiText.Get("cheats_window.cheats.max_reputation", "Max reputation"), CheatKind.MaxReputation));
+        yield return WindowRow.Of(Cheat(host, UiText.Get("cheats_window.cheats.reset_death_count", "Reset deaths"), CheatKind.ResetDeathCount), Cheat(host, UiText.Get("cheats_window.cheats.end_month", "End month"), CheatKind.EndMonth), Cheat(host, UiText.Get("cheats_window.cheats.end_year", "End year"), CheatKind.EndYear));
         yield return WindowRow.Of(
-            Toggle(host, "Roujin's challenge", CheatKind.ToggleSpawnRate, hospital.ActiveCheats.HasFlag(ToggleCheats.SpawnRate)),
-            Toggle(host, "No rest", CheatKind.ToggleNoRest, hospital.ActiveCheats.HasFlag(ToggleCheats.NoRest)),
-            Toggle(host, "Queue jump", CheatKind.ToggleQueueJump, hospital.ActiveCheats.HasFlag(ToggleCheats.QueueJump)));
+            Toggle(host, UiText.Get("corsixnet.cheats.roujin", "Roujin's challenge"), CheatKind.ToggleSpawnRate, hospital.ActiveCheats.HasFlag(ToggleCheats.SpawnRate)),
+            Toggle(host, UiText.Get("corsixnet.cheats.no_rest", "No rest"), CheatKind.ToggleNoRest, hospital.ActiveCheats.HasFlag(ToggleCheats.NoRest)),
+            Toggle(host, UiText.Get("corsixnet.cheats.queue_jump", "Queue jump"), CheatKind.ToggleQueueJump, hospital.ActiveCheats.HasFlag(ToggleCheats.QueueJump)));
         yield return WindowRow.Of(
-            Toggle(host, "Super doctors", CheatKind.ToggleSuperDoctor, hospital.ActiveCheats.HasFlag(ToggleCheats.SuperDoctor)),
-            Cheat(host, "Win level", CheatKind.WinLevel),
-            Cheat(host, "Lose level", CheatKind.LoseLevel));
+            Toggle(host, UiText.Get("corsixnet.cheats.super_doctors", "Super doctors"), CheatKind.ToggleSuperDoctor, hospital.ActiveCheats.HasFlag(ToggleCheats.SuperDoctor)),
+            Cheat(host, UiText.Get("cheats_window.cheats.win_level", "Win level"), CheatKind.WinLevel),
+            Cheat(host, UiText.Get("cheats_window.cheats.lose_level", "Lose level"), CheatKind.LoseLevel));
         yield return WindowRow.Of(
-            Cheat(host, "Repair all machines", CheatKind.RepairAllMachines),
-            Toggle(host, "Invulnerable machines", CheatKind.ToggleInvulnerableMachines, hospital.ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines)),
-            Cheat(host, "Show infected", CheatKind.ShowInfected));
+            Cheat(host, UiText.Get("cheats_window.cheats.repair_all_machines", "Repair all machines"), CheatKind.RepairAllMachines),
+            Toggle(host, UiText.Get("cheats_window.cheats.toggle_invulnerable_machines", "Invulnerable machines"), CheatKind.ToggleInvulnerableMachines, hospital.ActiveCheats.HasFlag(ToggleCheats.InvulnerableMachines)),
+            Cheat(host, UiText.Get("cheats_window.cheats.show_infected", "Show infected"), CheatKind.ShowInfected));
     }
 
     /// <summary>The cheats' tooltips (<c>tooltip.cheats_window.cheats</c>); the fax code toggles have our own.</summary>
     internal static string Tooltip(CheatKind cheat) => cheat switch
     {
-        CheatKind.Money => "Adds $10,000 to your bank balance",
-        CheatKind.AllResearch => "Completes all research",
-        CheatKind.Emergency => "Creates an emergency",
-        CheatKind.Vip => "Creates a VIP",
-        CheatKind.ToggleEarthquakes => "Toggle earthquakes",
-        CheatKind.Earthquake => "Creates an earthquake",
-        CheatKind.ToggleEpidemics => "Toggle whether epidemics can happen",
-        CheatKind.Epidemic => "Creates a contagious patient who may cause an epidemic to happen",
-        CheatKind.CreatePatient => "Creates a Patient at the map border",
-        CheatKind.EndMonth => "Jumps to the end of the month",
-        CheatKind.EndYear => "Jumps to the end of the year",
-        CheatKind.LoseLevel => "Lose the current level",
-        CheatKind.WinLevel => "Win the current level",
-        CheatKind.IncreasePrices => "Increase all prices by 50% (max. 200%)",
-        CheatKind.DecreasePrices => "Decrease all prices by 50% (min. 50%)",
-        CheatKind.ResetDeathCount => "Reset the hospital death count to zero",
-        CheatKind.MaxReputation => "Set the hospital reputation to the maximum",
-        CheatKind.RepairAllMachines => "Repairs all machines in the hospital",
-        CheatKind.ToggleInvulnerableMachines => "Toggle whether machines wear down when used",
-        CheatKind.ShowInfected => "Shows all infected patients' contagious icon",
-        CheatKind.ToggleSpawnRate => "Toggle Roujin's challenge: many more patients arrive",
-        CheatKind.ToggleNoRest => "Toggle whether staff never get tired",
-        CheatKind.ToggleQueueJump => "Toggle whether new patients go to the front of every queue",
-        CheatKind.ToggleSuperDoctor => "Toggle whether doctors have the best skills",
+        CheatKind.Money => UiText.Get("tooltip.cheats_window.cheats.money", "Adds $10,000 to your bank balance"),
+        CheatKind.AllResearch => UiText.Get("tooltip.cheats_window.cheats.all_research", "Completes all research"),
+        CheatKind.Emergency => UiText.Get("tooltip.cheats_window.cheats.emergency", "Creates an emergency"),
+        CheatKind.Vip => UiText.Get("tooltip.cheats_window.cheats.vip", "Creates a VIP"),
+        CheatKind.ToggleEarthquakes => UiText.Get("tooltip.cheats_window.cheats.toggle_earthquake", "Toggle earthquakes"),
+        CheatKind.Earthquake => UiText.Get("tooltip.cheats_window.cheats.earthquake", "Creates an earthquake"),
+        CheatKind.ToggleEpidemics => UiText.Get("tooltip.cheats_window.cheats.toggle_epidemic", "Toggle whether epidemics can happen"),
+        CheatKind.Epidemic => UiText.Get("tooltip.cheats_window.cheats.epidemic", "Creates a contagious patient who may cause an epidemic to happen"),
+        CheatKind.CreatePatient => UiText.Get("tooltip.cheats_window.cheats.create_patient", "Creates a Patient at the map border"),
+        CheatKind.EndMonth => UiText.Get("tooltip.cheats_window.cheats.end_month", "Jumps to the end of the month"),
+        CheatKind.EndYear => UiText.Get("tooltip.cheats_window.cheats.end_year", "Jumps to the end of the year"),
+        CheatKind.LoseLevel => UiText.Get("tooltip.cheats_window.cheats.lose_level", "Lose the current level"),
+        CheatKind.WinLevel => UiText.Get("tooltip.cheats_window.cheats.win_level", "Win the current level"),
+        CheatKind.IncreasePrices => UiText.Get("tooltip.cheats_window.cheats.increase_prices", "Increase all prices by 50% (max. 200%)"),
+        CheatKind.DecreasePrices => UiText.Get("tooltip.cheats_window.cheats.decrease_prices", "Decrease all prices by 50% (min. 50%)"),
+        CheatKind.ResetDeathCount => UiText.Get("tooltip.cheats_window.cheats.reset_death_count", "Reset the hospital death count to zero"),
+        CheatKind.MaxReputation => UiText.Get("tooltip.cheats_window.cheats.max_reputation", "Set the hospital reputation to the maximum"),
+        CheatKind.RepairAllMachines => UiText.Get("tooltip.cheats_window.cheats.repair_all_machines", "Repairs all machines in the hospital"),
+        CheatKind.ToggleInvulnerableMachines => UiText.Get("tooltip.cheats_window.cheats.toggle_invulnerable_machines", "Toggle whether machines wear down when used"),
+        CheatKind.ShowInfected => UiText.Get("tooltip.cheats_window.cheats.show_infected", "Shows all infected patients' contagious icon"),
+        CheatKind.ToggleSpawnRate => UiText.Get("corsixnet.cheats.roujin_tooltip", "Toggle Roujin's challenge: many more patients arrive"),
+        CheatKind.ToggleNoRest => UiText.Get("corsixnet.cheats.no_rest_tooltip", "Toggle whether staff never get tired"),
+        CheatKind.ToggleQueueJump => UiText.Get("corsixnet.cheats.queue_jump_tooltip", "Toggle whether new patients go to the front of every queue"),
+        CheatKind.ToggleSuperDoctor => UiText.Get("corsixnet.cheats.super_doctors_tooltip", "Toggle whether doctors have the best skills"),
         _ => cheat.ToString(),
     };
 
@@ -77,11 +77,11 @@ internal sealed class CheatsWindow : UiWindow
     private static void Use(IWindowHost host, string text, CheatKind cheat)
     {
         host.Submit(new CheatCommand(cheat));
-        host.Notice($"Cheat: {text}");
+        host.Notice(UiText.Format("corsixnet.cheats.used", "Cheat: %1%", text));
     }
 
     private static WindowCell Toggle(IWindowHost host, string text, CheatKind cheat, bool on) =>
-        WindowCell.Button(on ? $"{text}: on" : $"{text}: off", () => host.Submit(new CheatCommand(cheat)), highlight: on).WithTooltip(Tooltip(cheat));
+        WindowCell.Button(on ? UiText.Format("corsixnet.cheats.toggle_on", "%1%: on", text) : UiText.Format("corsixnet.cheats.toggle_off", "%1%: off", text), () => host.Submit(new CheatCommand(cheat)), highlight: on).WithTooltip(Tooltip(cheat));
 }
 
 /// <summary>
@@ -90,7 +90,7 @@ internal sealed class CheatsWindow : UiWindow
 /// </summary>
 internal sealed class ProgressReportWindow : UiWindow
 {
-    public override string Title => "Progress report";
+    public override string Title => UiText.Get("corsixnet.progress.caption", "Progress report");
 
     public override string? Hotkey => "F7";
 
@@ -111,11 +111,11 @@ internal sealed class ProgressReportWindow : UiWindow
         var report = simulation.Rules.EndConditions.ProgressReport(simulation, hospital);
         if (report.Count == 0)
         {
-            yield return WindowCell.Line("This level has no goals.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.progress.no_goals", "This level has no goals."), dim: true);
             yield break;
         }
 
-        yield return WindowRow.Of("Goal", WindowCell.Number("Now"), WindowCell.Number("Target"), string.Empty);
+        yield return WindowRow.Of(UiText.Get("corsixnet.progress.goal", "Goal"), WindowCell.Number(UiText.Get("corsixnet.progress.now", "Now")), WindowCell.Number(UiText.Get("corsixnet.progress.target", "Target")), string.Empty);
         foreach (var entry in report)
         {
             var goal = entry.Goal;
@@ -124,26 +124,29 @@ internal sealed class ProgressReportWindow : UiWindow
             yield return WindowRow.Of(
                 new WindowCell(Name(goal.Criterion), Highlight: entry.IsLoseGoal).WithTooltip(Tooltip(host, goal.Criterion, entry.IsLoseGoal, goal.Value, now ?? 0)),
                 WindowCell.Number(now is { } shown ? Format(goal.Criterion, shown) : "-"),
-                WindowCell.Number((entry.IsLoseGoal ? (goal.AtLeast ? "lose above " : "lose below ") : goal.AtLeast ? "at least " : "at most ") + Format(goal.Criterion, goal.Value)),
-                entry.IsLoseGoal ? string.Create(CultureInfo.InvariantCulture, $"warning {(int)((entry.Progress ?? 0) * 100)} %") : met ? "met" : string.Empty);
+                WindowCell.Number(UiText.Format(
+                    entry.IsLoseGoal ? (goal.AtLeast ? "corsixnet.progress.lose_above" : "corsixnet.progress.lose_below") : goal.AtLeast ? "corsixnet.progress.at_least" : "corsixnet.progress.at_most",
+                    entry.IsLoseGoal ? (goal.AtLeast ? "lose above %1%" : "lose below %1%") : goal.AtLeast ? "at least %1%" : "at most %1%",
+                    Format(goal.Criterion, goal.Value))),
+                entry.IsLoseGoal ? UiText.Format("corsixnet.progress.warning", "warning %1% %%", (int)((entry.Progress ?? 0) * 100)) : met ? UiText.Get("corsixnet.progress.met", "met") : string.Empty);
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of("Cured", WindowCell.Number(hospital.Cured.ToString(CultureInfo.InvariantCulture)), "Died", WindowCell.Number(hospital.Deaths.ToString(CultureInfo.InvariantCulture)));
-        yield return WindowRow.Of("Visitors", WindowCell.Number(hospital.Visitors.ToString(CultureInfo.InvariantCulture)), "Reputation", WindowCell.Number(hospital.Reputation.ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.casebook.cured", "Cured"), WindowCell.Number(hospital.Cured.ToString(CultureInfo.InvariantCulture)), UiText.Get("corsixnet.casebook.died", "Died"), WindowCell.Number(hospital.Deaths.ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("graphs.visitors", "Visitors"), WindowCell.Number(hospital.Visitors.ToString(CultureInfo.InvariantCulture)), UiText.Get("graphs.reputation", "Reputation"), WindowCell.Number(hospital.Reputation.ToString(CultureInfo.InvariantCulture)));
     }
 
     public static string Name(EndCriterion criterion) => criterion switch
     {
-        EndCriterion.Reputation => "Reputation",
-        EndCriterion.Balance => "Bank balance",
-        EndCriterion.PercentageCured => "Patients cured",
-        EndCriterion.NumCured => "Number cured",
-        EndCriterion.PercentageKilled => "Patients killed",
-        EndCriterion.Value => "Hospital value",
-        EndCriterion.StaffHappiness => "Staff happiness",
-        EndCriterion.PatientHappiness => "Patient happiness",
-        _ => "Months played",
+        EndCriterion.Reputation => UiText.Get("graphs.reputation", "Reputation"),
+        EndCriterion.Balance => UiText.Get("corsixnet.progress.bank_balance", "Bank balance"),
+        EndCriterion.PercentageCured => UiText.Get("corsixnet.progress.patients_cured", "Patients cured"),
+        EndCriterion.NumCured => UiText.Get("corsixnet.progress.number_cured", "Number cured"),
+        EndCriterion.PercentageKilled => UiText.Get("corsixnet.progress.patients_killed", "Patients killed"),
+        EndCriterion.Value => UiText.Get("bank_manager.hospital_value", "Hospital value"),
+        EndCriterion.StaffHappiness => UiText.Get("corsixnet.progress.staff_happiness", "Staff happiness"),
+        EndCriterion.PatientHappiness => UiText.Get("corsixnet.progress.patient_happiness", "Patient happiness"),
+        _ => UiText.Get("corsixnet.progress.months_played", "Months played"),
     };
 
     /// <summary>
@@ -160,17 +163,23 @@ internal sealed class ProgressReportWindow : UiWindow
         var over = !isLoseGoal;
         return criterion switch
         {
-            EndCriterion.Reputation => string.Format(CultureInfo.InvariantCulture, "Your Reputation should not be less than {0}. Currently it's {1}", goal, current),
-            EndCriterion.Balance => string.Format(CultureInfo.InvariantCulture, "Your bank balance should not be less than {0}. Currently it's {1}", goal, current),
+            EndCriterion.Reputation => UiText.Format("tooltip.status.reputation", "Your Reputation should not be less than %d. Currently it's %d", goal, current),
+            EndCriterion.Balance => UiText.Format("tooltip.status.balance", "Your bank balance should not be less than %d. Currently it's %d", goal, current),
             EndCriterion.NumCured => Original(4, "You need to cure %d patients. Currently you have cured %d"),
             EndCriterion.PercentageKilled => Original(5, "You should kill less than %d% of your patients. Currently you have killed %d%"),
             EndCriterion.Value => Original(6, "Your hospital should be worth at least %d. Currently it's worth %d"),
             EndCriterion.PercentageCured => Original(7, "You need to cure %d% of the patients who come to your hospital. Currently you have cured %d%"),
-            EndCriterion.StaffHappiness => string.Format(CultureInfo.InvariantCulture, over ? "Your average staff happiness should be over {0}%. Currently it's {1}%" : "Your average staff happiness should not be less than {0}%. Currently it's {1}%", goal, current),
-            EndCriterion.PatientHappiness => string.Format(CultureInfo.InvariantCulture, over ? "Your average patient happiness should be over {0}%. Currently it's {1}%" : "Your average patient happiness should not be less than {0}%. Currently it's {1}%", goal, current),
+            EndCriterion.StaffHappiness => over
+                ? UiText.Format("tooltip.status.over.staff_happiness", "Your average staff happiness should be over %d%. Currently it's %d%", goal, current)
+                : UiText.Format("tooltip.status.under.staff_happiness", "Your average staff happiness should not be less than %d%. Currently it's %d%", goal, current),
+            EndCriterion.PatientHappiness => over
+                ? UiText.Format("tooltip.status.over.patient_happiness", "Your average patient happiness should be over %d%. Currently it's %d%", goal, current)
+                : UiText.Format("tooltip.status.under.patient_happiness", "Your average patient happiness should not be less than %d%. Currently it's %d%", goal, current),
             _ => goal % 12 == 0
-                ? string.Format(CultureInfo.InvariantCulture, "You need to reach the year {0}. Currently it's the year {1}", (goal / 12) + 2000, ((current - 1) / 12) + 2000)
-                : string.Format(CultureInfo.InvariantCulture, over ? "You need to reach the end of {0} {1}. Currently it's {2} {3}" : "You need to win by the end of {0} {1}. Currently it's {2} {3}", Month(host, goal), (goal / 12) + 2000, Month(host, current), ((current - 1) / 12) + 2000),
+                ? UiText.Format(over ? "tooltip.status.over.years_played" : "tooltip.status.under.years_played", "You need to reach the year %d. Currently it's the year %d", (goal / 12) + 2000, ((current - 1) / 12) + 2000)
+                : over
+                    ? UiText.Format("tooltip.status.over.months_played", "You need to reach the end of %s %d. Currently it's %s %d", Month(host, goal), (goal / 12) + 2000, Month(host, current), ((current - 1) / 12) + 2000)
+                    : UiText.Format("tooltip.status.under.months_played", "You need to win by the end of %s %d. Currently it's %s %d", Month(host, goal), (goal / 12) + 2000, Month(host, current), ((current - 1) / 12) + 2000),
         };
     }
 
@@ -215,7 +224,7 @@ internal sealed class ProgressReportWindow : UiWindow
 /// </summary>
 internal sealed class AnnualReportWindow : UiWindow
 {
-    public override string Title => "Annual report";
+    public override string Title => UiText.Get("corsixnet.menu.annual_report", "Annual report");
 
     private readonly AnnualReportScreen _screen = new();
 
@@ -230,11 +239,11 @@ internal sealed class AnnualReportWindow : UiWindow
         var hospital = host.Simulation.Hospitals[host.Player];
         if (hospital.LastYearAwards.Count == 0)
         {
-            yield return WindowCell.Line("No trophies or awards this year.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.progress.no_awards", "No trophies or awards this year."), dim: true);
         }
         else
         {
-            yield return WindowRow.Of("Trophy or award", WindowCell.Number("Money"), WindowCell.Number("Reputation"));
+            yield return WindowRow.Of(UiText.Get("corsixnet.progress.award", "Trophy or award"), WindowCell.Number(UiText.Get("corsixnet.progress.money", "Money")), WindowCell.Number(UiText.Get("graphs.reputation", "Reputation")));
             foreach (var award in hospital.LastYearAwards)
             {
                 var bad = award.Money < 0 || award.Reputation < 0;
@@ -246,9 +255,9 @@ internal sealed class AnnualReportWindow : UiWindow
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of("Hospital value", WindowCell.Number(MoneyText.Format(hospital.Value)));
-        yield return WindowRow.Of("Your salary", WindowCell.Number(MoneyText.Format(hospital.PlayerSalary)));
-        yield return WindowRow.Of("Reputation", WindowCell.Number(hospital.Reputation.ToString(CultureInfo.InvariantCulture)));
+        yield return WindowRow.Of(UiText.Get("bank_manager.hospital_value", "Hospital value"), WindowCell.Number(MoneyText.Format(hospital.Value)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.progress.your_salary", "Your salary"), WindowCell.Number(MoneyText.Format(hospital.PlayerSalary)));
+        yield return WindowRow.Of(UiText.Get("graphs.reputation", "Reputation"), WindowCell.Number(hospital.Reputation.ToString(CultureInfo.InvariantCulture)));
     }
 
     /// <summary>The award's name: its kind's name, split into words.</summary>
@@ -279,7 +288,7 @@ internal sealed class AnnualReportWindow : UiWindow
 /// </summary>
 internal sealed class LevelEndWindow : UiWindow
 {
-    public override string Title => "Level over";
+    public override string Title => UiText.Get("corsixnet.progress.level_over", "Level over");
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
@@ -287,27 +296,27 @@ internal sealed class LevelEndWindow : UiWindow
         switch (hospital.Outcome)
         {
             case EndOutcome.Won:
-                yield return WindowCell.Line("Congratulations! You have met every goal of this level.", highlight: true);
+                yield return WindowCell.Line(UiText.Get("corsixnet.progress.won", "Congratulations! You have met every goal of this level."), highlight: true);
                 if (hospital.SalaryOffer > 0)
                 {
-                    yield return WindowRow.Of("Your new salary", WindowCell.Number(MoneyText.Format(hospital.SalaryOffer)));
+                    yield return WindowRow.Of(UiText.Get("corsixnet.progress.new_salary", "Your new salary"), WindowCell.Number(MoneyText.Format(hospital.SalaryOffer)));
                 }
 
                 yield return WindowRow.Of(
-                    WindowCell.Button("Next level", () => host.StartLevel(next: true), host.HasNextLevel).WithTooltip("Go on to the next level"),
-                    WindowCell.Button("Stay here", () => host.Close(this)).WithTooltip("Keep playing this level"));
+                    WindowCell.Button(UiText.Get("corsixnet.progress.next_level", "Next level"), () => host.StartLevel(next: true), host.HasNextLevel).WithTooltip(UiText.Get("corsixnet.progress.next_level_tooltip", "Go on to the next level")),
+                    WindowCell.Button(UiText.Get("corsixnet.progress.stay", "Stay here"), () => host.Close(this)).WithTooltip(UiText.Get("corsixnet.progress.stay_tooltip", "Keep playing this level")));
                 break;
             case EndOutcome.Lost:
-                yield return WindowCell.Line("You have lost this level.", highlight: true);
+                yield return WindowCell.Line(UiText.Get("corsixnet.progress.lost", "You have lost this level."), highlight: true);
                 if (hospital.LostTo is { } goal)
                 {
-                    yield return WindowRow.Of("Because of", ProgressReportWindow.Name(goal.Criterion));
+                    yield return WindowRow.Of(UiText.Get("corsixnet.progress.because_of", "Because of"), ProgressReportWindow.Name(goal.Criterion));
                 }
 
-                yield return WindowRow.Of(WindowCell.Button("Restart the level", () => host.StartLevel(next: false)).WithTooltip("Play this level again from the start"));
+                yield return WindowRow.Of(WindowCell.Button(UiText.Get("corsixnet.progress.restart", "Restart the level"), () => host.StartLevel(next: false)).WithTooltip(UiText.Get("corsixnet.progress.restart_tooltip", "Play this level again from the start")));
                 break;
             default:
-                yield return WindowCell.Line("The level goes on.", dim: true);
+                yield return WindowCell.Line(UiText.Get("corsixnet.progress.goes_on", "The level goes on."), dim: true);
                 break;
         }
     }

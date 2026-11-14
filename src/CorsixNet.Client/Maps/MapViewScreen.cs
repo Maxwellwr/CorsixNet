@@ -98,7 +98,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Width of the frame drawn around the map while building.</summary>
     private const int BuildFrameWidth = 3;
 
-    /// <summary>How long a notice such as "not enough money" stays in the status line.</summary>
+    /// <summary>How long a notice such as UiText.Get("corsixnet.build_tool.not_enough_money", "not enough money") stays in the status line.</summary>
     private const int NoticeMilliseconds = 4000;
 
     /// <summary>The emergency helicopter (CorsixTH's objects/helicopter.lua).</summary>
@@ -397,6 +397,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         Ui.StaffFaces.Current = Ui.StaffFaces.Load(device, install, palette);
         _unicodeFonts = new UnicodeFonts(_config.UnicodeFont, AppContext.BaseDirectory);
         _texts = LoadTexts(install, _config);
+        UiText.Current = _texts;
         ApplyLanguageFont();
         _sounds = SoundEffects.Load(install, _config);
         _scrolling = new MapScrolling(_config.ScrollSettings());
@@ -1030,7 +1031,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         if (_levels.Count == 0)
         {
-            _error = "No levels found.";
+            _error = UiText.Get("corsixnet.status.no_levels", "No levels found.");
             return;
         }
 
@@ -1050,7 +1051,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
         catch (Exception e) when (e is InvalidDataException or IOException)
         {
-            _error = $"Cannot load {_levels[index].Name}: {e.Message}";
+            _error = UiText.Format("corsixnet.status.cannot_load_level", "Cannot load %1%: %2%", _levels[index].Name, e.Message);
         }
 
         PrepareMapIfReady();
@@ -1089,7 +1090,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (_buildTool.IsActive || _furnishTool.IsActive)
         {
-            ShowNotice("Finish building before saving or loading");
+            ShowNotice(UiText.Get("corsixnet.status.finish_building_first", "Finish building before saving or loading"));
             return false;
         }
 
@@ -1101,11 +1102,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         try
         {
             SaveGameStore.Save(_saves.QuickSavePath, local.Name, local.Simulation);
-            ShowNotice(load ? "There was no quick save to load, so one has been made" : "Quick saved");
+            ShowNotice(load ? UiText.Get("corsixnet.status.no_quick_save", "There was no quick save to load, so one has been made") : UiText.Get("corsixnet.status.quick_saved", "Quick saved"));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            ShowNotice($"Cannot save: {e.Message}");
+            ShowNotice(UiText.Format("corsixnet.status.cannot_save", "Cannot save: %1%", e.Message));
         }
 
         return false;
@@ -1122,7 +1123,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
         {
-            ShowNotice($"Cannot load {Path.GetFileName(path)}: {e.Message}");
+            ShowNotice(UiText.Format("corsixnet.status.cannot_load", "Cannot load %1%: %2%", Path.GetFileName(path), e.Message));
             return false;
         }
 
@@ -1143,7 +1144,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _demoPending = _demoDeskPending = _demoDiagnosisPending = _demoMachinePending = _demoToiletsPending = false;
         _demoFurniture.Clear();
         PrepareMapIfReady();
-        ShowNotice($"Loaded {Path.GetFileName(path)}");
+        ShowNotice(UiText.Format("corsixnet.status.loaded", "Loaded %1%", Path.GetFileName(path)));
         return true;
     }
 
@@ -1787,7 +1788,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 if (_pickedUpStaff is not null)
                 {
                     _sounds.Play("pickup.wav"); // the pickup action
-                    ShowNotice("Picked up: click to put them down, right click lets them go");
+                    ShowNotice(UiText.Get("corsixnet.status.picked_up", "Picked up: click to put them down, right click lets them go"));
                 }
             }
         }
@@ -1826,13 +1827,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             var hospital = simulation.Hospitals[_session.Player];
             if (hospital.IsHeatingBroken)
             {
-                ShowNotice("The boiler is broken: the heating cannot be set until it is repaired");
+                ShowNotice(UiText.Get("corsixnet.status.boiler_broken", "The boiler is broken: the heating cannot be set until it is repaired"));
             }
             else
             {
                 var heat = Math.Clamp(hospital.RadiatorHeat + (shift ? -1 : 1), Hospital.MinRadiatorHeat, Hospital.MaxRadiatorHeat);
                 _session.Submit(new SetRadiatorHeatCommand(heat));
-                ShowNotice($"Heating: {heat * 10} %");
+                ShowNotice(UiText.Format("corsixnet.status.heating", "Heating: %1% %", heat * 10));
             }
         }
 
@@ -1844,12 +1845,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             // UITownMap's purchase: the till rings, or the wrong-choice buzz.
             if (!simulation.IsParcelPurchasable(parcel, _session.Player))
             {
-                ShowNotice($"Parcel {parcel} is not for sale");
+                ShowNotice(UiText.Format("corsixnet.status.parcel_not_for_sale", "Parcel %1% is not for sale", parcel));
                 _sounds.Play("Wrong2.wav");
             }
             else if (price > simulation.Hospitals[_session.Player].Balance)
             {
-                ShowNotice($"Not enough money for parcel {parcel}: it costs {MoneyText.Format(price)}");
+                ShowNotice(UiText.Format("corsixnet.town_map.cannot_afford", "Not enough money for parcel %1%: it costs %2%", parcel, MoneyText.Format(price)));
                 _sounds.Play("Wrong2.wav");
             }
             else
@@ -1982,7 +1983,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 }
                 else
                 {
-                    ShowNotice($"Cannot hire a {staffClass}: {problem}");
+                    ShowNotice(UiText.Format("corsixnet.status.cannot_hire", "Cannot hire a %1%: %2%", staffClass, problem));
                 }
             }
         }
@@ -3141,7 +3142,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, player) && _roomsDescribed.Add(room.RoomType)
                 && _config.RoomInformationDialogs && _texts?.RoomDescription(room.RoomType) is { Count: > 0 } description)
             {
-                _windows.Open(new InformationWindow(description, simulation.Content.FindRoom(room.RoomType)?.Name ?? "Information"));
+                _windows.Open(new InformationWindow(description, simulation.Content.FindRoom(room.RoomType) is { } definition ? UiText.Room(definition) : null));
             }
         }
     }
@@ -3186,7 +3187,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _pickedUpStaff = staffId;
         _sounds.Play("pickup.wav");
-        ShowNotice("Picked up: click to put them down, right click lets them go");
+        ShowNotice(UiText.Get("corsixnet.status.picked_up", "Picked up: click to put them down, right click lets them go"));
     }
 
     void IWindowHost.CenterOn(TilePosition tile) => _camera.Center = Camera.TileCenter(tile.X, tile.Y);
@@ -3233,10 +3234,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         switch (action)
         {
             case "save" or "load" when _session is not LocalSession:
-                ShowNotice("Only local games can be saved and loaded");
+                ShowNotice(UiText.Get("corsixnet.status.only_local_save", "Only local games can be saved and loaded"));
                 break;
             case "save" or "load" when _buildTool.IsActive || _furnishTool.IsActive:
-                ShowNotice("Finish building before saving or loading");
+                ShowNotice(UiText.Get("corsixnet.status.finish_building_first", "Finish building before saving or loading"));
                 break;
             case "save" or "load":
                 _windows.Open(new SaveLoadWindow(_saves, action == "save", SaveGameTo, LoadGame));
@@ -3273,7 +3274,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         if (_session is not LocalSession local)
         {
-            ShowNotice("Only local games are recorded");
+            ShowNotice(UiText.Get("corsixnet.status.only_local_replay", "Only local games are recorded"));
             return;
         }
 
@@ -3283,11 +3284,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             local.Recording.Finish(local.Simulation);
             local.Recording.Save(path);
-            ShowNotice($"Saved the replay {Path.GetFileNameWithoutExtension(path)}");
+            ShowNotice(UiText.Format("corsixnet.status.replay_saved", "Saved the replay %1%", Path.GetFileNameWithoutExtension(path)));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            ShowNotice($"Cannot save the replay: {e.Message}");
+            ShowNotice(UiText.Format("corsixnet.status.cannot_save_replay", "Cannot save the replay: %1%", e.Message));
         }
     }
 
@@ -3301,7 +3302,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
         {
-            ShowNotice($"Cannot watch {Path.GetFileName(path)}: {e.Message}");
+            ShowNotice(UiText.Format("corsixnet.status.cannot_watch", "Cannot watch %1%: %2%", Path.GetFileName(path), e.Message));
             return;
         }
 
@@ -3312,7 +3313,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _demoPending = _demoDeskPending = _demoDiagnosisPending = _demoMachinePending = _demoToiletsPending = false;
         _demoFurniture.Clear();
         PrepareMapIfReady();
-        ShowNotice("Watching a replay: your commands are not taken; pick a level or load a game to play again");
+        ShowNotice(UiText.Get("corsixnet.status.watching_replay", "Watching a replay: your commands are not taken; pick a level or load a game to play again"));
     }
 
     /// <summary>CorsixTH's <c>confirmation</c> texts, S[35][index], with an English stand-in.</summary>
@@ -3329,12 +3330,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         try
         {
             SaveGameStore.Save(path, local.Name, local.Simulation);
-            ShowNotice($"Saved {Path.GetFileNameWithoutExtension(path)}");
+            ShowNotice(UiText.Format("corsixnet.status.saved", "Saved %1%", Path.GetFileNameWithoutExtension(path)));
             return true;
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            ShowNotice($"Cannot save: {e.Message}");
+            ShowNotice(UiText.Format("corsixnet.status.cannot_save", "Cannot save: %1%", e.Message));
             return false;
         }
     }
@@ -3360,12 +3361,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                ShowNotice($"Cannot save the settings: {e.Message}");
+                ShowNotice(UiText.Format("corsixnet.status.cannot_save_settings", "Cannot save the settings: %1%", e.Message));
                 return;
             }
         }
 
-        ShowNotice(_adviser.IsEnabled ? "The adviser is back" : "The adviser is quiet");
+        ShowNotice(_adviser.IsEnabled ? UiText.Get("corsixnet.status.adviser_back", "The adviser is back") : UiText.Get("corsixnet.status.adviser_quiet", "The adviser is quiet"));
     }
 
     /// <summary>The options, with the hotkey assignment dialog (<c>UIOptions:buttonHotkey</c>), which goes back to them.</summary>
@@ -3410,7 +3411,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            ShowNotice($"Cannot save the hotkeys: {e.Message}");
+            ShowNotice(UiText.Format("corsixnet.status.cannot_save_hotkeys", "Cannot save the hotkeys: %1%", e.Message));
         }
     }
 
@@ -3444,14 +3445,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         if (_session is not null and not LocalSession)
         {
-            ShowNotice("A new game can only be started outside a network game");
+            ShowNotice(UiText.Get("corsixnet.status.no_new_game_in_network", "A new game can only be started outside a network game"));
             return;
         }
 
         var levels = OriginalLevels(_install, difficulty);
         if (levels.Count == 0)
         {
-            ShowNotice("The original levels are not installed");
+            ShowNotice(UiText.Get("corsixnet.status.no_original_levels", "The original levels are not installed"));
             return;
         }
 
@@ -3501,7 +3502,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (paragraphs.Count == 0)
         {
-            paragraphs.Add("That's the basic mechanics of putting a hospital together. Build diagnosis and treatment rooms, hire staff for them, and keep an eye on your reputation.");
+            paragraphs.Add(UiText.Get("corsixnet.status.tutorial_done", "That's the basic mechanics of putting a hospital together. Build diagnosis and treatment rooms, hire staff for them, and keep an eye on your reputation."));
         }
 
         _windows.Open(new InformationWindow(paragraphs));
@@ -3604,7 +3605,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 StartMapEditor(MapEditor.Blank(), null);
                 break;
             case "exit":
-                _windows.Open(new ConfirmWindow("You are about to quit from CorsixNet. Are you sure this is what you want to do?", () => ExitRequested = true));
+                _windows.Open(new ConfirmWindow(UiText.Get("corsixnet.status.confirm_exit", "You are about to quit from CorsixNet. Are you sure this is what you want to do?"), () => ExitRequested = true));
                 break;
         }
     }
@@ -3629,7 +3630,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
         catch (Exception e) when (e is IOException or InvalidDataException)
         {
-            _windows.Open(new InformationWindow([$"Cannot start the campaign: {e.Message}"]));
+            _windows.Open(new InformationWindow([UiText.Format("corsixnet.status.cannot_start_campaign", "Cannot start the campaign: %1%", e.Message)]));
             return;
         }
 
@@ -3653,7 +3654,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         _session?.Dispose();
         var simulation = new Simulation(editor.Map, seed: 1, BaseGameContent.Create(), LevelRules.Free);
-        var local = new LocalSession(path is null ? "Map Editor" : Path.GetFileName(path), simulation, _saves, autosaveFrequency: 0);
+        var local = new LocalSession(path is null ? UiText.Get("main_menu.map_edit", "Map Editor") : Path.GetFileName(path), simulation, _saves, autosaveFrequency: 0);
         local.SetSpeed(GameSpeed.Pause);
         _session = local;
         _error = null;
@@ -3736,11 +3737,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 {
                     tool.Editor.Save(path);
                     _editorPath = path;
-                    ShowNotice($"Saved the map as {path}");
+                    ShowNotice(UiText.Format("corsixnet.status.map_saved", "Saved the map as %1%", path));
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
-                    _windows.Open(new InformationWindow([$"Cannot save the map: {e.Message}"]));
+                    _windows.Open(new InformationWindow([UiText.Format("corsixnet.status.cannot_save_map", "Cannot save the map: %1%", e.Message)]));
                 }
 
                 break;
@@ -3749,10 +3750,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new MapListWindow(maps, LoadEditorMap));
                 break;
             case "restart":
-                _windows.Open(new ConfirmWindow("Start again with a blank map? Changes not saved are lost.", () => StartMapEditor(MapEditor.Blank(), null)));
+                _windows.Open(new ConfirmWindow(UiText.Get("corsixnet.status.confirm_new_map", "Start again with a blank map? Changes not saved are lost."), () => StartMapEditor(MapEditor.Blank(), null)));
                 break;
             case "quit":
-                _windows.Open(new ConfirmWindow("Leave the map editor? Changes not saved are lost.", QuitMapEditor));
+                _windows.Open(new ConfirmWindow(UiText.Get("corsixnet.status.confirm_leave_editor", "Leave the map editor? Changes not saved are lost."), QuitMapEditor));
                 break;
         }
     }
@@ -3778,7 +3779,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
         {
-            _windows.Open(new InformationWindow([$"Cannot load the map: {e.Message}"]));
+            _windows.Open(new InformationWindow([UiText.Format("corsixnet.status.cannot_load_map", "Cannot load the map: %1%", e.Message)]));
         }
     }
 
@@ -3813,6 +3814,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _texts = LoadTexts(_install, config);
+
+        UiText.Current = _texts;
         ApplyLanguageFont();
         if (_configPath is not null)
         {
@@ -3822,12 +3825,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
             catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
-                ShowNotice($"Cannot save the settings: {e.Message}");
+                ShowNotice(UiText.Format("corsixnet.status.cannot_save_settings", "Cannot save the settings: %1%", e.Message));
                 return;
             }
         }
 
-        ShowNotice("Settings saved; the screen size changes on the next start");
+        ShowNotice(UiText.Get("corsixnet.status.settings_saved", "Settings saved; the screen size changes on the next start"));
     }
 
     /// <summary>
@@ -3838,6 +3841,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _config = _config with { Language = config.Language, LanguageFonts = config.LanguageFonts };
         _texts = LoadTexts(_install, _config);
+        UiText.Current = _texts;
         ApplyLanguageFont();
     }
 
@@ -3874,7 +3878,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 // CorsixTH's edit room button: the next click on a room of the hospital edits it.
                 _pickingRoomToEdit = true;
                 _windows.CloseAll();
-                ShowNotice("Click a room to edit it; right click or Esc cancels");
+                ShowNotice(UiText.Get("corsixnet.status.edit_room_hint", "Click a room to edit it; right click or Esc cancels"));
                 break;
         }
     }
@@ -3903,7 +3907,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (_config.RemoveDestroyedRooms && RemoveDestroyedRoomCommand.RemovalCost(simulation, wreck, player) is { } cost)
             {
                 _pickingRoomToEdit = false;
-                var question = string.Create(CultureInfo.InvariantCulture, $"Would you like to remove the room for ${cost}?");
+                var question = UiText.Format("confirmation.remove_destroyed_room", "Would you like to remove the room for $%d?", cost);
                 _windows.Open(new ConfirmWindow(question, () => _session.Submit(new RemoveDestroyedRoomCommand(wreck.Id))));
             }
 
@@ -3924,7 +3928,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _hiring = (staffClass, Simulation!.AvailableStaff(staffClass)[index]);
         _windows.CloseAll();
-        ShowNotice("Click in the hospital to place the new member of staff; right click or Esc cancels");
+        ShowNotice(UiText.Get("corsixnet.status.place_staff_hint", "Click in the hospital to place the new member of staff; right click or Esc cancels"));
     }
 
     /// <summary>
@@ -3953,7 +3957,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (click == StaffPlacingClick.Paused)
         {
-            ShowNotice("The game is paused: unpause it to place the new member of staff");
+            ShowNotice(UiText.Get("corsixnet.status.paused_place_staff", "The game is paused: unpause it to place the new member of staff"));
             _sounds.Play("wrong2.wav");
             return true;
         }
@@ -3971,7 +3975,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
             else
             {
-                ShowNotice($"Cannot place them there: {problem}");
+                ShowNotice(UiText.Format("corsixnet.status.cannot_place_staff", "Cannot place them there: %1%", problem));
                 _sounds.Play("wrong2.wav");
             }
         }
@@ -4015,7 +4019,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         switch (click)
         {
             case StaffPlacingClick.Paused:
-                ShowNotice("The game is paused: unpause it to put the member of staff down");
+                ShowNotice(UiText.Get("corsixnet.status.paused_put_down_staff", "The game is paused: unpause it to put the member of staff down"));
                 _sounds.Play("wrong2.wav");
                 return;
             case StaffPlacingClick.Cancel:
@@ -4034,7 +4038,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             if (problem != StaffHireProblem.None)
             {
                 // _A.placement_info.staff_cannot_place: they stay on the cursor.
-                ShowNotice($"Cannot put the member of staff down there: {problem}");
+                ShowNotice(UiText.Format("corsixnet.status.cannot_put_down_staff", "Cannot put the member of staff down there: %1%", problem));
                 _sounds.Play("wrong2.wav");
                 return;
             }
@@ -4057,7 +4061,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         if (_editorTool is { } editor)
         {
-            var name = _editorPath is null ? "new map" : Path.GetFileName(_editorPath);
+            var name = _editorPath is null ? UiText.Get("corsixnet.status.new_map", "new map") : Path.GetFileName(_editorPath);
             var at = editor.Cursor;
             var tile = editor.Editor.Map[at.X, at.Y];
             return string.Create(CultureInfo.InvariantCulture, $"MAP EDITOR   {name}   tile ({at.X}, {at.Y})   floor {tile.Floor}   north {tile.NorthWall}   west {tile.WestWall}   parcel {tile.Parcel}   Esc: editor window");
@@ -4065,28 +4069,34 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (_session is null)
         {
-            return "No game.";
+            return UiText.Get("corsixnet.status.no_game", "No game.");
         }
 
         var simulation = Simulation;
         var money = simulation is not null && _session.Player < simulation.Hospitals.Count
-            ? string.Create(
-                CultureInfo.InvariantCulture,
-                $"   {MoneyText.Format(simulation.Hospitals[_session.Player].Balance)}   cured {simulation.Hospitals[_session.Player].Cured}   died {simulation.Hospitals[_session.Player].Deaths}   reputation {simulation.Hospitals[_session.Player].Reputation}   value {MoneyText.Format(simulation.Hospitals[_session.Player].Value)}{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{EpidemicText(simulation, simulation.Hospitals[_session.Player])}{QuestionText(simulation, _session.Player)}{OutcomeText(simulation.Hospitals[_session.Player])}")
+            ? UiText.Format(
+                "corsixnet.status.money",
+                "   %1%   cured %2%   died %3%   reputation %4%   value %5%",
+                MoneyText.Format(simulation.Hospitals[_session.Player].Balance),
+                simulation.Hospitals[_session.Player].Cured,
+                simulation.Hospitals[_session.Player].Deaths,
+                simulation.Hospitals[_session.Player].Reputation,
+                MoneyText.Format(simulation.Hospitals[_session.Player].Value))
+                + $"{LoanText(simulation.Hospitals[_session.Player])}{VipText(simulation.Hospitals[_session.Player])}{EmergencyText(simulation.Hospitals[_session.Player])}{EpidemicText(simulation, simulation.Hospitals[_session.Player])}{QuestionText(simulation, _session.Player)}{OutcomeText(simulation.Hospitals[_session.Player])}"
             : string.Empty;
 
         string EmergencyText(Hospital hospital) => hospital.Emergencies.Current switch
         {
-            { IsAccepted: false } offer => $"   EMERGENCY: {offer.Victims} with {DiseaseName(offer.DiseaseId)}, {offer.Percentage} % to cure (E accept, Shift+E refuse)",
-            { } emergency => $"   EMERGENCY: cured {emergency.Cured}, lost {emergency.Killed} of {emergency.Victims}, {emergency.WatchTimer + 1}/13 left",
+            { IsAccepted: false } offer => UiText.Format("corsixnet.status.status_emergency_offer", "   EMERGENCY: %1% with %2%, %3% % to cure (E accept, Shift+E refuse)", offer.Victims, DiseaseName(offer.DiseaseId), offer.Percentage),
+            { } emergency => UiText.Format("corsixnet.status.status_emergency", "   EMERGENCY: cured %1%, lost %2% of %3%, %4%/13 left", emergency.Cured, emergency.Killed, emergency.Victims, emergency.WatchTimer + 1),
             null => string.Empty,
         };
 
         string EpidemicText(Simulation simulation, Hospital hospital) => hospital.Epidemics.Current switch
         {
-            { FaxExpires: > 0 } fax => $"   EPIDEMIC of {DiseaseName(fax.DiseaseId)}: declare for {MoneyText.Format(fax.DeclareFine)} (Shift+I) or cover up (I)",
-            { IsWatchRunning: true } epidemic => $"   EPIDEMIC: {Epidemics.CountInfectedPatients(simulation, epidemic)} infected, {epidemic.WatchTimer + 1}/13 left (J vaccinate)",
-            { } => "   EPIDEMIC: the health inspector is coming",
+            { FaxExpires: > 0 } fax => UiText.Format("corsixnet.status.status_epidemic_offer", "   EPIDEMIC of %1%: declare for %2% (Shift+I) or cover up (I)", DiseaseName(fax.DiseaseId), MoneyText.Format(fax.DeclareFine)),
+            { IsWatchRunning: true } epidemic => UiText.Format("corsixnet.status.status_epidemic", "   EPIDEMIC: %1% infected, %2%/13 left (J vaccinate)", Epidemics.CountInfectedPatients(simulation, epidemic), epidemic.WatchTimer + 1),
+            { } => UiText.Get("corsixnet.status.status_inspector_coming", "   EPIDEMIC: the health inspector is coming"),
             null => string.Empty,
         };
 
@@ -4099,30 +4109,36 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
             var count = simulation.Entities.Count(entity => entity is Humanoid { Behaviour: PatientBehaviour { Question: not PatientQuestion.None } } other && other.HospitalPlayer == player);
             return patient.Question == PatientQuestion.NoDiagnosisRoom
-                ? $"   {count} ASKING: no diagnosis room for {DiseaseName(patient.DiseaseId)} ({patient.DiagnosisProgress / 10} %) (K wait, Shift+K send home, Ctrl+K guess cure)"
-                : $"   {count} ASKING: no room to treat {DiseaseName(patient.DiseaseId)} (K wait, Shift+K send home)";
+                ? UiText.Format("corsixnet.status.status_asking_diagnosis", "   %1% ASKING: no diagnosis room for %2% (%3% %) (K wait, Shift+K send home, Ctrl+K guess cure)", count, DiseaseName(patient.DiseaseId), patient.DiagnosisProgress / 10)
+                : UiText.Format("corsixnet.status.status_asking_treatment", "   %1% ASKING: no room to treat %2% (K wait, Shift+K send home)", count, DiseaseName(patient.DiseaseId));
         }
 
         string DiseaseName(string diseaseId) => _texts?.DiseaseName(diseaseId) ?? diseaseId;
 
-        string VipText(Hospital hospital) => hospital.Vips.IsInvitationPending ? $"   VIP {_texts?.VipName(hospital.Vips.InvitedName) ?? hospital.Vips.InvitedName.ToString(CultureInfo.InvariantCulture)} asks to visit (V invite, Shift+V refuse)" : string.Empty;
+        string VipText(Hospital hospital) => hospital.Vips.IsInvitationPending ? UiText.Format("corsixnet.status.status_vip", "   VIP %1% asks to visit (V invite, Shift+V refuse)", _texts?.VipName(hospital.Vips.InvitedName) ?? hospital.Vips.InvitedName.ToString(CultureInfo.InvariantCulture)) : string.Empty;
 
-        static string LoanText(Hospital hospital) => hospital.Loan > 0 ? $"   loan {MoneyText.Format(hospital.Loan)}" : string.Empty;
+        static string LoanText(Hospital hospital) => hospital.Loan > 0 ? UiText.Format("corsixnet.status.status_loan", "   loan %1%", MoneyText.Format(hospital.Loan)) : string.Empty;
 
         static string OutcomeText(Hospital hospital) => hospital.Outcome switch
         {
-            EndOutcome.Won => "   LEVEL WON",
-            EndOutcome.Lost => $"   LEVEL LOST ({hospital.LostTo?.Criterion})",
+            EndOutcome.Won => UiText.Get("corsixnet.status.status_level_won", "   LEVEL WON"),
+            EndOutcome.Lost => UiText.Format("corsixnet.status.status_level_lost", "   LEVEL LOST (%1%)", hospital.LostTo?.Criterion),
             _ => string.Empty,
         };
 
-        var levels = _levels.Count > 0 ? $"   ({_levelIndex + 1} of {_levels.Count})" : string.Empty;
+        var levels = _levels.Count > 0 ? UiText.Format("corsixnet.status.status_level_of", "   (%1% of %2%)", _levelIndex + 1, _levels.Count) : string.Empty;
         var people = Simulation?.Entities.OfType<Humanoid>().Count() ?? 0;
-        var levelKeys = _levels.Count > 0 ? "   F3: levels" : string.Empty;
-        var autosave = _session is LocalSession { AutosaveError: { } failed } ? $"   AUTOSAVE FAILED: {failed}" : string.Empty;
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"{_session.Name}{levels}{money}{autosave}   {_session.Status}   {people} people{(_wander ? " wandering" : string.Empty)}   overlay {_overlay}   zoom x{_camera.Zoom:0.00}   upscale x{_blocks.Scale}{levelKeys}   O: overlay   U: upscale   Esc: quit");
+        var levelKeys = _levels.Count > 0 ? UiText.Get("corsixnet.status.status_levels_key", "   F3: levels") : string.Empty;
+        var autosave = _session is LocalSession { AutosaveError: { } failed } ? UiText.Format("corsixnet.status.status_autosave_failed", "   AUTOSAVE FAILED: %1%", failed) : string.Empty;
+        return $"{_session.Name}{levels}{money}{autosave}   {_session.Status}   " + UiText.Format(
+            "corsixnet.status.line",
+            "%1% people%2%   overlay %3%   zoom x%4%   upscale x%5%%6%   O: overlay   U: upscale   Esc: quit",
+            people,
+            _wander ? UiText.Get("corsixnet.status.wandering", " wandering") : string.Empty,
+            _overlay,
+            _camera.Zoom.ToString("0.00", CultureInfo.InvariantCulture),
+            _blocks.Scale,
+            levelKeys);
     }
 
     /// <summary>
@@ -4141,7 +4157,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             // Stands in for CorsixTH's opening watch; whole days rounded up.
             var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;
-            date += string.Create(CultureInfo.InvariantCulture, $", opens in {days} days (Shift+O: now)");
+            date += UiText.Format("corsixnet.status.status_opens_in", ", opens in %1% days (Shift+O: now)", days);
         }
 
         var speed = GameSpeeds.Name(_session.Speed);
@@ -4164,7 +4180,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
-        const string title = "Choose a level (click one; F3 or Esc closes)";
+        var title = UiText.Get("corsixnet.status.choose_level", "Choose a level (click one; F3 or Esc closes)");
         var labels = _levels.Select(LevelLabel).ToList();
         var lineHeight = _text.LineHeight + 4;
         var width = labels.Append(title).Max(label => _text.Measure(label).Width) + 40;
@@ -4193,7 +4209,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (name.StartsWith("LEVEL.L", StringComparison.OrdinalIgnoreCase)
             && int.TryParse(name.AsSpan(7), NumberStyles.None, CultureInfo.InvariantCulture, out var number))
         {
-            return number <= 12 ? $"Campaign level {number}   ({name})" : $"Level {number}   ({name})";
+            return number <= 12 ? UiText.Format("corsixnet.status.campaign_level", "Campaign level %1%   (%2%)", number, name) : UiText.Format("corsixnet.status.level_number", "Level %1%   (%2%)", number, name);
         }
 
         return name;
@@ -4212,7 +4228,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (RoomListProblem(simulation, roomType) is { } problem)
         {
-            ShowNotice($"{roomType.Name}: {problem}");
+            ShowNotice($"{UiText.Room(roomType)}: {problem}");
             _sounds.Play("Wrong2.wav");
             return;
         }
@@ -4244,15 +4260,15 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var player = _session!.Player;
         if (!simulation.Rules.IsRoomAvailable(room))
         {
-            return "not on this level";
+            return UiText.Get("corsixnet.status.not_on_level", "not on this level");
         }
 
         if (!RoomPurchases.CanBuild(simulation, room, player))
         {
-            return "not researched yet";
+            return UiText.Get("corsixnet.status.not_researched", "not researched yet");
         }
 
-        return RoomPurchases.CanAfford(simulation, room, player) ? null : "not enough money";
+        return RoomPurchases.CanAfford(simulation, room, player) ? null : UiText.Get("corsixnet.build_tool.not_enough_money", "not enough money");
     }
 
     /// <summary>
@@ -4290,11 +4306,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var hospital = simulation.Hospitals[session.Player];
-        var rooms = simulation.Content.Rooms.OrderBy(room => room.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        var rooms = simulation.Content.Rooms.OrderBy(room => UiText.Room(room), StringComparer.CurrentCultureIgnoreCase).ToList();
         var rows = rooms.Select(room => (Room: room, Cost: MoneyText.Format(RoomPurchases.BuildCost(simulation, hospital, room)), Problem: RoomListProblem(simulation, room))).ToList();
-        const string title = "Build a room (click one; B or Esc closes)";
+        var title = UiText.Get("corsixnet.status.build_room_list", "Build a room (click one; B or Esc closes)");
         var lineHeight = _text.LineHeight + 4;
-        var nameWidth = rows.Max(row => _text.Measure(row.Room.Name).Width);
+        var nameWidth = rows.Max(row => _text.Measure(UiText.Room(row.Room)).Width);
         var costWidth = rows.Max(row => _text.Measure(row.Cost).Width);
         var problemWidth = rows.Max(row => row.Problem is null ? 0 : _text.Measure(row.Problem).Width);
         var width = Math.Max(_text.Measure(title).Width, nameWidth + costWidth + problemWidth + 48) + 24;
@@ -4319,7 +4335,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
             var tint = problem is null ? Color.White : RoomListBlocked;
             var y = row.Y + 2;
-            _text.Draw(batch, room.Name, new Vector2(box.X + 12, y), tint: tint);
+            _text.Draw(batch, UiText.Room(room), new Vector2(box.X + 12, y), tint: tint);
             var costRight = box.X + 12 + nameWidth + 24 + costWidth;
             _text.Draw(batch, cost, new Vector2(costRight - _text.Measure(cost).Width, y), tint: tint);
             if (problem is not null)
@@ -4333,7 +4349,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private static string DateText(GameDate date)
     {
         string[] months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return string.Create(CultureInfo.InvariantCulture, $"{date.Day} {months[date.Month - 1]} year {date.Year}");
+        return UiText.Format("corsixnet.status.date", "%1% %2% year %3%", date.Day, UiText.Current?.String(6, date.Month) ?? months[date.Month - 1], date.Year);
     }
 
     /// <summary>The close-up views windows asked for (their view circles), by the entity they follow.</summary>
@@ -4557,18 +4573,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         if (_editorTool is not null)
         {
-            return "Pan: arrows WASD middle drag   Wheel: zoom   Left drag: paint, clear or paste   Right drag: copy an area";
+            return UiText.Get("corsixnet.status.editor_keys", "Pan: arrows WASD middle drag   Wheel: zoom   Left drag: paint, clear or paste   Right drag: copy an area");
         }
 
         if (_buildTool.IsActive)
         {
-            var reminder = Environment.TickCount64 < _buildReminderUntil ? " (finish or cancel the room to use other keys)" : string.Empty;
-            return $"BUILD MODE{reminder}   {_buildTool.Status(Simulation)}";
+            var reminder = Environment.TickCount64 < _buildReminderUntil ? UiText.Get("corsixnet.status.finish_room_first", " (finish or cancel the room to use other keys)") : string.Empty;
+            return UiText.Format("corsixnet.status.build_mode", "BUILD MODE%1%   %2%", reminder, _buildTool.Status(Simulation));
         }
 
         if (_furnishTool.IsActive)
         {
-            return $"BUILD MODE   {_furnishTool.Status(Simulation)}";
+            return UiText.Format("corsixnet.status.build_mode_furnish", "BUILD MODE   %1%", _furnishTool.Status(Simulation));
         }
 
         if (_notice is not null && Environment.TickCount64 < _noticeUntil)
@@ -4584,8 +4600,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (_hoveredTile is not { } position || Map is not { } map)
         {
-            var pause = _session?.CanChangeSpeed == true ? "   Space P: pause   1-6: speed   Z: hold to speed up" : string.Empty;
-            return $"Pan: arrows WASD right drag   Wheel: zoom   B: build a room   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander{pause}";
+            var pause = _session?.CanChangeSpeed == true ? UiText.Get("corsixnet.status.speed_keys", "   Space P: pause   1-6: speed   Z: hold to speed up") : string.Empty;
+            return UiText.Format("corsixnet.status.keys", "Pan: arrows WASD right drag   Wheel: zoom   B: build a room   F: buy reception desk   H: spawn   G: spawn 10   Ctrl+1-4: hire   Click: select or walk   R: wander%1%", pause);
         }
 
         var tile = map[position.X, position.Y];

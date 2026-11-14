@@ -62,7 +62,7 @@ internal sealed class HireWindow : UiWindow
         }
     }
 
-    public override string Title => "Hire staff";
+    public override string Title => UiText.Get("corsixnet.hire.caption", "Hire staff");
 
     public override string? Hotkey => "Y";
 
@@ -85,27 +85,27 @@ internal sealed class HireWindow : UiWindow
         _shown = candidates.Count > 0 ? candidates[_selected] : null;
         if (candidates.Count == 0)
         {
-            yield return WindowCell.Line("Nobody is looking for work this month.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.hire.nobody", "Nobody is looking for work this month."), dim: true);
             yield break;
         }
 
-        yield return WindowRow.Of("Name", WindowCell.Number("Skill"), WindowCell.Number("Wage"), "Rank", string.Empty);
+        yield return WindowRow.Of(UiText.Get("corsixnet.staff.name", "Name"), WindowCell.Number(UiText.Get("corsixnet.staff.skill", "Skill")), WindowCell.Number(UiText.Get("corsixnet.staff.wage", "Wage")), UiText.Get("corsixnet.staff.rank", "Rank"), string.Empty);
         for (var i = 0; i < candidates.Count; i++)
         {
             var profile = candidates[i];
             var index = i;
-            var name = host.Texts?.Staff.FullName(profile) ?? string.Create(CultureInfo.InvariantCulture, $"Candidate {i + 1}");
+            var name = host.Texts?.Staff.FullName(profile) ?? UiText.Format("corsixnet.hire.candidate", "Candidate %1%", i + 1);
             yield return WindowRow.Of(
-                new WindowCell(name, () => _selected = index, Highlight: index == _selected) { Tooltip = "Show the portrait" },
+                new WindowCell(name, () => _selected = index, Highlight: index == _selected) { Tooltip = UiText.Get("corsixnet.hire.portrait", "Show the portrait") },
                 WindowCell.Number(StaffLabels.Skill(profile)),
                 WindowCell.Number(MoneyText.Format(profile.Wage)),
                 StaffLabels.Abilities(profile),
-                WindowCell.Button("Hire", () =>
+                WindowCell.Button(UiText.Get("corsixnet.toolbar.hire", "Hire"), () =>
                 {
                     if (hospital.Balance < profile.Wage)
                     {
                         // UIHireStaff:cannotAfford.
-                        host.Notice($"You cannot afford {name}: a month's wage is {MoneyText.Format(profile.Wage)}");
+                        host.Notice(UiText.Format("corsixnet.hire.cannot_afford", "You cannot afford %1%: a month's wage is %2%", name, MoneyText.Format(profile.Wage)));
                         host.PlaySound("wrong2.wav");
                         return;
                     }
@@ -121,9 +121,9 @@ internal sealed class HireWindow : UiWindow
 
     private static string Plural(StaffClass staffClass) => staffClass switch
     {
-        StaffClass.Doctor => "Doctors",
-        StaffClass.Nurse => "Nurses",
-        StaffClass.Handyman => "Handymen",
-        _ => "Receptionists",
+        StaffClass.Doctor => UiText.Get("corsixnet.staff.doctors", "Doctors"),
+        StaffClass.Nurse => UiText.Get("corsixnet.staff.nurses", "Nurses"),
+        StaffClass.Handyman => UiText.Get("corsixnet.staff.handymen", "Handymen"),
+        _ => UiText.Get("corsixnet.staff.receptionists", "Receptionists"),
     };
 }

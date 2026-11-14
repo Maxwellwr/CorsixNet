@@ -1,3 +1,4 @@
+using CorsixNet.Client.Ui;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
@@ -149,8 +150,10 @@ internal sealed class FurnishCorridorTool
         }
 
         var price = simulation is null ? string.Empty : $" ({MoneyText.Format(simulation.Rules.ObjectCost(_placing.Id))})";
-        var problem = _cannotAfford ? "   (not enough money)" : _problem is ObjectPlacementProblem.None or ObjectPlacementProblem.OutsideMap ? string.Empty : $"   ({_problem})";
-        return $"{_placing.Name}{price}: click to buy and place it, right click turns it, Tab: next item{problem}   Esc: cancel";
+        var problem = _cannotAfford
+            ? "   (" + UiText.Get("corsixnet.build_tool.not_enough_money", "not enough money") + ")"
+            : _problem is ObjectPlacementProblem.None or ObjectPlacementProblem.OutsideMap ? string.Empty : "  " + BuildRoomTool.ExplainPlacement(_problem);
+        return UiText.Format("corsixnet.build_tool.corridor_object", "%1%%2%: click to buy and place it, right click turns it, Tab: next item%3%   Esc: cancel", UiText.Object(_placing), price, problem);
     }
 
     /// <summary>Turns the object clockwise to its next available orientation.</summary>

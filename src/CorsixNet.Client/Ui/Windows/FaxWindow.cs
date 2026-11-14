@@ -23,7 +23,7 @@ internal sealed class FaxWindow : UiWindow
     /// <summary>The code typed on the fax's keypad (<c>UIFax.code</c>).</summary>
     private string _code = string.Empty;
 
-    public override string Title => "Faxes";
+    public override string Title => UiText.Get("corsixnet.toolbar.faxes", "Faxes");
 
     /// <summary>The code typed so far.</summary>
     internal string Code => _code;
@@ -91,6 +91,12 @@ internal sealed class FaxWindow : UiWindow
     /// The faxes waiting, one message each, in the order the table lists them: the VIP's invitation, the reports, the
     /// emergency, the epidemic and the patients asking what to do; each with its choices.
     /// </summary>
+    private static string EmergencyOfferText(IWindowHost host, Sim.Disasters.Emergency offer) =>
+        UiText.Format("corsixnet.fax.emergency_offer", "Emergency: %1% patients with %2%, cure %3% %% for %4% each.", offer.Victims, DiseaseName(host, offer.DiseaseId), offer.Percentage, MoneyText.Format(offer.Bonus));
+
+    private static string EpidemicOfferText(IWindowHost host, Sim.Disasters.Epidemic epidemic) =>
+        UiText.Format("corsixnet.fax.epidemic_offer", "Epidemic of %1%: declare it and pay %2%, or try to cover it up.", DiseaseName(host, epidemic.DiseaseId), MoneyText.Format(epidemic.DeclareFine));
+
     internal List<FaxMessage> Messages(IWindowHost host)
     {
         var simulation = host.Simulation;
@@ -98,10 +104,10 @@ internal sealed class FaxWindow : UiWindow
         var messages = new List<FaxMessage>();
         if (hospital.Vips.IsInvitationPending)
         {
-            var name = host.Texts?.VipName(hospital.Vips.InvitedName) ?? string.Create(CultureInfo.InvariantCulture, $"VIP {hospital.Vips.InvitedName}");
+            var name = host.Texts?.VipName(hospital.Vips.InvitedName) ?? UiText.Format("corsixnet.fax.vip_number", "VIP %1%", hospital.Vips.InvitedName);
             messages.Add(new FaxMessage(
-                [host.Texts?.String(44, 187)?.Replace("%s", name, StringComparison.Ordinal) ?? $"{name} would like to visit your hospital."],
-                [(host.Texts?.String(44, 184) ?? "Invite the VIP", true, () => host.Submit(new AnswerVipCommand(true))), (host.Texts?.String(44, 185) ?? "Turn the VIP down", true, () => host.Submit(new AnswerVipCommand(false)))]));
+                [host.Texts?.String(44, 187)?.Replace("%s", name, StringComparison.Ordinal) ?? UiText.Format("corsixnet.fax.vip_visit", "%1% would like to visit your hospital.", name)],
+                [(host.Texts?.String(44, 184) ?? "Invite the VIP", true, () => host.Submit(new AnswerVipCommand(true))), (host.Texts?.String(44, 185) ?? UiText.Get("corsixnet.fax.refuse_tooltip", "Turn the VIP down"), true, () => host.Submit(new AnswerVipCommand(false)))]));
         }
 
         if (hospital.Vips.Report is { } report)
@@ -126,14 +132,14 @@ internal sealed class FaxWindow : UiWindow
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
         {
             messages.Add(new FaxMessage(
-                [.. EmergencyStartLines(host, offer)],
-                [(host.Texts?.String(44, 15) ?? "Accept the emergency", true, () => host.Submit(new AnswerEmergencyCommand(true))), (host.Texts?.String(44, 16) ?? "Send the emergency elsewhere", true, () => host.Submit(new AnswerEmergencyCommand(false)))]));
+                [EmergencyOfferText(host, offer)],
+                [(host.Texts?.String(44, 15) ?? "Accept the emergency", true, () => host.Submit(new AnswerEmergencyCommand(true))), (host.Texts?.String(44, 16) ?? UiText.Get("corsixnet.fax.refuse_emergency_tooltip", "Send the emergency elsewhere"), true, () => host.Submit(new AnswerEmergencyCommand(false)))]));
         }
 
         if (hospital.Epidemics.Current is { FaxExpires: > 0 } epidemic)
         {
             messages.Add(new FaxMessage(
-                [.. EpidemicStartLines(host, epidemic)],
+                [EpidemicOfferText(host, epidemic)],
                 [(host.Texts?.String(44, 165) ?? "Declare the epidemic", true, () => host.Submit(new AnswerEpidemicCommand(false))), (host.Texts?.String(44, 166) ?? "Try to cover it up", true, () => host.Submit(new AnswerEpidemicCommand(true)))]));
         }
 
@@ -214,11 +220,11 @@ internal sealed class FaxWindow : UiWindow
         if (hospital.Vips.IsInvitationPending)
         {
             any = true;
-            var name = host.Texts?.VipName(hospital.Vips.InvitedName) ?? string.Create(CultureInfo.InvariantCulture, $"VIP {hospital.Vips.InvitedName}");
+            var name = host.Texts?.VipName(hospital.Vips.InvitedName) ?? UiText.Format("corsixnet.fax.vip_number", "VIP %1%", hospital.Vips.InvitedName);
             yield return WindowRow.Of(
-                $"{name} would like to visit your hospital.",
-                WindowCell.Button("Invite", () => host.Submit(new AnswerVipCommand(true))).WithTooltip("Invite the VIP to visit your hospital"),
-                WindowCell.Button("Refuse", () => host.Submit(new AnswerVipCommand(false))).WithTooltip("Turn the VIP down"));
+                UiText.Format("corsixnet.fax.vip_visit", "%1% would like to visit your hospital.", name),
+                WindowCell.Button(UiText.Get("corsixnet.fax.invite", "Invite"), () => host.Submit(new AnswerVipCommand(true))).WithTooltip(UiText.Get("corsixnet.fax.invite_tooltip", "Invite the VIP to visit your hospital")),
+                WindowCell.Button(UiText.Get("corsixnet.fax.refuse", "Refuse"), () => host.Submit(new AnswerVipCommand(false))).WithTooltip(UiText.Get("corsixnet.fax.refuse_tooltip", "Turn the VIP down")));
         }
 
         if (hospital.Vips.Report is { } report)
@@ -230,7 +236,7 @@ internal sealed class FaxWindow : UiWindow
             }
 
             // The fax's one choice, close (fax.vip_visit_result.close_text).
-            yield return WindowCell.Button(host.Texts?.String(44, 189) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Vip))) with { Tooltip = "Close this fax" };
+            yield return WindowCell.Button(host.Texts?.String(44, 189) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Vip))) with { Tooltip = UiText.Get("corsixnet.fax.close_tooltip", "Close this fax") };
         }
 
         if (hospital.Emergencies.Report is { } result)
@@ -242,7 +248,7 @@ internal sealed class FaxWindow : UiWindow
             }
 
             // fax.emergency_result.close_text.
-            yield return WindowCell.Button(host.Texts?.String(44, 38) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Emergency))) with { Tooltip = "Close this fax" };
+            yield return WindowCell.Button(host.Texts?.String(44, 38) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Emergency))) with { Tooltip = UiText.Get("corsixnet.fax.close_tooltip", "Close this fax") };
         }
         foreach (var discovered in hospital.DiseaseReports)
         {
@@ -253,7 +259,7 @@ internal sealed class FaxWindow : UiWindow
             }
 
             // fax.disease_discovered.close_text.
-            yield return WindowCell.Button(host.Texts?.String(44, 55) ?? "A new disease has been found", () => host.Submit(new CloseReportCommand(FaxReport.Disease))) with { Tooltip = "Close this fax" };
+            yield return WindowCell.Button(host.Texts?.String(44, 55) ?? "A new disease has been found", () => host.Submit(new CloseReportCommand(FaxReport.Disease))) with { Tooltip = UiText.Get("corsixnet.fax.close_tooltip", "Close this fax") };
         }
 
         if (hospital.Epidemics.Report is { } epidemicResult)
@@ -265,25 +271,25 @@ internal sealed class FaxWindow : UiWindow
             }
 
             // fax.epidemic_result.close_text.
-            yield return WindowCell.Button(host.Texts?.String(44, 173) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Epidemic))) with { Tooltip = "Close this fax" };
+            yield return WindowCell.Button(host.Texts?.String(44, 173) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Epidemic))) with { Tooltip = UiText.Get("corsixnet.fax.close_tooltip", "Close this fax") };
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
         {
             any = true;
             yield return WindowRow.Of(
-                string.Create(CultureInfo.InvariantCulture, $"Emergency: {offer.Victims} patients with {DiseaseName(host, offer.DiseaseId)}, cure {offer.Percentage} % for {MoneyText.Format(offer.Bonus)} each."),
-                WindowCell.Button("Accept", () => host.Submit(new AnswerEmergencyCommand(true))).WithTooltip("Take the emergency in"),
-                WindowCell.Button("Refuse", () => host.Submit(new AnswerEmergencyCommand(false))).WithTooltip("Send the emergency elsewhere"));
+                EmergencyOfferText(host, offer),
+                WindowCell.Button(UiText.Get("corsixnet.fax.accept", "Accept"), () => host.Submit(new AnswerEmergencyCommand(true))).WithTooltip(UiText.Get("corsixnet.fax.accept_tooltip", "Take the emergency in")),
+                WindowCell.Button(UiText.Get("corsixnet.fax.refuse", "Refuse"), () => host.Submit(new AnswerEmergencyCommand(false))).WithTooltip(UiText.Get("corsixnet.fax.refuse_emergency_tooltip", "Send the emergency elsewhere")));
         }
 
         if (hospital.Epidemics.Current is { FaxExpires: > 0 } epidemic)
         {
             any = true;
             yield return WindowRow.Of(
-                $"Epidemic of {DiseaseName(host, epidemic.DiseaseId)}: declare it and pay {MoneyText.Format(epidemic.DeclareFine)}, or try to cover it up.",
-                WindowCell.Button("Declare", () => host.Submit(new AnswerEpidemicCommand(false))).WithTooltip("Declare the epidemic and pay the fine"),
-                WindowCell.Button("Cover up", () => host.Submit(new AnswerEpidemicCommand(true))).WithTooltip("Try to cure every infected patient before the health inspector comes"));
+                EpidemicOfferText(host, epidemic),
+                WindowCell.Button(UiText.Get("corsixnet.fax.declare", "Declare"), () => host.Submit(new AnswerEpidemicCommand(false))).WithTooltip(UiText.Get("corsixnet.fax.declare_tooltip", "Declare the epidemic and pay the fine")),
+                WindowCell.Button(UiText.Get("corsixnet.fax.cover_up", "Cover up"), () => host.Submit(new AnswerEpidemicCommand(true))).WithTooltip(UiText.Get("corsixnet.fax.cover_up_tooltip", "Try to cure every infected patient before the health inspector comes")));
         }
 
         foreach (var humanoid in Asking(simulation, host.Player))
@@ -292,41 +298,41 @@ internal sealed class FaxWindow : UiWindow
             var patient = (PatientBehaviour)humanoid.Behaviour!;
             var noDiagnosis = patient.Question == PatientQuestion.NoDiagnosisRoom;
             var text = noDiagnosis
-                ? string.Create(CultureInfo.InvariantCulture, $"Patient {humanoid.Id}: no diagnosis room left, diagnosed {Math.Min(100, patient.DiagnosisProgress / 10)} %.")
-                : $"Patient {humanoid.Id}: no room to treat {DiseaseName(host, patient.DiseaseId)}.";
+                ? UiText.Format("corsixnet.fax.patient_no_diagnosis", "Patient %1%: no diagnosis room left, diagnosed %2% %%.", humanoid.Id, Math.Min(100, patient.DiagnosisProgress / 10))
+                : UiText.Format("corsixnet.fax.patient_no_treatment", "Patient %1%: no room to treat %2%.", humanoid.Id, DiseaseName(host, patient.DiseaseId));
             var cells = new List<WindowCell>
             {
                 text,
-                WindowCell.Button("Wait", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Wait))).WithTooltip("Ask the patient to wait in the hospital"),
-                WindowCell.Button("Send home", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.SendHome))).WithTooltip("Send the patient home"),
+                WindowCell.Button(UiText.Get("corsixnet.fax.wait", "Wait"), () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Wait))).WithTooltip(UiText.Get("corsixnet.fax.wait_tooltip", "Ask the patient to wait in the hospital")),
+                WindowCell.Button(UiText.Get("corsixnet.patient.send_home", "Send home"), () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.SendHome))).WithTooltip(UiText.Get("tooltip.queue_window.patient_dropdown.send_home", "Send the patient home")),
             };
             if (noDiagnosis)
             {
-                cells.Add(WindowCell.Button("Guess cure", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.GuessCure))).WithTooltip("Treat the patient for the likeliest disease"));
+                cells.Add(WindowCell.Button(UiText.Get("corsixnet.patient.guess_cure", "Guess cure"), () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.GuessCure))).WithTooltip(UiText.Get("corsixnet.fax.guess_cure_tooltip", "Treat the patient for the likeliest disease")));
             }
             else if (PatientBehaviour.CanGoToResearch(simulation, humanoid))
             {
-                cells.Add(WindowCell.Button("Research", () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Research))).WithTooltip("Send the patient to the research department"));
+                cells.Add(WindowCell.Button(UiText.Get("corsixnet.menu.research", "Research"), () => host.Submit(new AnswerPatientCommand(humanoid.Id, PatientAnswer.Research))).WithTooltip(UiText.Get("corsixnet.fax.research_tooltip", "Send the patient to the research department")));
             }
 
-            cells.Add(WindowCell.Button("Patient", () => host.Open(new PatientWindow(humanoid.Id))).WithTooltip("Look at the patient"));
+            cells.Add(WindowCell.Button(UiText.Get("corsixnet.patient.caption", "Patient"), () => host.Open(new PatientWindow(humanoid.Id))).WithTooltip(UiText.Get("corsixnet.fax.patient_tooltip", "Look at the patient")));
             yield return new WindowRow(cells);
         }
 
         if (!any)
         {
-            yield return WindowCell.Line("No faxes waiting.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.fax.none", "No faxes waiting."), dim: true);
         }
 
         // The keypad (UIFax:appendNumber, cancel, correct, validate): codes typed here can unlock cheats.
         yield return WindowRow.Gap;
-        yield return WindowRow.Of("Code", _code.Length > 0 ? _code : "-");
+        yield return WindowRow.Of(UiText.Get("corsixnet.fax.code", "Code"), _code.Length > 0 ? _code : "-");
         yield return new WindowRow("12345".Select(digit => Key(digit.ToString())).ToList());
         yield return new WindowRow("67890".Select(digit => Key(digit.ToString())).ToList());
         yield return WindowRow.Of(
-            WindowCell.Button("Cancel", () => _code = string.Empty, _code.Length > 0).WithTooltip("Clear the code"),
-            WindowCell.Button("Correct", () => _code = _code[..^1], _code.Length > 0).WithTooltip("Delete the last digit"),
-            WindowCell.Button("Validate", () => Validate(host), _code.Length > 0).WithTooltip("Send the code"));
+            WindowCell.Button(UiText.Get("graphics_window.cancel", "Cancel"), () => _code = string.Empty, _code.Length > 0).WithTooltip(UiText.Get("corsixnet.fax.clear_tooltip", "Clear the code")),
+            WindowCell.Button(UiText.Get("corsixnet.fax.correct", "Correct"), () => _code = _code[..^1], _code.Length > 0).WithTooltip(UiText.Get("corsixnet.fax.correct_tooltip", "Delete the last digit")),
+            WindowCell.Button(UiText.Get("corsixnet.fax.validate", "Validate"), () => Validate(host), _code.Length > 0).WithTooltip(UiText.Get("corsixnet.fax.validate_tooltip", "Send the code")));
     }
 
     /// <summary>
@@ -336,12 +342,13 @@ internal sealed class FaxWindow : UiWindow
     /// </summary>
     internal static IEnumerable<string> VipReportLines(IWindowHost host, VipReport report)
     {
-        var name = host.Texts?.VipName(report.Name) ?? string.Create(CultureInfo.InvariantCulture, $"VIP {report.Name}");
+        var name = host.Texts?.VipName(report.Name) ?? UiText.Format("corsixnet.fax.vip_number", "VIP %1%", report.Name);
         yield return new Advice(44, 192, "%s has made a report on your hospital:").Text(host.Texts, name);
         if (host.Simulation.Rules.FreeBuild)
         {
             // CorsixTH picks one at random; this one stays the same for the visit.
-            yield return FreeBuildRemarks[(int)(report.Expires % FreeBuildRemarks.Length)];
+            var remark = (int)(report.Expires % FreeBuildRemarks.Length);
+            yield return UiText.Get("fax.vip_visit_result.remarks.free_build." + (remark + 1), FreeBuildRemarks[remark]);
             yield break;
         }
 
@@ -369,63 +376,6 @@ internal sealed class FaxWindow : UiWindow
         {
             yield return new Advice(44, 40, "The most you could have earned was %d. You earned %d.").Text(host.Texts, report.MaxBonus, report.Earned);
         }
-    }
-
-    /// <summary>
-    /// makeEmergencyStartFax's lines: where it is, how many have the disease, whether it can be cured (the drug's
-    /// effectiveness, or the room to build and the staff to hire for the last treatment room), and the bonus.
-    /// </summary>
-    internal static IEnumerable<string> EmergencyStartLines(IWindowHost host, Sim.Disasters.Emergency offer)
-    {
-        string S(int index, string fallback, params object[] arguments) => new Advice(44, index, fallback).Text(host.Texts, arguments);
-        var simulation = host.Simulation;
-        var name = DiseaseName(host, offer.DiseaseId);
-
-        // _S.fax.emergency.locations[math.random(1, 9)]: here the same place for the same emergency.
-        var location = S(27 + (int)((ulong)offer.OfferExpires % 9), "a nearby town");
-        yield return S(18, "There has been an emergency at %s.", location);
-        yield return offer.Victims == 1
-            ? host.Texts?.Named("fax.emergency.num_disease_singular")?.Replace("%s", name, StringComparison.Ordinal) ?? $"There is 1 person with {name} needing immediate attention."
-            : S(19, "There are %d people with %s needing immediate attention.", offer.Victims, name);
-        var info = S(21, "You can cure this.");
-        if (Sim.Diseases.DiseaseCatalog.Find(offer.DiseaseId) is { } disease && disease.TreatmentRooms.Count > 0)
-        {
-            var hospital = simulation.Hospitals[host.Player];
-            if (disease.TreatmentRooms is ["pharmacy"])
-            {
-                info = S(20, "You can cure %s with %d%% efficiency.", name, hospital.PeekCase(disease, simulation.Rules.Diseases).CureEffectiveness).Replace("%%", "%", StringComparison.Ordinal);
-            }
-
-            var roomType = disease.TreatmentRooms[^1];
-            var roomMissing = !simulation.Entities.OfType<Room>().Any(room => room.RoomType == roomType && room.IsActive && RoomVisits.Owner(simulation, room) == host.Player);
-            var staff = RoomStaff(roomType);
-            var staffAvailable = staff is not { } kind || StaffOfCategory(simulation, host.Player, kind.Kind) > 0;
-            var roomName = simulation.Content.FindRoom(roomType)?.Name ?? roomType;
-            var staffName = staff is { } needed ? StaffTitle(host, needed.Kind) : string.Empty;
-            if (roomMissing)
-            {
-                info = staffAvailable ? S(23, "You need to build a %s", roomName) + "." : S(22, "You need to build a %s and employ a %s", roomName, staffName) + ".";
-            }
-            else if (!staffAvailable)
-            {
-                info = S(24, "You need to employ a %s", staffName) + ".";
-            }
-        }
-
-        yield return info;
-        yield return simulation.Rules.FreeBuild
-            ? host.Texts?.Named("fax.emergency.free_build") ?? "If you are successful your reputation will increase, but if you fail your reputation will be seriously dented."
-            : S(26, "The bonus is %d for each patient you cure.", offer.Bonus * offer.Victims);
-    }
-
-    /// <summary>The epidemic's fax (Epidemic:sendFax): the disease, the fine to declare it, and what covering it up means.</summary>
-    internal static IEnumerable<string> EpidemicStartLines(IWindowHost host, Sim.Disasters.Epidemic epidemic)
-    {
-        string S(int index, string fallback, params object[] arguments) => new Advice(44, index, fallback).Text(host.Texts, arguments);
-        yield return S(168, "Your hospital has an epidemic of %s.", DiseaseName(host, epidemic.DiseaseId));
-        yield return S(169, "Declaring it costs a fine of %d.", epidemic.DeclareFine);
-        yield return S(170, "If you cover it up, you must cure everyone infected before the health inspector arrives.");
-        yield return S(171, "If anyone infected is found, you will be fined and your reputation will suffer.");
     }
 
     /// <summary>
@@ -595,13 +545,13 @@ internal sealed class FaxWindow : UiWindow
     /// <summary>Our stand-ins for the original's fifteen remarks, best to worst.</summary>
     private static string Remark(int rating) => rating switch
     {
-        <= 3 => "A superb hospital. I was most impressed.",
-        <= 7 => "A good hospital, well run.",
-        <= 10 => "An average hospital. It could do better.",
-        _ => "A poor hospital. Things must improve.",
+        <= 3 => UiText.Get("corsixnet.fax.remark_superb", "A superb hospital. I was most impressed."),
+        <= 7 => UiText.Get("corsixnet.fax.remark_good", "A good hospital, well run."),
+        <= 10 => UiText.Get("corsixnet.fax.remark_average", "An average hospital. It could do better."),
+        _ => UiText.Get("corsixnet.fax.remark_poor", "A poor hospital. Things must improve."),
     };
 
-    private WindowCell Key(string digit) => WindowCell.Button(digit, () => _code += digit, _code.Length < 10).WithTooltip($"Type {digit}");
+    private WindowCell Key(string digit) => WindowCell.Button(digit, () => _code += digit, _code.Length < 10).WithTooltip(UiText.Format("corsixnet.fax.type_digit", "Type %1%", digit));
 
     /// <summary>
     /// <c>UIFax:validate</c>: 24328, the original game's code, opens the cheats; 112 is a friendly hello; the other codes
@@ -614,7 +564,7 @@ internal sealed class FaxWindow : UiWindow
         switch (FaxCodes.Check(code))
         {
             case FaxCode.Cheats:
-                host.Adviser.Say("Congratulations, you have unlocked cheats!", Environment.TickCount64);
+                host.Adviser.Say(UiText.Get("adviser.cheats.th_cheat", "Congratulations, you have unlocked cheats!"), Environment.TickCount64);
                 host.Open(new CheatsWindow());
                 break;
             case FaxCode.Hello:
@@ -622,7 +572,14 @@ internal sealed class FaxWindow : UiWindow
             case FaxCode.Toggle when FaxCodes.ToggleCheat(code) is { } toggle:
                 var wasOn = host.Simulation.Hospitals[host.Player].ActiveCheats.HasFlag(toggle.Flag);
                 host.Submit(new CheatCommand(toggle.Cheat));
-                host.Adviser.Say(wasOn ? toggle.Off : toggle.On, Environment.TickCount64);
+                var cheatName = toggle.Cheat switch
+                {
+                    CheatKind.ToggleSpawnRate => "roujin",
+                    CheatKind.ToggleNoRest => "norest",
+                    CheatKind.ToggleQueueJump => "queuejump",
+                    _ => "superdoctor",
+                };
+                host.Adviser.Say(wasOn ? UiText.Get($"adviser.cheats.{cheatName}_off_cheat", toggle.Off) : UiText.Get($"adviser.cheats.{cheatName}_on_cheat", toggle.On), Environment.TickCount64);
                 break;
             default:
                 host.PlaySound("fax_no.wav");

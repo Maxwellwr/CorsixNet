@@ -37,11 +37,16 @@ internal sealed class GraphWindow : UiWindow
         ("Reputation", new Color(215, 12, 101), s => s.Reputation),
     ];
 
+    private static readonly string[] LineNames = ["money_in", "money_out", "wages", "balance", "visitors", "cures", "deaths", "reputation"];
+
+    /// <summary>A line's name in the chosen language (CorsixTH's <c>graphs</c> strings).</summary>
+    internal static string LineName(int line) => UiText.Get("graphs." + LineNames[line], Lines[line].Name);
+
     private readonly bool[] _shown = Enumerable.Repeat(true, Lines.Length).ToArray();
     private int _scale = 3;
     private IReadOnlyList<MonthStatistics> _values = [];
 
-    public override string Title => "Graphs";
+    public override string Title => UiText.Get("corsixnet.menu.graphs", "Graphs");
 
     public override string? Hotkey => "F8";
 
@@ -82,13 +87,13 @@ internal sealed class GraphWindow : UiWindow
         yield return new WindowRow(Lines.Take(4).Select((line, i) => Toggle(host, i)).ToList());
         yield return new WindowRow(Lines.Skip(4).Select((line, i) => Toggle(host, i + 4)).ToList());
         yield return WindowRow.Of(
-            WindowCell.Button("Months", () => _scale = 3, _scale != 3, _scale == 3).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
-            WindowCell.Button("Years", () => _scale = 2, _scale != 2, _scale == 2).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
-            WindowCell.Button("4 years", () => _scale = 1, _scale != 1, _scale == 1).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
-            WindowCell.Button("Figures", () => host.Open(new GraphFiguresWindow())).WithTooltip("Show the figures behind the graphs"));
+            WindowCell.Button(UiText.Get("corsixnet.graphs.months", "Months"), () => _scale = 3, _scale != 3, _scale == 3).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
+            WindowCell.Button(UiText.Get("corsixnet.graphs.years", "Years"), () => _scale = 2, _scale != 2, _scale == 2).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
+            WindowCell.Button(UiText.Get("corsixnet.graphs.four_years", "4 years"), () => _scale = 1, _scale != 1, _scale == 1).WithTooltip(OriginalTooltips.Get(host, 177, "Change the graph's time scale")),
+            WindowCell.Button(UiText.Get("corsixnet.graphs.figures", "Figures"), () => host.Open(new GraphFiguresWindow())).WithTooltip(UiText.Get("corsixnet.graphs.figures_tooltip", "Show the figures behind the graphs")));
         if (_values.Count < 2)
         {
-            yield return WindowCell.Line("The graphs start after the first month.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.graphs.empty", "The graphs start after the first month."), dim: true);
         }
     }
 
@@ -113,7 +118,8 @@ internal sealed class GraphWindow : UiWindow
                 continue;
             }
 
-            var (name, colour, value) = Lines[line];
+            var (_, colour, value) = Lines[line];
+            var name = LineName(line);
             var minimum = Math.Min(0, _values.Min(value));
             var maximum = Math.Max(0, _values.Max(value));
             Vector2? previous = null;
@@ -138,8 +144,8 @@ internal sealed class GraphWindow : UiWindow
 
     /// <summary>A line's button; its tooltip is <c>tooltip.graphs</c>' (CorsixTH's English corrects the reputation's).</summary>
     private WindowCell Toggle(IWindowHost host, int line) =>
-        WindowCell.Button(Lines[line].Name, () => _shown[line] = !_shown[line], highlight: _shown[line])
-            .WithTooltip(line == 7 ? "Toggle reputation" : OriginalTooltips.Get(host, 178 + line, "Toggle " + Lines[line].Name.ToLowerInvariant()));
+        WindowCell.Button(LineName(line), () => _shown[line] = !_shown[line], highlight: _shown[line])
+            .WithTooltip(line == 7 ? UiText.Get("tooltip.graphs.reputation", "Toggle reputation") : OriginalTooltips.Get(host, 178 + line, "Toggle " + Lines[line].Name.ToLowerInvariant()));
 
     private static void DrawLine(SpriteBatch batch, Texture2D pixel, Vector2 from, Vector2 to, Color colour)
     {

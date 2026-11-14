@@ -14,7 +14,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class ResearchWindow : UiWindow
 {
-    public override string Title => "Research";
+    public override string Title => UiText.Get("corsixnet.menu.research", "Research");
 
     public override string? Hotkey => "F6";
 
@@ -32,15 +32,15 @@ internal sealed class ResearchWindow : UiWindow
     {
         var simulation = host.Simulation;
         var research = simulation.Hospitals[host.Player].Research;
-        yield return WindowRow.Of("Area", "Working on", WindowCell.Number("Done"), WindowCell.Number("Share"));
+        yield return WindowRow.Of(UiText.Get("corsixnet.research.area", "Area"), UiText.Get("corsixnet.research.working_on", "Working on"), WindowCell.Number(UiText.Get("corsixnet.research.done", "Done")), WindowCell.Number(UiText.Get("corsixnet.research.share", "Share")));
         foreach (var category in Enum.GetValues<ResearchCategory>())
         {
             var area = research.Area(category);
             var working = area.Current.Kind switch
             {
-                ResearchTargetKind.None => "Finished",
-                ResearchTargetKind.Drain => "Nothing yet",
-                ResearchTargetKind.Object => simulation.Content.FindObject(area.Current.Id)?.Name ?? area.Current.Id,
+                ResearchTargetKind.None => UiText.Get("corsixnet.research.finished", "Finished"),
+                ResearchTargetKind.Drain => UiText.Get("corsixnet.research.nothing_yet", "Nothing yet"),
+                ResearchTargetKind.Object => UiText.ObjectName(simulation.Content, area.Current.Id),
                 _ => host.Texts?.DiseaseName(area.Current.Id) ?? area.Current.Id,
             };
             yield return WindowRow.Of(
@@ -57,20 +57,20 @@ internal sealed class ResearchWindow : UiWindow
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of("Total", string.Empty, string.Empty, WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{research.Total} %")));
+        yield return WindowRow.Of(UiText.Get("corsixnet.research.total", "Total"), string.Empty, string.Empty, WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{research.Total} %")));
         if (research.Concentrated.Length > 0)
         {
-            yield return WindowCell.Line($"Concentrating on {host.Texts?.DiseaseName(research.Concentrated) ?? research.Concentrated} (the casebook stops it)", highlight: true);
+            yield return WindowCell.Line(UiText.Format("corsixnet.research.concentrating", "Concentrating on %1% (the casebook stops it)", host.Texts?.DiseaseName(research.Concentrated) ?? research.Concentrated), highlight: true);
         }
     }
 
     private static string Name(ResearchCategory category) => category switch
     {
-        ResearchCategory.Cure => "Cure equipment",
-        ResearchCategory.Diagnosis => "Diagnosis equipment",
-        ResearchCategory.Drugs => "Drug research",
-        ResearchCategory.Improvements => "Improvements",
-        _ => "Specialised",
+        ResearchCategory.Cure => UiText.Get("research.categories.cure", "Cure equipment"),
+        ResearchCategory.Diagnosis => UiText.Get("research.categories.diagnosis", "Diagnosis equipment"),
+        ResearchCategory.Drugs => UiText.Get("research.categories.drugs", "Drug research"),
+        ResearchCategory.Improvements => UiText.Get("research.categories.improvements", "Improvements"),
+        _ => UiText.Get("research.categories.specialisation", "Specialised"),
     };
 
     /// <summary>How far the area's work is, as the window's progress bar.</summary>
@@ -97,14 +97,16 @@ internal sealed class ResearchWindow : UiWindow
         {
             host.Submit(new AdjustResearchCommand(category, change));
         }, enabled);
-        var area = category switch
+        var (area, english) = category switch
         {
-            ResearchCategory.Cure => "Cure",
-            ResearchCategory.Diagnosis => "Diagnosis",
-            ResearchCategory.Drugs => "Drugs",
-            ResearchCategory.Improvements => "Improvements",
-            _ => "Specialisation",
+            ResearchCategory.Cure => ("cure", "Cure"),
+            ResearchCategory.Diagnosis => ("diagnosis", "Diagnosis"),
+            ResearchCategory.Drugs => ("drugs", "Drugs"),
+            ResearchCategory.Improvements => ("improvements", "Improvements"),
+            _ => ("specialisation", "Specialisation"),
         };
-        return button.WithTooltip($"{(change < 0 ? "Decrease" : "Increase")} {area} research percentage");
+        return button.WithTooltip(change < 0
+            ? UiText.Get($"tooltip.research.{area}_dec", $"Decrease {english} research percentage")
+            : UiText.Get($"tooltip.research.{area}_inc", $"Increase {english} research percentage"));
     }
 }

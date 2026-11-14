@@ -15,7 +15,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class MainMenuWindow(Action<string> action, string version) : UiWindow
 {
-    public override string Title => "Main menu";
+    public override string Title => UiText.Get("corsixnet.main_menu.caption", "Main menu");
 
     public override bool IsPinned => true;
 
@@ -53,18 +53,18 @@ internal sealed class CustomLevelWindow(IReadOnlyList<CustomLevelEntry> levels, 
     private CustomLevelEntry? _selected = levels.Count > 0 ? levels[0] : null;
     private bool _freeBuild = freeBuild;
 
-    public override string Title => "Custom Game";
+    public override string Title => UiText.Get("custom_game_window.caption", "Custom Game");
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         if (levels.Count == 0)
         {
-            yield return WindowCell.Line("No levels found: put .level and .map files in the levels folder (levels in config.txt).", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.custom_game.none", "No levels found: put .level and .map files in the levels folder (levels in config.txt)."), dim: true);
         }
 
         foreach (var level in levels)
         {
-            yield return WindowRow.Of(WindowCell.Button(level.Info.Name, () => _selected = level, highlight: level == _selected) with { Tooltip = "Click a level to read more about it" });
+            yield return WindowRow.Of(WindowCell.Button(level.Info.Name, () => _selected = level, highlight: level == _selected) with { Tooltip = UiText.Get("tooltip.custom_game_window.choose_game", "Click a level to read more about it") });
         }
 
         if (_selected?.Info.Briefing is { Length: > 0 } briefing)
@@ -78,14 +78,14 @@ internal sealed class CustomLevelWindow(IReadOnlyList<CustomLevelEntry> levels, 
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Free Build", () => _freeBuild = !_freeBuild, highlight: _freeBuild) with { Tooltip = "Tick this box if you want to play without money or winning and losing conditions" },
-            WindowCell.Button("Start", () =>
+            WindowCell.Button(UiText.Get("custom_game_window.free_build", "Free Build"), () => _freeBuild = !_freeBuild, highlight: _freeBuild) with { Tooltip = UiText.Get("tooltip.custom_game_window.free_build", "Tick this box if you want to play without money or winning and losing conditions") },
+            WindowCell.Button(UiText.Get("custom_game_window.load_selected_level", "Start"), () =>
             {
                 host.Close(this);
                 start(_selected!, _freeBuild);
             }, enabled: _selected is not null) with
-            { Tooltip = "Load and play the selected level" },
-            WindowCell.Button("Cancel", () => host.Close(this)));
+            { Tooltip = UiText.Get("tooltip.custom_game_window.load_selected_level", "Load and play the selected level") },
+            WindowCell.Button(UiText.Get("new_game_window.cancel", "Cancel"), () => host.Close(this)));
     }
 }
 
@@ -94,7 +94,7 @@ internal sealed class CustomCampaignWindow(IReadOnlyList<CustomCampaignEntry> ca
 {
     private CustomCampaignEntry? _selected = campaigns.Count > 0 ? campaigns[0] : null;
 
-    public override string Title => "Custom Campaign";
+    public override string Title => UiText.Get("custom_campaign_window.caption", "Custom Campaign");
 
     /// <summary>A campaign's name, or its file's when it gives none.</summary>
     public static string Name(CustomCampaignEntry entry) => entry.Campaign.Name ?? Path.GetFileNameWithoutExtension(entry.Path);
@@ -103,12 +103,12 @@ internal sealed class CustomCampaignWindow(IReadOnlyList<CustomCampaignEntry> ca
     {
         if (campaigns.Count == 0)
         {
-            yield return WindowCell.Line("No campaigns found: put .campaign files in the campaigns folder (campaigns in config.txt).", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.custom_campaign.none", "No campaigns found: put .campaign files in the campaigns folder (campaigns in config.txt)."), dim: true);
         }
 
         foreach (var campaign in campaigns)
         {
-            yield return WindowRow.Of(WindowCell.Button(Name(campaign), () => _selected = campaign, highlight: campaign == _selected) with { Tooltip = "Choose a campaign to read more about it" });
+            yield return WindowRow.Of(WindowCell.Button(Name(campaign), () => _selected = campaign, highlight: campaign == _selected) with { Tooltip = UiText.Get("tooltip.custom_campaign_window.choose_campaign", "Choose a campaign to read more about it") });
         }
 
         if (_selected?.Campaign.Description is { Length: > 0 } description)
@@ -122,12 +122,12 @@ internal sealed class CustomCampaignWindow(IReadOnlyList<CustomCampaignEntry> ca
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Start campaign", () =>
+            WindowCell.Button(UiText.Get("custom_campaign_window.start_selected_campaign", "Start campaign"), () =>
             {
                 host.Close(this);
                 start(_selected!);
             }, enabled: _selected is not null) with
-            { Tooltip = "Load the first level of this campaign" },
-            WindowCell.Button("Cancel", () => host.Close(this)));
+            { Tooltip = UiText.Get("tooltip.custom_campaign_window.start_selected_campaign", "Load the first level of this campaign") },
+            WindowCell.Button(UiText.Get("new_game_window.cancel", "Cancel"), () => host.Close(this)));
     }
 }

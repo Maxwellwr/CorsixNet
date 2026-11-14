@@ -24,7 +24,7 @@ internal enum BuildButton
 /// </summary>
 internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> press) : UiWindow
 {
-    public override string Title => tool.RoomType?.Name ?? "Room";
+    public override string Title => tool.RoomType is { } room ? UiText.Room(room) : UiText.Get("corsixnet.build.room", "Room");
 
     public override bool IsDone(IWindowHost host) => !tool.IsFurnishing;
 
@@ -63,16 +63,16 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
         }
 
         var missing = tool.Missing(simulation);
-        yield return WindowCell.Line(missing.Count == 0 ? "Everything needed is in place." : "Still needed:", highlight: missing.Count == 0);
+        yield return WindowCell.Line(missing.Count == 0 ? UiText.Get("corsixnet.build.all_in_place", "Everything needed is in place.") : UiText.Get("corsixnet.build.still_needed", "Still needed:"), highlight: missing.Count == 0);
         foreach (var (objectType, count) in missing)
         {
-            yield return WindowRow.Of("  " + (simulation.Content.FindObject(objectType)?.Name ?? objectType), WindowCell.Number(count.ToString(CultureInfo.InvariantCulture)));
+            yield return WindowRow.Of("  " + (UiText.ObjectName(simulation.Content, objectType)), WindowCell.Number(count.ToString(CultureInfo.InvariantCulture)));
         }
 
         if (room.AdditionalObjects is { Count: > 0 } extras)
         {
             yield return WindowRow.Gap;
-            yield return WindowCell.Line("Buy more:", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.build.buy_more", "Buy more:"), dim: true);
             // UIEditRoom:purchaseItems lists only what the level has and research has discovered.
             var research = simulation.Hospitals[host.Player].Research;
             foreach (var definition in extras.Select(simulation.Content.FindObject).OfType<ObjectDefinition>().Where(o => research.CanBuy(simulation.Rules, o.Id)))
@@ -81,10 +81,10 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
                 var price = research.ObjectCost(simulation.Rules, definition.Id);
                 var toPlace = tool.ExtrasToPlace(definition.Id);
                 yield return WindowRow.Of(
-                    "  " + definition.Name,
+                    "  " + UiText.Object(definition),
                     WindowCell.Number(toPlace > 0 ? toPlace.ToString(CultureInfo.InvariantCulture) : string.Empty),
                     WindowCell.Number(MoneyText.Format(price)),
-                    WindowCell.Button("Buy", () =>
+                    WindowCell.Button(UiText.Get("corsixnet.build.buy", "Buy"), () =>
                     {
                         tool.PlaceExtra(definition);
                     }, simulation.Hospitals[host.Player].Balance >= price * (toPlace + 1)));
@@ -93,9 +93,9 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button(tool.IsEditing ? "Confirm" : string.Create(CultureInfo.InvariantCulture, $"Confirm {MoneyText.Format(simulation.Rules.RoomCost(room.Id))}"), () => press(BuildButton.Confirm), tool.CanConfirm(simulation), highlight: Tutorial.Lit("confirm")),
-            WindowCell.Button(tool.IsPickingUp ? "Stop picking up" : "Pick up", () => press(BuildButton.PickUp), highlight: tool.IsPickingUp),
-            WindowCell.Button("Take down", () => press(BuildButton.Back)));
+            WindowCell.Button(tool.IsEditing ? UiText.Get("tooltip.place_objects_window.confirm", "Confirm") : UiText.Format("corsixnet.build.confirm_cost", "Confirm %1%", MoneyText.Format(simulation.Rules.RoomCost(room.Id))), () => press(BuildButton.Confirm), tool.CanConfirm(simulation), highlight: Tutorial.Lit("confirm")),
+            WindowCell.Button(tool.IsPickingUp ? UiText.Get("corsixnet.build.stop_picking_up", "Stop picking up") : UiText.Get("tooltip.staff_window.pick_up", "Pick up"), () => press(BuildButton.PickUp), highlight: tool.IsPickingUp),
+            WindowCell.Button(UiText.Get("corsixnet.build.take_down", "Take down"), () => press(BuildButton.Back)));
     }
 }
 
@@ -105,7 +105,7 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
 /// </summary>
 internal sealed class FurnishCorridorWindow(Action<ObjectDefinition> buy) : UiWindow
 {
-    public override string Title => "Furnish corridor";
+    public override string Title => UiText.Get("corsixnet.build.furnish_corridor", "Furnish corridor");
 
     private readonly FurnishCorridorScreen _screen = new();
 
@@ -131,15 +131,15 @@ internal sealed class FurnishCorridorWindow(Action<ObjectDefinition> buy) : UiWi
     {
         var simulation = host.Simulation;
         var balance = simulation.Hospitals[host.Player].Balance;
-        yield return WindowRow.Of("Object", WindowCell.Number("Price"), WindowCell.Number("Have"), string.Empty);
-        foreach (var definition in simulation.Content.Objects.Where(o => o.CorridorObject).OrderBy(o => o.Name, StringComparer.OrdinalIgnoreCase))
+        yield return WindowRow.Of(UiText.Get("corsixnet.build.object", "Object"), WindowCell.Number(UiText.Get("corsixnet.build.price", "Price")), WindowCell.Number(UiText.Get("corsixnet.build.have", "Have")), string.Empty);
+        foreach (var definition in simulation.Content.Objects.Where(o => o.CorridorObject).OrderBy(o => UiText.Object(o), StringComparer.CurrentCultureIgnoreCase))
         {
             var price = simulation.Rules.ObjectCost(definition.Id);
             yield return WindowRow.Of(
-                definition.Name,
+                UiText.Object(definition),
                 WindowCell.Number(MoneyText.Format(price)),
                 WindowCell.Number(Owned(simulation, host.Player, definition.Id).ToString(CultureInfo.InvariantCulture)),
-                WindowCell.Button("Buy", () =>
+                WindowCell.Button(UiText.Get("corsixnet.build.buy", "Buy"), () =>
                 {
                     host.Close(this);
                     buy(definition);
@@ -168,25 +168,30 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
         var hospital = simulation.Hospitals[host.Player];
         var faxes = FaxWindow.Pending(simulation, host.Player).Count();
         // CorsixTH's tooltip.toolbar texts, with the keys from the hotkeys file.
-        string Tip(string text, string? action = null, string? key = null) =>
-            (action is null ? key : host.HotkeyText(action) ?? key) is { } shown ? $"{text} ({shown})" : text;
+        string Tip(string name, string text, string? action = null, string? key = null)
+        {
+            var template = UiText.Get(name, text + " (%s)");
+            return (action is null ? key : host.HotkeyText(action) ?? key) is { } shown
+                ? UiText.Fill(template, shown)
+                : System.Text.RegularExpressions.Regex.Replace(template, @"\s*\(%s\)", string.Empty);
+        }
         yield return WindowRow.Of(
-            new WindowCell(MoneyText.Format(hospital.Balance), Highlight: true) { Tooltip = "Balance" },
-            WindowCell.Button("Build", () => action("rooms"), highlight: Tutorial.Lit("build")) with { Tooltip = Tip("Build rooms", key: "B") },
-            WindowCell.Button("Corridor", () => action("corridor"), highlight: Tutorial.Lit("corridor")) with { Tooltip = Tip("Furnish corridor") },
-            WindowCell.Button("Edit room", () => action("edit")) with { Tooltip = Tip("Edit rooms/items") },
-            WindowCell.Button("Hire", () => host.Open(new HireWindow()), highlight: Tutorial.Lit("hire")) with { Tooltip = Tip("Hire staff", "ingame_panel_hireStaff") },
-            WindowCell.Button(faxes > 0 ? string.Create(CultureInfo.InvariantCulture, $"Faxes ({faxes})") : "Faxes", () => host.Open(new FaxWindow()), highlight: faxes > 0) with { Tooltip = Tip("Faxes waiting for an answer", "ingame_openFirstMessage") },
-            WindowCell.Button("Bank", () => host.Open(new BankManagerWindow())) with { Tooltip = Tip("Bank Manager", "ingame_panel_bankManager") },
-            WindowCell.Button("Staff", () => host.Open(new StaffManagementWindow())) with { Tooltip = Tip("Staff management", "ingame_panel_staffManage") },
-            WindowCell.Button("Town", () => host.Open(new TownMapWindow())) with { Tooltip = Tip("Town map", "ingame_panel_townMap") },
-            WindowCell.Button("Casebook", () => host.Open(new CasebookWindow())) with { Tooltip = Tip("Drug casebook", "ingame_panel_casebook") },
-            WindowCell.Button("Research", () => host.Open(new ResearchWindow())) with { Tooltip = Tip("Research", "ingame_panel_research") },
-            WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())) with { Tooltip = Tip("Status", "ingame_panel_status") },
-            WindowCell.Button("Charts", () => host.Open(new GraphWindow())) with { Tooltip = Tip("Charts", "ingame_panel_charts") },
-            WindowCell.Button("Policy", () => host.Open(new PolicyWindow())) with { Tooltip = Tip("Policy", "ingame_panel_policy") },
-            WindowCell.Button("Machines", () => host.Open(new MachineMenuWindow())) with { Tooltip = Tip("Machine menu", "ingame_panel_machineMenu") },
-            WindowCell.Button("Messages", () => host.Open(new AdviserHistoryWindow())) with { Tooltip = Tip("The adviser's messages", "ingame_panel_adviserHistory") });
+            new WindowCell(MoneyText.Format(hospital.Balance), Highlight: true) { Tooltip = UiText.Get("tooltip.toolbar.balance", "Balance") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.build", "Build"), () => action("rooms"), highlight: Tutorial.Lit("build")) with { Tooltip = Tip("tooltip.toolbar.rooms", "Build rooms", key: "B") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.corridor", "Corridor"), () => action("corridor"), highlight: Tutorial.Lit("corridor")) with { Tooltip = Tip("tooltip.toolbar.objects", "Furnish corridor") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.edit", "Edit room"), () => action("edit")) with { Tooltip = Tip("tooltip.toolbar.edit", "Edit rooms/items") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.hire", "Hire"), () => host.Open(new HireWindow()), highlight: Tutorial.Lit("hire")) with { Tooltip = Tip("tooltip.toolbar.hire", "Hire staff", "ingame_panel_hireStaff") },
+            WindowCell.Button(faxes > 0 ? UiText.Format("corsixnet.toolbar.faxes_count", "Faxes (%1%)", faxes) : UiText.Get("corsixnet.toolbar.faxes", "Faxes"), () => host.Open(new FaxWindow()), highlight: faxes > 0) with { Tooltip = Tip("corsixnet.toolbar.faxes_tooltip", "Faxes waiting for an answer", "ingame_openFirstMessage") },
+            WindowCell.Button(UiText.Get("corsixnet.menu.bank", "Bank"), () => host.Open(new BankManagerWindow())) with { Tooltip = Tip("corsixnet.toolbar.bank_tooltip", "Bank Manager", "ingame_panel_bankManager") },
+            WindowCell.Button(UiText.Get("corsixnet.menu.staff", "Staff"), () => host.Open(new StaffManagementWindow())) with { Tooltip = Tip("tooltip.toolbar.staff_list", "Staff management", "ingame_panel_staffManage") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.town", "Town"), () => host.Open(new TownMapWindow())) with { Tooltip = Tip("tooltip.toolbar.town_map", "Town map", "ingame_panel_townMap") },
+            WindowCell.Button(UiText.Get("corsixnet.menu.casebook", "Casebook"), () => host.Open(new CasebookWindow())) with { Tooltip = Tip("tooltip.toolbar.casebook", "Drug casebook", "ingame_panel_casebook") },
+            WindowCell.Button(UiText.Get("corsixnet.menu.research", "Research"), () => host.Open(new ResearchWindow())) with { Tooltip = Tip("tooltip.toolbar.research", "Research", "ingame_panel_research") },
+            WindowCell.Button(UiText.Get("corsixnet.menu.status", "Status"), () => host.Open(new ProgressReportWindow())) with { Tooltip = Tip("tooltip.toolbar.status", "Status", "ingame_panel_status") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.charts", "Charts"), () => host.Open(new GraphWindow())) with { Tooltip = Tip("tooltip.toolbar.charts", "Charts", "ingame_panel_charts") },
+            WindowCell.Button(UiText.Get("corsixnet.menu.policy", "Policy"), () => host.Open(new PolicyWindow())) with { Tooltip = Tip("tooltip.toolbar.policy", "Policy", "ingame_panel_policy") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.machines", "Machines"), () => host.Open(new MachineMenuWindow())) with { Tooltip = Tip("tooltip.toolbar.machine_menu", "Machine menu", "ingame_panel_machineMenu") },
+            WindowCell.Button(UiText.Get("corsixnet.toolbar.messages", "Messages"), () => host.Open(new AdviserHistoryWindow())) with { Tooltip = Tip("corsixnet.toolbar.messages_tooltip", "The adviser's messages", "ingame_panel_adviserHistory") });
 
     }
 

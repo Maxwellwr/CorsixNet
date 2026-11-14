@@ -19,7 +19,7 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
     /// <summary>The difficulty chosen: medium when it is there, as CorsixTH picks.</summary>
     public Difficulty Selected { get; private set; } = available.Contains(Difficulty.Medium) ? Difficulty.Medium : available.FirstOrDefault(Difficulty.Medium);
 
-    public override string Title => "Campaign";
+    public override string Title => UiText.Get("new_game_window.caption", "Campaign");
 
     /// <summary>Whether the tutorial starts with the first level (<c>buttonTutorial</c>).</summary>
     public bool Tutorial { get; private set; }
@@ -27,17 +27,17 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
     /// <summary>The name of a difficulty, as the new game dialog shows it.</summary>
     public static string Name(Difficulty difficulty) => difficulty switch
     {
-        Difficulty.Easy => "Junior (Easy)",
-        Difficulty.Hard => "Consultant (Hard)",
-        _ => "Doctor (Medium)",
+        Difficulty.Easy => UiText.Get("new_game_window.easy", "Junior (Easy)"),
+        Difficulty.Hard => UiText.Get("new_game_window.hard", "Consultant (Hard)"),
+        _ => UiText.Get("new_game_window.medium", "Doctor (Medium)"),
     };
 
     /// <summary>The difficulty's tooltip, shown under the choice.</summary>
     public static string Description(Difficulty difficulty) => difficulty switch
     {
-        Difficulty.Easy => "If you are new to simulation games this is the option for you",
-        Difficulty.Hard => "If you are used to this kind of game and want more of a challenge, pick this option",
-        _ => "This is the middle way to go if you are unsure what to choose",
+        Difficulty.Easy => UiText.Get("tooltip.new_game_window.easy", "If you are new to simulation games this is the option for you"),
+        Difficulty.Hard => UiText.Get("tooltip.new_game_window.hard", "If you are used to this kind of game and want more of a challenge, pick this option"),
+        _ => UiText.Get("tooltip.new_game_window.medium", "This is the middle way to go if you are unsure what to choose"),
     };
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
@@ -52,7 +52,7 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
             _ => "medium",
         };
 
-        yield return WindowRow.Of(Text("player_name", "Player name"), string.IsNullOrEmpty(playerName) ? "(player_name in config.txt)" : playerName);
+        yield return WindowRow.Of(Text("player_name", "Player name"), string.IsNullOrEmpty(playerName) ? UiText.Get("corsixnet.new_game.player_name_hint", "(player_name in config.txt)") : playerName);
         yield return WindowRow.Of(
             [
                 Text("difficulty", "Difficulty"),

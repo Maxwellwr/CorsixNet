@@ -93,7 +93,7 @@ internal sealed class RoomEditScreen(BuildRoomTool tool, Action<BuildButton> pre
         }
 
         void Centred(TextRenderer font, string text, int x, int y, int width) => font.Draw(batch, text, new Vector2(origin.X + x + ((width - font.Measure(text).Width) / 2), origin.Y + y));
-        Centred(white, tool.RoomType?.Name ?? string.Empty, 17, 21, 153);
+        Centred(white, tool.RoomType is { } room ? UiText.Room(room) : string.Empty, 17, 21, 153);
         var what = tool.IsPickingUp ? host.Texts?.String(3, 16) ?? "Pick up an object to move it"
             : lines.Count > 0 ? host.Texts?.String(3, 14) ?? "Place the objects"
             : host.Texts?.String(3, 15) ?? "Confirm, or buy more objects";
@@ -118,7 +118,7 @@ internal sealed class RoomEditScreen(BuildRoomTool tool, Action<BuildButton> pre
             }
 
             var font = i - 1 == _hovered ? blue : white;
-            Centred(font, definition.Name, 15, 136 + (i * 29), 130);
+            Centred(font, UiText.Object(definition), 15, 136 + (i * 29), 130);
             Centred(font, count.ToString(CultureInfo.InvariantCulture), 151, 136 + (i * 29), 19);
         }
     }
@@ -218,7 +218,7 @@ internal sealed class RoomBuyWindow(BuildRoomTool tool) : UiWindow
             .Where(o => research.CanBuy(simulation.Rules, o.Id)).ToList();
     });
 
-    public override string Title => "Buy objects";
+    public override string Title => UiText.Get("corsixnet.buy_objects.caption", "Buy objects");
 
     public override bool IsDone(IWindowHost host) => !tool.IsFurnishing;
 

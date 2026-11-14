@@ -59,7 +59,7 @@ internal sealed class MachineScreen
         Button("replace", Replace, 341);
         Button("close", Close, 337);
 
-        var name = host.Simulation.Content.FindObject(machine.ObjectType)?.Name ?? machine.ObjectType;
+        var name = UiText.ObjectName(host.Simulation.Content, machine.ObjectType);
         font.Draw(batch, state.IsRepairCalled ? $"({name})" : name, new Vector2(origin.X + 27, origin.Y + 27));
         font.Draw(batch, state.TotalUsage.ToString(CultureInfo.InvariantCulture), new Vector2(origin.X + 60, origin.Y + 59));
         for (var dx = 0; dx < StatusWidth(state.TimesUsed, state.Strength); dx++)

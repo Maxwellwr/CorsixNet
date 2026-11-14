@@ -62,19 +62,4 @@ public sealed class FaxScreenTests
         var diagnosis = FaxWindow.NoDiagnosisRoomLines(host, patient, known: true).ToList();
         Assert.Contains("42%", diagnosis[2], StringComparison.Ordinal);
     }
-
-    [Fact]
-    public void TheEmergencyAndEpidemicFaxesSayWhatTheyAreAbout()
-    {
-        var host = new WindowTestHost();
-        var emergency = FaxWindow.EmergencyStartLines(host, new CorsixNet.Sim.Disasters.Emergency("bloaty_head", 5, 300, 75)).ToList();
-        Assert.Equal(4, emergency.Count);
-        Assert.Contains("5 people with bloaty_head", emergency[1], StringComparison.Ordinal);
-        Assert.StartsWith("You need to build a ", emergency[2], StringComparison.Ordinal);
-        Assert.Contains("1500", emergency[3], StringComparison.Ordinal);
-
-        var epidemic = FaxWindow.EpidemicStartLines(host, new CorsixNet.Sim.Disasters.Epidemic("broken_wind") { DeclareFine = 2000 }).ToList();
-        Assert.Equal(4, epidemic.Count);
-        Assert.Contains("2000", epidemic[1], StringComparison.Ordinal);
-    }
 }

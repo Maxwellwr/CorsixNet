@@ -274,7 +274,7 @@ internal sealed class AnnualReportScreen
             font.Draw(batch, text, new Vector2(origin.X + x + ((width - font.Measure(text).Width) / 2), origin.Y + y));
 
         var simulation = host.Simulation;
-        Centred(string.Create(CultureInfo.InvariantCulture, $"Charts {simulation.Date.Year + 1998}"), 210, 30, 200);
+        Centred(UiText.Format("corsixnet.annual_report.charts", "Charts %1%", simulation.Date.Year + 1998), 210, 30, 200);
         (int Index, string Fallback, int X, int Y, bool Ascending, Func<Hospital, long> Value)[] rankings =
         [
             (1, "Money", 140, 98, false, h => h.Balance - h.Loan),
@@ -295,7 +295,7 @@ internal sealed class AnnualReportScreen
             foreach (var (hospital, i) in order)
             {
                 var rowY = y + 30 + (row * 15);
-                var name = (i == host.Player ? host.PlayerName : string.Create(CultureInfo.InvariantCulture, $"Hospital {i + 1}")).ToUpperInvariant();
+                var name = ProgressReportScreen.HospitalName(host, i).ToUpperInvariant();
                 font.Draw(batch, name, new Vector2(origin.X + x, origin.Y + rowY));
                 var number = value(hospital).ToString(CultureInfo.InvariantCulture);
                 font.Draw(batch, number, new Vector2(origin.X + x + 100 + 70 - font.Measure(number).Width, origin.Y + rowY));

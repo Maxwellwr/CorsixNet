@@ -15,7 +15,7 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
 
     private string? _confirmOverwrite;
 
-    public override string Title => saving ? "Save game" : "Load game";
+    public override string Title => saving ? UiText.Label("save_game_window.caption", "Save game") : UiText.Label("load_game_window.caption", "Load game");
 
     public override bool IsSameAs(UiWindow other) => other is SaveLoadWindow;
 
@@ -24,8 +24,8 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
         if (saving)
         {
             var date = host.Simulation.Date;
-            var name = string.Create(CultureInfo.InvariantCulture, $"Year {date.Year} month {date.Month} day {date.Day}{Extension}");
-            yield return WindowRow.Of(WindowCell.Button($"Save as \"{name}\"", () =>
+            var name = UiText.Format("corsixnet.save_game.file_name", "Year %1% month %2% day %3%", date.Year, date.Month, date.Day) + Extension;
+            yield return WindowRow.Of(WindowCell.Button(UiText.Format("corsixnet.save_game.save_as", "Save as \"%1%\"", name), () =>
             {
                 if (save(Path.Combine(store.Directory, name)))
                 {
@@ -38,18 +38,18 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
         var games = Games().ToList();
         if (games.Count == 0)
         {
-            yield return WindowCell.Line("No saved games yet.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.save_game.none", "No saved games yet."), dim: true);
             yield break;
         }
 
-        yield return WindowRow.Of("Saved game", "Saved at", string.Empty);
+        yield return WindowRow.Of(UiText.Get("corsixnet.save_game.name", "Saved game"), UiText.Get("corsixnet.save_game.saved_at", "Saved at"), string.Empty);
         foreach (var (path, label) in games)
         {
             var when = File.GetLastWriteTime(path).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
             WindowCell action;
             if (!saving)
             {
-                action = WindowCell.Button("Load", () =>
+                action = WindowCell.Button(UiText.Get("load_game_window.load_button", "Load"), () =>
                 {
                     if (load(path))
                     {
@@ -59,7 +59,7 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
             }
             else if (_confirmOverwrite == path)
             {
-                action = WindowCell.Button("Sure? Overwrite", () =>
+                action = WindowCell.Button(UiText.Get("corsixnet.save_game.confirm_overwrite", "Sure? Overwrite"), () =>
                 {
                     _confirmOverwrite = null;
                     if (save(path))
@@ -70,7 +70,7 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
             }
             else
             {
-                action = WindowCell.Button("Overwrite", () => _confirmOverwrite = path, enabled: label != "Quick save");
+                action = WindowCell.Button(UiText.Get("corsixnet.save_game.overwrite", "Overwrite"), () => _confirmOverwrite = path, enabled: path != store.QuickSavePath);
             }
 
             yield return WindowRow.Of(label, when, action);
@@ -88,7 +88,7 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
 
         if (File.Exists(store.QuickSavePath))
         {
-            found.Add((store.QuickSavePath, "Quick save"));
+            found.Add((store.QuickSavePath, UiText.Get("corsixnet.save_game.quick_save", "Quick save")));
         }
 
         var autosaves = Path.Combine(store.Directory, SaveGameStore.AutosaveFolder);
@@ -142,47 +142,49 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
 
     private bool _applied;
 
-    public override string Title => "Options";
+    public override string Title => UiText.Get("options_window.caption", "Options");
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
-        yield return Switch("Sound effects", _draft.PlaySounds, on => _draft = _draft with { PlaySounds = on });
-        yield return Stepper("Sound volume", Percent(_draft.SoundVolume), () => _draft = _draft with { SoundVolume = Math.Max(0m, _draft.SoundVolume - 0.1m) }, () => _draft = _draft with { SoundVolume = Math.Min(1m, _draft.SoundVolume + 0.1m) });
-        yield return Switch("Screen shake", _draft.EnableScreenShake, on => _draft = _draft with { EnableScreenShake = on });
-        yield return Switch("Adviser", !_draft.AdviserDisabled, on => _draft = _draft with { AdviserDisabled = !on });
-        yield return Switch("Room information", _draft.RoomInformationDialogs, on => _draft = _draft with { RoomInformationDialogs = on });
-        yield return Switch("Edge scrolling", !_draft.PreventEdgeScrolling, on => _draft = _draft with { PreventEdgeScrolling = !on });
-        yield return Stepper("Scroll speed", _draft.ScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ScrollSpeed = Math.Max(1, _draft.ScrollSpeed - 1) }, () => _draft = _draft with { ScrollSpeed = Math.Min(10, _draft.ScrollSpeed + 1) });
-        yield return Stepper("Shift scroll speed", _draft.ShiftScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ShiftScrollSpeed = Math.Max(1, _draft.ShiftScrollSpeed - 1) }, () => _draft = _draft with { ShiftScrollSpeed = Math.Min(10, _draft.ShiftScrollSpeed + 1) });
-        yield return Stepper("Autosave", _draft.AutosaveFrequency switch { 0 => "off", 1 => "monthly", 2 => "weekly", _ => "daily" }, () => _draft = _draft with { AutosaveFrequency = Math.Max(0, _draft.AutosaveFrequency - 1) }, () => _draft = _draft with { AutosaveFrequency = Math.Min(3, _draft.AutosaveFrequency + 1) });
-        yield return WindowRow.Of("Screen", string.Create(CultureInfo.InvariantCulture, $"{_draft.Width} x {_draft.Height}{(_draft.Fullscreen ? ", fullscreen" : string.Empty)}"));
+        yield return Switch(UiText.Get("corsixnet.options.sound_effects", "Sound effects"), _draft.PlaySounds, on => _draft = _draft with { PlaySounds = on });
+        yield return Stepper(UiText.Get("audio_window.sound_volume", "Sound volume"), Percent(_draft.SoundVolume), () => _draft = _draft with { SoundVolume = Math.Max(0m, _draft.SoundVolume - 0.1m) }, () => _draft = _draft with { SoundVolume = Math.Min(1m, _draft.SoundVolume + 0.1m) });
+        yield return Switch(UiText.Get("accessibility_window.enable_screen_shake", "Screen shake"), _draft.EnableScreenShake, on => _draft = _draft with { EnableScreenShake = on });
+        yield return Switch(UiText.Get("corsixnet.options.adviser", "Adviser"), !_draft.AdviserDisabled, on => _draft = _draft with { AdviserDisabled = !on });
+        yield return Switch(UiText.Get("corsixnet.options.room_information", "Room information"), _draft.RoomInformationDialogs, on => _draft = _draft with { RoomInformationDialogs = on });
+        yield return Switch(UiText.Get("corsixnet.options.edge_scrolling", "Edge scrolling"), !_draft.PreventEdgeScrolling, on => _draft = _draft with { PreventEdgeScrolling = !on });
+        yield return Stepper(UiText.Get("accessibility_window.scroll_speed", "Scroll speed"), _draft.ScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ScrollSpeed = Math.Max(1, _draft.ScrollSpeed - 1) }, () => _draft = _draft with { ScrollSpeed = Math.Min(10, _draft.ScrollSpeed + 1) });
+        yield return Stepper(UiText.Get("accessibility_window.shift_scroll_speed", "Shift scroll speed"), _draft.ShiftScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ShiftScrollSpeed = Math.Max(1, _draft.ShiftScrollSpeed - 1) }, () => _draft = _draft with { ShiftScrollSpeed = Math.Min(10, _draft.ShiftScrollSpeed + 1) });
+        yield return Stepper(UiText.Get("options_window.autosave_frequency", "Autosave"), _draft.AutosaveFrequency switch { 0 => UiText.Get("options_window.option_off", "off"), 1 => UiText.Get("autosave_frequency.monthly", "monthly"), 2 => UiText.Get("autosave_frequency.weekly", "weekly"), _ => UiText.Get("autosave_frequency.daily", "daily") }, () => _draft = _draft with { AutosaveFrequency = Math.Max(0, _draft.AutosaveFrequency - 1) }, () => _draft = _draft with { AutosaveFrequency = Math.Min(3, _draft.AutosaveFrequency + 1) });
+        var size = string.Create(CultureInfo.InvariantCulture, $"{_draft.Width} x {_draft.Height}");
+        yield return WindowRow.Of(UiText.Get("corsixnet.options.screen", "Screen"), _draft.Fullscreen ? UiText.Format("corsixnet.options.screen_fullscreen", "%1%, fullscreen", size) : size);
+        var language = UiText.Get("options_window.language", "Language");
         yield return _languages.Count > 1
-            ? Stepper("Language", _draft.Language, () => Preview(() => StepLanguage(-1)), () => Preview(() => StepLanguage(+1)))
-            : WindowRow.Of("Language", _draft.Language);
+            ? Stepper(language, _draft.Language, () => Preview(() => StepLanguage(-1)), () => Preview(() => StepLanguage(+1)))
+            : WindowRow.Of(language, _draft.Language);
         if (fonts?.Invoke(_draft.Language) is { } choices)
         {
-            yield return Stepper("Font", FontName(choices), () => Preview(() => StepFont(fonts(_draft.Language)?.Fonts ?? [], -1)), () => Preview(() => StepFont(fonts(_draft.Language)?.Fonts ?? [], +1)));
+            yield return Stepper(UiText.Get("folders_window.font_label", "Font"), FontName(choices), () => Preview(() => StepFont(fonts(_draft.Language)?.Fonts ?? [], -1)), () => Preview(() => StepFont(fonts(_draft.Language)?.Fonts ?? [], +1)));
         }
         if (hotkeys is not null)
         {
             // buttonHotkey: the options close for the hotkey assignment dialog, which opens them again.
-            var assign = WindowCell.Button("Assign", () =>
+            var assign = WindowCell.Button(UiText.Get("corsixnet.options.assign", "Assign"), () =>
             {
                 host.Close(this);
                 hotkeys();
             });
-            yield return WindowRow.Of("Hotkeys", assign with { Tooltip = "Change keyboard hotkeys." });
+            yield return WindowRow.Of(UiText.Get("options_window.hotkey", "Hotkeys"), assign with { Tooltip = UiText.Get("tooltip.options_window.hotkey", "Change keyboard hotkeys.") });
         }
 
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Apply", () =>
+            WindowCell.Button(UiText.Get("graphics_window.apply", "Apply"), () =>
             {
                 _applied = true;
                 apply(_draft);
                 host.Close(this);
             }, _draft != _current),
-            WindowCell.Button("Cancel", () => host.Close(this)));
+            WindowCell.Button(UiText.Get("graphics_window.cancel", "Cancel"), () => host.Close(this)));
     }
 
     /// <summary>Gives back the language and font the window opened with unless the draft was applied.</summary>
@@ -230,7 +232,12 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
     {
         if (_draft.LanguageFont([_draft.Language]) is not { } path)
         {
-            return choices.Default;
+            return choices.Default switch
+            {
+                LanguageFontChoices.GameFont => UiText.Get("corsixnet.options.game_font", LanguageFontChoices.GameFont),
+                LanguageFontChoices.SystemFont => UiText.Get("corsixnet.options.system_font", LanguageFontChoices.SystemFont),
+                var other => other,
+            };
         }
 
         foreach (var (name, choice) in choices.Fonts)
@@ -262,7 +269,7 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
     private static string Percent(decimal fraction) => string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(fraction * 100)} %");
 
     private static WindowRow Switch(string label, bool on, Action<bool> set) =>
-        WindowRow.Of(label, WindowCell.Button("On", () => set(true), !on, on), WindowCell.Button("Off", () => set(false), on, !on));
+        WindowRow.Of(label, WindowCell.Button(UiText.Get("options_window.option_on", "On"), () => set(true), !on, on), WindowCell.Button(UiText.Get("options_window.option_off", "Off"), () => set(false), on, !on));
 
     private static WindowRow Stepper(string label, string value, Action down, Action up) =>
         WindowRow.Of(label, WindowCell.Button("-", down), WindowCell.Number(value), WindowCell.Button("+", up));
@@ -274,38 +281,38 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
 /// </summary>
 internal sealed class MenuWindow(Action<string> action) : UiWindow
 {
-    public override string Title => "Menu";
+    public override string Title => UiText.Get("corsixnet.menu.caption", "Menu");
 
     public override string? Hotkey => "Esc";
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         yield return WindowRow.Of(
-            "File",
-            Item("New game", "newgame"),
-            Item("Save", "save"),
-            Item("Load", "load"),
-            Item("Quick save", "quicksave"),
-            Item("Quick load", "quickload"),
-            Item("Restart", "restart"),
-            Item("Quit", "quit"));
-        yield return WindowRow.Of("Replays", Item("Save replay", "savereplay"), Item("Watch replay", "replays"));
-        yield return WindowRow.Of("Options", Item("Settings", "options"), Item("Levels", "levels"));
+            UiText.Get("corsixnet.menu.file", "File"),
+            Item(UiText.Get("corsixnet.menu.new_game", "New game"), "newgame"),
+            Item(UiText.Get("corsixnet.menu.save", "Save"), "save"),
+            Item(UiText.Get("corsixnet.menu.load", "Load"), "load"),
+            Item(UiText.Get("corsixnet.menu.quick_save", "Quick save"), "quicksave"),
+            Item(UiText.Get("corsixnet.menu.quick_load", "Quick load"), "quickload"),
+            Item(UiText.Get("corsixnet.menu.restart", "Restart"), "restart"),
+            Item(UiText.Get("corsixnet.menu.quit", "Quit"), "quit"));
+        yield return WindowRow.Of(UiText.Get("corsixnet.menu.replays", "Replays"), Item(UiText.Get("corsixnet.menu.save_replay", "Save replay"), "savereplay"), Item(UiText.Get("corsixnet.menu.watch_replay", "Watch replay"), "replays"));
+        yield return WindowRow.Of(UiText.Get("corsixnet.menu.options", "Options"), Item(UiText.Get("corsixnet.menu.settings", "Settings"), "options"), Item(UiText.Get("corsixnet.menu.levels", "Levels"), "levels"));
         yield return WindowRow.Of(
-            "Charts",
-            WindowCell.Button("Bank", () => host.Open(new BankManagerWindow())),
-            WindowCell.Button("Statement", () => host.Open(new BankStatementWindow())),
-            WindowCell.Button("Staff", () => host.Open(new StaffManagementWindow())),
-            WindowCell.Button("Town map", () => host.Open(new TownMapWindow())),
-            WindowCell.Button("Casebook", () => host.Open(new CasebookWindow())),
-            WindowCell.Button("Research", () => host.Open(new ResearchWindow())));
+            UiText.Get("corsixnet.menu.charts", "Charts"),
+            WindowCell.Button(UiText.Get("corsixnet.menu.bank", "Bank"), () => host.Open(new BankManagerWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.statement", "Statement"), () => host.Open(new BankStatementWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.staff", "Staff"), () => host.Open(new StaffManagementWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.town_map", "Town map"), () => host.Open(new TownMapWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.casebook", "Casebook"), () => host.Open(new CasebookWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.research", "Research"), () => host.Open(new ResearchWindow())));
         yield return WindowRow.Of(
             string.Empty,
-            WindowCell.Button("Status", () => host.Open(new ProgressReportWindow())),
-            WindowCell.Button("Graphs", () => host.Open(new GraphWindow())),
-            WindowCell.Button("Policy", () => host.Open(new PolicyWindow())),
-            WindowCell.Button("Annual report", () => host.Open(new AnnualReportWindow())));
-        yield return WindowRow.Of("Debug", WindowCell.Button("Cheats", () => host.Open(new CheatsWindow())));
+            WindowCell.Button(UiText.Get("corsixnet.menu.status", "Status"), () => host.Open(new ProgressReportWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.graphs", "Graphs"), () => host.Open(new GraphWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.policy", "Policy"), () => host.Open(new PolicyWindow())),
+            WindowCell.Button(UiText.Get("corsixnet.menu.annual_report", "Annual report"), () => host.Open(new AnnualReportWindow())));
+        yield return WindowRow.Of(UiText.Get("corsixnet.menu.debug", "Debug"), WindowCell.Button(UiText.Get("corsixnet.menu.cheats", "Cheats"), () => host.Open(new CheatsWindow())));
 
         WindowCell Item(string text, string name) => WindowCell.Button(text, () =>
         {
@@ -318,7 +325,7 @@ internal sealed class MenuWindow(Action<string> action) : UiWindow
 /// <summary>The replays in the saves folder, newest first, to watch one.</summary>
 internal sealed class ReplayListWindow(string folder, Action<string> watch) : UiWindow
 {
-    public override string Title => "Replays";
+    public override string Title => UiText.Get("corsixnet.menu.replays", "Replays");
 
     /// <summary>The replay files in the folder, newest first.</summary>
     public static IReadOnlyList<string> Files(string folder) =>
@@ -331,7 +338,7 @@ internal sealed class ReplayListWindow(string folder, Action<string> watch) : Ui
         var files = Files(folder);
         if (files.Count == 0)
         {
-            yield return WindowCell.Line("No replays yet: Save replay in the menu keeps the game played so far.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.replays.none", "No replays yet: Save replay in the menu keeps the game played so far."), dim: true);
             yield break;
         }
 
@@ -339,7 +346,7 @@ internal sealed class ReplayListWindow(string folder, Action<string> watch) : Ui
         {
             yield return WindowRow.Of(
                 Path.GetFileNameWithoutExtension(path),
-                WindowCell.Button("Watch", () =>
+                WindowCell.Button(UiText.Get("corsixnet.replays.watch", "Watch"), () =>
                 {
                     host.Close(this);
                     watch(path);

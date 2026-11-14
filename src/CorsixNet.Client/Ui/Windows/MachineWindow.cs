@@ -21,7 +21,7 @@ internal sealed class MachineWindow(int machineId) : UiWindow
 
     public int MachineId { get; } = machineId;
 
-    public override string Title => "Machine";
+    public override string Title => UiText.Get("machine_menu.machine", "Machine");
 
     private readonly MachineScreen _screen = new();
 
@@ -55,7 +55,7 @@ internal sealed class MachineWindow(int machineId) : UiWindow
     internal void AskToReplace(IWindowHost host, RoomObject machine)
     {
         var simulation = host.Simulation;
-        var name = simulation.Content.FindObject(machine.ObjectType)?.Name ?? machine.ObjectType;
+        var name = UiText.ObjectName(simulation.Content, machine.ObjectType);
         var cost = host.Player >= 0 && host.Player < simulation.Hospitals.Count ? simulation.Hospitals[host.Player].Research.ObjectCost(simulation.Rules, machine.ObjectType) : 0;
         Replace(host, name, cost);
     }
@@ -71,7 +71,7 @@ internal sealed class MachineWindow(int machineId) : UiWindow
         }
 
         var simulation = host.Simulation;
-        var name = simulation.Content.FindObject(machine.ObjectType)?.Name ?? machine.ObjectType;
+        var name = UiText.ObjectName(simulation.Content, machine.ObjectType);
 
         // The name is in brackets while the room waits for the repair the player called for.
         yield return WindowCell.Line(state.IsRepairCalled ? $"({name})" : name, highlight: true);
@@ -82,17 +82,17 @@ internal sealed class MachineWindow(int machineId) : UiWindow
         yield return WindowRow.Of(
             host.Texts?.String(32, 116) ?? "Status",
             WindowCell.Number(new string('I', filled) + new string('.', BarLength - filled)),
-            WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{Math.Max(0, state.RemainingUses)} of {state.Strength}"), dim: true));
+            WindowCell.Number(UiText.Format("corsixnet.machines.uses_of", "%1% of %2%", Math.Max(0, state.RemainingUses), state.Strength), dim: true));
         if (state.IsBreaking)
         {
-            yield return WindowCell.Line("Smoking: it needs a handyman soon.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.machines.smoking", "Smoking: it needs a handyman soon."), dim: true);
         }
 
         yield return WindowRow.Gap;
         var cost = host.Player >= 0 && host.Player < simulation.Hospitals.Count ? simulation.Hospitals[host.Player].Research.ObjectCost(simulation.Rules, machine.ObjectType) : 0;
         yield return WindowRow.Of(
-            WindowCell.Button("Call handyman", () => host.Submit(new CallHandymanCommand(MachineId)), state.TimesUsed != 0 && !state.IsRepairCalled).WithTooltip(OriginalTooltips.Get(host, 117, "Call a handyman to repair the machine")),
-            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Replace ({MoneyText.Format(cost)})"), () => Replace(host, name, cost)).WithTooltip(OriginalTooltips.Get(host, 118, "Replace the machine")));
+            WindowCell.Button(UiText.Get("corsixnet.machines.call_handyman", "Call handyman"), () => host.Submit(new CallHandymanCommand(MachineId)), state.TimesUsed != 0 && !state.IsRepairCalled).WithTooltip(OriginalTooltips.Get(host, 117, "Call a handyman to repair the machine")),
+            WindowCell.Button(UiText.Format("corsixnet.machines.replace", "Replace (%1%)", MoneyText.Format(cost)), () => Replace(host, name, cost)).WithTooltip(OriginalTooltips.Get(host, 118, "Replace the machine")));
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ internal sealed class MachineWindow(int machineId) : UiWindow
         if (host.Player < 0 || host.Player >= simulation.Hospitals.Count || simulation.Hospitals[host.Player].Balance < cost)
         {
             host.PlaySound("wrong2.wav");
-            host.Notice(string.Create(CultureInfo.InvariantCulture, $"You need at least {MoneyText.Format(cost)} in the bank to afford a new {name}!"));
+            host.Notice(UiText.Format("adviser.warnings.cannot_afford_machine", "You need at least $%1% in the bank to afford a new %2%!", cost, name));
             return;
         }
 

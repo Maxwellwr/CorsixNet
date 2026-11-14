@@ -143,7 +143,7 @@ internal sealed class TownMapScreen
                 }
                 else
                 {
-                    owner = ownerNumber == host.Player + 1 ? host.PlayerName : string.Create(CultureInfo.InvariantCulture, $"Player {ownerNumber}");
+                    owner = ProgressReportScreen.HospitalName(host, ownerNumber - 1);
                 }
             }
         }

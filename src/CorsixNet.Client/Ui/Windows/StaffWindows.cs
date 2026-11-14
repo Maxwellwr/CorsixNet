@@ -20,7 +20,7 @@ internal static class StaffLabels
         simulation.Entities.OfType<Humanoid>().Where(h => h.Profile is not null && h.Employer == player && !h.IsFired && !h.IsDespawning);
 
     public static string Name(IWindowHost host, Humanoid staff) =>
-        host.Texts?.Staff.FullName(staff.Profile!) ?? string.Create(CultureInfo.InvariantCulture, $"{staff.Profile!.Class} {staff.Id}");
+        host.Texts?.Staff.FullName(staff.Profile!) ?? UiText.Format("corsixnet.staff.unnamed", "%1% %2%", staff.Profile!.Class, staff.Id);
 
     public static string Percent(decimal fraction) => string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(Math.Clamp(fraction, 0m, 1m) * 100m)} %");
 
@@ -34,20 +34,20 @@ internal static class StaffLabels
             return string.Empty;
         }
 
-        var parts = new List<string> { profile.IsConsultant ? "Consultant" : profile.IsJunior ? "Junior" : "Doctor" };
+        var parts = new List<string> { profile.IsConsultant ? UiText.Get("staff_title.consultant", "Consultant") : profile.IsJunior ? UiText.Get("staff_title.junior", "Junior") : UiText.Get("staff_title.doctor", "Doctor") };
         if (profile.IsSurgeon)
         {
-            parts.Add("surgeon");
+            parts.Add(UiText.Get("corsixnet.staff.surgeon_lower", "surgeon"));
         }
 
         if (profile.IsPsychiatrist)
         {
-            parts.Add("psychiatrist");
+            parts.Add(UiText.Get("corsixnet.staff.psychiatrist_lower", "psychiatrist"));
         }
 
         if (profile.IsResearcher)
         {
-            parts.Add("researcher");
+            parts.Add(UiText.Get("corsixnet.staff.researcher_lower", "researcher"));
         }
 
         return string.Join(", ", parts);
@@ -56,13 +56,13 @@ internal static class StaffLabels
     /// <summary>What the member of staff is doing, roughly as the staff window's action text says.</summary>
     public static string Doing(Simulation simulation, Humanoid staff) => staff.Behaviour switch
     {
-        DoctorBehaviour { RoomId: > 0 } doctor when simulation.FindEntity(doctor.RoomId) is Room room => $"Working in the {simulation.Content.FindRoom(room.RoomType)?.Name ?? room.RoomType}",
-        NurseBehaviour { RoomId: > 0 } nurse when simulation.FindEntity(nurse.RoomId) is Room room => $"Working in the {simulation.Content.FindRoom(room.RoomType)?.Name ?? room.RoomType}",
-        ReceptionistBehaviour => "At the reception desk",
-        HandymanBehaviour => "Looking for work",
-        LeavingBehaviour => "Leaving",
-        null => "Idle",
-        _ => "Wandering about",
+        DoctorBehaviour { RoomId: > 0 } doctor when simulation.FindEntity(doctor.RoomId) is Room room => UiText.Format("corsixnet.staff.working_in", "Working in the %1%", UiText.RoomName(simulation.Content, room.RoomType)),
+        NurseBehaviour { RoomId: > 0 } nurse when simulation.FindEntity(nurse.RoomId) is Room room => UiText.Format("corsixnet.staff.working_in", "Working in the %1%", UiText.RoomName(simulation.Content, room.RoomType)),
+        ReceptionistBehaviour => UiText.Get("corsixnet.staff.at_reception", "At the reception desk"),
+        HandymanBehaviour => UiText.Get("corsixnet.staff.looking_for_work", "Looking for work"),
+        LeavingBehaviour => UiText.Get("corsixnet.staff.leaving", "Leaving"),
+        null => UiText.Get("corsixnet.staff.idle", "Idle"),
+        _ => UiText.Get("dynamic_info.staff.actions.wandering", "Wandering about"),
     };
 }
 
@@ -77,7 +77,7 @@ internal sealed class StaffManagementWindow : UiWindow
     private int? _selected;
     private int? _confirmFire;
 
-    public override string Title => "Staff management";
+    public override string Title => UiText.Get("corsixnet.staff.management_caption", "Staff management");
 
     public override string? Hotkey => "Shift+F3";
 
@@ -111,7 +111,7 @@ internal sealed class StaffManagementWindow : UiWindow
             },
             highlight: staffClass == _category)).ToList());
         yield return WindowRow.Gap;
-        yield return WindowRow.Of("Name", WindowCell.Number("Wage"), WindowCell.Number("Skill"), WindowCell.Number("Tired"), WindowCell.Number("Happy"), "Abilities", "Raise asked for");
+        yield return WindowRow.Of(UiText.Get("corsixnet.staff.name", "Name"), WindowCell.Number(UiText.Get("corsixnet.staff.wage", "Wage")), WindowCell.Number(UiText.Get("corsixnet.staff.skill", "Skill")), WindowCell.Number(UiText.Get("corsixnet.staff.tired", "Tired")), WindowCell.Number(UiText.Get("corsixnet.staff.happy", "Happy")), UiText.Get("corsixnet.staff.abilities", "Abilities"), UiText.Get("corsixnet.staff.raise_asked_for", "Raise asked for"));
         var members = employed.Where(h => h.Profile!.Class == _category).ToList();
         if (_selected is { } id && members.All(h => h.Id != id))
         {
@@ -134,13 +134,13 @@ internal sealed class StaffManagementWindow : UiWindow
 
         if (members.Count == 0)
         {
-            yield return WindowCell.Line("None hired.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.staff.none_hired", "None hired."), dim: true);
         }
 
         yield return WindowRow.Gap;
         if (members.FirstOrDefault(h => h.Id == _selected) is not { } chosen)
         {
-            yield return WindowCell.Line("Click a name to choose a member of staff.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.staff.choose_hint", "Click a name to choose a member of staff."), dim: true);
             yield break;
         }
 
@@ -148,32 +148,32 @@ internal sealed class StaffManagementWindow : UiWindow
         var hospital = simulation.Hospitals[host.Player];
         var atMaximum = chosen.Profile.Wage >= simulation.Rules.MaxSalary;
         yield return WindowRow.Of(
-            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Bonus {MoneyText.Format(bonus)}"), () =>
+            WindowCell.Button(UiText.Format("corsixnet.staff.bonus", "Bonus %1%", MoneyText.Format(bonus)), () =>
             {
                 host.Submit(new PayBonusCommand(chosen.Id));
                 host.PlaySound("cashreg.wav");
             }, hospital.Balance > bonus).WithTooltip(OriginalTooltips.Get(host, 57, "Pay a bonus of a tenth of the salary")),
-            WindowCell.Button(string.Create(CultureInfo.InvariantCulture, $"Raise salary {MoneyText.Format(chosen.Profile.Wage / 10)}"), () =>
+            WindowCell.Button(UiText.Format("corsixnet.staff.raise_salary", "Raise salary %1%", MoneyText.Format(chosen.Profile.Wage / 10)), () =>
             {
                 host.Submit(new IncreaseSalaryCommand(chosen.Id));
                 host.PlaySound("bonusal2.wav");
             }, !atMaximum).WithTooltip(OriginalTooltips.Get(host, 59, "Raise the salary by a tenth")),
-            WindowCell.Button("Staff window", () => host.Open(new StaffWindow(chosen.Id))).WithTooltip(OriginalTooltips.Get(host, 62, "Open this person's window")),
-            WindowCell.Button("Show", () => host.CenterOn(chosen.Tile)).WithTooltip(OriginalTooltips.Get(host, 63, "Show this person in the hospital")),
+            WindowCell.Button(UiText.Get("corsixnet.staff.staff_window", "Staff window"), () => host.Open(new StaffWindow(chosen.Id))).WithTooltip(OriginalTooltips.Get(host, 62, "Open this person's window")),
+            WindowCell.Button(UiText.Get("corsixnet.staff.show", "Show"), () => host.CenterOn(chosen.Tile)).WithTooltip(OriginalTooltips.Get(host, 63, "Show this person in the hospital")),
             (_confirmFire == chosen.Id
-                ? WindowCell.Button("Sure? Fire", () =>
+                ? WindowCell.Button(UiText.Get("corsixnet.staff.confirm_fire", "Sure? Fire"), () =>
                 {
                     host.Submit(new FireStaffCommand(chosen.Id));
                     _confirmFire = null;
                     _selected = null;
                 })
-                : WindowCell.Button("Fire", () => _confirmFire = chosen.Id)).WithTooltip(OriginalTooltips.Get(host, 58, "Sack this person")));
+                : WindowCell.Button(UiText.Get("corsixnet.staff.fire", "Fire"), () => _confirmFire = chosen.Id)).WithTooltip(OriginalTooltips.Get(host, 58, "Sack this person")));
         if (chosen.RaiseRequest > 0)
         {
             yield return WindowRow.Of(
-                $"Asks for a raise of {MoneyText.Format(chosen.RaiseRequest)} or quits",
-                WindowCell.Button("Grant", () => host.Submit(new AnswerRaiseCommand(chosen.Id, true))).WithTooltip(OriginalTooltips.Get(host, 236, "Give the pay rise")),
-                WindowCell.Button("Refuse (fires)", () => host.Submit(new AnswerRaiseCommand(chosen.Id, false))).WithTooltip(OriginalTooltips.Get(host, 237, "Refuse the pay rise: the person leaves")));
+                UiText.Format("corsixnet.staff.asks_raise_or_quits", "Asks for a raise of %1% or quits", MoneyText.Format(chosen.RaiseRequest)),
+                WindowCell.Button(UiText.Get("corsixnet.staff.grant", "Grant"), () => host.Submit(new AnswerRaiseCommand(chosen.Id, true))).WithTooltip(OriginalTooltips.Get(host, 236, "Give the pay rise")),
+                WindowCell.Button(UiText.Get("corsixnet.staff.refuse", "Refuse (fires)"), () => host.Submit(new AnswerRaiseCommand(chosen.Id, false))).WithTooltip(OriginalTooltips.Get(host, 237, "Refuse the pay rise: the person leaves")));
         }
     }
 
@@ -185,10 +185,10 @@ internal sealed class StaffManagementWindow : UiWindow
 
     private static string Plural(StaffClass staffClass) => staffClass switch
     {
-        StaffClass.Doctor => "Doctors",
-        StaffClass.Nurse => "Nurses",
-        StaffClass.Handyman => "Handymen",
-        _ => "Receptionists",
+        StaffClass.Doctor => UiText.Get("corsixnet.staff.doctors", "Doctors"),
+        StaffClass.Nurse => UiText.Get("corsixnet.staff.nurses", "Nurses"),
+        StaffClass.Handyman => UiText.Get("corsixnet.staff.handymen", "Handymen"),
+        _ => UiText.Get("corsixnet.staff.receptionists", "Receptionists"),
     };
 }
 
@@ -251,7 +251,7 @@ internal sealed class StaffWindow(int staffId) : UiWindow
     }
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) => Staff(host) is { } staff ? StaffScreen.Tooltip(host, local, staff) : null;
-    public override string Title => "Staff";
+    public override string Title => UiText.Get("corsixnet.menu.staff", "Staff");
 
     public override bool IsSameAs(UiWindow other) => other is StaffWindow window && window.StaffId == StaffId;
 
@@ -274,19 +274,19 @@ internal sealed class StaffWindow(int staffId) : UiWindow
             yield return WindowCell.Line(description, dim: true);
         }
 
-        yield return WindowRow.Of("Wage", WindowCell.Number(MoneyText.Format(profile.Wage)));
-        yield return WindowRow.Of("Skill", WindowCell.Number(StaffLabels.Skill(profile)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.staff.wage", "Wage"), WindowCell.Number(MoneyText.Format(profile.Wage)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.staff.skill", "Skill"), WindowCell.Number(StaffLabels.Skill(profile)));
         if (StaffLabels.Abilities(profile) is { Length: > 0 } abilities)
         {
-            yield return WindowRow.Of("Rank", abilities);
+            yield return WindowRow.Of(UiText.Get("corsixnet.staff.rank", "Rank"), abilities);
         }
 
-        yield return WindowRow.Of("Tiredness", WindowCell.Number(StaffLabels.Percent(staff.Fatigue)), staff.IsTiredMoodShown ? "Tired" : string.Empty);
-        yield return WindowRow.Of("Happiness", WindowCell.Number(StaffLabels.Percent(staff.Happiness)));
-        yield return WindowRow.Of("Doing", StaffLabels.Doing(simulation, staff));
+        yield return WindowRow.Of(UiText.Get("dynamic_info.staff.tiredness", "Tiredness"), WindowCell.Number(StaffLabels.Percent(staff.Fatigue)), staff.IsTiredMoodShown ? UiText.Get("corsixnet.staff.tired", "Tired") : string.Empty);
+        yield return WindowRow.Of(UiText.Get("tooltip.handyman_window.happiness", "Happiness"), WindowCell.Number(StaffLabels.Percent(staff.Happiness)));
+        yield return WindowRow.Of(UiText.Get("corsixnet.staff.doing", "Doing"), StaffLabels.Doing(simulation, staff));
         if (staff.RaiseRequest > 0)
         {
-            yield return WindowRow.Of("Asks for a raise", WindowCell.Number(MoneyText.Format(staff.RaiseRequest)));
+            yield return WindowRow.Of(UiText.Get("corsixnet.staff.asks_for_raise", "Asks for a raise"), WindowCell.Number(MoneyText.Format(staff.RaiseRequest)));
         }
 
         if (staff.Behaviour is HandymanBehaviour handyman)
@@ -294,36 +294,36 @@ internal sealed class StaffWindow(int staffId) : UiWindow
             // UIStaff:changeParcel: all parcels (0), then each parcel the hospital owns in turn.
             var parcels = OwnedParcels(simulation, host.Player);
             yield return WindowRow.Of(
-                "Looks after",
-                handyman.Parcel == 0 ? "All parcels" : string.Create(CultureInfo.InvariantCulture, $"Parcel {handyman.Parcel}"),
-                WindowCell.Button("Next parcel", () =>
+                UiText.Get("corsixnet.staff.looks_after", "Looks after"),
+                handyman.Parcel == 0 ? UiText.Get("handyman_window.all_parcels", "All parcels") : UiText.Format("corsixnet.staff.parcel", "Parcel %1%", handyman.Parcel),
+                WindowCell.Button(UiText.Get("corsixnet.staff.next_parcel", "Next parcel"), () =>
                 {
                     var next = parcels.FirstOrDefault(parcel => parcel > handyman.Parcel);
                     host.Submit(new SetHandymanParcelCommand(staff.Id, next));
-                }, parcels.Count > 0).WithTooltip("The plot where the handyman accepts tasks, click to change setting"));
+                }, parcels.Count > 0).WithTooltip(UiText.Get("tooltip.handyman_window.parcel_select", "The plot where the handyman accepts tasks, click to change setting")));
 
             // The priority buttons (UIStaff:doMoreCleaning, doMoreWatering, doMoreRepairing), with their bars as shares.
-            yield return Priority(host, staff, handyman, HandymanTaskType.Cleaning, "Litter", 125, "Sweep up more litter");
-            yield return Priority(host, staff, handyman, HandymanTaskType.Watering, "Plants", 126, "Water the plants more");
-            yield return Priority(host, staff, handyman, HandymanTaskType.Repairing, "Machines", 127, "Repair the machines more");
+            yield return Priority(host, staff, handyman, HandymanTaskType.Cleaning, UiText.Get("corsixnet.staff.litter", "Litter"), 125, "Sweep up more litter");
+            yield return Priority(host, staff, handyman, HandymanTaskType.Watering, UiText.Get("corsixnet.staff.plants", "Plants"), 126, "Water the plants more");
+            yield return Priority(host, staff, handyman, HandymanTaskType.Repairing, UiText.Get("corsixnet.staff.machines", "Machines"), 127, "Repair the machines more");
         }
 
         // The handyman window has its own strings (handyman_window).
         var isHandyman = staff.Behaviour is HandymanBehaviour;
         yield return WindowRow.Gap;
         yield return WindowRow.Of(
-            WindowCell.Button("Pick up", () => host.PickUpStaff(staff.Id)).WithTooltip(OriginalTooltips.Get(host, isHandyman ? 131 : 112, "Pick this person up to put them down elsewhere")),
-            WindowCell.Button("Show", () => host.CenterOn(staff.Tile)).WithTooltip(isHandyman ? OriginalTooltips.Get(host, 129, "Show the handyman in the hospital") : "Left click to zoom to staff, right click to cycle through staff members"),
+            WindowCell.Button(UiText.Get("tooltip.staff_window.pick_up", "Pick up"), () => host.PickUpStaff(staff.Id)).WithTooltip(OriginalTooltips.Get(host, isHandyman ? 131 : 112, "Pick this person up to put them down elsewhere")),
+            WindowCell.Button(UiText.Get("corsixnet.staff.show", "Show"), () => host.CenterOn(staff.Tile)).WithTooltip(isHandyman ? OriginalTooltips.Get(host, 129, "Show the handyman in the hospital") : UiText.Get("tooltip.staff_window.center_view", "Left click to zoom to staff, right click to cycle through staff members")),
             (_confirmFire
-                ? WindowCell.Button("Sure? Fire", () => host.Submit(new FireStaffCommand(staff.Id)))
-                : WindowCell.Button("Fire", () => _confirmFire = true)).WithTooltip(OriginalTooltips.Get(host, isHandyman ? 130 : 111, "Sack this person")));
+                ? WindowCell.Button(UiText.Get("corsixnet.staff.confirm_fire", "Sure? Fire"), () => host.Submit(new FireStaffCommand(staff.Id)))
+                : WindowCell.Button(UiText.Get("corsixnet.staff.fire", "Fire"), () => _confirmFire = true)).WithTooltip(OriginalTooltips.Get(host, isHandyman ? 130 : 111, "Sack this person")));
     }
 
     private static WindowRow Priority(IWindowHost host, Humanoid staff, HandymanBehaviour handyman, HandymanTaskType task, string label, int tooltip, string fallback) =>
         WindowRow.Of(
             label,
             WindowCell.Number(string.Create(CultureInfo.InvariantCulture, $"{handyman.Priority(task) / 10} %")),
-            WindowCell.Button("More", () =>
+            WindowCell.Button(UiText.Get("corsixnet.staff.more", "More"), () =>
             {
                 // UIStaff:changeHandymanAttributes: the first time, the adviser explains the priorities.
                 if (!host.Simulation.Hospitals[host.Player].HandymanPrioritiesChanged)

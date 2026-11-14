@@ -33,11 +33,21 @@ public sealed class CorsixLanguages
     /// <summary>The pseudo language that maps names to the original's strings.</summary>
     public const string OriginalStrings = "original_strings";
 
+    /// <summary>The folder beside CorsixTH's files that holds CorsixNet's own strings, in the same form.</summary>
+    public const string OwnStringsFolder = "CorsixNet";
+
     private readonly Dictionary<string, Chunk> _byName = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<CorsixLanguage> _languages = [];
+    private readonly CorsixLanguages? _own;
 
-    public CorsixLanguages(IEnumerable<(string FileName, string Text)> files)
+    /// <param name="files">CorsixTH's language files.</param>
+    /// <param name="ownFiles">
+    /// CorsixNet's own strings for the interface CorsixTH has no text for, one file per language declared with
+    /// <c>Language(...)</c> as CorsixTH's are; a loaded language gets its file's strings over CorsixTH's.
+    /// </param>
+    public CorsixLanguages(IEnumerable<(string FileName, string Text)> files, IEnumerable<(string FileName, string Text)>? ownFiles = null)
     {
+        _own = ownFiles is null ? null : new CorsixLanguages(ownFiles);
         foreach (var (fileName, text) in files.OrderBy(file => file.FileName, StringComparer.Ordinal))
         {
             IReadOnlyList<LuaStatement> statements;
@@ -87,11 +97,17 @@ public sealed class CorsixLanguages
     /// <summary>The languages that can be chosen, by file name (original_strings left out).</summary>
     public IReadOnlyList<CorsixLanguage> Languages => _languages;
 
-    /// <summary>Reads every <c>*.lua</c> file of a folder; none when the folder is missing.</summary>
+    /// <summary>
+    /// Reads every <c>*.lua</c> file of a folder, and CorsixNet's own strings from its <c>CorsixNet</c> folder; none
+    /// when a folder is missing.
+    /// </summary>
     public static CorsixLanguages Load(string directory) =>
-        new(Directory.Exists(directory)
-            ? Directory.EnumerateFiles(directory, "*.lua").Select(path => (Path.GetFileName(path), File.ReadAllText(path)))
-            : []);
+        new(Files(directory), Files(Path.Combine(directory, OwnStringsFolder)));
+
+    private static List<(string FileName, string Text)> Files(string directory) =>
+        Directory.Exists(directory)
+            ? [.. Directory.EnumerateFiles(directory, "*.lua").Select(path => (Path.GetFileName(path), File.ReadAllText(path)))]
+            : [];
 
     /// <summary>The language a name or abbreviation means (case ignored), or null.</summary>
     public CorsixLanguage? Find(string name) =>
@@ -141,6 +157,14 @@ public sealed class CorsixLanguages
     {
         var strings = new LanguageStrings();
         Evaluate(language, strings, originalStrings, [], []);
+
+        // CorsixNet's own strings for the language, by any of its names; none for one without a file of them.
+        var names = Find(language)?.Names ?? [language];
+        if (_own is not null && names.Select(name => _own._byName.GetValueOrDefault(name)).FirstOrDefault(chunk => chunk is not null) is { } own)
+        {
+            new Evaluator(_own, strings, originalStrings, [], [own.FileName]).Run(own.Statements);
+        }
+
         return strings;
     }
 

@@ -245,7 +245,7 @@ internal sealed class CasebookScreen
         var hospital = host.Simulation.Hospitals[host.Player];
         if (new Rectangle(306, 352, 29, 29).Contains(local) && (!disease.IsPseudo || CureSprite(disease) != 6))
         {
-            return !disease.TreatmentRooms.All(hospital.IsRoomDiscovered) ? "Unknown cure"
+            return !disease.TreatmentRooms.All(hospital.IsRoomDiscovered) ? UiText.Get("tooltip.casebook.cure_type.unknown", "Unknown cure")
                 : CureSprite(disease) switch
                 {
                     7 => Tip(149, "Drug, %d%% effective").Replace("%d", hospital.PeekCase(disease, host.Simulation.Rules.Diseases).CureEffectiveness.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal).Replace("%%", "%", StringComparison.Ordinal),
@@ -263,7 +263,7 @@ internal sealed class CasebookScreen
                 return Tip(153, "You can treat this disease");
             }
 
-            var names = string.Join(", ", missing.Select(room => host.Simulation.Content.FindRoom(room)?.Name ?? room));
+            var names = string.Join(", ", missing.Select(room => UiText.RoomName(host.Simulation.Content, room)));
             return string.Create(CultureInfo.InvariantCulture, $"{Tip(155, "Build")} ({names}).");
         }
 

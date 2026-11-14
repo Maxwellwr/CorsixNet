@@ -2,6 +2,7 @@ using CorsixNet.Client.Rendering;
 using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Staff;
@@ -72,6 +73,147 @@ internal static class CorsixText
 {
     /// <summary>The chosen translation's string by name, or <paramref name="fallback"/> (CorsixTH's English).</summary>
     public static string Get(IWindowHost host, string name, string fallback) => host.Texts?.Named(name) ?? fallback;
+}
+
+/// <summary>
+/// The interface's texts in the language the settings choose, for code without a window host: CorsixTH's strings by
+/// name (<c>options_window.caption</c>) and CorsixNet's own (<c>corsixnet.*</c>, from <c>Languages/CorsixNet</c>), each
+/// with its English stand-in for when no translation is loaded.
+/// </summary>
+internal static class UiText
+{
+    /// <summary>The loaded texts, set whenever the language is (re)loaded; null before and in tests.</summary>
+    public static OriginalTexts? Current { get; set; }
+
+    /// <summary>The string by name in the chosen language, or <paramref name="fallback"/> (English).</summary>
+    public static string Get(string name, string fallback) => Current?.Named(name) ?? fallback;
+
+    /// <summary>
+    /// The string by name as a plain label: CorsixTH's hotkey placeholders (<c>(%1%)</c>) and the padding of its menu
+    /// items taken out (<c>"  (%1%) LOAD  "</c> gives <c>LOAD</c>).
+    /// </summary>
+    public static string Label(string name, string fallback) =>
+        System.Text.RegularExpressions.Regex.Replace(Get(name, fallback), @"\(?%\d+%\)?", string.Empty).Trim();
+
+    /// <summary>A room's name (CorsixTH's <c>rooms_short</c>, which each room's <c>room.name</c> names).</summary>
+    public static string Room(RoomDefinition room) => Get("rooms_short." + RoomKey(room.Id), room.Name);
+
+    /// <summary>The name of the room with this id, the id itself when the content has no such room.</summary>
+    public static string RoomName(GameContent content, string roomId) =>
+        content.FindRoom(roomId) is { } room ? Room(room) : Get("rooms_short." + RoomKey(roomId), roomId);
+
+    /// <summary>An object's name (CorsixTH's <c>object</c> strings, which each object's <c>object.name</c> names).</summary>
+    public static string Object(ObjectDefinition definition) => Get("object." + ObjectKey(definition.Id), definition.Name);
+
+    /// <summary>The name of the object with this id, the id itself when the content has no such object.</summary>
+    public static string ObjectName(GameContent content, string objectId) =>
+        content.FindObject(objectId) is { } definition ? Object(definition) : Get("object." + ObjectKey(objectId), objectId);
+
+    /// <summary>The name of a room by its id alone, the id itself without a translation.</summary>
+    public static string RoomName(string roomId) => Get("rooms_short." + RoomKey(roomId), roomId);
+
+    /// <summary>The name of an object by its id alone, the id itself without a translation.</summary>
+    public static string ObjectName(string objectId) => Get("object." + ObjectKey(objectId), objectId);
+
+    /// <summary>The name of a room or else an object by its id (what a sale was of).</summary>
+    public static string ObjectOrRoomName(string id) =>
+        Current?.Named("rooms_short." + RoomKey(id)) ?? ObjectName(id);
+
+    /// <summary>The <c>rooms_short</c> name of a room id where CorsixTH's room files name it differently.</summary>
+    private static string RoomKey(string id) => id switch
+    {
+        "gp" => "gps_office",
+        "psych" => "psychiatric",
+        "research" => "research_room",
+        "slack_tongue" => "tongue_clinic",
+        "staff_room" => "staffroom",
+        "training" => "training_room",
+        _ => id,
+    };
+
+    /// <summary>The <c>object</c> name of an object id where CorsixTH's object files name it differently.</summary>
+    private static string ObjectKey(string id) => id switch
+    {
+        "analyser" => "atom_analyser",
+        "autopsy" => "auto_autopsy",
+        "entrance_left_door" => "entrance_left",
+        "entrance_right_door" => "entrance_right",
+        "swing_door_left" => "swing_door1",
+        "swing_door_right" => "swing_door2",
+        "extinguisher" => "fire_extinguisher",
+        "gates_to_hell" => "gates_of_hell",
+        "loo" => "toilet",
+        "operating_table_b" => "operating_table",
+        "radiation_shield_b" => "radiation_shield",
+        "sink" => "toilet_sink",
+        _ => id,
+    };
+
+    /// <summary>The string by name with its placeholders filled (<see cref="Fill"/>).</summary>
+    public static string Format(string name, string fallback, params object?[] args) => Fill(Get(name, fallback), args);
+
+    /// <summary>
+    /// Fills CorsixTH's placeholders: <c>%1%</c>, <c>%2%</c>... by number, <c>%s</c> and <c>%d</c> with the arguments in
+    /// order, <c>%%</c> as a percent sign; anything else is kept as written.
+    /// </summary>
+    public static string Fill(string template, params object?[] args)
+    {
+        if (!template.Contains('%', StringComparison.Ordinal))
+        {
+            return template;
+        }
+
+        var result = new System.Text.StringBuilder(template.Length + 16);
+        var next = 0;
+        for (var i = 0; i < template.Length; i++)
+        {
+            var c = template[i];
+            if (c != '%' || i + 1 >= template.Length)
+            {
+                result.Append(c);
+                continue;
+            }
+
+            var following = template[i + 1];
+            if (following == '%')
+            {
+                result.Append('%');
+                i++;
+            }
+            else if (following is 's' or 'd')
+            {
+                result.Append(Argument(next++));
+                i++;
+            }
+            else if (char.IsAsciiDigit(following))
+            {
+                var end = i + 1;
+                while (end < template.Length && char.IsAsciiDigit(template[end]))
+                {
+                    end++;
+                }
+
+                if (end < template.Length && template[end] == '%')
+                {
+                    result.Append(Argument(int.Parse(template.AsSpan(i + 1, end - i - 1), System.Globalization.CultureInfo.InvariantCulture) - 1));
+                    i = end;
+                }
+                else
+                {
+                    result.Append(c);
+                }
+            }
+            else
+            {
+                result.Append(c);
+            }
+        }
+
+        return result.ToString();
+
+        string Argument(int index) =>
+            index >= 0 && index < args.Length ? Convert.ToString(args[index], System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty : string.Empty;
+    }
 }
 
 /// <summary>One row of a window's table.</summary>

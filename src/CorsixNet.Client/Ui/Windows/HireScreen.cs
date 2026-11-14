@@ -126,7 +126,7 @@ internal sealed class HireScreen
             return;
         }
 
-        font.Draw(batch, host.Texts?.Staff.FullName(profile) ?? "Candidate", new Vector2(origin.X + 79, origin.Y + 21));
+        font.Draw(batch, host.Texts?.Staff.FullName(profile) ?? UiText.Get("corsixnet.hire.candidate_name", "Candidate"), new Vector2(origin.X + 79, origin.Y + 21));
         StaffFaces.Current?.Draw(batch, profile, origin + new Point(158, 48));
         font.Draw(batch, string.Create(CultureInfo.InvariantCulture, $"${profile.Wage}"), new Vector2(origin.X + 116, origin.Y + 179));
         if (host.Texts?.Staff.Description(profile) is { Length: > 0 } description)

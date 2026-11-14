@@ -37,7 +37,7 @@ internal sealed class MachineMenuWindow : UiWindow
 {
     public MachineSort Sort { get; private set; } = MachineSort.Ratio;
 
-    public override string Title => "Machines";
+    public override string Title => UiText.Get("corsixnet.toolbar.machines", "Machines");
 
     public override string? Hotkey => "F10";
 
@@ -45,15 +45,15 @@ internal sealed class MachineMenuWindow : UiWindow
     {
         var machines = List(host.Simulation, host.Player, Sort);
         yield return WindowRow.Of(
-            new WindowCell("!", Dim: true) { Tooltip = "Danger indicator" },
-            new WindowCell("X", Dim: true) { Tooltip = "Repair assignment indicator" },
-            Header("Machine", MachineSort.Name, "Machine name"),
-            Header("Status", MachineSort.Ratio, "Remaining strength to total strength of the machines"),
-            Header("Remain", MachineSort.Remaining, "Remaining strength of the machines"),
-            Header("Strength", MachineSort.Strength, "Total strength of the machines"));
+            new WindowCell("!", Dim: true) { Tooltip = UiText.Get("tooltip.machine_menu.header.smoking", "Danger indicator") },
+            new WindowCell("X", Dim: true) { Tooltip = UiText.Get("tooltip.machine_menu.header.assigned", "Repair assignment indicator") },
+            Header(UiText.Get("machine_menu.machine", "Machine"), MachineSort.Name, UiText.Get("tooltip.machine_menu.header.machine", "Machine name")),
+            Header(UiText.Get("machine_menu.status", "Status"), MachineSort.Ratio, UiText.Get("tooltip.machine_menu.header.ratio", "Remaining strength to total strength of the machines")),
+            Header(UiText.Get("machine_menu.remaining_strength", "Remain"), MachineSort.Remaining, UiText.Get("tooltip.machine_menu.header.remaining_strength", "Remaining strength of the machines")),
+            Header(UiText.Get("machine_menu.total_strength", "Strength"), MachineSort.Strength, UiText.Get("tooltip.machine_menu.header.total_strength", "Total strength of the machines")));
         if (machines.Count == 0)
         {
-            yield return WindowCell.Line("The hospital has no machines.", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.machines.none", "The hospital has no machines."), dim: true);
             yield break;
         }
 
@@ -76,7 +76,7 @@ internal sealed class MachineMenuWindow : UiWindow
     }
 
     private WindowCell Header(string text, MachineSort sort, string tooltip) =>
-        WindowCell.Button(text, () => Sort = sort, highlight: Sort == sort) with { Tooltip = tooltip + ". Click to sort by this value." };
+        WindowCell.Button(text, () => Sort = sort, highlight: Sort == sort) with { Tooltip = tooltip.TrimEnd('.') + ". " + UiText.Get("tooltip.machine_menu.sort", "Click to sort by this value.") };
 
     /// <summary><c>UIMachineMenu:update</c>: the player's machines (not slave parts) in rooms that have not crashed, sorted.</summary>
     public static List<MachineListEntry> List(Simulation simulation, int player, MachineSort sort)
@@ -103,7 +103,7 @@ internal sealed class MachineMenuWindow : UiWindow
 
             var remaining = state.RemainingUses;
             var percentage = state.Strength <= 0 ? 0 : (int)Math.Floor(remaining * 100.0 / state.Strength);
-            var name = simulation.Content.FindObject(machine.ObjectType)?.Name ?? machine.ObjectType;
+            var name = UiText.ObjectName(simulation.Content, machine.ObjectType);
             list.Add(new MachineListEntry(machine, name, state.IsBreaking, assigned.GetValueOrDefault(machine.Id), state.Strength, remaining, percentage));
         }
 

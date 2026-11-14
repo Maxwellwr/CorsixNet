@@ -63,7 +63,7 @@ internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Ac
         }
     }
 
-    public override string Title => "Map Editor";
+    public override string Title => UiText.Get("main_menu.map_edit", "Map Editor");
 
     public override bool IsPinned => false;
 
@@ -82,41 +82,41 @@ internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Ac
         var pages = MapEditorPages.All;
         for (var i = 0; i < pages.Count; i += 3)
         {
-            yield return new WindowRow([.. pages.Skip(i).Take(3).Select((page, j) => PageButton(page.Name, i + j))]);
+            yield return new WindowRow([.. pages.Skip(i).Take(3).Select((page, j) => PageButton(UiText.Get("map_editor_window.pages." + page.Name.ToLowerInvariant().Replace(" ", "_", StringComparison.Ordinal), page.Name), i + j))]);
         }
 
         var players = tool.Editor.Map.PlayerCount;
 
         // The editor menu's player count (menu.lua, map:setPlayerCount).
         yield return new WindowRow([.. Enumerable.Range(1, 4).Select(count => WindowCell.Button(
-            count == 1 ? "1 player" : $"{count} players", () => tool.Editor.Map.SetPlayerCount(count), highlight: players == count))]);
+            count == 1 ? UiText.Get("corsixnet.map_editor.one_player", "1 player") : UiText.Format("corsixnet.map_editor.players", "%1% players", count), () => tool.Editor.Map.SetPlayerCount(count), highlight: players == count))]);
         yield return WindowRow.Of(
-            WindowCell.Button("Paste", () => Text(EditorMode.Paste), enabled: tool.Clip is not null, highlight: tool.Mode == EditorMode.Paste),
-            WindowCell.Button("Delete wall", () => Text(EditorMode.DeleteWall), highlight: tool.Mode == EditorMode.DeleteWall));
+            WindowCell.Button(UiText.Get("map_editor_window.pages.paste", "Paste"), () => Text(EditorMode.Paste), enabled: tool.Clip is not null, highlight: tool.Mode == EditorMode.Paste),
+            WindowCell.Button(UiText.Get("map_editor_window.pages.delete_wall", "Delete wall"), () => Text(EditorMode.DeleteWall), highlight: tool.Mode == EditorMode.DeleteWall));
         yield return new WindowRow([.. Enumerable.Range(0, 4).Select(player => WindowCell.Button(
-            $"Camera {player + 1}", () => Text(EditorMode.Camera, player), enabled: player < players,
+            UiText.Get("map_editor_window.pages.camera_" + (player + 1), $"Camera {player + 1}"), () => Text(EditorMode.Camera, player), enabled: player < players,
             highlight: tool.Mode == EditorMode.Camera && tool.Number == player))]);
         yield return new WindowRow([.. Enumerable.Range(0, 4).Select(player => WindowCell.Button(
-            $"Heliport {player + 1}", () => Text(EditorMode.Heliport, player), enabled: player < players,
+            UiText.Get("map_editor_window.pages.heliport_" + (player + 1), $"Heliport {player + 1}"), () => Text(EditorMode.Heliport, player), enabled: player < players,
             highlight: tool.Mode == EditorMode.Heliport && tool.Number == player))]);
         for (var first = 0; first < 10; first += 5)
         {
             yield return new WindowRow([.. Enumerable.Range(first, 5).Select(parcel => WindowCell.Button(
-                $"Parcel {parcel}", () => Text(EditorMode.Parcel, parcel),
+                UiText.Format("map_editor_window.pages.parcel", "Parcel %d", parcel), () => Text(EditorMode.Parcel, parcel),
                 highlight: tool.Mode == EditorMode.Parcel && tool.Number == parcel))]);
         }
 
         yield return WindowRow.Of(
-            WindowCell.Button(_typingParcel ? $"Parcel: {_parcelText}_" : $"Set parcel: {_parcelText}", () => _typingParcel = !_typingParcel,
+            WindowCell.Button(_typingParcel ? UiText.Format("corsixnet.map_editor.parcel_typing", "Parcel: %1%_", _parcelText) : UiText.Format("corsixnet.map_editor.set_parcel", "Set parcel: %1%", _parcelText), () => _typingParcel = !_typingParcel,
                 highlight: _typingParcel || (tool.Mode == EditorMode.Parcel && tool.Number >= 10))
             with
-            { Tooltip = "Type a parcel number and press Return" });
+            { Tooltip = UiText.Get("map_editor_window.pages.set_parcel_tooltip", "Type a parcel number and press Return") });
 
         yield return WindowRow.Of(
-            WindowCell.Button("Save map", () => action("save")) with { Tooltip = "Save the map to the maps folder" },
-            WindowCell.Button("Load map", () => action("load")) with { Tooltip = "Load a map from the maps folder" },
-            WindowCell.Button("New map", () => action("restart")) with { Tooltip = "Start again from a blank map" },
-            WindowCell.Button("Quit", () => action("quit")) with { Tooltip = "Back to the main menu" });
+            WindowCell.Button(UiText.Get("corsixnet.map_editor.save_map", "Save map"), () => action("save")) with { Tooltip = UiText.Get("corsixnet.map_editor.save_map_tooltip", "Save the map to the maps folder") },
+            WindowCell.Button(UiText.Get("corsixnet.map_editor.load_map", "Load map"), () => action("load")) with { Tooltip = UiText.Get("corsixnet.map_editor.load_map_tooltip", "Load a map from the maps folder") },
+            WindowCell.Button(UiText.Get("corsixnet.map_editor.new_map", "New map"), () => action("restart")) with { Tooltip = UiText.Get("corsixnet.map_editor.new_map_tooltip", "Start again from a blank map") },
+            WindowCell.Button(UiText.Get("corsixnet.menu.quit", "Quit"), () => action("quit")) with { Tooltip = UiText.Get("corsixnet.map_editor.quit_tooltip", "Back to the main menu") });
         yield return WindowCell.Line(Status(), dim: true);
     }
 
@@ -192,26 +192,26 @@ internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Ac
 
     private string Status() => tool.Mode switch
     {
-        EditorMode.Sprite => "Left drag paints; right press while dragging paints in blocks; right drag copies.",
-        EditorMode.DeleteWall => "Left drag removes walls and entrance doors.",
-        EditorMode.Parcel => $"Left drag puts tiles into parcel {tool.Number}.",
-        EditorMode.Camera when tool.Number < tool.Editor.Map.PlayerCount => $"Click the tile where player {tool.Number + 1}'s view starts ({Tile(tool.Editor.Map.GetCameraTile(tool.Number))}).",
-        EditorMode.Heliport when tool.Number < tool.Editor.Map.PlayerCount => $"Click the tile where player {tool.Number + 1}'s helicopter lands ({Tile(tool.Editor.Map.GetHeliportTile(tool.Number))}).",
-        EditorMode.Paste => "Left click pastes the copied area; a left drag fills an area with it.",
-        _ => "Choose a page; a right drag on the map copies an area.",
+        EditorMode.Sprite => UiText.Get("corsixnet.map_editor.status_sprite", "Left drag paints; right press while dragging paints in blocks; right drag copies."),
+        EditorMode.DeleteWall => UiText.Get("corsixnet.map_editor.status_delete_wall", "Left drag removes walls and entrance doors."),
+        EditorMode.Parcel => UiText.Format("corsixnet.map_editor.status_parcel", "Left drag puts tiles into parcel %1%.", tool.Number),
+        EditorMode.Camera when tool.Number < tool.Editor.Map.PlayerCount => UiText.Format("corsixnet.map_editor.status_camera", "Click the tile where player %1%'s view starts (%2%).", tool.Number + 1, Tile(tool.Editor.Map.GetCameraTile(tool.Number))),
+        EditorMode.Heliport when tool.Number < tool.Editor.Map.PlayerCount => UiText.Format("corsixnet.map_editor.status_heliport", "Click the tile where player %1%'s helicopter lands (%2%).", tool.Number + 1, Tile(tool.Editor.Map.GetHeliportTile(tool.Number))),
+        EditorMode.Paste => UiText.Get("corsixnet.map_editor.status_paste", "Left click pastes the copied area; a left drag fills an area with it."),
+        _ => UiText.Get("corsixnet.map_editor.status_default", "Choose a page; a right drag on the map copies an area."),
     };
 }
 
 /// <summary><c>UILoadMap</c>: the maps in the levels folder; a click on one opens it in the editor.</summary>
 internal sealed class MapListWindow(IReadOnlyList<string> paths, Action<string> load) : UiWindow
 {
-    public override string Title => "Load Map";
+    public override string Title => UiText.Get("corsixnet.map_editor.load_map_caption", "Load Map");
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         if (paths.Count == 0)
         {
-            yield return WindowCell.Line("No maps found: maps are saved in the levels folder (levels in config.txt).", dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.map_editor.no_maps", "No maps found: maps are saved in the levels folder (levels in config.txt)."), dim: true);
         }
 
         foreach (var path in paths)
@@ -224,6 +224,6 @@ internal sealed class MapListWindow(IReadOnlyList<string> paths, Action<string> 
         }
 
         yield return WindowRow.Gap;
-        yield return WindowRow.Of(WindowCell.Button("Cancel", () => host.Close(this)));
+        yield return WindowRow.Of(WindowCell.Button(UiText.Get("graphics_window.cancel", "Cancel"), () => host.Close(this)));
     }
 }

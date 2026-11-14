@@ -1,4 +1,5 @@
 using System.Globalization;
+using CorsixNet.Client.Ui;
 using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Economy;
 
@@ -36,26 +37,26 @@ internal static class MoneyPanels
     /// <summary>What a transaction was for, as the statement reads it.</summary>
     public static string Describe(Transaction transaction) => transaction.Kind switch
     {
-        TransactionKind.BuyObject => $"Buy {transaction.Subject}",
-        TransactionKind.SellObject => $"Sell {transaction.Subject}",
-        TransactionKind.BuildRoom => $"Build {transaction.Subject}",
-        TransactionKind.HireStaff => "Hire staff",
-        TransactionKind.Wages => "Wages",
-        TransactionKind.Treatment => $"Treatment: {transaction.Subject}",
-        TransactionKind.Insurance => $"Insurance company {transaction.Subject}",
-        TransactionKind.DrugCost => "Drug costs",
-        TransactionKind.TrophyBonus => "Trophy money",
-        TransactionKind.AwardBonus => "Awards and fines",
-        TransactionKind.Loan => "Bank loan",
-        TransactionKind.LoanRepayment => "Loan repayment",
-        TransactionKind.LoanInterest => "Loan interest",
-        TransactionKind.Overdraft => "Overdraft",
-        TransactionKind.BuyLand => $"Buy parcel {transaction.Subject}",
-        TransactionKind.Heating => "Heating",
-        TransactionKind.Cheat => "Cheat",
-        TransactionKind.Severance => $"Severance pay: {transaction.Subject}",
-        TransactionKind.PersonalBonus => $"Staff bonus: {transaction.Subject}",
-        TransactionKind.RemoveRoom => "Build: Remove destroyed room",
+        TransactionKind.BuyObject => $"{UiText.Get("transactions.buy_object", "Buy")}: {UiText.ObjectName(transaction.Subject)}",
+        TransactionKind.SellObject => $"{UiText.Get("transactions.sell_object", "Sell")}: {UiText.ObjectOrRoomName(transaction.Subject)}",
+        TransactionKind.BuildRoom => $"{UiText.Get("transactions.build_room", "Build")}: {UiText.RoomName(transaction.Subject)}",
+        TransactionKind.HireStaff => UiText.Get("transactions.hire_staff", "Hire staff"),
+        TransactionKind.Wages => UiText.Get("transactions.wages", "Wages"),
+        TransactionKind.Treatment => $"{UiText.Get("transactions.cure_colon", "Treatment:")} {UiText.Current?.DiseaseName(transaction.Subject) ?? transaction.Subject}",
+        TransactionKind.Insurance => $"{UiText.Get("transactions.insurance_colon", "Insurance:")} {(int.TryParse(transaction.Subject, out var company) ? UiText.Current?.String(20, company) : null) ?? transaction.Subject}",
+        TransactionKind.DrugCost => UiText.Get("transactions.drug_cost", "Drug costs"),
+        TransactionKind.TrophyBonus => UiText.Get("transactions.eoy_trophy_bonus", "Trophy money"),
+        TransactionKind.AwardBonus => UiText.Get("transactions.eoy_bonus_penalty", "Awards and fines"),
+        TransactionKind.Loan => UiText.Get("transactions.bank_loan", "Bank loan"),
+        TransactionKind.LoanRepayment => UiText.Get("transactions.loan_repayment", "Loan repayment"),
+        TransactionKind.LoanInterest => UiText.Get("transactions.loan_interest", "Loan interest"),
+        TransactionKind.Overdraft => UiText.Get("transactions.overdraft", "Overdraft"),
+        TransactionKind.BuyLand => $"{UiText.Get("transactions.buy_land", "Buy parcel")} {transaction.Subject}",
+        TransactionKind.Heating => UiText.Get("transactions.heating", "Heating"),
+        TransactionKind.Cheat => UiText.Get("transactions.cheat", "Cheat"),
+        TransactionKind.Severance => $"{UiText.Get("transactions.severance", "Severance pay")}: {transaction.Subject}",
+        TransactionKind.PersonalBonus => $"{UiText.Get("transactions.personal_bonus", "Staff bonus")}: {transaction.Subject}",
+        TransactionKind.RemoveRoom => UiText.Get("transactions.remove_room", "Build: Remove destroyed room"),
         _ => transaction.Kind.ToString(),
     };
 }

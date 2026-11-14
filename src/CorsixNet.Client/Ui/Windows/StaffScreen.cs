@@ -115,7 +115,7 @@ internal sealed class StaffScreen(int staffId)
         font.Draw(batch, string.Create(CultureInfo.InvariantCulture, $"${profile.Wage}"), new Vector2(origin.X + 135, origin.Y + 198 + offset));
         if (handyman is not null)
         {
-            var parcel = handyman.Parcel == 0 ? "All parcels" : string.Create(CultureInfo.InvariantCulture, $"Parcel {handyman.Parcel}");
+            var parcel = handyman.Parcel == 0 ? UiText.Get("handyman_window.all_parcels", "All parcels") : UiText.Format("corsixnet.staff.parcel", "Parcel %1%", handyman.Parcel);
             font.Draw(batch, parcel, new Vector2(origin.X + 35 + ((50 - font.Measure(parcel).Width) / 2), origin.Y + 215));
             foreach (var (task, x) in new[] { (HandymanTaskType.Cleaning, 43), (HandymanTaskType.Watering, 99), (HandymanTaskType.Repairing, 155) })
             {
@@ -265,7 +265,7 @@ internal sealed class StaffScreen(int staffId)
             "litter" => Tip(125, "Sweep up more litter"),
             "plants" => Tip(126, "Water the plants more"),
             "machines" => Tip(127, "Repair the machines more"),
-            "parcel" => "The plot where the handyman accepts tasks, click to change setting",
+            "parcel" => UiText.Get("tooltip.handyman_window.parcel_select", "The plot where the handyman accepts tasks, click to change setting"),
             "circle" => Pick(110, 129, "Left click to zoom to staff, right click to cycle through staff members"),
             _ => new Rectangle(33, 19, 139, 23).Contains(local) ? Pick(98, 119, "Name of the staff member")
                 : new Rectangle(113, 49, 91, 25).Contains(local) ? Pick(101, 122, "Happiness")

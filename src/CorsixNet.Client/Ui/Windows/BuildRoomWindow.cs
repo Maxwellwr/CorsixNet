@@ -68,7 +68,7 @@ internal sealed class BuildRoomWindow(Action<RoomDefinition> build) : UiWindow
     private int _hovered = -1;
     private string? _pressed;
 
-    public override string Title => "Build a room";
+    public override string Title => UiText.Get("corsixnet.build.build_room", "Build a room");
 
     public override bool IsFullscreen(IWindowHost host) =>
         host.Graphics is { } graphics && graphics.Sheet("REQ09V", OriginalGraphics.MainPalette) is not null
@@ -128,7 +128,7 @@ internal sealed class BuildRoomWindow(Action<RoomDefinition> build) : UiWindow
         for (var i = 0; i < Math.Min(10, rooms.Count); i++)
         {
             var lit = rooms[i].Id == "gp" && Tutorial.Lit("room:gp");
-            Text(i == _hovered || lit ? blue : white, rooms[i].Name, 163, 21 + ((i + 1) * 19));
+            Text(i == _hovered || lit ? blue : white, UiText.Room(rooms[i]), 163, 21 + ((i + 1) * 19));
         }
 
         var cost = _hovered >= 0 && _hovered < rooms.Count ? RoomPurchases.BuildCost(simulation, simulation.Hospitals[host.Player], rooms[_hovered]) : 0;
