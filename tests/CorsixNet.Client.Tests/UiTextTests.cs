@@ -22,13 +22,15 @@ public partial class UiTextTests
     public void LabelsDropTheMenusHotkeysAndPadding() =>
         Assert.Equal("LOAD", UiText.Label("menu_file.load", "  (%1%) LOAD  "));
 
-    [Fact]
-    public void RussianHasEveryOwnStringTheClientUses()
+    [Theory]
+    [InlineData("Russian")]
+    [InlineData("German")]
+    public void ATranslationHasEveryOwnStringTheClientUses(string language)
     {
-        var russian = CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")).Load("Russian", _ => null);
-        var missing = OwnNames().Where(name => russian.Get(name) is not { Length: > 0 }).ToList();
+        var strings = CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")).Load(language, _ => null);
+        var missing = OwnNames().Where(name => strings.Get(name) is not { Length: > 0 }).ToList();
 
-        Assert.True(missing.Count == 0, "Missing in Languages/CorsixNet/russian.lua: " + string.Join(", ", missing));
+        Assert.True(missing.Count == 0, $"Missing in Languages/CorsixNet for {language}: " + string.Join(", ", missing));
     }
 
     [Fact]
