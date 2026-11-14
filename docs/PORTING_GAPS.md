@@ -178,7 +178,8 @@ fonts, faces) and the details listed.
 - Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
 - Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
-- Adviser: the speaking figure (`dialogs/adviser.lua`); the announcer's queue is done (`Audio/Announcer`: priorities,
+- Adviser: done, the figure too (`AdviserFigure`: getting up, talking with the balloon, waiting, getting down,
+  clicks on him); the bottom panel behind him is still our text bar. The announcer's queue is done (`Audio/Announcer`: priorities,
   expiry, the staffed-desk rule, random announcements, `play_announcements`, `announcement_volume`); the queue, history and much
   of the advice are done (`Adviser`, `AdviserChecks`, `AdviserHistoryWindow`).
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,

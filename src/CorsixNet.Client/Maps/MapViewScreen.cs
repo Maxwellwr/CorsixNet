@@ -282,6 +282,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The game's texts in the installed language, or null if no string file loads.</summary>
     private OriginalTexts? _texts;
     private readonly Adviser _adviser = new();
+    private readonly AdviserFigure _adviserFigure = new();
+
+    /// <summary>The bottom panel's sprites (<c>Data/Panel02V</c>), for the adviser's balloon.</summary>
+    private readonly SpriteAtlas? _panelSprites;
+
+    /// <summary>The black font of the adviser's balloon (<c>QData/Font50V</c>).</summary>
+    private readonly TextRenderer? _blackText;
 
     /// <summary>The tutorial of the first level, when the new game dialog asked for it.</summary>
     private Tutorial? _tutorial;
@@ -357,6 +364,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             _cursors = null;
         }
+        try
+        {
+            _panelSprites = new SpriteAtlas(device, install.LoadSpriteSheet("DATA", "PANEL02V", complex: true), palette);
+            _blackText = new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", "FONT50V", complex: false)), palette);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException)
+        {
+            _panelSprites = null;
+            _blackText = null;
+        }
+
         Ui.StaffFaces.Current = Ui.StaffFaces.Load(device, install, palette);
         _unicodeFonts = new UnicodeFonts(_config.UnicodeFont, AppContext.BaseDirectory);
         _texts = LoadTexts(install, _config);
@@ -561,6 +579,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         // Windows over the map take the mouse while it is over them: the map sees no clicks and no wheel then.
         var realMouse = mouse;
+        if (ClickAdviser(mouse))
+        {
+            mouse = new MouseState(mouse.X, mouse.Y, mouse.ScrollWheelValue, _previousMouse.LeftButton, mouse.MiddleButton, _previousMouse.RightButton, mouse.XButton1, mouse.XButton2);
+        }
+
         var overWindow = IsWindowHostReady
             && _windows.Update(this, mouse, _previousMouse, new Rectangle(0, StatusHeight, _device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight)));
         _cursorOverWindow = overWindow;
@@ -796,6 +819,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             var pointer = InputScript.Mouse();
             _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
+            DrawAdviser(batch, viewport);
         }
 
         DrawLevelList(batch);
@@ -898,6 +922,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _blueprints.Dispose();
         _floatingDollars.Dispose();
         _cursors?.Dispose();
+        _panelSprites?.Dispose();
+        _blackText?.Dispose();
         _animations.Dispose();
         _blocks.Dispose();
         _text.Dispose();
@@ -2514,6 +2540,129 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>
+    /// Where the adviser is: CorsixTH's bottom panel is 640 by 48 pixels, centred at the bottom of the screen, and the
+    /// adviser's window sits at (378, -16) in it, his animation 200 pixels further right.
+    /// </summary>
+    private static Point AdviserOrigin(Viewport viewport) => new(((viewport.Width - 640) / 2) + 378, viewport.Height - 48 - 16);
+
+    /// <summary>
+    /// UIAdviser:draw: the adviser's animation, and while he talks the balloon (Panel02V's sprites 37 to 39, the middle
+    /// one repeated to the balloon's width) with his speech in the black font.
+    /// </summary>
+    private void DrawAdviser(SpriteBatch batch, Viewport viewport)
+    {
+        if (_adviserFigure.Animation is not { } animation)
+        {
+            return;
+        }
+
+        var origin = AdviserOrigin(viewport);
+        var set = _animations.Animations;
+        _animations.DrawFrame(batch, set.Advance(set.FirstFrame(animation), _adviserFigure.Frame), origin.X + 200, origin.Y, NoAdviserLayers, flipHorizontally: false);
+        if (_adviserFigure.Speech is not { } speech || _panelSprites is null || _blackText is null)
+        {
+            return;
+        }
+
+        var width = AdviserFigure.BalloonWidth(speech);
+        var left = BalloonLeft(origin, width);
+        for (var dx = 0; dx <= width; dx += 16)
+        {
+            _panelSprites.Draw(batch, 38, origin.X + 139 - dx, origin.Y - 25, Color.White);
+        }
+
+        _panelSprites.Draw(batch, 37, left - 16, origin.Y - 25, Color.White);
+        _panelSprites.Draw(batch, 39, origin.X + 155, origin.Y - 40, Color.White);
+        var y = origin.Y - 20;
+        var tint = _blackText.IsTrueType ? Color.Black : (Color?)null;
+        foreach (var line in WrapToWidth(speech.TrimEnd('/'), width + 60, text => _blackText.Measure(text).Width))
+        {
+            _blackText.Draw(batch, line, new Vector2(left - 8, y), tint: tint);
+            y += _blackText.LineHeight;
+        }
+    }
+
+    private static readonly byte[] NoAdviserLayers = new byte[Humanoid.LayerCount];
+
+    /// <summary>The left edge of the balloon's repeated middle part, the last one drawn.</summary>
+    private static int BalloonLeft(Point origin, int width) => origin.X + 139 - (width / 16 * 16);
+
+    /// <summary>
+    /// UIAdviser:onMouseDown: a left click on the adviser or his balloon moves on to the next message, or he gets down if
+    /// there is none; a right click sends him down and the waiting messages to the history unsaid.
+    /// </summary>
+    /// <returns>Whether the click was on him, so nothing else gets it.</returns>
+    private bool ClickAdviser(MouseState mouse)
+    {
+        var left = mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released;
+        var right = mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released;
+        if ((!left && !right) || !_adviserFigure.IsUp || _adviserFigure.Animation is not { } animation)
+        {
+            return false;
+        }
+
+        var origin = AdviserOrigin(_device.Viewport);
+        var set = _animations.Animations;
+        var onHim = _animations.HitTest(set.Advance(set.FirstFrame(animation), _adviserFigure.Frame), origin.X + 200, origin.Y, NoAdviserLayers, false, mouse.X, mouse.Y);
+        if (!onHim && _adviserFigure.Speech is { } speech && _panelSprites is not null)
+        {
+            var balloonLeft = BalloonLeft(origin, AdviserFigure.BalloonWidth(speech)) - 16;
+            var balloon = new Rectangle(balloonLeft, origin.Y - 40, origin.X + 155 + _panelSprites.WidthOf(39) - balloonLeft, 15 + _panelSprites.HeightOf(38));
+            onHim = balloon.Contains(mouse.X, mouse.Y);
+        }
+
+        if (!onHim)
+        {
+            return false;
+        }
+
+        var now = Environment.TickCount64;
+        if (right)
+        {
+            _adviser.DismissAll();
+            _adviserFigure.Hide(now);
+        }
+        else if (_adviser.Queued > 0)
+        {
+            _adviser.Next(now);
+        }
+        else
+        {
+            _adviser.Next(now);
+            _adviserFigure.Hide(now);
+        }
+
+        return true;
+    }
+
+    /// <summary>Breaks text into lines no wider than <paramref name="width"/> pixels at spaces (longer words stay whole).</summary>
+    internal static IReadOnlyList<string> WrapToWidth(string text, int width, Func<string, int> measure)
+    {
+        var lines = new List<string>();
+        var line = string.Empty;
+        foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var longer = line.Length == 0 ? word : line + " " + word;
+            if (line.Length > 0 && measure(longer) > width)
+            {
+                lines.Add(line);
+                line = word;
+            }
+            else
+            {
+                line = longer;
+            }
+        }
+
+        if (line.Length > 0)
+        {
+            lines.Add(line);
+        }
+
+        return lines;
+    }
+
+    /// <summary>
     /// UIPlaceStaff:draw: the member of staff being hired or carried stands, in the first frame of their idle animation
     /// facing east, on the tile they would be put on, grey where they cannot be.
     /// </summary>
@@ -2744,6 +2893,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             _adviserSession = _session;
             _adviser.Clear();
+            _adviserFigure.Reset();
             _adviserChecks = new AdviserChecks(_adviser, _adviserRandom);
 
             // The tutorial belongs to the game it was started with: another game ends it.
@@ -2782,6 +2932,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _adviserChecks.StartedWithTutorial = _tutorialSession is not null && ReferenceEquals(_session, _tutorialSession);
             _adviserChecks.Observe(Simulation!, _session!.Player, _texts, now);
             _adviser.Update(now);
+            _adviserFigure.Update(now, _adviser.Current);
             DescribeNewRooms(Simulation!, _session.Player);
         }
     }
@@ -3401,6 +3552,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (!string.Equals(config.UnicodeFont, _unicodeFonts.Configured, StringComparison.Ordinal))
         {
             _text.UseTrueType(null);
+            _blackText?.UseTrueType(null);
             _unicodeFonts.Dispose();
             _unicodeFonts = new UnicodeFonts(config.UnicodeFont, AppContext.BaseDirectory);
         }
@@ -3925,6 +4077,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _text.UseTrueType(face);
+        _blackText?.UseTrueType(face);
         _windows.Origin = new Point(8, StatusHeight + 8);
     }
 
