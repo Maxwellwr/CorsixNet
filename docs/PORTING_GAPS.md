@@ -173,7 +173,8 @@ fonts, faces) and the details listed.
 - Top menu bar (`dialogs/menu.lua`); Esc opens a menu window with the file items, options, charts and debug.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
-  edit panel are text windows. Resizing a finished room or moving its door is not done.
+  edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
+  editing, `ReturnToBlueprintCommand`).
 - Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
 - Fullscreen dialogs (`dialogs/fullscreen/*.lua`) are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
@@ -182,8 +183,7 @@ fonts, faces) and the details listed.
 - Information, confirm and tip of the day dialogs are done as text windows (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
 - Cursors: the original's (DATA/MPointer, `CursorDrawing`) are drawn for the map's hover cases (patient, staff, queue at a
-  door or desk, machine repair, rat, infected patient), editing a room, waiting while it empties, carrying staff and a pressed button; not yet the
-  room resize/move arrows, the bank's SPointer ones; people and placed objects are picked by their sprites' pixels (`HumanoidDrawing.HumanoidAt`,
+  door or desk, machine repair, rat, infected patient), editing a room, waiting while it empties, carrying staff and a pressed button; the blueprint's move, resize and arrow cursors are done (`BuildRoomTool.Cursor`); not yet the bank's SPointer ones; people and placed objects are picked by their sprites' pixels (`HumanoidDrawing.HumanoidAt`,
   `ObjectDrawing.ObjectAt`; machines and reception desks use it), doors still by tile. Tooltips for the annual report's
   figures and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
   cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
