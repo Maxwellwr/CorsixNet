@@ -182,6 +182,9 @@ Done and committed:
   room, -100000 for rooms needing a researcher, psychiatrist or surgeon) instead of the nearest, and leave staff
   to a waiting room that scores better for them. With staff_allowed_to_move (the default), a room with patients
   queueing calls staff idle in a room nobody waits for (2026-11-12; only then, as rooms here poll for staff).
+  Ctrl+C over a finished room puts a copy of it on the cursor (our addition): the same type, size and door, moved by
+  its top left corner; a click builds it and its objects go where they stood in the original if they fit (not its
+  windows), then it is furnished and confirmed as any new room; Esc or a right click cancels.
   Edit room (bottom panel, then click a room): the room stops taking patients, its queue goes to
   other rooms, its staff leave once no patient is inside, then its objects can be moved, bought or
   sold; Confirm costs nothing again (Room.IsPaid, IsClosing; save format 59). Esc while editing goes

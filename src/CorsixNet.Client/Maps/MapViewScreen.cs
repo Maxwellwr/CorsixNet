@@ -1905,6 +1905,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         // handyman or receptionist on the list and place them on the tile under the cursor. The plain
         // number keys set the game speed, as in CorsixTH.
         var control = keys.IsKeyDown(Keys.LeftControl) || keys.IsKeyDown(Keys.RightControl);
+
+        // Ctrl+C over a finished room of the hospital puts a copy of it on the cursor (our addition, BuildRoomTool.StartCopy).
+        if (control && pressed(Keys.C) && !_buildTool.IsActive && !_furnishTool.IsActive && _hoveredTile is { } copyAt
+            && simulation.FindEntity(simulation.Map[copyAt.X, copyAt.Y].RoomId) is Room { IsActive: true } copied
+            && RoomBuilder.IsOwnedBy(simulation.Map, copied, _session.Player))
+        {
+            _windows.CloseAll();
+            _buildTool.StartCopy(simulation, copied);
+        }
+
         (Keys Key, StaffClass Class)[] hireKeys =
         [
             (Keys.D1, StaffClass.Doctor), (Keys.D2, StaffClass.Nurse), (Keys.D3, StaffClass.Handyman), (Keys.D4, StaffClass.Receptionist),
