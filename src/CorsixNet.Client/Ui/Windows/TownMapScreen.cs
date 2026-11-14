@@ -288,9 +288,9 @@ internal sealed class TownMapScreen
                     }
                 }
 
-                var shown = tile.Has(TileFlags.Hospital) || original.Has(TileFlags.Hospital);
+                var (north, west) = WallsDrawn(map, x, y);
                 var inside = tile.Has(TileFlags.Hospital);
-                if (shown && tile.NorthWall != 0)
+                if (north)
                 {
                     batch.Draw(pixel, new Rectangle(px, py, 3, 1), Color.White);
 
@@ -301,7 +301,7 @@ internal sealed class TownMapScreen
                     }
                 }
 
-                if (shown && tile.WestWall != 0)
+                if (west)
                 {
                     batch.Draw(pixel, new Rectangle(px, py, 1, 3), Color.White);
                     if (doors.Contains(new TilePosition(x, y - 1)))
@@ -312,6 +312,20 @@ internal sealed class TownMapScreen
             }
         }
     }
+
+    /// <summary>
+    /// th_lua_ui.cpp is_wall_drawn: the walls of every tile, not only the hospital's (a building's south and east
+    /// walls stand on the tiles outside it); an owned parcel's as they are now, the rest as in the level file.
+    /// </summary>
+    internal static (bool North, bool West) WallsDrawn(LevelMap map, int x, int y)
+    {
+        var tile = map[x, y];
+        var walls = map.GetParcelOwner(tile.Parcel) != 0 || !map.HasOriginalTiles ? tile : map.OriginalTile(x, y);
+        return (IsWall(walls.NorthWall), IsWall(walls.WestWall));
+    }
+
+    /// <summary>th_lua_ui.cpp is_wall: the wall sprites, not the fences, hedges and trees on the wall layers.</summary>
+    private static bool IsWall(ushort sprite) => (sprite & 0xFF) is >= 82 and <= 164;
 
     /// <summary>The people and objects switched on, as UITownMap:draw's coloured squares.</summary>
     private static void DrawEntities(SpriteBatch batch, Simulation simulation, int player, Texture2D pixel, Point at)

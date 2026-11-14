@@ -31,4 +31,29 @@ public sealed class TownMapScreenTests
         Assert.Null(CorsixNet.Client.Maps.MapViewScreen.LevelTitle("LEVEL.L3", null));
         Assert.Equal("MY TOWN", CorsixNet.Client.Maps.MapViewScreen.LevelTitle("my town.level", null));
     }
+    [Fact]
+    public void TheWallsOutsideTheHospitalAreDrawnToo()
+    {
+        // A building's south wall stands on the street tile below it, outside any parcel.
+        var map = new LevelMap(8, 8, 1) { ParcelCount = 3 };
+        map[2, 2].Parcel = 1;
+        map[2, 3].NorthWall = 114;
+        map[3, 3].WestWall = 115;
+        map[4, 4].NorthWall = 181;
+        map[5, 5].Parcel = 2;
+        map[5, 5].NorthWall = 116;
+        map.KeepOriginalTiles();
+        map.SetParcelOwner(1, 1);
+        map.SetParcelOwner(2, 0);
+
+        Assert.Equal((true, false), TownMapScreen.WallsDrawn(map, 2, 3));
+        Assert.Equal((false, true), TownMapScreen.WallsDrawn(map, 3, 3));
+
+        // Hedges and fences on the wall layer are not walls.
+        Assert.Equal((false, false), TownMapScreen.WallsDrawn(map, 4, 4));
+
+        // A parcel for sale shows as grass on the main map, but its building's walls as in the level file.
+        Assert.NotEqual(116, map[5, 5].NorthWall);
+        Assert.Equal((true, false), TownMapScreen.WallsDrawn(map, 5, 5));
+    }
 }
