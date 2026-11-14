@@ -434,17 +434,16 @@ public class AdviserTests
     }
 
     [Fact]
-    public void TheBottomPanelShowsTheAdviserAndTheHistoryCanBeCleared()
+    public void ClicksOnTheAdviserMoveOnAndTheHistoryCanBeCleared()
     {
         var host = new WindowTestHost();
-        var panel = new BottomPanel(_ => { });
         host.Adviser.Say("Build a staff room.", 0);
         host.Adviser.Say("Hire a handyman.", 0);
 
-        Assert.Contains(panel.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Adviser: Build a staff room.");
-        host.Click(panel, "Next");
+        Assert.Equal("Build a staff room.", host.Adviser.Current);
+        host.Adviser.Next(0);
         Assert.Equal("Hire a handyman.", host.Adviser.Current);
-        host.Click(panel, "Quiet");
+        host.Adviser.DismissAll();
         Assert.Null(host.Adviser.Current);
 
         var history = new AdviserHistoryWindow();

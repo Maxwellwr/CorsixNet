@@ -134,21 +134,6 @@ internal sealed class BottomPanel(Action<string> action) : UiWindow
             WindowCell.Button("Machines", () => host.Open(new MachineMenuWindow())) with { Tooltip = Tip("Machine menu", "ingame_panel_machineMenu") },
             WindowCell.Button("Messages", () => host.Open(new AdviserHistoryWindow())) with { Tooltip = Tip("The adviser's messages", "ingame_panel_adviserHistory") });
 
-        // The adviser pops up from the panel (dialogs/adviser.lua): a click moves on, as a left click on him does;
-        // Quiet sends the rest to the history unsaid, as a right click does.
-        if (host.Adviser.Current is { } speech)
-        {
-            var adviser = host.Adviser;
-            var lines = Wrap($"Adviser: {speech}", WrapLength);
-            yield return WindowRow.Of(
-                WindowCell.Button(adviser.Queued > 0 ? "Next" : "OK", () => adviser.Next(Environment.TickCount64)),
-                WindowCell.Button("Quiet", adviser.DismissAll),
-                WindowCell.Line(lines[0], highlight: true));
-            foreach (var line in lines.Skip(1))
-            {
-                yield return WindowRow.Of(new WindowCell(string.Empty), new WindowCell(string.Empty), WindowCell.Line(line, highlight: true));
-            }
-        }
     }
 
     /// <summary>Characters on one line of the adviser's speech before it wraps.</summary>
