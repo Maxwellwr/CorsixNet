@@ -150,6 +150,21 @@ public class BuildRoomToolTests
         Assert.Null(tool.Update(simulation, 0, Mouse(new(6, 5))));
         Assert.Null(tool.Ghost);
 
+        // Of two bought at once, each Esc cancels one.
+        tool.PlaceExtra(simulation.Content.FindObject("sink")!);
+        tool.PlaceExtra(simulation.Content.FindObject("sink")!);
+        Assert.Equal(2, tool.ExtrasToPlace("sink"));
+        Assert.Null(tool.Update(simulation, 0, Back()));
+        Assert.Equal(1, tool.ExtrasToPlace("sink"));
+        tool.Update(simulation, 0, Mouse(new(6, 5)));
+        Assert.Equal("sink", tool.Ghost?.ObjectType);
+        Assert.Null(tool.Update(simulation, 0, Back()));
+        Assert.Equal(0, tool.ExtrasToPlace("sink"));
+        tool.Update(simulation, 0, Mouse(new(6, 5)));
+        Assert.Null(tool.Ghost);
+        Assert.True(tool.IsFurnishing);
+        Assert.Equal(balance, hospital.Balance);
+
         // Bought and placed, then picked up again: it is sold back and Esc takes it off the cursor.
         tool.PlaceExtra(simulation.Content.FindObject("sink")!);
         var spot2 = Enumerable.Range(4, 4).SelectMany(x => Enumerable.Range(4, 4).Select(y => new TilePosition(x, y)))

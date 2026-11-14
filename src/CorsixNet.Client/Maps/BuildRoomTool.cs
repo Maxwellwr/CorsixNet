@@ -816,9 +816,15 @@ internal sealed class BuildRoomTool
             // An object the room does not need (bought from the edit panel's list, or picked up off the floor) comes off
             // the cursor first, as CorsixTH's UIPlaceObjects:removeObject cancels a purchase: it is paid for only when
             // placed, and one picked up was already sold back by PickUpObjectCommand. A needed object stays: Esc then
-            // takes the room down below.
+            // takes the room down below. Of several bought, one is cancelled per press (removeObject lowers qty by one)
+            // and the next goes on the cursor.
             if (_placing is not null && (_placingExtra || !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id)))
             {
+                if (_placingExtra)
+                {
+                    _extras.Remove(_placing);
+                }
+
                 StopPlacing();
                 return null;
             }
