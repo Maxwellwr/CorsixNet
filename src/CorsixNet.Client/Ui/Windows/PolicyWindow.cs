@@ -1,6 +1,9 @@
 using System.Globalization;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -15,6 +18,16 @@ internal sealed class PolicyWindow : UiWindow
 
     public override string? Hotkey => "F9";
 
+    private readonly PolicyScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="PolicyScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => PolicyScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => PolicyScreen.Tooltip(host, local);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var policies = host.Simulation.Hospitals[host.Player].Policies;

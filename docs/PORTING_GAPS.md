@@ -183,7 +183,7 @@ fonts, faces) and the details listed.
   edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
   editing, `ReturnToBlueprintCommand`).
 - Hire, staff, patient, queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
-- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager and the casebook are text windows; the hall of fame/shame page is a TODO in CorsixTH too.
+- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager, the casebook and the policy screen are text windows (the policy's wage requests switch stays in its table only); the hall of fame/shame page is a TODO in CorsixTH too.
 - Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
 - Adviser: done, the figure too (`AdviserFigure`: getting up, talking with the balloon, waiting, getting down,
   clicks on him). The announcer's queue is done (`Audio/Announcer`: priorities,
