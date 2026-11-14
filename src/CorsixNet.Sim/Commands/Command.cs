@@ -900,6 +900,12 @@ public enum FaxReport : byte
 
     /// <summary>How the emergency went (<c>makeEmergencyEndFax</c>).</summary>
     Emergency = 1,
+
+    /// <summary>The oldest fax telling of a newly discovered disease (<c>adviseDiscoverDisease</c>).</summary>
+    Disease = 2,
+
+    /// <summary>The epidemic cover-up's result (<c>cover_up_result_fax</c>).</summary>
+    Epidemic = 3,
 }
 
 /// <summary>
@@ -918,13 +924,20 @@ public sealed record CloseReportCommand(FaxReport Report) : Command
         }
 
         var hospital = simulation.Hospitals[player];
-        if (Report == FaxReport.Vip)
+        switch (Report)
         {
-            hospital.Vips.Report = null;
-        }
-        else
-        {
-            hospital.Emergencies.Report = null;
+            case FaxReport.Vip:
+                hospital.Vips.Report = null;
+                break;
+            case FaxReport.Emergency:
+                hospital.Emergencies.Report = null;
+                break;
+            case FaxReport.Disease when hospital.DiseaseReports.Count > 0:
+                hospital.DiseaseReports.RemoveAt(0);
+                break;
+            case FaxReport.Epidemic:
+                hospital.Epidemics.Report = null;
+                break;
         }
     }
 

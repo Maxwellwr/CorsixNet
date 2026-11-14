@@ -109,8 +109,6 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   drawn (`dialogs/patient.lua`); what they show is kept (`PatientBehaviour.HealthHistory`, `TreatmentHistory`, and
   the sad mood `IsSad`). Its send home and guess cure buttons are done as commands (`SendPatientHomeCommand`,
   `GuessPatientCureCommand`; Q and Shift+Q in the client).
-- The fax telling of a newly discovered disease (`player_hospital.lua`'s `disease_discovered`, closed with its one
-  choice as the VIP's and the emergency's reports are, `CloseReportCommand`).
 - The fax window for patients asking what to do, its texts (what to build or hire) and the research choice, and the
   policy window (`fullscreen/hospital_policy.lua`, `fax.lua`, `player_hospital.lua`). The policies themselves
   (`HospitalPolicies`, `SetPolicyCommand`) and the questions with their send home, wait and guess cure answers
@@ -120,11 +118,12 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   reputation and the result on the fax window (`HospitalEmergencies.Report`, `makeEmergencyEndFax`) are done
   (`Emergencies`).
 - Epidemics: clicking patients to vaccinate them (J picks every infected patient for now) and the vaccination
-  cursor, vaccinating patients on benches, the infected mood icons, the result fax, the adviser's warnings, the
+  cursor, vaccinating patients on benches, the infected mood icons, the adviser's warnings, the
   announcements and the inspector's, and showing the infected by cheat (`epidemic.lua`,
   `entities/humanoids/inspector.lua`). Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
   the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
-  evacuation are done (`Epidemics`, `InspectorBehaviour`).
+  evacuation and the result fax (`HospitalEpidemics.Report`) are done (`Epidemics`, `InspectorBehaviour`). The fax
+  telling of a newly discovered disease is done too (`Hospital.DiseaseReports`, `adviseDiscoverDisease`).
 - VIP visits: the original's look of
   the asking and reporting faxes. The visit, the rating (with the litter seen), its grant and reputation, the year's
   trophy, the invitation and the report on the fax window (`VipVisits.Report`, `FaxWindow.VipReportLines`,

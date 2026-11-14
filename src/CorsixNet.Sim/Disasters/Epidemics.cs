@@ -286,6 +286,12 @@ public sealed class HospitalEpidemics
     /// <summary>The last epidemic's fine or compensation.</summary>
     public int LastAmount { get; internal set; }
 
+    /// <summary>How long the cover-up's result fax waits before it goes (<c>sendResultFax</c>'s 24*20).</summary>
+    public const int ReportDays = 20;
+
+    /// <summary>The cover-up's result fax (<c>cover_up_result_fax</c>), until it is closed or expires.</summary>
+    public EpidemicReport? Report { get; internal set; }
+
     /// <summary>Whether the fax asking whether to declare or cover up is waiting for an answer.</summary>
     public bool IsFaxPending => Current is { FaxExpires: > 0 };
 
@@ -1061,6 +1067,7 @@ public static class Epidemics
         }
 
         hospital.Epidemics.LastOutcome = epidemic.Outcome;
+        hospital.Epidemics.Report = new EpidemicReport(epidemic.DiseaseId, epidemic.Outcome, hospital.Epidemics.LastAmount, simulation.Tick + (HospitalEpidemics.ReportDays * GameDate.HoursPerDay));
         hospital.Epidemics.Current = null;
     }
 
@@ -1112,3 +1119,6 @@ public static class Epidemics
         return cell.Has(TileFlags.Hospital) && cell.Parcel < map.ParcelCount && map.GetParcelOwner(cell.Parcel) == player + 1;
     }
 }
+
+/// <summary>The result of a cover-up for its fax: the disease, how it ended and the compensation or fine.</summary>
+public readonly record struct EpidemicReport(string DiseaseId, EpidemicOutcome Outcome, int Amount, long Expires);

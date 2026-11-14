@@ -501,6 +501,29 @@ public sealed class Hospital
     /// <inheritdoc cref="NotPaying"/>
     public string LastNotPayingDisease { get; private set; } = string.Empty;
 
+    /// <summary>How long the fax telling of a discovered disease waits before it goes (<c>adviseDiscoverDisease</c>'s 25*24).</summary>
+    public const int DiseaseReportDays = 25;
+
+    /// <summary>
+    /// The faxes telling of diseases newly discovered, oldest first, each until it is closed or expires
+    /// (<c>PlayerHospital:adviseDiscoverDisease</c>).
+    /// </summary>
+    public List<DiseaseReport> DiseaseReports { get; } = [];
+
+    /// <summary>adviseDiscoverDisease: a fax tells of the disease, for 25 days.</summary>
+    internal void AdviseDiscoverDisease(Simulation simulation, string diseaseId) =>
+        DiseaseReports.Add(new DiseaseReport(diseaseId, simulation.Tick + (DiseaseReportDays * Calendar.GameDate.HoursPerDay)));
+
+    /// <summary>Forgets the faxes about diseases and the epidemic's result once they have expired.</summary>
+    internal void TickReports(Simulation simulation)
+    {
+        DiseaseReports.RemoveAll(report => simulation.Tick >= report.Expires);
+        if (Epidemics.Report is { } report && simulation.Tick >= report.Expires)
+        {
+            Epidemics.Report = null;
+        }
+    }
+
     /// <summary>Machines that have exploded and wrecked their room (CorsixTH's <c>num_explosions</c>, kept but never read there).</summary>
     public int Explosions { get; internal set; }
 
@@ -1537,6 +1560,21 @@ public sealed class Hospital
         writer.WriteString(LastPriceAdviceDisease);
         writer.WriteInt32(NotPaying);
         writer.WriteString(LastNotPayingDisease);
+        writer.WriteInt32(DiseaseReports.Count);
+        foreach (var report in DiseaseReports)
+        {
+            writer.WriteString(report.DiseaseId);
+            writer.WriteInt64(report.Expires);
+        }
+
+        writer.WriteBool(Epidemics.Report is not null);
+        if (Epidemics.Report is { } result)
+        {
+            writer.WriteString(result.DiseaseId);
+            writer.WriteByte((byte)result.Outcome);
+            writer.WriteInt32(result.Amount);
+            writer.WriteInt64(result.Expires);
+        }
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1684,6 +1722,26 @@ public sealed class Hospital
             hospital.LastNotPayingDisease = reader.ReadString();
         }
 
+        if (reader.Version is 0 or >= 93)
+        {
+            var reports = reader.ReadCount(Diseases.DiseaseCatalog.All.Count);
+            for (var i = 0; i < reports; i++)
+            {
+                hospital.DiseaseReports.Add(new DiseaseReport(reader.ReadString(), reader.ReadInt64()));
+            }
+
+            if (reader.ReadBool())
+            {
+                var diseaseId = reader.ReadString();
+                var ended = reader.ReadByte();
+                hospital.Epidemics.Report = new Disasters.EpidemicReport(
+                    diseaseId,
+                    ended <= (byte)Disasters.EpidemicOutcome.Evacuated ? (Disasters.EpidemicOutcome)ended : throw new InvalidDataException($"Unknown epidemic outcome {ended}."),
+                    reader.ReadInt32(),
+                    reader.ReadInt64());
+            }
+        }
+
         return hospital;
     }
 
@@ -1696,3 +1754,6 @@ public sealed class Hospital
         }
     }
 }
+
+/// <summary>A fax telling of a disease newly discovered, until <see cref="Expires"/>.</summary>
+public readonly record struct DiseaseReport(string DiseaseId, long Expires);

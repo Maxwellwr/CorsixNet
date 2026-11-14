@@ -113,6 +113,15 @@ internal sealed class FaxWindow : UiWindow
         {
             messages.Add(new FaxMessage([.. EmergencyReportLines(host, result)], [(host.Texts?.String(44, 38) ?? "Close", true, () => host.Submit(new CloseReportCommand(FaxReport.Emergency)))]));
         }
+        foreach (var discovered in hospital.DiseaseReports)
+        {
+            messages.Add(new FaxMessage([.. DiseaseReportLines(host, discovered)], [(host.Texts?.String(44, 55) ?? "A new disease has been found", true, () => host.Submit(new CloseReportCommand(FaxReport.Disease)))]));
+        }
+
+        if (hospital.Epidemics.Report is { } epidemicResult)
+        {
+            messages.Add(new FaxMessage([.. EpidemicReportLines(host, epidemicResult)], [(host.Texts?.String(44, 173) ?? "Close", true, () => host.Submit(new CloseReportCommand(FaxReport.Epidemic)))]));
+        }
 
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
         {
@@ -163,6 +172,15 @@ internal sealed class FaxWindow : UiWindow
         if (hospital.Emergencies.Report is { } result)
         {
             yield return $"emergencyreport:{result.Expires}";
+        }
+        foreach (var discovered in hospital.DiseaseReports)
+        {
+            yield return $"diseasereport:{discovered.DiseaseId}:{discovered.Expires}";
+        }
+
+        if (hospital.Epidemics.Report is { } epidemicResult)
+        {
+            yield return $"epidemicreport:{epidemicResult.Expires}";
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
@@ -218,6 +236,29 @@ internal sealed class FaxWindow : UiWindow
 
             // fax.emergency_result.close_text.
             yield return WindowCell.Button(host.Texts?.String(44, 38) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Emergency))) with { Tooltip = "Close this fax" };
+        }
+        foreach (var discovered in hospital.DiseaseReports)
+        {
+            any = true;
+            foreach (var line in DiseaseReportLines(host, discovered))
+            {
+                yield return WindowCell.Line(line);
+            }
+
+            // fax.disease_discovered.close_text.
+            yield return WindowCell.Button(host.Texts?.String(44, 55) ?? "A new disease has been found", () => host.Submit(new CloseReportCommand(FaxReport.Disease))) with { Tooltip = "Close this fax" };
+        }
+
+        if (hospital.Epidemics.Report is { } epidemicResult)
+        {
+            any = true;
+            foreach (var line in EpidemicReportLines(host, epidemicResult))
+            {
+                yield return WindowCell.Line(line);
+            }
+
+            // fax.epidemic_result.close_text.
+            yield return WindowCell.Button(host.Texts?.String(44, 173) ?? "Close", () => host.Submit(new CloseReportCommand(FaxReport.Epidemic))) with { Tooltip = "Close this fax" };
         }
 
         if (hospital.Emergencies.Current is { IsAccepted: false } offer)
@@ -323,6 +364,55 @@ internal sealed class FaxWindow : UiWindow
         }
     }
 
+    /// <summary>
+    /// adviseDiscoverDisease's fax: the staff have discovered the disease, then its cause, symptoms and cure.
+    /// </summary>
+    internal static IEnumerable<string> DiseaseReportLines(IWindowHost host, DiseaseReport report)
+    {
+        yield return new Advice(44, 61, "Your staff have discovered a new disease. It is %s.").Text(host.Texts, DiseaseName(host, report.DiseaseId));
+        if (host.Texts?.Disease(report.DiseaseId) is { } text)
+        {
+            foreach (var line in new[] { text.Cause, text.Symptoms, text.Cure })
+            {
+                if (!string.IsNullOrEmpty(line))
+                {
+                    yield return line;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Epidemic:determineFaxAndFines's result fax: it worked and the compensation, or it failed and the fine, the fine with
+    /// reputation lost, or the evacuation.
+    /// </summary>
+    internal static IEnumerable<string> EpidemicReportLines(IWindowHost host, EpidemicReport report)
+    {
+        var name = DiseaseName(host, report.DiseaseId);
+        if (report.Outcome == EpidemicOutcome.CoveredUp)
+        {
+            yield return new Advice(44, 177, "The epidemic of %s has been covered up.").Text(host.Texts, name);
+            yield return new Advice(44, 178, "The health inspector found nothing to report.").Text(host.Texts);
+            yield return new Advice(44, 179, "You have been paid compensation of %d.").Text(host.Texts, report.Amount);
+            yield break;
+        }
+
+        yield return new Advice(44, 175, "The epidemic of %s was not contained.").Text(host.Texts, name);
+        yield return new Advice(44, 176, "The health inspector has reported your hospital.").Text(host.Texts);
+        yield return report.Outcome switch
+        {
+            EpidemicOutcome.Fined when ReputationLost(host, report) => new Advice(44, 181, "You have been fined %d and your reputation has suffered.").Text(host.Texts, report.Amount),
+            EpidemicOutcome.Evacuated => new Advice(44, 182, "Your hospital is being evacuated.").Text(host.Texts),
+            _ => new Advice(44, 180, "You have been fined %d.").Text(host.Texts, report.Amount),
+        };
+    }
+
+    /// <summary>
+    /// Whether <c>reputation_loss_minimum</c> or more were still infected, as the fine (a fixed sum each,
+    /// <c>calculateInfectedFine</c>) shows.
+    /// </summary>
+    private static bool ReputationLost(IWindowHost host, EpidemicReport report) =>
+        host.Simulation.Rules.Epidemics is { Fine: > 0 } rules && report.Amount / rules.Fine >= rules.ReputationLossMinimum;
     /// <summary><c>fax.vip_visit_result.remarks.free_build</c> (english.lua).</summary>
     private static readonly string[] FreeBuildRemarks =
     [
