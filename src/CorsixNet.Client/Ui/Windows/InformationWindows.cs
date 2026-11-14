@@ -49,6 +49,12 @@ internal sealed class InformationWindow(IReadOnlyList<string> paragraphs, string
             host.Close(this);
         }
     }
+
+    /// <summary>global_confirm: Enter closes it.</summary>
+    public override bool TakesKey(string action) => action == "global_confirm";
+
+    public override void FullscreenKey(IWindowHost host, string action) => host.Close(this);
+
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var first = true;
@@ -116,6 +122,17 @@ internal sealed class ConfirmWindow(string question, Action ok) : UiWindow
     }
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
+
+    /// <summary>global_confirm: Enter is OK.</summary>
+    public override bool TakesKey(string action) => action == "global_confirm";
+
+    public override void FullscreenKey(IWindowHost host, string action)
+    {
+        host.PlaySound("YesX.wav");
+        host.Close(this);
+        ok();
+    }
+
     /// <summary>Centred, as CorsixTH's <c>UIConfirmDialog</c>.</summary>
     public override Vector2? DefaultPosition => new(0.5f, 0.5f);
 

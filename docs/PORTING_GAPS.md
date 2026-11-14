@@ -55,8 +55,10 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Hire window: the original's panel (names, descriptions and portraits are done, `StaffTexts`, `StaffFaces`); picking up and placing staff
   (two steps, cancel puts candidate back) (`dialogs/hire_staff.lua`, `place_staff.lua`, `staff_profile.lua`).
 - Staff management screen: done in the original's look (`StaffManagementScreen`: tabs, pages, ordering by a heading,
-  bonus, pay rise, sack, the view). Missing: the arrow keys (fullscreen windows take no keys yet); a raise request is
-  answered from the table look or the fax only.
+  bonus, pay rise, sack, the view, the arrow keys). A raise request is answered from the table look or the fax only.
+- Keys in windows: a window on top in its original look takes the keys it handles (`UiWindow.TakesKey`): the arrows in
+  staff management and the casebook, Enter in the confirmation and information dialogs. Not yet: Enter in the hire,
+  furnish and edit room windows, the patient window's send home key, the place objects keys.
 - Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;

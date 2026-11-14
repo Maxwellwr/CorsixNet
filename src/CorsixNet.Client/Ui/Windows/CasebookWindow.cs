@@ -36,6 +36,11 @@ internal sealed class CasebookWindow : UiWindow
     public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
+
+    /// <summary>The arrow keys (ingame_scroll_*), as the original's key handlers.</summary>
+    public override bool TakesKey(string action) => action.StartsWith("ingame_scroll_", StringComparison.Ordinal);
+
+    public override void FullscreenKey(IWindowHost host, string action) => _screen.Key(host, action);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var simulation = host.Simulation;

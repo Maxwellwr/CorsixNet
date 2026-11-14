@@ -121,6 +121,39 @@ internal sealed class StaffManagementScreen
         }
     }
 
+    /// <summary>
+    /// The key handlers: left and right go to the previous and next kind of staff (previousCategory, nextCategory), up
+    /// and down choose the previous and next member of staff, turning the page (previousStaff, nextStaff, selectIndex).
+    /// </summary>
+    public void Key(IWindowHost host, string action) => Key(action, List(host).Select(h => h.Id).ToList());
+
+    /// <summary><see cref="Key(IWindowHost, string)"/> over the ids listed.</summary>
+    public void Key(string action, IReadOnlyList<int> listed)
+    {
+        var category = StaffClasses.HireOrder.ToList().IndexOf(Category);
+        switch (action)
+        {
+            case "ingame_scroll_left" when category > 0:
+                SetCategory(StaffClasses.HireOrder[category - 1]);
+                break;
+            case "ingame_scroll_right" when category < StaffClasses.HireOrder.Count - 1:
+                SetCategory(StaffClasses.HireOrder[category + 1]);
+                break;
+            case "ingame_scroll_up" or "ingame_scroll_down":
+                var index = Selected is { } id ? listed.ToList().IndexOf(id) : -1;
+                var next = index < 0
+                    ? (action == "ingame_scroll_up" ? listed.Count - 1 : 0)
+                    : index + (action == "ingame_scroll_up" ? -1 : 1);
+                if (next >= 0 && next < listed.Count)
+                {
+                    Selected = listed[next];
+                    Page = (next / RowsPerPage) + 1;
+                }
+
+                break;
+        }
+    }
+
     /// <summary>scrollUp and scrollDown: a page at a time while there is more than one, the choice dropped.</summary>
     public void Scroll(int count, int by)
     {

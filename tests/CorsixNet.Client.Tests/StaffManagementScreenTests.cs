@@ -56,5 +56,23 @@ public sealed class StaffManagementScreenTests
     }
 
     [Fact]
+    public void ArrowKeysChangeTheKindAndTheMemberOfStaff()
+    {
+        var screen = new StaffManagementScreen();
+        screen.Key("ingame_scroll_left", []);
+        Assert.Equal(StaffClass.Doctor, screen.Category);
+        screen.Key("ingame_scroll_right", []);
+        Assert.Equal(StaffClass.Nurse, screen.Category);
+        var listed = Enumerable.Range(100, 12).ToList();
+        screen.Key("ingame_scroll_down", listed);
+        Assert.Equal((100, 1), (screen.Selected, screen.Page));
+        screen.Key("ingame_scroll_up", listed);
+        Assert.Equal(100, screen.Selected);
+        screen.SetCategory(StaffClass.Nurse);
+        screen.Key("ingame_scroll_up", listed);
+        Assert.Equal((111, 2), (screen.Selected, screen.Page));
+    }
+
+    [Fact]
     public void WithoutTheGraphicsItIsATable() => Assert.False(new StaffManagementWindow().IsFullscreen(new WindowTestHost()));
 }
