@@ -9,8 +9,61 @@ namespace CorsixNet.Client.Ui.Windows;
 /// <c>load_game.lua</c>), from the menu (Esc): the saved games in the saves folder, newest first,
 /// with the quick save and the autosaves; saving to a new file or over one, and loading one.
 /// </summary>
-internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<string, bool> save, Func<string, bool> load) : UiWindow
+internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<string, bool> save, Func<string, bool> load) : UiWindow, IKeyCaptureWindow
 {
+    /// <summary>The longest name typed for a new save.</summary>
+    public const int MaxNameLength = 40;
+
+    private bool _typing;
+    private string _name = string.Empty;
+
+    /// <summary>The save's name being typed (save_game.lua's new savegame box), while it waits for keys.</summary>
+    public string TypedName => _name;
+
+    public bool IsCapturing => _typing;
+
+    /// <summary>
+    /// The new savegame box: letters (capitals with Shift), digits, spaces, - and _ are typed; Backspace takes the last
+    /// one away; Return saves under the name, asking first if a save of that name exists; Escape stops typing.
+    /// </summary>
+    public void Capture(Hotkey key)
+    {
+        switch (key.Key)
+        {
+            case "escape":
+                _typing = false;
+                return;
+            case "backspace":
+                _name = _name.Length > 0 ? _name[..^1] : _name;
+                return;
+            case "return":
+                _typing = false;
+                _pendingSave = _name.Trim().Length > 0 ? _name.Trim() + Extension : null;
+                return;
+            case "space":
+                Type(' ');
+                return;
+            case "-":
+                Type(key.Shift ? '_' : '-');
+                return;
+        }
+
+        if (key.Key.Length == 1 && char.IsAsciiLetterOrDigit(key.Key[0]))
+        {
+            Type(key.Shift && char.IsAsciiLetter(key.Key[0]) ? char.ToUpperInvariant(key.Key[0]) : key.Key[0]);
+        }
+    }
+
+    private void Type(char character)
+    {
+        if (_name.Length < MaxNameLength)
+        {
+            _name += character;
+        }
+    }
+
+    /// <summary>The file name Return asked to save under, done on the window's next look.</summary>
+    private string? _pendingSave;
     public const string Extension = ".sav";
 
     private string? _confirmOverwrite;
@@ -21,8 +74,24 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
+        if (saving && _pendingSave is { } typed)
+        {
+            _pendingSave = null;
+            var target = Path.Combine(store.Directory, typed);
+            if (File.Exists(target))
+            {
+                _confirmOverwrite = target;
+            }
+            else if (save(target))
+            {
+                host.Close(this);
+                yield break;
+            }
+        }
+
         if (saving)
         {
+            yield return WindowRow.Of(WindowCell.Button(_typing ? $"Name: {_name}_" : _name.Length > 0 ? $"Name: {_name} (click to edit, Return to save)" : "Type a name for a new save", () => _typing = !_typing, highlight: _typing));
             var date = host.Simulation.Date;
             var name = UiText.Format("corsixnet.save_game.file_name", "Year %1% month %2% day %3%", date.Year, date.Month, date.Day) + Extension;
             yield return WindowRow.Of(WindowCell.Button(UiText.Format("corsixnet.save_game.save_as", "Save as \"%1%\"", name), () =>
