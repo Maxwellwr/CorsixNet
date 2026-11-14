@@ -1,5 +1,7 @@
 using CorsixNet.Client.Maps;
 using CorsixNet.Client.Ui;
+using CorsixNet.Client.Ui.Windows;
+using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
@@ -106,12 +108,15 @@ public class BuildRoomToolTests
 
         var tool = new BuildRoomTool();
         tool.StartEditing(definition, room.Id, simulation.Tick);
-        foreach (var extra in new[] { "loo", "sink" })
-        {
-            tool.PlaceExtra(simulation.Content.FindObject(extra)!);
-            tool.Update(simulation, 0, Mouse(new(6, 5)));
-            Assert.Equal(extra, tool.Ghost?.ObjectType);
-        }
+        tool.PlaceExtra(simulation.Content.FindObject("loo")!);
+        tool.Update(simulation, 0, Mouse(new(6, 5)));
+        Assert.Equal("loo", tool.Ghost?.ObjectType);
+
+        // A second one bought waits until the first is placed.
+        tool.PlaceExtra(simulation.Content.FindObject("sink")!);
+        tool.Update(simulation, 0, Mouse(new(6, 5)));
+        Assert.Equal("loo", tool.Ghost?.ObjectType);
+        Assert.Equal(1, tool.ExtrasToPlace("sink"));
     }
 
     [Fact]
@@ -164,6 +169,61 @@ public class BuildRoomToolTests
         Assert.True(tool.IsFurnishing);
         Assert.Equal(balance, hospital.Balance);
     }
+    [Fact]
+    public void SeveralExtrasBoughtAtOnceArePlacedOneAfterAnother()
+    {
+        // UIPlaceObjects:addObjects: each Buy adds one to the line's qty, and they are placed one by one.
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var definition = simulation.Content.FindRoom("toilets")!;
+        host.Submit(new BuildRoomCommand(new RoomPlan("toilets", new TileRect(4, 4, 6, 6), new DoorPlacement(new(5, 4), EdgeOrientation.North))));
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+        foreach (var needed in new[] { "loo", "sink" })
+        {
+            host.Submit(new PlaceObjectCommand(needed, FreeSpot(simulation, room, needed), Direction.North));
+        }
+
+        var tool = new BuildRoomTool();
+        tool.StartEditing(definition, room.Id, simulation.Tick);
+        var panel = new RoomEditWindow(tool, _ => { });
+        var buyRows = host.Lines(panel).Where(line => line.EndsWith("|Buy", StringComparison.Ordinal)).ToList();
+        var loo = buyRows.FindIndex(line => line.Contains(simulation.Content.FindObject("loo")!.Name, StringComparison.Ordinal));
+        var sink = buyRows.FindIndex(line => line.Contains(simulation.Content.FindObject("sink")!.Name, StringComparison.Ordinal));
+        for (var i = 0; i < 3; i++)
+        {
+            host.Click(panel, "Buy", loo);
+        }
+
+        host.Click(panel, "Buy", sink);
+        Assert.Equal(3, tool.ExtrasToPlace("loo"));
+        Assert.Equal(1, tool.ExtrasToPlace("sink"));
+        Assert.Contains(host.Lines(panel), line => line.Contains(simulation.Content.FindObject("loo")!.Name + "|3|", StringComparison.Ordinal));
+
+        var placed = new List<string>();
+        for (var i = 0; i < 4; i++)
+        {
+            tool.Update(simulation, 0, Mouse(new(9, 9)));
+            var ghost = tool.Ghost?.ObjectType;
+            Assert.NotNull(ghost);
+            var spot = FreeSpot(simulation, room, ghost);
+            tool.Update(simulation, 0, Mouse(spot));
+            var command = Assert.IsType<PlaceObjectCommand>(tool.Update(simulation, 0, Mouse(spot, down: true, pressed: true)));
+            host.Submit(command);
+            placed.Add(command.ObjectType);
+        }
+
+        Assert.Equal(["loo", "loo", "loo", "sink"], placed);
+        Assert.Equal(0, tool.ExtrasToPlace("loo"));
+        Assert.Equal(0, tool.ExtrasToPlace("sink"));
+        tool.Update(simulation, 0, Mouse(new(9, 9)));
+        Assert.Null(tool.Ghost);
+        Assert.Equal(4, simulation.Entities.OfType<RoomObject>().Count(o => o.RoomId == room.Id && o.ObjectType == "loo"));
+    }
+
+    private static TilePosition FreeSpot(Simulation simulation, Room room, string objectType) =>
+        Enumerable.Range(room.Area.X, room.Area.Width).SelectMany(x => Enumerable.Range(room.Area.Y, room.Area.Height).Select(y => new TilePosition(x, y)))
+            .First(tile => ObjectPlacer.Check(simulation, objectType, tile, Direction.North, 0) == ObjectPlacementProblem.None);
+
     [Fact]
     public void ACopiedRoomGetsTheOriginalsDoorAndObjects()
     {

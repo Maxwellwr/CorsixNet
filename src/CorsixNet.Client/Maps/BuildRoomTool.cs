@@ -83,6 +83,12 @@ internal sealed class BuildRoomTool
     /// <summary>Whether the object on the cursor was bought from the list of extras (see <see cref="PlaceExtra"/>).</summary>
     private bool _placingExtra;
 
+    /// <summary>
+    /// The extra objects bought from the list and not placed yet, one entry each, the one on the cursor first and those of
+    /// a type together (CorsixTH's <c>UIPlaceObjects</c> lines and their <c>qty</c>).
+    /// </summary>
+    private readonly List<ObjectDefinition> _extras = [];
+
     /// <summary>The room being copied: its size, its door from its top left corner, and its objects.</summary>
     private (int Width, int Height, DoorPlacement Door)? _copy;
     private readonly List<(string ObjectType, TilePosition Offset, Direction Orientation)> _copyObjects = [];
@@ -226,6 +232,7 @@ internal sealed class BuildRoomTool
     {
         _phase = Phase.Inactive;
         _editing = false;
+        _extras.Clear();
         StopPlacing();
     }
 
@@ -239,8 +246,9 @@ internal sealed class BuildRoomTool
         && Remaining(simulation, room).Count == 0 && RoomBuilder.CanConfirm(simulation, room, _player);
 
     /// <summary>
-    /// Puts an extra object the room allows on the cursor while furnishing (the edit panel's buy list, CorsixTH's
-    /// <c>UIPlaceObjects:addObjects</c>); it is bought when placed and sold back if the room is taken down.
+    /// Buys one more of an extra object the room allows while furnishing (the edit panel's buy list, CorsixTH's
+    /// <c>UIPlaceObjects:addObjects</c>, which adds to the line's <c>qty</c>): each press adds one to place, and they go
+    /// on the cursor one after another as they are placed. Each is paid for when placed and sold back if the room is taken down.
     /// </summary>
     public void PlaceExtra(ObjectDefinition definition)
     {
@@ -249,10 +257,24 @@ internal sealed class BuildRoomTool
             return;
         }
 
+        var last = _extras.FindLastIndex(e => e.Id == definition.Id);
+        _extras.Insert(last < 0 ? _extras.Count : last + 1, definition);
+        if (_placingExtra)
+        {
+            // Another extra is on the cursor: this one waits its turn.
+            return;
+        }
+
+        // The extra goes on the cursor now, before any needed object that was there.
+        _extras.Remove(definition);
+        _extras.Insert(0, definition);
         _pickingUp = false;
         StartPlacing(definition, Turns.First(definition.Orientations.ContainsKey));
         _placingExtra = true;
     }
+
+    /// <summary>How many of an extra object have been bought from the list and are still to be placed, the one on the cursor included.</summary>
+    public int ExtrasToPlace(string objectType) => _extras.Count(e => e.Id == objectType);
 
     /// <summary>
     /// Starts copying a built room (our addition, CorsixTH has none): a room of the same type, size and door follows the
@@ -335,6 +357,7 @@ internal sealed class BuildRoomTool
         _message = null;
         _blueprint = null;
         _markedArea = null;
+        _extras.Clear();
         StopPlacing();
     }
 
@@ -809,6 +832,7 @@ internal sealed class BuildRoomTool
             _markedArea = null;
             _editing = false;
             _message = null;
+            _extras.Clear();
             StopPlacing();
             return room.IsPaid ? new ReturnToBlueprintCommand(room.Id) : new CancelRoomCommand(room.Id);
         }
@@ -830,6 +854,13 @@ internal sealed class BuildRoomTool
         if (_placing is not null && !_placingExtra && (_room!.NeededObjects?.ContainsKey(_placing.Id) ?? false) && !Remaining(simulation, room).Any(r => r.ObjectType == _placing.Id))
         {
             StopPlacing();
+        }
+
+        if (_placing is null && _extras.Count > 0)
+        {
+            // The next extra bought from the list, once the one before it is placed (or after picking up).
+            StartPlacing(_extras[0], Turns.First(_extras[0].Orientations.ContainsKey));
+            _placingExtra = true;
         }
 
         if (_placing is null && NextToPlace(simulation, room) is { } next)
@@ -865,6 +896,11 @@ internal sealed class BuildRoomTool
             var command = new PlaceObjectCommand(_placing.Id, target, _orientation);
             var newer = simulation.Entities.Count == 0 ? 1 : simulation.Entities.Max(e => e.Id) + 1;
             _pending.Add(new Pending(_placing.Id, +1, simulation.Tick, newer, target, _orientation));
+            if (_placingExtra)
+            {
+                _extras.Remove(_placing);
+            }
+
             StopPlacing();
             PlaySound?.Invoke("place_r.wav"); // UIPlaceObjects:placeObject
             return command;
