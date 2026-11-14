@@ -4,6 +4,13 @@
 # Only characters of code page 437, as the game's bitmap font draws German.
 language: [Deutsch, German, de, ger, deu]
 strings:
+  menu:
+    file: '  DATEI  '
+    options: '  OPTIONEN  '
+    charts: '  ÜBERSICHTEN  '
+    debug: '  DEBUG  '
+  menu_charts:
+    machine_menu: '  (%1%) GERÄTELISTE  '
   accessibility_window:
     enable_screen_shake: Bildschirmwackeln
     scroll_speed: Scrollgeschwindigkeit
@@ -158,7 +165,7 @@ strings:
     custom_game:
       none: 'Keine Level gefunden: Legen Sie .level- und .map-Dateien in den Level-Ordner (levels in config.yaml).'
     custom_campaign:
-      none: 'Keine Kampagnen gefunden: Legen Sie .campaign.yaml- oder .campaign-Dateien in den Kampagnen-Ordner (campaigns in config.yaml).'
+      none: 'Keine Kampagnen gefunden: Legen Sie .campaign.yaml-Dateien in den Kampagnen-Ordner (campaigns in config.yaml).'
     information:
       caption: Information
     confirm:
