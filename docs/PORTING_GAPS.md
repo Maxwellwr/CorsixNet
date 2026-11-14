@@ -218,8 +218,8 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   done (`LevelMapLoader.LoadCustom`, `LoadCampaign`, `--map`, `--campaign`). The difficulty and what it changes (`LevelRules.Difficulty`, `--difficulty`)
   are done, except the ward's use of it, as there is no ward yet.
 - Free build mode (Done in the simulation: `LevelRules.WithFreeBuild`, `free_build_mode` in `config.txt` for `--map`
-  levels outside a campaign, `--free-build` on the server; the client shows no free build texts yet: the progress
-  report's and the VIP and emergency faxes' remarks, `progress_report.lua`, `player_hospital.lua`). Sandbox options
+  levels outside a campaign, `--free-build` on the server; the progress report's free build text and the VIP and
+  emergency faxes' free build remarks are shown). Sandbox options
   beyond it are not done.
 - Main menu (`resizables/main_menu.lua`): done as a window over the paused first level when the command line names
   nothing to play (`MainMenuWindow`: Campaign, Custom Campaign, Single Scenario with Free Build, Continue Game, Load
