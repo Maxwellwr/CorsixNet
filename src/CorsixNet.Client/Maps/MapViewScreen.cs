@@ -54,6 +54,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The most interface ticks of scrolling (18 ms each) one frame catches up on.</summary>
     private const int MaxScrollTicksPerFrame = 10;
 
+    /// <summary>UIPlaceStaff takes the tile under a point this many screen pixels below the cursor.</summary>
+    private const int StaffCursorDrop = 14;
+
+    /// <summary>A member of staff who cannot be put down where they are shown is grey (the ghost palette).</summary>
+    private static readonly Color StaffBlockedTint = new Color(130, 130, 130);
+
     /// <summary>How far an earthquake at full strength moves the view, in map pixels (CorsixTH's <c>shake_screen_max_movement</c>).</summary>
     private const float ShakeMaxMovement = 50f;
 
@@ -185,6 +191,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private KeyboardState _previousKeys;
     private MouseState _previousMouse;
     private Point? _hoveredTile;
+
+    /// <summary>The tile a member of staff being hired or carried goes on: 14 screen pixels below the cursor's, as
+    /// <c>UIPlaceStaff:onCursorWorldPositionChange</c> takes it.</summary>
+    private Point? _staffTile;
     private (int X, int Y) _hoveredFraction;
     private Point _rightPressedAt;
     private bool _buildBack;
@@ -631,6 +641,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var tile = Camera.WorldToTile(world);
         _hoveredTile = inView && Map is { } map && map.Contains(tile.X, tile.Y) ? tile : null;
         _hoveredFraction = Camera.WorldToTileFraction(world);
+        var staffTile = Camera.WorldToTile(_camera.ScreenToWorld(new Point(mouse.X, mouse.Y - StatusHeight + StaffCursorDrop), viewSize));
+        _staffTile = inView && Map is { } staffMap && staffMap.Contains(staffTile.X, staffTile.Y) ? staffTile : null;
         _hoveredWorld = inView ? new Point((int)Math.Floor(world.X), (int)Math.Floor(world.Y)) : null;
         UpdateHover();
 
@@ -706,6 +718,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             (tile, anchorX, anchorY) => DrawEarlyEntities(batch, tile, anchorX, anchorY),
             tile => _earlyByTile.TryGetValue(tile, out var early) && early.Count > 0);
             DrawOverlay(batch, map, view);
+            DrawPlacingStaff(batch);
             if (_editorTool is { } editor && (_hoveredTile is not null || editor.IsDragging))
             {
                 // UIMapEditor:fillCursorArea: a red outline on each tile the cursor covers.
@@ -1636,7 +1649,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         // Until staff can be grabbed with the hand cursor, M picks up the player's member of staff nearest the cursor
         // (within a tile) and M again puts them down at the cursor; on the same tile, nothing happens.
-        if (pressed(Keys.M) && _hoveredTile is { } handPoint)
+        if (pressed(Keys.M) && (_pickedUpStaff is null ? _hoveredTile : _staffTile) is { } handPoint)
         {
             var hand = new TilePosition(handPoint.X, handPoint.Y);
             if (_pickedUpStaff is { } carried)
@@ -2058,7 +2071,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
 
             // Someone shown by another's animation, such as a patient at the pharmacy cabinet.
-            if (entity is Humanoid { IsHidden: true })
+            // The pickup action: one being carried is drawn on the cursor instead.
+            if (entity is Humanoid { IsHidden: true } || (entity is Humanoid && entity.Id == _pickedUpStaff))
             {
                 continue;
             }
@@ -2499,10 +2513,49 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
+    /// <summary>
+    /// UIPlaceStaff:draw: the member of staff being hired or carried stands, in the first frame of their idle animation
+    /// facing east, on the tile they would be put on, grey where they cannot be.
+    /// </summary>
+    private void DrawPlacingStaff(SpriteBatch batch)
+    {
+        if (Simulation is not { } simulation || _session is null || _staffTile is not { } point)
+        {
+            return;
+        }
+
+        var tile = new TilePosition(point.X, point.Y);
+        Humanoid shown;
+        bool valid;
+        if (_hiring is { } hiring)
+        {
+            var index = simulation.AvailableStaff(hiring.Class).ToList().IndexOf(hiring.Profile);
+            if (index < 0)
+            {
+                return;
+            }
+
+            shown = Humanoid.CreateStaff(0, tile, hiring.Profile, _session.Player);
+            valid = StaffHiring.Check(simulation, hiring.Class, index, tile, _session.Player) == StaffHireProblem.None;
+        }
+        else if (_pickedUpStaff is { } carried && simulation.FindEntity(carried) is Humanoid held)
+        {
+            shown = held;
+            valid = held.Tile == tile || StaffMoving.Check(simulation, carried, tile, _session.Player) == StaffHireProblem.None;
+        }
+        else
+        {
+            return;
+        }
+
+        _humanoids.DrawPlacing(batch, shown, 32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y), valid ? Color.White : StaffBlockedTint);
+    }
+
     private void DrawOverlay(SpriteBatch batch, LevelMap map, Rectangle view)
     {
         // While building, the blueprint and the object being placed show where the cursor is, as in the original.
-        var hovered = _buildTool.IsActive || _furnishTool.IsActive ? null : _hoveredTile;
+        // The member of staff being placed shows where they go instead.
+        var hovered = _buildTool.IsActive || _furnishTool.IsActive || _hiring is not null || _pickedUpStaff is not null ? null : _hoveredTile;
         var (firstScanline, lastScanline) = MapRenderer.VisibleScanlines(map, view);
         for (var s = firstScanline; s <= lastScanline; s++)
         {
@@ -3068,7 +3121,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var staff = simulation.Entities.OfType<Humanoid>().Where(h => h.Employer == player && h.Profile is not null && !h.IsFired).ToList();
         var build = _buildTool.TutorialState(simulation, player);
         bool? hiringValid = null;
-        if (_hiring is { } hiring && _hoveredTile is { } hovered)
+        if (_hiring is { } hiring && _staffTile is { } hovered)
         {
             var index = simulation.AvailableStaff(hiring.Class).ToList().IndexOf(hiring.Profile);
             hiringValid = index >= 0 && StaffHiring.Check(simulation, hiring.Class, index, new TilePosition(hovered.X, hovered.Y), player) == StaffHireProblem.None;
@@ -3475,7 +3528,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return true;
         }
 
-        if (mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released && _hoveredTile is { } point)
+        if (mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released && _staffTile is { } point)
         {
             var tile = new TilePosition(point.X, point.Y);
             var problem = StaffHiring.Check(simulation, hiring.Class, index, tile, _session!.Player);
