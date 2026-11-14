@@ -208,6 +208,20 @@ public class ResearchTests
 
     private static GameContent NewContent() => new([Ultrascan], [114], [Machine]);
 
+    [Fact]
+    public void OnlyObjectsTheLevelHasAndResearchHasFoundCanBeBought()
+    {
+        var simulation = NewSimulation();
+        var research = simulation.Hospitals[0].Research;
+
+        // UIEditRoom:purchaseItems: an undiscovered machine is not offered, a discovered one and plain furniture are.
+        Assert.False(research.CanBuy(simulation.Rules, "ultrascanner"));
+        Assert.True(research.CanBuy(simulation.Rules, "inflator"));
+        Assert.True(research.CanBuy(simulation.Rules, "cabinet"));
+
+        var level = new LevelRules(1000, [], [], objectAvailability: [KeyValuePair.Create("analyser", new ObjectAvailability(ForLevel: false, AtStart: false))]);
+        Assert.False(research.CanBuy(level, "analyser"));
+    }
     private static Simulation NewSimulation(int whenAvail = 0)
     {
         var map = TestMaps.FromRows("........", "........", "........", "........", "........", "........", "........", "........");

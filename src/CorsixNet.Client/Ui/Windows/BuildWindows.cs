@@ -44,7 +44,9 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
         {
             yield return WindowRow.Gap;
             yield return WindowCell.Line("Buy more:", dim: true);
-            foreach (var definition in extras.Select(simulation.Content.FindObject).OfType<ObjectDefinition>())
+            // UIEditRoom:purchaseItems lists only what the level has and research has discovered.
+            var research = simulation.Hospitals[host.Player].Research;
+            foreach (var definition in extras.Select(simulation.Content.FindObject).OfType<ObjectDefinition>().Where(o => research.CanBuy(simulation.Rules, o.Id)))
             {
                 var price = simulation.Rules.ObjectCost(definition.Id);
                 yield return WindowRow.Of(

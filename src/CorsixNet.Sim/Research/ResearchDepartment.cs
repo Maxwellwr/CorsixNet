@@ -224,6 +224,13 @@ public sealed class ResearchDepartment
     }
 
     /// <summary><c>Hospital:getObjectBuildCost</c>: what an object costs now; research may have lowered a machine's cost.</summary>
+    /// <summary>
+    /// Whether an object can be bought for a room (UIEditRoom:purchaseItems): the level has it (`AvailableForLevel`) and,
+    /// if it is researched, it has been discovered.
+    /// </summary>
+    public bool CanBuy(LevelRules rules, string objectId) =>
+        rules.Availability(objectId).ForLevel && (!_objects.TryGetValue(objectId, out var research) || research.Discovered);
+
     public int ObjectCost(LevelRules rules, string objectId) =>
         rules.FreeBuild ? 0 : _objects.TryGetValue(objectId, out var research) ? research.Cost : rules.ObjectCost(objectId);
 
