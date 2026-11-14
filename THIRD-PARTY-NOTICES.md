@@ -180,6 +180,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## FreeType
+
+CorsixNet draws TrueType fonts with FreeType through FreeTypeSharp (MIT, https://github.com/ryancheung/FreeTypeSharp),
+whose package carries FreeType's native libraries. FreeType is used under the FreeType License (FTL):
+
+```text
+Portions of this software are copyright (C) 2023 The FreeType Project (www.freetype.org). All rights reserved.
+```
+
 ## MMPX
 
 Source: https://casual-effects.com/research/McGuire2021PixelArt/index.html

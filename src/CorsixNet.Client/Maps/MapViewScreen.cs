@@ -2604,10 +2604,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _panelSprites.Draw(batch, 37, left - 16, origin.Y - 25, Color.White);
         _panelSprites.Draw(batch, 39, origin.X + 155, origin.Y - 40, Color.White);
         var y = origin.Y - 20;
-        var tint = _blackText.IsTrueType ? Color.Black : (Color?)null;
         foreach (var line in WrapToWidth(speech.TrimEnd('/'), width + 60, text => _blackText.Measure(text).Width))
         {
-            _blackText.Draw(batch, line, new Vector2(left - 8, y), tint: tint);
+            _blackText.Draw(batch, line, new Vector2(left - 8, y), tint: _blackText.IsTrueTypeFor(line) ? Color.Black : null);
             y += _blackText.LineHeight;
         }
     }
@@ -4289,16 +4288,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void ApplyLanguageFont()
     {
         TrueTypeFace? face = null;
+        var minimumSize = 8;
         if (TranslationFiles.Value.Find(_config.Language) is { UsesGameFont: false } translation)
         {
             var sample = translation.NativeName + string.Concat(_texts?.Language?.Strings.Values ?? []);
             face = _unicodeFonts.Find(sample)?.Face;
+
+            // Ideograms fill the em square and need more pixels than letters to be read; 14 is CorsixTH's smallest.
+            minimumSize = translation.NativeName.Any(character => character >= '⺀') ? 14 : 8;
         }
 
-        _text.UseTrueType(face);
-        _blackText?.UseTrueType(face);
-        _bottomPanel?.UseTrueType(face);
-        _graphics.UseTrueType(face);
+        _text.UseTrueType(face, minimumSize);
+        _blackText?.UseTrueType(face, minimumSize);
+        _bottomPanel?.UseTrueType(face, minimumSize);
+        _graphics.UseTrueType(face, minimumSize);
         _windows.Origin = new Point(8, StatusHeight + 8);
     }
 
