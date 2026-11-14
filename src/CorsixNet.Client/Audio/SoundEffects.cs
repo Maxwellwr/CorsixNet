@@ -12,12 +12,14 @@ using Microsoft.Xna.Framework.Audio;
 namespace CorsixNet.Client.Audio;
 
 /// <summary>
-/// The sounds of <c>SOUND-n.DAT</c>, played through MonoGame. Without the archive, with sounds turned off in the
+/// The sounds of <c>SOUND-n.DAT</c>, played through MonoGame, the announcer's in the chosen language's own speech where it
+/// has one (<see cref="LanguageVoice"/>). Without the archive, with sounds turned off in the
 /// settings (<c>play_sounds</c>), or without a sound device, nothing is played and nothing fails.
 /// </summary>
 internal sealed class SoundEffects : IDisposable
 {
     private readonly SoundChoice? _choice;
+    private readonly LanguageVoice _voice;
     private readonly float _volume;
     private readonly float _announcementVolume;
     private readonly Dictionary<string, SoundEffect?> _loaded = new(StringComparer.OrdinalIgnoreCase);
@@ -25,15 +27,19 @@ internal sealed class SoundEffects : IDisposable
     private bool _broken;
     private (string Name, SoundEffectInstance? Instance)? _loop;
 
-    private SoundEffects(SoundChoice? choice, float volume, float announcementVolume = 0.5f)
+    private SoundEffects(SoundChoice? choice, float volume, float announcementVolume = 0.5f, LanguageVoice? voice = null)
     {
         _choice = choice;
+        _voice = voice ?? LanguageVoice.None;
         _volume = volume;
         _announcementVolume = announcementVolume;
     }
 
-    /// <summary>The sound archive of the settings' language (the English one if it has none), if sounds are on.</summary>
-    public static SoundEffects Load(ThemeHospitalInstall install, GameConfig config)
+    /// <summary>
+    /// The sound archive of the settings' language (the English one if it has none), if sounds are on, with the
+    /// language's own speech <paramref name="voice"/> over it.
+    /// </summary>
+    public static SoundEffects Load(ThemeHospitalInstall install, GameConfig config, LanguageVoice? voice = null)
     {
         if (!config.PlaySounds)
         {
@@ -50,7 +56,7 @@ internal sealed class SoundEffects : IDisposable
             Console.Error.WriteLine($"The sound effects could not be loaded: {e.Message}");
         }
 
-        return new SoundEffects(archive is null ? null : new SoundChoice(archive), (float)Math.Clamp(config.SoundVolume, 0m, 1m), (float)Math.Clamp(config.AnnouncementVolume, 0m, 1m));
+        return new SoundEffects(archive is null ? null : new SoundChoice(archive), (float)Math.Clamp(config.SoundVolume, 0m, 1m), (float)Math.Clamp(config.AnnouncementVolume, 0m, 1m), voice);
     }
 
     /// <summary><c>UI:playSound</c>: a sound heard everywhere alike; the name may hold <c>*</c> wildcards.</summary>
@@ -173,7 +179,10 @@ internal sealed class SoundEffects : IDisposable
         }
     }
 
-    /// <summary>The sound loaded once; null for one that is not in the archive or that MonoGame cannot read.</summary>
+    /// <summary>
+    /// The sound loaded once, from the language's own speech if it has it, else from the archive; null for one that is
+    /// in neither or that MonoGame cannot read.
+    /// </summary>
     private SoundEffect? Effect(string name)
     {
         if (_loaded.TryGetValue(name, out var effect))
@@ -181,18 +190,19 @@ internal sealed class SoundEffects : IDisposable
             return effect;
         }
 
-        if (_choice!.Archive.Find(name) is { } entry)
+        var file = _voice.Find(name);
+        if (file is not null || _choice!.Archive.Find(name) is not null)
         {
             try
             {
-                using var stream = new MemoryStream(_choice.Archive.Read(entry).ToArray());
+                using Stream stream = file is not null ? File.OpenRead(file) : new MemoryStream(_choice!.Archive.Read(_choice.Archive.Find(name)!).ToArray());
                 effect = SoundEffect.FromStream(stream);
             }
             catch (NoAudioHardwareException)
             {
                 _broken = true;
             }
-            catch (Exception e) when (e is InvalidDataException or ArgumentException or NotSupportedException or InvalidOperationException)
+            catch (Exception e) when (e is InvalidDataException or ArgumentException or NotSupportedException or InvalidOperationException or IOException or UnauthorizedAccessException)
             {
                 Console.Error.WriteLine($"The sound {name} could not be read: {e.Message}");
             }

@@ -6,6 +6,7 @@ using CorsixNet.Client.Sessions;
 using CorsixNet.Client.Ui;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Content;
+using CorsixNet.Content.Audio;
 using CorsixNet.Content.Interface;
 using CorsixNet.Content.Languages;
 using CorsixNet.Content.Levels;
@@ -408,7 +409,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _texts = LoadTexts(install, _config);
         UiText.Current = _texts;
         ApplyLanguageFont();
-        _sounds = SoundEffects.Load(install, _config);
+        _sounds = SoundEffects.Load(install, _config, VoiceOf(_config));
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
         _buildTool.AbandonRequested = () => _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
@@ -4020,7 +4021,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _adviser.IsEnabled = !config.AdviserDisabled;
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
-        _sounds = SoundEffects.Load(_install, config);
+        _sounds = SoundEffects.Load(_install, config, VoiceOf(config));
         if (!string.Equals(config.UnicodeFont, _unicodeFonts.Configured, StringComparison.Ordinal))
         {
             _text.UseTrueType(null);
@@ -4916,6 +4917,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>CorsixTH's language files beside the game (Languages/*.yaml), read once.</summary>
     private static readonly Lazy<CorsixLanguages> TranslationFiles = new(() => CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")));
+
+    /// <summary>The announcer's speech in the settings' language (Languages/Voice/&lt;language&gt;), if it has its own.</summary>
+    private static LanguageVoice VoiceOf(GameConfig config) =>
+        LanguageVoice.Load(TranslationFiles.Value.VoiceDirectory(Path.Combine(AppContext.BaseDirectory, "Languages"), config.Language));
 
     /// <summary>
     /// The languages to choose from, as the settings take them: CorsixTH's translations, by English name, that the

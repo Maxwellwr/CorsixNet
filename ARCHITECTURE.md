@@ -151,6 +151,14 @@ entities and pending commands.
   `UI:playSound` (heard alike everywhere) and `Entity:playSound` (quieter away from the view's centre and not heard
   off it, `SoundChoice.VolumeAt`). It is driven by the client's own actions only, never by the simulation, and is
   silent without the archive, with `play_sounds = false` or without a sound device.
+- **Announcer speech in other languages.** CorsixNet's own: a language may speak the announcements itself from
+  `Languages/Voice/<language file>` beside the game (`LanguageVoice`, folder from `CorsixLanguages.VoiceDirectory`):
+  a WAV file there named as the original's sound (`EMERG006.WAV`) is heard instead of it, the rest stay the
+  original's. Russian has one, made by `tools/CorsixNet.AnnouncerVoice`: it speaks the translation's `subtitles.*`
+  (or `speech.yaml`'s fixes) with the Piper voice ru_RU-denis-medium (CC0 data) and runs them through a hospital
+  loudspeaker (horn band 380–3400 Hz, compressor, light distortion, hall echo, line hiss), written as the original's
+  22050 Hz 8-bit mono; `voice.yaml` records the voice, settings and texts so that only changed lines are spoken again,
+  and a test fails when it no longer matches the subtitles. It is not a copy of the original announcer's voice.
 - **Scrolling.** `MapScrolling` (CorsixNet.Content, so that it can be tested) is CorsixTH's `GameUI` scrolling, run in
   18 ms interface ticks whatever the frame rate: keys and screen edges with the speed settings and the growing
   multiplier, dragging by whole map pixels, and the wheel's zoom momentum through `World:adjustZoom`.

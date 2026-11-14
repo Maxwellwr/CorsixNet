@@ -181,6 +181,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Russian announcer voice (Piper ru_RU-denis-medium)
+
+The Russian announcements in `src/CorsixNet.Content/Languages/Voice/russian` were spoken by
+`tools/CorsixNet.AnnouncerVoice` with the Piper text-to-speech engine (https://github.com/OHF-Voice/piper1-gpl, run
+only as a tool, not shipped) and the voice ru_RU-denis-medium from https://huggingface.co/rhasspy/piper-voices,
+published under the MIT license (as the repository declares it; it carries no copyright line). The voice was trained
+on the "denis" dataset of https://github.com/OHF-Voice/voice-datasets, released under CC0, fine-tuned from the
+rdh base model (CC0). The texts are CorsixTH's Russian subtitles (MIT, see CorsixTH above). The voice is not
+the original game's announcer and is not modelled on her recordings.
+
 ## YamlDotNet
 
 CorsixNet reads its language files with YamlDotNet (https://github.com/aaubry/YamlDotNet), used under the MIT

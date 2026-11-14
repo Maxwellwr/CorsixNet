@@ -62,6 +62,12 @@ public sealed class CorsixLanguages
     /// <summary>The language files' extension.</summary>
     public const string Extension = ".yaml";
 
+    /// <summary>
+    /// The folder beside CorsixTH's files that holds the announcer's speech in other languages: a folder per language
+    /// file, named as the file is (<c>Voice/russian</c> for russian.yaml), of WAV files named as the original's sounds.
+    /// </summary>
+    public const string VoiceFolder = "Voice";
+
     private readonly Dictionary<string, LanguageFile> _byName = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<CorsixLanguage> _languages = [];
     private readonly CorsixLanguages? _own;
@@ -121,6 +127,17 @@ public sealed class CorsixLanguages
     /// <summary>The language a name or abbreviation means (case ignored), or null.</summary>
     public CorsixLanguage? Find(string name) =>
         _languages.FirstOrDefault(language => language.Names.Any(n => string.Equals(n, name.Trim(), StringComparison.OrdinalIgnoreCase)));
+
+    /// <summary>The name of the file that declares a language (by any of its names), without its extension, or null.</summary>
+    public string? FileStem(string language) =>
+        _byName.TryGetValue(language.Trim(), out var file) ? Path.GetFileNameWithoutExtension(file.FileName) : null;
+
+    /// <summary>
+    /// The folder of a language's announcer speech under <paramref name="directory"/>, the folder of the language
+    /// files (see <see cref="VoiceFolder"/>), or null for a language no file declares.
+    /// </summary>
+    public string? VoiceDirectory(string directory, string language) =>
+        FileStem(language) is { } stem ? Path.Combine(directory, VoiceFolder, stem) : null;
 
     /// <summary>
     /// The number of the original's string file a language inherits last (<c>original_strings: n</c>, its own or
