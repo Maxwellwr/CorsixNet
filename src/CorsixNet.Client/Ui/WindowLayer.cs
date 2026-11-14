@@ -332,7 +332,9 @@ internal sealed class WindowLayer
             // UIFullscreen: 640 by 480, centred on the screen, and kept on it from the top left.
             // A smaller one opens where it says (Window:setDefaultPosition), kept on the screen.
             var size = open.Window.FullscreenSize;
-            var full = open.Window.FullscreenPosition is { } at
+            var full = open.Window.FullscreenScreenPosition is { } fixedAt
+                ? new Rectangle(Math.Clamp(fixedAt.X, screen.X, Math.Max(screen.X, screen.Right - size.X)), Math.Clamp(fixedAt.Y, screen.Y, Math.Max(screen.Y, screen.Bottom - size.Y)), size.X, size.Y)
+                : open.Window.FullscreenPosition is { } at
                 ? new Rectangle(Place(at.X, screen.X, screen.Width, size.X), Place(at.Y, screen.Y, screen.Height, size.Y), size.X, size.Y)
                 : new Rectangle(screen.X + Math.Max(0, (screen.Width - size.X) / 2), screen.Y + Math.Max(0, (screen.Height - size.Y) / 2), size.X, size.Y);
             open.Position = full.Location;

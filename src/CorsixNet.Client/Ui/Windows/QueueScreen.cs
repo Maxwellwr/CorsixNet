@@ -122,6 +122,17 @@ internal sealed class QueueScreen(int ownerId)
         }
     }
 
+    private QueuePopupWindow? _popup;
+
+    private void ClosePopup(IWindowHost host)
+    {
+        if (_popup is not null)
+        {
+            host.Close(_popup);
+            _popup = null;
+        }
+    }
+
     public void Mouse(IWindowHost host, UiWindow window, Point local, MouseState mouse, MouseState previous)
     {
         var simulation = host.Simulation;
@@ -134,12 +145,17 @@ internal sealed class QueueScreen(int ownerId)
         _hovered = _dragged is null && InQueueBox(local) ? HoveredPatient(members, local.X - 219) : null;
         if (mouse.RightButton == ButtonState.Pressed && previous.RightButton == ButtonState.Released && _hovered is { } chosen)
         {
-            host.Open(new PatientWindow(chosen));
+            // onMouseDown's right button: the popup to send the patient to reception or home, at the cursor.
+            ClosePopup(host);
+            _popup = new QueuePopupWindow(chosen, new Point(mouse.X, mouse.Y));
+            host.Open(_popup);
             return;
         }
 
         if (mouse.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released)
         {
+            // onMouseUp: a click in the queue window takes away any popup left.
+            ClosePopup(host);
             _pressed = Smaller.Contains(local) ? "smaller" : Larger.Contains(local) ? "larger" : Close.Contains(local) ? "close" : null;
             if (_pressed is null && _hovered is { } lifted)
             {
@@ -195,7 +211,7 @@ internal sealed class QueueScreen(int ownerId)
             : new Rectangle(15, 87, 148, 21).Contains(local) ? Tip(74, "The most who may queue")
             : new Rectangle(168, 25, 45, 80).Contains(local) ? Tip(77, "Drag a patient here to move them to the front")
             : new Rectangle(543, 51, 43, 54).Contains(local) ? Tip(78, "Drag a patient here to move them to the back")
-            : InQueueBox(local) ? Tip(80, "Drag a patient to move them, right click for their window")
+            : InQueueBox(local) ? Tip(80, "Drag a patient to move them, right click to send them to reception or home")
             : null;
     }
 
@@ -263,4 +279,92 @@ internal sealed class QueueScreen(int ownerId)
 
     private static List<Humanoid> Members(Simulation simulation, HumanoidQueue queue) =>
         queue.Members.Select(simulation.FindEntity).OfType<Humanoid>().ToList();
+}
+
+/// <summary>
+/// CorsixTH's <c>UIQueuePopup</c>: Req06V's panel 188 by 68 at the cursor, with a button sending the patient back to
+/// reception and one sending them home; it closes on either, or on a click elsewhere.
+/// </summary>
+internal sealed class QueuePopupWindow(int patientId, Point at) : UiWindow
+{
+    private static readonly Rectangle Reception = new(12, 12, 81, 54);
+    private static readonly Rectangle Home = new(95, 12, 81, 54);
+
+    private string? _pressed;
+
+    public int PatientId { get; } = patientId;
+
+    public override string Title => "Queue";
+
+    public override bool IsFullscreen(IWindowHost host) => QueueScreen.IsAvailable(host);
+
+    public override Point FullscreenSize => new(188, 68);
+
+    public override Point? FullscreenScreenPosition => at;
+
+    public override bool IsDone(IWindowHost host) =>
+        host.Simulation.FindEntity(PatientId) is not Humanoid { Behaviour: PatientBehaviour { Phase: PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue or PatientPhase.InReceptionQueue or PatientPhase.WalkingToReception } };
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
+    {
+        var sheet = host.Graphics!.Sheet("REQ06V", OriginalGraphics.MainPalette)!;
+        var local = new Point(mouse.X, mouse.Y) - origin;
+        var held = mouse.LeftButton == ButtonState.Pressed;
+        sheet.Draw(batch, 375, origin.X, origin.Y, Color.White);
+        if (held && _pressed == "reception" && Reception.Contains(local))
+        {
+            sheet.Draw(batch, 378, origin.X + Reception.X, origin.Y + Reception.Y, Color.White);
+        }
+
+        if (held && _pressed == "home" && Home.Contains(local))
+        {
+            sheet.Draw(batch, 379, origin.X + Home.X, origin.Y + Home.Y, Color.White);
+        }
+
+        sheet.Draw(batch, 377, origin.X, origin.Y + 58, Color.White);
+    }
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        string? Under() => Reception.Contains(local) ? "reception" : Home.Contains(local) ? "home" : null;
+        if (mouse.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released)
+        {
+            _pressed = Under();
+            return;
+        }
+
+        if (mouse.LeftButton != ButtonState.Released || previous.LeftButton != ButtonState.Pressed)
+        {
+            return;
+        }
+
+        var pressed = _pressed;
+        _pressed = null;
+        if (pressed is null || pressed != Under())
+        {
+            return;
+        }
+
+        host.PlaySound(WindowLayer.DefaultButtonSound);
+        host.Submit(pressed == "reception" ? new SendPatientToReceptionCommand(PatientId) : new SendPatientHomeCommand(PatientId));
+        host.Close(this);
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) =>
+        Reception.Contains(local) ? "Send the patient back to reception" : Home.Contains(local) ? "Send the patient home" : null;
+
+    public override IEnumerable<WindowRow> Rows(IWindowHost host)
+    {
+        yield return WindowRow.Of(
+            WindowCell.Button("Reception", () =>
+            {
+                host.Submit(new SendPatientToReceptionCommand(PatientId));
+                host.Close(this);
+            }),
+            WindowCell.Button("Home", () =>
+            {
+                host.Submit(new SendPatientHomeCommand(PatientId));
+                host.Close(this);
+            }));
+    }
 }

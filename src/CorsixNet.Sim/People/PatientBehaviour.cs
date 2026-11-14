@@ -984,6 +984,24 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     }
 
     /// <summary>
+    /// <c>UIQueuePopup:sendToReception</c> (<c>setNextAction(SeekReceptionAction())</c>): a patient on their way to a
+    /// room, or queueing at its door, leaves the queue and looks for a reception desk again.
+    /// </summary>
+    internal void SendToReception(Simulation simulation, Humanoid humanoid)
+    {
+        if (Phase is not (PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue))
+        {
+            return;
+        }
+
+        LeaveQueue(simulation, humanoid);
+        humanoid.StopWalking();
+        Waiting = -1;
+        TargetId = 0;
+        Phase = PatientPhase.SeekReception;
+    }
+
+    /// <summary>
     /// <c>Queue:rerouteAllPatients</c> when a room closes to be edited: a patient walking to it or queueing at its door
     /// heads for another room of the type instead (<c>SeekRoomAction(room_type)</c>), or, with none, looks again as
     /// they would have (a diagnosis room goes back on the list); one going to the toilets goes back to what they were
