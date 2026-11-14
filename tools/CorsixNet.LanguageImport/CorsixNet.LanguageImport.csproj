@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>Writes CorsixTH's Lua language files out as the YAML CorsixNet reads, and checks both give the same strings.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/CorsixNet.Content/CorsixNet.Content.csproj" />
+  </ItemGroup>
+
+</Project>

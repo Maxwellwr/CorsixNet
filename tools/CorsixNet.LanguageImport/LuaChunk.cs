@@ -5,7 +5,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace CorsixNet.Formats;
+namespace CorsixNet.LanguageImport;
 
 /// <summary>A Lua expression as written.</summary>
 public abstract record LuaExpression;

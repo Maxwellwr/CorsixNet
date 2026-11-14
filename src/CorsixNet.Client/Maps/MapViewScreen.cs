@@ -4649,7 +4649,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             : string.Empty;
     }
 
-    /// <summary>CorsixTH's language files beside the game (Languages/*.lua), read once.</summary>
+    /// <summary>CorsixTH's language files beside the game (Languages/*.yaml), read once.</summary>
     private static readonly Lazy<CorsixLanguages> TranslationFiles = new(() => CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")));
 
     /// <summary>

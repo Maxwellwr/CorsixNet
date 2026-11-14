@@ -31,9 +31,10 @@ and `CorsixTH/Lua/dialogs/place_staff.lua`), walk timing and animation numbers (
 `CorsixTH/Lua/humanoid_actions/walk.lua` and `CorsixTH/Lua/entities/humanoid.lua`), and
 the RNC decompressor modifications (`Rnc.cs`).
 
-Included unchanged: CorsixTH's language files (`src/CorsixNet.Content/Languages/CorsixTH/*.lua`, from
-`CorsixTH/Lua/languages` at commit 7639874), each with its translators' copyright and the MIT license in its header,
-read by `CorsixLanguages.cs` (from `CorsixTH/Lua/strings.lua`).
+Included as YAML: CorsixTH's language files (`src/CorsixNet.Content/Languages/CorsixTH/*.yaml`, from
+`CorsixTH/Lua/languages` at commit 7639874, written out by `tools/CorsixNet.LanguageImport` with the same strings),
+each with its translators' copyright and the MIT license in its header, read by `CorsixLanguages.cs` (from
+`CorsixTH/Lua/strings.lua`).
 
 ```text
 Copyright (C) 2009-2016 Peter "Corsix" Cawley
@@ -179,6 +180,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## YamlDotNet
+
+CorsixNet reads its language files with YamlDotNet (https://github.com/aaubry/YamlDotNet), used under the MIT
+license: Copyright (c) Antoine Aubry and contributors.
 
 ## FreeType
 

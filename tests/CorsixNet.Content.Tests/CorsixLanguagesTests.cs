@@ -6,45 +6,54 @@ namespace CorsixNet.Content.Tests;
 public class CorsixLanguagesTests
 {
     private const string OriginalStringsFile = """
-        Language("original_strings")
-        SetSpeechFile("Sound-".. ... ..".dat")
-        local S = LoadStrings("Lang-".. ... ..".dat")
-        Encoding(utf8)
-        local function D(name_str) return S[4][name_str] end
-        staff_class = { nurse = S[1][1], doctor = S[1][2] }
-        adviser = { warnings = { money_low = S[11][2], money_very_low_take_loan = S[11][3] } }
-        vip_names = { health_minister = S[42][1], S[42][2], S[42][3] }
-        diseases = { bloaty_head = D(3) }
-        menu_file_load = { "Load one", "Load two" }
-        menu_file_save = menu_file_load
+        language: [original_strings]
+        steps:
+          - original:
+              staff_class.nurse: [1, 1]
+              staff_class.doctor: [1, 2]
+              adviser.warnings.money_low: [11, 2]
+              adviser.warnings.money_very_low_take_loan: [11, 3]
+              vip_names.health_minister: [42, 1]
+              vip_names.1: [42, 2]
+              vip_names.2: [42, 3]
+          - strings:
+              menu_file_load: [Load one, Load two]
+          - copy: {menu_file_save: menu_file_load}
         """;
 
     private const string EnglishFile = """
-        Font("cp437")
-        Language("English", "English", "en", "eng")
-        Inherit("original_strings", 0)
-        adviser.warnings.money_low = "Your money is getting low!"
-        vip_names = { [2] = "Sir Lancelot Spratt" }
-        tutorial = { build_reception = "Build a " .. "reception" }
+        language: [English, English, en, eng]
+        font: cp437
+        steps:
+          - original_strings: 0
+          - strings:
+              adviser.warnings.money_low: Your money is getting low!
+              vip_names: {2: Sir Lancelot Spratt}
+              tutorial: {build_reception: Build a reception}
         """;
 
     private const string FrenchFile = """
-        Font("cp437")
-        Language(utf8 "Français", "French", "fr", "fre", "fra")
-        Inherit("english")
-        Inherit("original_strings", 1)
-        tutorial.build_reception = "Construisez une réception"
+        language: [Français, French, fr, fre, fra]
+        font: cp437
+        steps:
+          - inherit: english
+          - original_strings: 1
+          - strings:
+              tutorial:
+                build_reception: Construisez une réception
         """;
 
     private const string RussianFile = """
-        Font("mik")
-        Language("Русский", "Russian", "ru", "rus")
-        Inherit("English")
-        Encoding(utf8)
-        staff_class = {
-          nurse = "Медсестра",
-        }
-        diseases = { bloaty_head = { name = "Раздутая голова" } }
+        language: [Русский, Russian, ru, rus]
+        font: mik
+        steps:
+          - inherit: English
+        strings:
+          staff_class:
+            nurse: Медсестра
+          diseases:
+            bloaty_head:
+              name: Раздутая голова
         """;
 
     [Fact]
@@ -132,7 +141,7 @@ public class CorsixLanguagesTests
             Assert.NotEmpty(languages.Load(language.EnglishName, _ => Original("en")).Strings);
         }
 
-        // original_strings.lua names the adviser's first tutorial message S[11][...] and English keeps it.
+        // original_strings names the adviser's first tutorial message S[11][...] and English keeps it.
         var english = languages.Load("English", _ => Original("en"));
         Assert.NotNull(english.Get("adviser.tutorial.build_reception"));
         Assert.Equal("Your money is getting low!", english.Get("adviser.warnings.money_low"));
@@ -147,10 +156,10 @@ public class CorsixLanguagesTests
 
     private static CorsixLanguages Languages() => new(
     [
-        ("original_strings.lua", OriginalStringsFile),
-        ("english.lua", EnglishFile),
-        ("french.lua", FrenchFile),
-        ("russian.lua", RussianFile),
+        ("original_strings.yaml", OriginalStringsFile),
+        ("english.yaml", EnglishFile),
+        ("french.yaml", FrenchFile),
+        ("russian.yaml", RussianFile),
     ]);
 
     /// <summary>Every string is "prefix section.index" (CorsixTH's 1-based numbers), 64 sections of 220.</summary>
@@ -197,16 +206,18 @@ public class TranslatedStaffTextsTests
     {
         var languages = new CorsixLanguages(
         [
-            ("original_strings.lua", """
-                Language("original_strings")
-                local S = LoadStrings("Lang-".. ... ..".dat")
-                humanoid_name_starts = S[9]
-                staff_descriptions.misc = S[46]
-                staff_descriptions.misc[3] = nil
+            ("original_strings.yaml", """
+                language: [original_strings]
+                steps:
+                  - original:
+                      humanoid_name_starts: [9]
+                      staff_descriptions.misc: [46]
+                  - remove: [staff_descriptions.misc.3]
                 """),
-            ("english.lua", """
-                Language("English", "English", "en")
-                Inherit("original_strings", 0)
+            ("english.yaml", """
+                language: [English, English, en]
+                steps:
+                  - original_strings: 0
                 """),
         ]);
         var strings = languages.Load("English", _ => Table());
