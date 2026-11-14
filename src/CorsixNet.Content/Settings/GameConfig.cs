@@ -378,10 +378,11 @@ public sealed record GameConfig
         text.Append("""
 
             -------------------------------------------------------------------------------
-            -- A font file for each language drawn with a Unicode font, by the language's
-            -- name, chosen in the options window or written here, e.g.
+            -- A font file for each language, by the language's name, chosen in the
+            -- options window or written here, e.g.
             --  unicode_fonts = { Russian = [[C:\Windows\Fonts\tahoma.ttf]] }
-            -- A language without one uses unicode_font above, else a font of the system.
+            -- A language without one is drawn with the game's own font, or, when that
+            -- has not its letters, with unicode_font above, else a font of the system.
             --
 
             """);

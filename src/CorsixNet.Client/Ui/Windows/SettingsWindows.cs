@@ -101,25 +101,36 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
     }
 }
 
+/// <summary>The fonts a language can be drawn with in the options window, and the name of its font when none is chosen.</summary>
+internal sealed record LanguageFontChoices(string Default, IReadOnlyList<(string Name, string Path)> Fonts)
+{
+    /// <summary>The default of a language the game's bitmap font draws.</summary>
+    public const string GameFont = "Game font";
+
+    /// <summary>The default of a language drawn with a TrueType font found among the system's.</summary>
+    public const string SystemFont = "System";
+}
+
 /// <summary>
 /// The options window (CorsixTH's <c>dialogs/resizables/options.lua</c> with <c>customise.lua</c> and
 /// <c>sound_setting.lua</c>): sound effects and their volume, screen shake, edge scrolling, scroll speeds and the
 /// autosave frequency, and the language among the installed ones (CorsixTH's <c>options.lua</c> language list). Changes
 /// are kept in a draft until Apply, which saves <c>config.txt</c> and uses them at once; the screen size takes effect on
-/// the next start. A language drawn with a TrueType font also gets a choice of font among the system's fonts that
-/// have its letters (<c>unicode_fonts</c>), "System" leaving it to be found as before. The language and the font are
+/// the next start. Every language gets a choice of font among the system's fonts that have its letters
+/// (<c>unicode_fonts</c>): a language the game's bitmap font draws keeps that font by default ("Game font"), one drawn
+/// with a TrueType font leaves it to be found as before ("System"). The language and the font are
 /// tried out as soon as they are stepped to, as CorsixTH's language list changes the language on a click; closing the
 /// window without Apply gives the ones it opened with back.
 /// </summary>
 /// <param name="fonts">
-/// The fonts the language can be drawn with, by name; null for a language the game's font draws, empty while they are
-/// still being looked for.
+/// The fonts the language can be drawn with, by name, and the name of what it is drawn with when none is chosen; the
+/// fonts are empty while they are still being looked for, and null leaves the font row out.
 /// </param>
 /// <param name="preview">
 /// Shows the game in a language and font without saving them: the settings the window opened with but for the draft's
 /// language and fonts, or those it opened with when it closes without Apply.
 /// </param>
-internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, IReadOnlyList<(string Name, string Path)>?>? fonts = null, Action<GameConfig>? preview = null) : UiWindow
+internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, LanguageFontChoices?>? fonts = null, Action<GameConfig>? preview = null) : UiWindow
 {
     private readonly IReadOnlyList<string> _languages = languages ?? [];
 
@@ -150,7 +161,7 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
             : WindowRow.Of("Language", _draft.Language);
         if (fonts?.Invoke(_draft.Language) is { } choices)
         {
-            yield return Stepper("Font", FontName(choices), () => Preview(() => StepFont(fonts(_draft.Language) ?? [], -1)), () => Preview(() => StepFont(fonts(_draft.Language) ?? [], +1)));
+            yield return Stepper("Font", FontName(choices), () => Preview(() => StepFont(fonts(_draft.Language)?.Fonts ?? [], -1)), () => Preview(() => StepFont(fonts(_draft.Language)?.Fonts ?? [], +1)));
         }
         if (hotkeys is not null)
         {
@@ -214,15 +225,15 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         _draft = _draft with { Language = _languages[next] };
     }
 
-    /// <summary>The name of the font chosen for the draft's language, or "System" for none.</summary>
-    private string FontName(IReadOnlyList<(string Name, string Path)> choices)
+    /// <summary>The name of the font chosen for the draft's language, or the choices' default for none.</summary>
+    private string FontName(LanguageFontChoices choices)
     {
         if (_draft.LanguageFont([_draft.Language]) is not { } path)
         {
-            return "System";
+            return choices.Default;
         }
 
-        foreach (var (name, choice) in choices)
+        foreach (var (name, choice) in choices.Fonts)
         {
             if (string.Equals(choice, path, StringComparison.OrdinalIgnoreCase))
             {
@@ -233,7 +244,7 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         return Path.GetFileNameWithoutExtension(path);
     }
 
-    /// <summary>The next or previous font for the draft's language, "System" coming before the first.</summary>
+    /// <summary>The next or previous font for the draft's language, the default (none chosen) coming before the first.</summary>
     private void StepFont(IReadOnlyList<(string Name, string Path)> choices, int step)
     {
         if (choices.Count == 0)

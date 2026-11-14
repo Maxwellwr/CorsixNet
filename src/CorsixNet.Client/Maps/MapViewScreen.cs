@@ -3373,24 +3373,26 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage);
 
     /// <summary>
-    /// The system's fonts with every character of the language's translation, for the options window's font choice:
-    /// null for a language the game's font draws, empty until they have been looked for (in the background, once).
+    /// The system's fonts with every letter of the language's translation, for the options window's font choice, empty
+    /// until they have been looked for (in the background, once); a language the game's font draws keeps that font
+    /// unless one is chosen, the others have one found among the system's.
     /// </summary>
-    private IReadOnlyList<(string Name, string Path)>? FontChoices(string language)
+    private LanguageFontChoices? FontChoices(string language)
     {
-        if (TranslationFiles.Value.Find(language) is not { UsesGameFont: false } translation)
-        {
-            return null;
-        }
-
-        if (!_fontChoices.TryGetValue(translation.EnglishName, out var choices))
+        var translation = TranslationFiles.Value.Find(language);
+        var key = translation?.EnglishName ?? language.Trim();
+        if (!_fontChoices.TryGetValue(key, out var choices))
         {
             var fonts = _unicodeFonts;
-            choices = Task.Run(() => fonts.Choices(translation.NativeName + string.Concat(TranslationFiles.Value.Load(language, _ => null).Strings.Values)));
-            _fontChoices[translation.EnglishName] = choices;
+            var sample = translation is null
+                ? language
+                : translation.NativeName + string.Concat(TranslationFiles.Value.Load(language, _ => null).Strings.Values);
+            choices = Task.Run(() => fonts.Choices(sample));
+            _fontChoices[key] = choices;
         }
 
-        return choices.IsCompletedSuccessfully ? choices.Result : [];
+        var found = choices.IsCompletedSuccessfully ? choices.Result : [];
+        return new LanguageFontChoices(translation is { UsesGameFont: false } ? LanguageFontChoices.SystemFont : LanguageFontChoices.GameFont, found);
     }
 
     /// <summary><c>UIHotkeyAssign:buttonAccept</c>: the keys are used at once and saved to <c>hotkeys.txt</c>.</summary>
@@ -4638,14 +4640,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>
     /// Draws text in the settings' language with the game's font, or with the Unicode font found for the language when
-    /// its translation asks for one (<c>App:initLanguage</c>, <c>Graphics:onChangeLanguage</c>); the status bar and the
-    /// windows below it follow the font's height.
+    /// its translation asks for one (<c>App:initLanguage</c>, <c>Graphics:onChangeLanguage</c>); a language the game's
+    /// font draws can have a TrueType font chosen for it in the options instead. The status bar and the windows below
+    /// it follow the font's height.
     /// </summary>
     private void ApplyLanguageFont()
     {
         TrueTypeFace? face = null;
         var minimumSize = 8;
-        if (TranslationFiles.Value.Find(_config.Language) is { UsesGameFont: false } translation)
+        var translation = TranslationFiles.Value.Find(_config.Language);
+        if (translation is null || translation.UsesGameFont)
+        {
+            face = _unicodeFonts.Chosen(_config.LanguageFont(translation?.Names ?? [_config.Language]));
+        }
+        else
         {
             var sample = translation.NativeName + string.Concat(_texts?.Language?.Strings.Values ?? []);
             face = _unicodeFonts.Find(sample, _config.LanguageFont(translation.Names))?.Face;

@@ -87,6 +87,9 @@ internal sealed class UnicodeFonts : IDisposable
         return best is { } found ? (found.Path, found.Face) : null;
     }
 
+    /// <summary>The face of the font file chosen for a language, if there is one; nothing else is looked for.</summary>
+    public TrueTypeFace? Chosen(string? path) => string.IsNullOrWhiteSpace(path) ? null : Face(path);
+
     /// <summary>Whether a font found for the text has all its characters.</summary>
     public bool CanDraw(string sample, string? chosen = null) => Find(sample, chosen) is { } found && found.Face.MissingGlyphs(sample) == 0;
 
