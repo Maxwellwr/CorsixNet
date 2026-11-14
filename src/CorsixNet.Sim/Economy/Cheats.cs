@@ -84,6 +84,9 @@ public enum CheatKind : byte
 
     /// <summary><c>toggle_invulnerable_machines</c>, on or off: the hospital's machines neither wear nor explode.</summary>
     ToggleInvulnerableMachines = 23,
+
+    /// <summary><c>show_infected</c>: the infected patients of the epidemics not shown yet show their icon, or no longer; nothing without such an epidemic.</summary>
+    ShowInfected = 24,
 }
 
 /// <summary>CorsixTH's fax code cheats (<c>toggle_cheats</c>), which stay on until the code is sent again.</summary>
@@ -115,7 +118,7 @@ public enum ToggleCheats : byte
 /// (<c>Cheats:announceCheat</c>), except losing the level.
 /// </summary>
 /// <remarks>
-/// The other cheats wait for what they act on: showing the infected before an epidemic shows, and machines.
+/// The other cheats wait for what they act on: machines.
 /// </remarks>
 public static class Cheats
 {
@@ -217,6 +220,19 @@ public static class Cheats
                 break;
             case CheatKind.ToggleInvulnerableMachines:
                 Toggle(simulation, hospital, ToggleCheats.InvulnerableMachines);
+                break;
+            case CheatKind.ShowInfected:
+                // Cheats:cheatShowInfected: each hidden epidemic's cheat_always_show_mood flips.
+                if (hospital.Epidemics.Future.Count == 0)
+                {
+                    return;
+                }
+
+                foreach (var future in hospital.Epidemics.Future)
+                {
+                    future.CheatAlwaysShowMood = !future.CheatAlwaysShowMood;
+                }
+
                 break;
             default:
                 return;

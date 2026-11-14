@@ -75,6 +75,12 @@ internal static class HumanoidMoods
                 var epidemic = patient.IsVaccinated ? 4566 : patient.VaccinatingNurseId != 0 ? 4572 : patient.IsMarkedForVaccination ? 4570 : 4574;
                 Offer(true, epidemic, 55);
             }
+            else if (patient.IsInfected && humanoid.HospitalPlayer < simulation.Hospitals.Count
+                && simulation.Hospitals[humanoid.HospitalPlayer].Epidemics.Future.Any(future => future.CheatAlwaysShowMood && future.InfectedIds.Contains(humanoid.Id)))
+            {
+                // Cheats:cheatShowInfected: the infected icon over the patients of an epidemic not shown yet.
+                Offer(true, 4574, 55);
+            }
 
             // Patient:_dailyHealthChecks's health_treshold_rangemap: dying1 to dying5 as health falls below 0.22.
             if (!patient.IsCured && !dying && patient.Health < 0.22m)
