@@ -102,6 +102,27 @@ internal sealed class HumanoidDrawing
         }
     }
 
+    /// <summary>
+    /// UIPlaceStaff's animation: the first frame of the humanoid's idle animation facing east (<c>getIdleAnimation</c>),
+    /// with layer 5 from their profile, at a tile's anchor.
+    /// </summary>
+    public void DrawPlacing(SpriteBatch batch, Humanoid humanoid, int anchorX, int anchorY, Color tint)
+    {
+        var idle = WalkAnimations.GetValueOrDefault(humanoid.Type, WalkAnimations[HumanoidType.StandardMalePatient]).IdleEast;
+        Span<byte> layers = stackalloc byte[Humanoid.LayerCount];
+        for (var i = 0; i < layers.Length; i++)
+        {
+            layers[i] = humanoid.Layers[i];
+        }
+
+        if (humanoid.Profile is { } profile)
+        {
+            layers[Humanoid.StaffLayer] = profile.Layer5;
+        }
+
+        _renderer.DrawFrame(batch, _renderer.Animations.FirstFrame(idle), anchorX, anchorY, layers, flipHorizontally: false, tint);
+    }
+
     /// <summary>Told of each humanoid drawn: its id, the frame and where (for the frames' sounds).</summary>
     public Action<int, int, int, int>? FrameDrawn { get; set; }
 
