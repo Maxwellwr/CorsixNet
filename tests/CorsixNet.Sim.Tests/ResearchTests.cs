@@ -200,14 +200,6 @@ public class ResearchTests
         Assert.Equal(1_000, loaded.Rules.Research.ExpertiseRequired(UltrascanExpertise));
     }
 
-    private static void Run(Simulation simulation, Command command)
-    {
-        simulation.Schedule(0, command);
-        simulation.Step();
-    }
-
-    private static GameContent NewContent() => new([Ultrascan], [114], [Machine]);
-
     [Fact]
     public void OnlyObjectsTheLevelHasAndResearchHasFoundCanBeBought()
     {
@@ -222,6 +214,15 @@ public class ResearchTests
         var level = new LevelRules(1000, [], [], objectAvailability: [KeyValuePair.Create("analyser", new ObjectAvailability(ForLevel: false, AtStart: false))]);
         Assert.False(research.CanBuy(level, "analyser"));
     }
+
+    private static void Run(Simulation simulation, Command command)
+    {
+        simulation.Schedule(0, command);
+        simulation.Step();
+    }
+
+    private static GameContent NewContent() => new([Ultrascan], [114], [Machine]);
+
     private static Simulation NewSimulation(int whenAvail = 0)
     {
         var map = TestMaps.FromRows("........", "........", "........", "........", "........", "........", "........", "........");

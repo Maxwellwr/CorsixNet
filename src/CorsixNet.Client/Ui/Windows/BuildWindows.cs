@@ -48,7 +48,7 @@ internal sealed class RoomEditWindow(BuildRoomTool tool, Action<BuildButton> pre
             var research = simulation.Hospitals[host.Player].Research;
             foreach (var definition in extras.Select(simulation.Content.FindObject).OfType<ObjectDefinition>().Where(o => research.CanBuy(simulation.Rules, o.Id)))
             {
-                var price = simulation.Rules.ObjectCost(definition.Id);
+                var price = research.ObjectCost(simulation.Rules, definition.Id);
                 yield return WindowRow.Of(
                     "  " + definition.Name,
                     WindowCell.Number(MoneyText.Format(price)),

@@ -30,6 +30,11 @@ public class ResearchRoomTests
         Assert.True(hospital.IsRoomDiscovered("research"));
         Assert.False(hospital.IsRoomDiscovered("ultrascan"));
 
+        // The computer is on level 8 but not there at the start (StartAvail 0): research has to find it before it can be
+        // bought for the room.
+        Assert.False(hospital.Research.CanBuy(rules, "computer"));
+        hospital.Research.Objects["computer"].Discovered = true;
+
         var room = BuildResearchRoom(simulation);
         var researcher = HireResearcher(simulation);
         var used = new HashSet<string>();
@@ -59,6 +64,31 @@ public class ResearchRoomTests
         // Research is paid for each month.
         Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.Research, Amount: < 0 });
         Assert.True(hospital.Balance < balance);
+    }
+
+    [Fact]
+    public void OnLevelTwoTheAtomAnalyserCannotBeBoughtForTheResearchRoom()
+    {
+        var install = RealGameData.Require();
+        var rules = LevelRulesLoader.LoadOriginal(install, "LEVEL.L2", BaseGameContent.Create()).WithoutCompetitors();
+        var simulation = NewHospital(rules);
+        var hospital = simulation.Hospitals[0];
+
+        // UIEditRoom:purchaseItems: level 2 does not have the analyser (AvailableForLevel 0), so it is neither offered
+        // nor placed.
+        Assert.False(hospital.Research.CanBuy(rules, "analyser"));
+        Run(simulation, new BuildRoomCommand(new RoomPlan("research", Area, new DoorPlacement(new(5, Area.Bottom), EdgeOrientation.North))));
+        var balance = hospital.Balance;
+        for (var y = Area.Y; y < Area.Bottom; y++)
+        {
+            for (var x = Area.X; x < Area.Right; x++)
+            {
+                Run(simulation, new PlaceObjectCommand("analyser", new(x, y), Direction.North));
+            }
+        }
+
+        Assert.DoesNotContain(simulation.Entities.OfType<RoomObject>(), o => o.ObjectType == "analyser");
+        Assert.Equal(balance, hospital.Balance);
     }
 
     private static Room BuildResearchRoom(Simulation simulation)
