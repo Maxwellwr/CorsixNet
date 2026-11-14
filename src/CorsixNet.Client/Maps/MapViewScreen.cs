@@ -630,6 +630,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         // Windows over the map take the mouse while it is over them: the map sees no clicks and no wheel then.
         var realMouse = mouse;
+        if (IsWindowHostReady && OriginalMenuBar.IsAvailable(this)
+            && _menuBar.Update(this, MenuBarMenus(), MenuBarMeasure, mouse, _previousMouse, Environment.TickCount64))
+        {
+            // UIMenuBar takes the mouse while it is over the bar or an open menu.
+            mouse = new MouseState(mouse.X, mouse.Y, _previousMouse.ScrollWheelValue, _previousMouse.LeftButton, mouse.MiddleButton, _previousMouse.RightButton, mouse.XButton1, mouse.XButton2);
+        }
+
         if (ClickAdviser(mouse))
         {
             mouse = new MouseState(mouse.X, mouse.Y, mouse.ScrollWheelValue, _previousMouse.LeftButton, mouse.MiddleButton, _previousMouse.RightButton, mouse.XButton1, mouse.XButton2);
@@ -884,6 +891,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             DrawAdviser(batch, viewport);
             DrawSubtitles(batch);
             _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
+            if (OriginalMenuBar.IsAvailable(this))
+            {
+                _menuBar.Draw(batch, this, MenuBarMenus(), viewport.Width, DateTime.Now);
+            }
             if (_bottomPanel is not null && OriginalBottomPanel.TooltipAt(viewport, new Point(pointer.X, pointer.Y), ((IWindowHost)this).HotkeyText) is { } tooltip)
             {
                 OriginalBottomPanel.DrawTooltip(batch, _text, _pixel, viewport, new Point(pointer.X, pointer.Y), tooltip);
@@ -3251,6 +3262,50 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>The menu's items that are not windows.</summary>
+    private readonly OriginalMenuBar _menuBar = new();
+
+    private int MenuBarMeasure(string text) => ((IWindowHost)this).Graphics?.Font("FONT01V", OriginalGraphics.MainPalette)?.Measure(text).Width ?? 0;
+
+    /// <summary>
+    /// makeGameMenu's menus: file (load, save, quick save and load, restart, quit), options, charts (the dialogs) and
+    /// debug (cheats, replays). CorsixTH's own options and debug items this game has no counterpart for are left out.
+    /// </summary>
+    private List<MenuBarMenu> MenuBarMenus()
+    {
+        // The hotkey label CorsixTH puts into an item (hotkey_value_label) is left out.
+        static string Item(string name, string fallback) => UiText.Get(name, fallback).Replace("(%1%)", string.Empty, StringComparison.Ordinal).Replace("%1%", string.Empty, StringComparison.Ordinal).Replace("%s", string.Empty, StringComparison.Ordinal).Trim();
+        MenuBarItem Open(string name, string fallback, Func<UiWindow> window) => new(Item(name, fallback), () => _windows.Open(window()));
+        MenuBarItem Do(string name, string fallback, string action) => new(Item(name, fallback), () => MenuAction(action));
+        return
+        [
+            new(Item("menu.file", "FILE"), [
+                Do("menu_file.load", "LOAD", "load"),
+                Do("menu_file.save", "SAVE", "save"),
+                Do("corsixnet.menu.quick_save", "Quick save", "quicksave"),
+                Do("corsixnet.menu.quick_load", "Quick load", "quickload"),
+                Do("menu_file.restart", "RESTART", "restart"),
+                Do("menu_file.quit", "QUIT", "quit")]),
+            new(Item("menu.options", "OPTIONS"), [
+                Do("corsixnet.menu.settings", "Settings", "options"),
+                Do("corsixnet.menu.levels", "Levels", "levels")]),
+            new(Item("menu.charts", "CHARTS"), [
+                Open("menu_charts.bank_manager", "BANK MANAGER", () => new BankManagerWindow()),
+                Open("menu_charts.statement", "STATEMENT", () => new BankStatementWindow()),
+                Open("menu_charts.staff_listing", "STAFF LISTING", () => new StaffManagementWindow()),
+                Open("menu_charts.town_map", "TOWN MAP", () => new TownMapWindow()),
+                Open("menu_charts.casebook", "CASEBOOK", () => new CasebookWindow()),
+                Open("menu_charts.research", "RESEARCH", () => new ResearchWindow()),
+                Open("menu_charts.status", "STATUS", () => new ProgressReportWindow()),
+                Open("menu_charts.graphs", "GRAPHS", () => new GraphWindow()),
+                Open("menu_charts.policy", "POLICY", () => new PolicyWindow()),
+                Open("menu_charts.machine_menu", "MACHINE MENU", () => new MachineMenuWindow())]),
+            new(Item("menu.debug", "DEBUG"), [
+                Open("corsixnet.menu.cheats", "Cheats", () => new CheatsWindow()),
+                Do("corsixnet.menu.save_replay", "Save replay", "savereplay"),
+                Do("corsixnet.menu.watch_replay", "Watch replay", "replays")]),
+        ];
+    }
+
     private void MenuAction(string action)
     {
         switch (action)
