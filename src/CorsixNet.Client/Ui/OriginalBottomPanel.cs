@@ -25,7 +25,7 @@ internal sealed record BottomPanelState(
     long Balance,
     int Reputation,
     string Date,
-    string? Info,
+    DynamicInfoLines? Info,
     string? Pause,
     IReadOnlyList<string> Faxes,
     Func<string, bool> IsOn,
@@ -75,6 +75,7 @@ internal sealed class OriginalBottomPanel : IDisposable
     private readonly TextRenderer _pauseFont;
     private string? _pressed;
     private readonly FaxDrawer _drawer = new();
+    private readonly Texture2D? _pixel;
 
     public OriginalBottomPanel(GraphicsDevice device, ThemeHospitalInstall install, Palette palette)
     {
@@ -83,6 +84,8 @@ internal sealed class OriginalBottomPanel : IDisposable
         _dateFont = Font(device, install, "FONT16V", palette);
         _whiteFont = Font(device, install, "FONT01V", palette);
         _pauseFont = Font(device, install, "FONT124V", palette);
+        _pixel = new Texture2D(device, 1, 1);
+        _pixel.SetData([Color.White]);
     }
 
     /// <summary>Where the panel is: centred at the bottom of the screen (<c>setDefaultPosition(0.5, -0.1)</c>).</summary>
@@ -306,6 +309,7 @@ internal sealed class OriginalBottomPanel : IDisposable
         _dateFont.Dispose();
         _whiteFont.Dispose();
         _pauseFont.Dispose();
+        _pixel?.Dispose();
     }
 
     /// <summary>
@@ -326,12 +330,33 @@ internal sealed class OriginalBottomPanel : IDisposable
             return;
         }
 
-        var lines = Maps.MapViewScreen.WrapToWidth(info, 240, text => _whiteFont.Measure(text).Width);
-        for (var i = 0; i < Math.Min(3, lines.Count); i++)
+        // drawDynamicInfo: a line every 10 pixels; on the last, the bar 100 wide at the right of the info area (white
+        // frame, black, orange for the share done) with white dividers.
+        var lines = info.Lines.Take(3).ToList();
+        var right = x + (Width - 364);
+        for (var i = 1; i <= lines.Count; i++)
         {
-            _whiteFont.Draw(batch, lines[i], new Vector2(x + 20, y + (10 * (i + 1))));
+            foreach (var line in Maps.MapViewScreen.WrapToWidth(lines[i - 1], 240, text => _whiteFont.Measure(text).Width).Take(1))
+            {
+                _whiteFont.Draw(batch, line, new Vector2(x + 20, y + (10 * i)));
+            }
+
+            if (i == lines.Count && info.Progress is { } progress && _pixel is { } pixel)
+            {
+                var barX = right - 111;
+                batch.Draw(pixel, new Rectangle(barX - 1, y + (10 * i), 100, 10), Color.White);
+                batch.Draw(pixel, new Rectangle(barX, y + 1 + (10 * i), 98, 8), Color.Black);
+                batch.Draw(pixel, new Rectangle(barX, y + 1 + (10 * i), ProgressWidth(progress), 8), new Color(221, 83, 0));
+                foreach (var divider in info.Dividers ?? [])
+                {
+                    batch.Draw(pixel, new Rectangle(barX + (int)Math.Floor(divider * 100), y + (10 * i), 1, 10), Color.White);
+                }
+            }
         }
     }
+
+    /// <summary>The orange part of the progress bar: 98 pixels for the whole.</summary>
+    public static int ProgressWidth(decimal progress) => (int)Math.Floor(98 * Math.Clamp(progress, 0m, 1m));
 
     private static PanelButton? ButtonAt(Rectangle bounds, Point at, bool hovering)
     {

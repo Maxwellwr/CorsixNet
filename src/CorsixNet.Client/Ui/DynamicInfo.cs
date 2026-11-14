@@ -7,10 +7,21 @@ using System.Globalization;
 using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Content;
 using CorsixNet.Sim;
+using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.People;
 
 namespace CorsixNet.Client.Ui;
+
+/// <summary>
+/// The dynamic info as the bottom panel draws it (CorsixTH's <c>dynamic_info</c>): up to three lines, and on the last a
+/// progress bar from 0 to 1 with dividers (the tiredness at which staff go for a rest).
+/// </summary>
+internal sealed record DynamicInfoLines(IReadOnlyList<string> Lines, decimal? Progress = null, IReadOnlyList<decimal>? Dividers = null)
+{
+    /// <summary>The lines joined into one, the bar left out.</summary>
+    public override string ToString() => string.Join("   ", Lines.Where(line => !string.IsNullOrWhiteSpace(line)));
+}
 
 /// <summary>
 /// What CorsixTH's bottom panel shows about the humanoid or object under the cursor (<c>getDynamicInfo</c>): its lines
@@ -40,6 +51,42 @@ internal static class DynamicInfo
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The dynamic info of a humanoid for the bottom panel: a patient's action, contagion and diagnosis with the bar of
+    /// diagnosis made (up to the stop procedure policy); a member of staff's name, what they do and their tiredness with
+    /// its bar, divided at the staff room policy (none for a receptionist); null where CorsixTH shows none.
+    /// </summary>
+    public static DynamicInfoLines? Panel(Simulation simulation, Humanoid humanoid, OriginalTexts? texts)
+    {
+        string S(int index, string fallback) => texts?.String(59, index) ?? fallback;
+        var hospital = humanoid.HospitalPlayer >= 0 && humanoid.HospitalPlayer < simulation.Hospitals.Count ? simulation.Hospitals[humanoid.HospitalPlayer] : null;
+        switch (humanoid.Behaviour)
+        {
+            case PatientBehaviour patient:
+                var undiagnosed = !patient.IsDiagnosed && patient.Phase is not (PatientPhase.GoingHome or PatientPhase.Dying);
+                var stop = Math.Max(1, hospital?.Policies.StopProcedure ?? HospitalPolicies.DefaultStopProcedure);
+                return new DynamicInfoLines(
+                    [PatientAction(simulation, patient, S), Contagious(simulation, humanoid, patient, S), undiagnosed ? S(15, "Diagnosis progress") : Diagnosis(patient, texts, S)],
+                    undiagnosed ? Math.Min(1m, (decimal)patient.DiagnosisProgress / stop) : null);
+            case VipBehaviour:
+                return new DynamicInfoLines([S(21, "VIP")]);
+            case InspectorBehaviour:
+                return new DynamicInfoLines([S(22, "Health Inspector")]);
+        }
+
+        if (humanoid.Profile is not { } profile)
+        {
+            return null;
+        }
+
+        var name = texts?.Staff.FullName(profile) ?? string.Create(CultureInfo.InvariantCulture, $"{profile.Class} {humanoid.Id}");
+        var receptionist = profile.Class == Sim.Staff.StaffClass.Receptionist;
+        return new DynamicInfoLines(
+            [name, StaffLabels.Doing(simulation, humanoid), receptionist ? string.Empty : S(29, "Tiredness")],
+            receptionist ? null : Math.Clamp(humanoid.Fatigue, 0m, 1m),
+            receptionist || hospital is null ? null : [hospital.Policies.GoToStaffRoom / (decimal)HospitalPolicies.MaxFraction]);
     }
 
     /// <summary>A machine's dynamic info: its name, strength and times used (<c>Machine:updateDynamicInfo</c>).</summary>

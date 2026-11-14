@@ -4309,7 +4309,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _closeUpsWanted.Clear();
     }
     /// <summary>GameUI: the bottom panel's dynamic info of what is under the cursor, or null.</summary>
-    private string? HoverInfo()
+    private string? HoverInfo() => HoverPanelInfo()?.ToString() is { Length: > 0 } text ? text : null;
+
+    /// <summary>The dynamic info of what is under the cursor as the original's panel draws it: lines and a bar.</summary>
+    private DynamicInfoLines? HoverPanelInfo()
     {
         if (_cursorOverWindow || Simulation is not { } simulation || _hoveredTile is not { } point)
         {
@@ -4317,12 +4320,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var tile = new TilePosition(point.X, point.Y);
-        if (simulation.FindEntity(_hoveredHumanoid) is Humanoid hovered && DynamicInfo.Of(simulation, hovered, _texts) is { Length: > 0 } info)
+        if (simulation.FindEntity(_hoveredHumanoid) is Humanoid hovered && DynamicInfo.Panel(simulation, hovered, _texts) is { } info)
         {
             return info;
         }
 
-        return MachineUnderCursor(simulation, tile) is { } machine ? DynamicInfo.OfMachine(simulation, machine, _texts) : null;
+        return MachineUnderCursor(simulation, tile) is { } machine
+            ? new DynamicInfoLines(DynamicInfo.OfMachine(simulation, machine, _texts).Split("   ", StringSplitOptions.RemoveEmptyEntries))
+            : null;
     }
 
     /// <summary>
@@ -4429,7 +4434,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             hospital.Balance,
             hospital.Reputation,
             string.Create(CultureInfo.InvariantCulture, $"{simulation.Date.Day} {month}"),
-            HoverInfo(),
+            HoverPanelInfo(),
             _session.IsPaused ? _texts?.String(3, 22) ?? "Pause" : null,
             PanelFaxes(),
             PanelDialogOpen,
