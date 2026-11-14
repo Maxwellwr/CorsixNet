@@ -3,6 +3,7 @@ using CorsixNet.Client.Ui;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
 
 namespace CorsixNet.Client.Tests;
@@ -85,6 +86,32 @@ public class BuildRoomToolTests
         Assert.Equal(GameCursor.ResizeRoom, tool.Cursor(new TilePosition(9, 9)));
     }
 
+    [Fact]
+    public void AnotherToiletOrSinkBoughtFromTheListStaysOnTheCursor()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var definition = simulation.Content.FindRoom("toilets")!;
+        host.Submit(new BuildRoomCommand(new RoomPlan("toilets", new TileRect(4, 4, 4, 4), new DoorPlacement(new(5, 4), EdgeOrientation.North))));
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+        foreach (var needed in new[] { "loo", "sink" })
+        {
+            var spot = Enumerable.Range(4, 4).SelectMany(x => Enumerable.Range(4, 4).Select(y => new TilePosition(x, y)))
+                .First(tile => ObjectPlacer.Check(simulation, needed, tile, Direction.North, 0) == ObjectPlacementProblem.None);
+            host.Submit(new PlaceObjectCommand(needed, spot, Direction.North));
+        }
+
+        Assert.Empty(RoomBuilder.MissingObjects(simulation, room));
+
+        var tool = new BuildRoomTool();
+        tool.StartEditing(definition, room.Id, simulation.Tick);
+        foreach (var extra in new[] { "loo", "sink" })
+        {
+            tool.PlaceExtra(simulation.Content.FindObject(extra)!);
+            tool.Update(simulation, 0, Mouse(new(6, 5)));
+            Assert.Equal(extra, tool.Ghost?.ObjectType);
+        }
+    }
     private static BuildInput Mouse(TilePosition at, bool down = false, bool pressed = false, bool released = false) =>
         new(at, 128, 128, down, pressed, released, false, false, false, false);
 
