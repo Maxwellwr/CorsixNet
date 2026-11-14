@@ -103,7 +103,7 @@ internal sealed class CustomCampaignWindow(IReadOnlyList<CustomCampaignEntry> ca
     {
         if (campaigns.Count == 0)
         {
-            yield return WindowCell.Line(UiText.Get("corsixnet.custom_campaign.none", "No campaigns found: put .campaign.yaml or .campaign files in the campaigns folder (campaigns in config.yaml)."), dim: true);
+            yield return WindowCell.Line(UiText.Get("corsixnet.custom_campaign.none", "No campaigns found: put .campaign.yaml files in the campaigns folder (campaigns in config.yaml)."), dim: true);
         }
 
         foreach (var campaign in campaigns)

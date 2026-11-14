@@ -27,6 +27,7 @@ public partial class UiTextTests
     [InlineData("Russian")]
     [InlineData("German")]
     [InlineData("French")]
+    [InlineData("Spanish")]
     public void ATranslationHasEveryOwnStringTheClientUses(string language)
     {
         var strings = CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")).Load(language, _ => null);

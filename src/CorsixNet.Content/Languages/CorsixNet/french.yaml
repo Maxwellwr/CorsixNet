@@ -4,6 +4,11 @@
 # Only characters of code page 437, as the game's bitmap font draws French.
 language: [Français, French, fr, fre, fra]
 strings:
+  menu:
+    file: '  FICHIER  '
+    options: '  OPTIONS  '
+    charts: '  TABLEAUX  '
+    debug: '  DEBOGAGE  '
   accessibility_window:
     enable_screen_shake: Tremblement de l'écran
     scroll_speed: Vitesse de défilement
@@ -93,7 +98,7 @@ strings:
     custom_game:
       none: 'Aucun niveau trouvé : placez les fichiers .level et .map dans le dossier des niveaux (levels dans config.yaml).'
     custom_campaign:
-      none: 'Aucune campagne trouvée : placez les fichiers .campaign dans le dossier des campagnes (campaigns dans config.yaml).'
+      none: 'Aucune campagne trouvée : placez les fichiers .campaign.yaml dans le dossier des campagnes (campaigns dans config.yaml).'
     information:
       caption: Information
     confirm:
