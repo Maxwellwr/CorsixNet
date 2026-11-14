@@ -182,7 +182,7 @@ fonts, faces) and the details listed.
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
   edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
   editing, `ReturnToBlueprintCommand`).
-- The hire, staff, patient, queue and machine windows are drawn as the original's (the queue's right-click popup with reception
+- The build room, hire, staff, patient, queue and machine windows are drawn as the original's (the queue's right-click popup with reception
   and send home is a click to the patient's window for now; `HireScreen` Req11V, `StaffScreen` Req01V,
   `PatientScreen` Req02V, the view circles' close-up of the map, `IWindowHost.CloseUp`); queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
 - Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager, the casebook, the policy, research, progress report, graphs, town map and annual report screens are text windows (the town map's city name and entrance doors are missing) (the report's happiness cursor icons, competitors' own names and its one-warning-at-a-time choice are missing) (research's looping Research.wav is missing) (the policy's wage requests switch stays in its table only); the hall of fame/shame page is a TODO in CorsixTH too.

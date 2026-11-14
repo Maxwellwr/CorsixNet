@@ -152,6 +152,11 @@ internal interface IWindowHost
     {
     }
 
+    /// <summary>Draws an animation of the game's (such as a room's preview) at a point, playing at the game's 18 frames a second.</summary>
+    void DrawAnimation(SpriteBatch batch, int animation, Point at)
+    {
+    }
+
     /// <summary>The map tile under a point of the screen, or null off the map.</summary>
     TilePosition? TileAtScreen(Point screen) => null;
 }

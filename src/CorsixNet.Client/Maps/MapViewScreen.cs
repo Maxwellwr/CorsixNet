@@ -1829,7 +1829,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
         else if (HotkeyInput.Pressed(_hotkeys["ingame_panel_buildRoom"], keys, pressed) && !_buildTool.IsActive && !_furnishTool.IsActive)
         {
-            _roomList = true;
+            ToggleRoomList();
             return;
         }
 
@@ -3329,7 +3329,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             HiringValid = hiringValid == true,
             Receptionists = staff.Count(h => h.Profile!.Class == StaffClass.Receptionist),
             Doctors = staff.Count(h => h.Profile!.Class == StaffClass.Doctor),
-            RoomListOpen = _roomList,
+            RoomListOpen = _roomList || _windows.Windows.Any(w => w is BuildRoomWindow),
             BuildStage = build.Stage,
             BuildRoomType = build.RoomType,
             Blueprint = build.Blueprint,
@@ -3641,7 +3641,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         switch (action)
         {
             case "rooms":
-                _roomList = !_roomList;
+                ToggleRoomList();
                 break;
             case "corridor":
                 _windows.Open(new FurnishCorridorWindow(definition => _furnishTool.Start(definition)));
@@ -4032,6 +4032,28 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>
+    /// The build room window (B, the panel's build button): the original's look where its graphics are there, else our
+    /// list of every room.
+    /// </summary>
+    private void ToggleRoomList()
+    {
+        var window = new BuildRoomWindow(room =>
+        {
+            if (Simulation is { } simulation)
+            {
+                TryStartRoom(simulation, room);
+            }
+        });
+        if (window.IsFullscreen(this))
+        {
+            _windows.Toggle(window);
+        }
+        else
+        {
+            _roomList = !_roomList;
+        }
+    }
+    /// <summary>
     /// The list of rooms (B), a stand-in for CorsixTH's build room window (<c>dialogs/build_room.lua</c>): every room type
     /// with what it costs in all, or why it cannot be built; the one under the cursor is highlighted.
     /// </summary>
@@ -4096,6 +4118,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The size of a close-up view in world pixels (UIStaff's 75 by 75 of the map).</summary>
     public const int CloseUpSize = 75;
+
+    void IWindowHost.DrawAnimation(SpriteBatch batch, int animation, Point at)
+    {
+        var set = _animations.Animations;
+        var first = set.FirstFrame(animation);
+        var length = Math.Max(1, set.Length(first));
+        _animations.DrawFrame(batch, set.Advance(first, (int)(Environment.TickCount64 * 18 / 1000 % length)), at.X, at.Y, NoAdviserLayers, flipHorizontally: false);
+    }
 
     void IWindowHost.DrawIdle(SpriteBatch batch, Humanoid humanoid, Point at) => _humanoids.DrawIdle(batch, humanoid, at.X, at.Y);
 
@@ -4249,7 +4279,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         "charts" => _windows.Windows.Any(w => w is GraphWindow),
         "policy" => _windows.Windows.Any(w => w is PolicyWindow),
         "fax" => _windows.Windows.Any(w => w is FaxWindow),
-        "rooms" => _roomList || _buildTool.IsActive,
+        "rooms" => _roomList || _buildTool.IsActive || _windows.Windows.Any(w => w is BuildRoomWindow),
         "corridor" => _furnishTool.IsActive || _windows.Windows.Any(w => w is FurnishCorridorWindow),
         "edit" => _pickingRoomToEdit,
         _ => false,
