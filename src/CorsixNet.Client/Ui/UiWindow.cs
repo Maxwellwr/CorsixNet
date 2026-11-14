@@ -2,6 +2,7 @@ using CorsixNet.Client.Rendering;
 using CorsixNet.Content;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Staff;
 using Microsoft.Xna.Framework;
@@ -145,6 +146,14 @@ internal interface IWindowHost
     /// the next frame has drawn it; asking keeps it drawn.
     /// </summary>
     Texture2D? CloseUp(int entityId) => null;
+
+    /// <summary>Draws a humanoid standing in the first frame of their idle animation facing west, as UIQueue:drawPatient.</summary>
+    void DrawIdle(SpriteBatch batch, Humanoid humanoid, Point at)
+    {
+    }
+
+    /// <summary>The map tile under a point of the screen, or null off the map.</summary>
+    TilePosition? TileAtScreen(Point screen) => null;
 }
 
 /// <summary>
@@ -209,6 +218,9 @@ internal abstract class UiWindow
 
     /// <summary>Where a window drawn by itself opens from the top left of the screen's free area; null centres it.</summary>
     public virtual Point? FullscreenPosition => null;
+
+    /// <summary>Whether the window takes the mouse wherever it is (dragging something out of it), not only over it.</summary>
+    public virtual bool CapturesMouse => false;
 
     /// <summary>Draws the fullscreen dialog with its top left corner at <paramref name="origin"/>.</summary>
     public virtual void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)

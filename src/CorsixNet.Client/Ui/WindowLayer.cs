@@ -177,6 +177,13 @@ internal sealed class WindowLayer
             return true;
         }
 
+        // A window dragging something out of itself takes the mouse anywhere until it lets go.
+        if (_open.LastOrDefault(open => open.Layout is { Fullscreen: true } && open.Window.CapturesMouse) is { Layout: { } capturing } captor)
+        {
+            captor.Window.FullscreenMouse(host, point - capturing.Bounds.Location, mouse, previous);
+            return true;
+        }
+
         var hit = _open.LastOrDefault(open => open.Layout!.Bounds.Contains(point));
         if (hit is null)
         {
