@@ -4097,6 +4097,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The size of a close-up view in world pixels (UIStaff's 75 by 75 of the map).</summary>
     public const int CloseUpSize = 75;
 
+    void IWindowHost.DrawIdle(SpriteBatch batch, Humanoid humanoid, Point at) => _humanoids.DrawIdle(batch, humanoid, at.X, at.Y);
+
+    TilePosition? IWindowHost.TileAtScreen(Point screen)
+    {
+        var tile = Camera.WorldToTile(_camera.ScreenToWorld(new Point(screen.X, screen.Y - StatusHeight), ViewSize));
+        return Map is { } map && map.Contains(tile.X, tile.Y) ? new TilePosition(tile.X, tile.Y) : null;
+    }
+
     Texture2D? IWindowHost.CloseUp(int entityId)
     {
         _closeUpsWanted.Add(entityId);

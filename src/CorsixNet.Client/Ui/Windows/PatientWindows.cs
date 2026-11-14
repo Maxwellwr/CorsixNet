@@ -138,6 +138,22 @@ internal sealed class QueueWindow(int ownerId) : UiWindow
 
     public override string Title => "Queue";
 
+    private QueueScreen? _screen;
+
+    private QueueScreen Screen => _screen ??= new QueueScreen(OwnerId);
+
+    /// <summary>The original's look (<see cref="QueueScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => QueueScreen.IsAvailable(host);
+
+    public override Point FullscreenSize => QueueScreen.Size;
+
+    public override bool CapturesMouse => _screen is { IsDragging: true };
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => Screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => Screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => QueueScreen.Tooltip(host, local);
     public override bool IsSameAs(UiWindow other) => other is QueueWindow window && window.OwnerId == OwnerId;
 
     public override bool IsDone(IWindowHost host) => QueueOf(host.Simulation, OwnerId) is null;
