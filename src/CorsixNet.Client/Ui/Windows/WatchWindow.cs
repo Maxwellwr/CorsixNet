@@ -4,6 +4,8 @@ using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Disasters;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -19,6 +21,20 @@ internal sealed class WatchWindow : UiWindow
     /// <summary>At the left, a little above the bottom, as CorsixTH's <c>UIWatch</c>.</summary>
     public override Vector2? DefaultPosition => new(20, -100);
 
+    private readonly WatchScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="WatchScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => WatchScreen.IsAvailable(host);
+
+    public override Point FullscreenSize => WatchScreen.Size;
+
+    public override Vector2? FullscreenPosition => new(20, -100);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => WatchScreen.Tooltip(host, local);
     /// <summary>Whether a countdown runs for the player; the opening watch waits while the tutorial holds it.</summary>
     public static bool IsRunning(Simulation simulation, int player)
     {
