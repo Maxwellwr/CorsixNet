@@ -932,6 +932,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         var tile = new TilePosition(hovered.X, hovered.Y);
+        if (_vaccinationMode && CoverUpRunning() is not null
+            && !(simulation.FindEntity(_hoveredHumanoid) is Humanoid { Behaviour: PatientBehaviour { IsInfected: true } }))
+        {
+            // In vaccination mode the epidemic's hover cursor shows over everything else.
+            return GameCursor.EpidemicHover;
+        }
+
         if (simulation.FindEntity(_hoveredHumanoid) is Humanoid humanoid)
         {
             if (humanoid.Behaviour is PatientBehaviour { IsInfected: true } && humanoid.HospitalPlayer < simulation.Hospitals.Count
@@ -1990,6 +1997,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
+        if (_vaccinationMode && CoverUpRunning() is null)
+        {
+            // turnOffVaccinationMode: the cover-up is over.
+            _vaccinationMode = false;
+        }
+
+        if (_vaccinationMode)
+        {
+            // GameUI:onMouseUp in vaccination mode: a left click only picks infected patients, a right click ends the mode.
+            if (clicked && _hoveredTile is { } pick && HumanoidUnderCursor(simulation, new TilePosition(pick.X, pick.Y)) is { } patientHere && IsVaccinationTarget(patientHere))
+            {
+                _session.Submit(new VaccinateCommand(patientHere.Id));
+                _sounds.Play("vaccin.wav");
+            }
+
+            if (mouse.RightButton == ButtonState.Pressed && _previousMouse.RightButton == ButtonState.Released)
+            {
+                _vaccinationMode = false;
+            }
+
+            return;
+        }
+
         if (clicked && _hoveredTile is { } aim && RatNear(simulation, _session.Player, aim) is { } shot)
         {
             // Rat:onClick: a click on one of the player's rats (within a tile of the cursor) shoots it.
@@ -2012,7 +2042,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 }
                 else if (here.Behaviour is PatientBehaviour && here.HospitalPlayer == _session.Player)
                 {
-                    _windows.Open(new PatientWindow(here.Id));
+                    // Patient:onClick: an infected patient during the cover-up is picked for vaccination (vaccin.wav).
+                    if (IsVaccinationTarget(here))
+                    {
+                        _session.Submit(new VaccinateCommand(here.Id));
+                        _sounds.Play("vaccin.wav");
+                    }
+                    else
+                    {
+                        _windows.Open(new PatientWindow(here.Id));
+                    }
                 }
             }
             else if (MachineUnderCursor(simulation, tile) is { } machine && simulation.FindEntity(machine.RoomId) is Room machineRoom && RoomBuilder.IsOwnedBy(simulation.Map, machineRoom, _session.Player))
@@ -3101,6 +3140,21 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     void IWindowHost.Notice(string text) => ShowNotice(text);
 
     void IWindowHost.PlaySound(string name) => _sounds.Play(name);
+
+    private bool _vaccinationMode;
+
+    bool IWindowHost.IsVaccinationMode => _vaccinationMode && CoverUpRunning() is not null;
+
+    void IWindowHost.ToggleVaccinationMode() => _vaccinationMode = !_vaccinationMode && CoverUpRunning() is not null;
+
+    /// <summary>The player's epidemic while its cover-up's watch runs, when patients can be picked for vaccination.</summary>
+    private Epidemic? CoverUpRunning() =>
+        Simulation is { } simulation && _session is not null && _session.Player < simulation.Hospitals.Count
+        && simulation.Hospitals[_session.Player].Epidemics.Current is { IsCoverUp: true, IsWatchRunning: true } epidemic ? epidemic : null;
+
+    /// <summary>isValidVaccinationTarget: an infected patient not yet vaccinated or picked, while the cover-up runs.</summary>
+    private bool IsVaccinationTarget(Humanoid humanoid) =>
+        CoverUpRunning() is not null && humanoid.Behaviour is PatientBehaviour { IsInfected: true, IsVaccinated: false, IsMarkedForVaccination: false };
 
     void IWindowHost.PickUpStaff(int staffId)
     {

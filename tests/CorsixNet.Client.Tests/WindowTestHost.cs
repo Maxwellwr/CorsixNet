@@ -47,6 +47,10 @@ internal sealed class WindowTestHost : IWindowHost
 
     public void PlaySound(string name) => Sounds.Add(name);
 
+    public bool IsVaccinationMode { get; set; }
+
+    public void ToggleVaccinationMode() => IsVaccinationMode = !IsVaccinationMode;
+
     public int? PickedUp { get; private set; }
 
     public TilePosition? Centered { get; private set; }

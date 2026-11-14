@@ -117,8 +117,7 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   the helicopter's sound is its frames' (`FrameSounds`). The planned and random emergencies, the fax offer, helicopter, watch, bonus,
   reputation and the result on the fax window (`HospitalEmergencies.Report`, `makeEmergencyEndFax`) are done
   (`Emergencies`).
-- Epidemics: clicking patients to vaccinate them (J picks every infected patient for now) and the vaccination
-  cursor, vaccinating patients on benches, the infected mood icons, the adviser's warnings, the
+- Epidemics: vaccinating patients on benches, the infected mood icons, the adviser's warnings, the
   announcements and the inspector's, and showing the infected by cheat (`epidemic.lua`,
   `entities/humanoids/inspector.lua`). Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
   the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
@@ -185,7 +184,7 @@ fonts, faces) and the details listed.
   edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
   editing, `ReturnToBlueprintCommand`).
 - The fax (`FaxScreen` over Fax01V: the first fax waiting with its choices, the keypad; the emergency's, epidemic's and
-  patients' texts are still our English stand-ins), the watch (`WatchScreen`, Watch01V; the epidemic's vaccination button does nothing yet), the build room, room edit (with its buy window), furnish corridor, hire, staff, patient, queue and machine windows are drawn as the original's (the queue's right-click popup with reception
+  patients' texts are still our English stand-ins), the watch (`WatchScreen`, Watch01V; its epidemic button toggles vaccination mode), the build room, room edit (with its buy window), furnish corridor, hire, staff, patient, queue and machine windows are drawn as the original's (the queue's right-click popup with reception
   and send home is a click to the patient's window for now; `HireScreen` Req11V, `StaffScreen` Req01V,
   `PatientScreen` Req02V, the view circles' close-up of the map, `IWindowHost.CloseUp`); queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
 - Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager, the casebook, the policy, research, progress report, graphs, town map and annual report screens are text windows (the town map's city name and entrance doors are missing) (the report's happiness cursor icons, competitors' own names and its one-warning-at-a-time choice are missing) (research's looping Research.wav is missing) (the policy's wage requests switch stays in its table only); the hall of fame/shame page is a TODO in CorsixTH too.
