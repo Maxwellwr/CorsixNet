@@ -133,6 +133,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private readonly MapRenderer _renderer;
     private readonly TextRenderer _text;
     private UnicodeFonts _unicodeFonts;
+    private readonly Dictionary<string, Task<IReadOnlyList<(string Name, string Path)>>> _fontChoices = new(StringComparer.OrdinalIgnoreCase);
     private readonly Texture2D _diamond;
     private readonly Texture2D _cellOutline;
     private readonly Texture2D _pixel;
@@ -2703,10 +2704,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _panelSprites.Draw(batch, 37, left - 16, origin.Y - 25, Color.White);
         _panelSprites.Draw(batch, 39, origin.X + 155, origin.Y - 40, Color.White);
         var y = origin.Y - 20;
-        var tint = _blackText.IsTrueType ? Color.Black : (Color?)null;
         foreach (var line in WrapToWidth(speech.TrimEnd('/'), width + 60, text => _blackText.Measure(text).Width))
         {
-            _blackText.Draw(batch, line, new Vector2(left - 8, y), tint: tint);
+            _blackText.Draw(batch, line, new Vector2(left - 8, y), tint: _blackText.IsTrueTypeFor(line) ? Color.Black : null);
             y += _blackText.LineHeight;
         }
     }
@@ -3273,7 +3273,28 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The options, with the hotkey assignment dialog (<c>UIOptions:buttonHotkey</c>), which goes back to them.</summary>
     private OptionsWindow NewOptionsWindow() =>
-        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))));
+        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices);
+
+    /// <summary>
+    /// The system's fonts with every character of the language's translation, for the options window's font choice:
+    /// null for a language the game's font draws, empty until they have been looked for (in the background, once).
+    /// </summary>
+    private IReadOnlyList<(string Name, string Path)>? FontChoices(string language)
+    {
+        if (TranslationFiles.Value.Find(language) is not { UsesGameFont: false } translation)
+        {
+            return null;
+        }
+
+        if (!_fontChoices.TryGetValue(translation.EnglishName, out var choices))
+        {
+            var fonts = _unicodeFonts;
+            choices = Task.Run(() => fonts.Choices(translation.NativeName + string.Concat(TranslationFiles.Value.Load(language, _ => null).Strings.Values)));
+            _fontChoices[translation.EnglishName] = choices;
+        }
+
+        return choices.IsCompletedSuccessfully ? choices.Result : [];
+    }
 
     /// <summary><c>UIHotkeyAssign:buttonAccept</c>: the keys are used at once and saved to <c>hotkeys.txt</c>.</summary>
     private void SaveHotkeys(Hotkeys hotkeys)
@@ -4500,7 +4521,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>Whether the language can be shown: with the game's font, or with a Unicode font that has its name's characters.</summary>
-    private bool CanDraw(CorsixLanguage language) => language.UsesGameFont || _unicodeFonts.CanDraw(language.NativeName);
+    private bool CanDraw(CorsixLanguage language) => language.UsesGameFont || _unicodeFonts.CanDraw(language.NativeName, _config.LanguageFont(language.Names));
 
     /// <summary>
     /// Draws text in the settings' language with the game's font, or with the Unicode font found for the language when
@@ -4510,16 +4531,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void ApplyLanguageFont()
     {
         TrueTypeFace? face = null;
+        var minimumSize = 8;
         if (TranslationFiles.Value.Find(_config.Language) is { UsesGameFont: false } translation)
         {
             var sample = translation.NativeName + string.Concat(_texts?.Language?.Strings.Values ?? []);
-            face = _unicodeFonts.Find(sample)?.Face;
+            face = _unicodeFonts.Find(sample, _config.LanguageFont(translation.Names))?.Face;
+
+            // Ideograms fill the em square and need more pixels than letters to be read; 14 is CorsixTH's smallest.
+            minimumSize = translation.NativeName.Any(character => character >= '⺀') ? 14 : 8;
         }
 
-        _text.UseTrueType(face);
-        _blackText?.UseTrueType(face);
-        _bottomPanel?.UseTrueType(face);
-        _graphics.UseTrueType(face);
+        _text.UseTrueType(face, minimumSize);
+        _blackText?.UseTrueType(face, minimumSize);
+        _bottomPanel?.UseTrueType(face, minimumSize);
+        _graphics.UseTrueType(face, minimumSize);
         _windows.Origin = new Point(8, StatusHeight + 8);
     }
 
