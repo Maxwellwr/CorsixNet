@@ -81,6 +81,17 @@ internal sealed class StaffManagementWindow : UiWindow
 
     public override string? Hotkey => "Shift+F3";
 
+    private readonly StaffManagementScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="StaffManagementScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => StaffManagementScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
+
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var simulation = host.Simulation;
