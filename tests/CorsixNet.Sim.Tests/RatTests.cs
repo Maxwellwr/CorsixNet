@@ -3,6 +3,7 @@ using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Rooms;
 
 namespace CorsixNet.Sim.Tests;
 
@@ -104,6 +105,27 @@ public class RatTests
         var dead = Assert.Single(simulation.Entities.OfType<Litter>());
         Assert.Equal(LitterType.DeadRat, dead.Type);
         Assert.Equal(2, dead.Tile.Y);
+    }
+
+    [Fact]
+    public void TheHolesInARoomsWallsCloseWhenItIsTakenOutOfUse()
+    {
+        var simulation = NewSimulation();
+        var hospital = simulation.Hospitals[0];
+        var room = new Room(99, "gp", new TileRect(5, 5, 3, 3), [.. Enumerable.Repeat(new OriginalTile(1, TileFlags.Passable), 9)]);
+
+        // Holes in the corridor tiles round the room, in the walls towards it, and two that are not.
+        hospital.AddRathole(new Rathole(new TilePosition(6, 4), Direction.South, 1));
+        hospital.AddRathole(new Rathole(new TilePosition(5, 8), Direction.North, 1));
+        hospital.AddRathole(new Rathole(new TilePosition(4, 7), Direction.East, 1));
+        hospital.AddRathole(new Rathole(new TilePosition(8, 5), Direction.West, 1));
+        hospital.AddRathole(new Rathole(new TilePosition(6, 4), Direction.North, 1));
+        hospital.AddRathole(new Rathole(new TilePosition(3, 2), Direction.North, 1));
+
+        // Hospital:removeRatholesAroundRoom.
+        Rats.RemoveRatholesAroundRoom(simulation, room);
+
+        Assert.Equal([new Rathole(new TilePosition(6, 4), Direction.North, 1), new Rathole(new TilePosition(3, 2), Direction.North, 1)], hospital.Ratholes);
     }
 
     private static void StepDay(Simulation simulation)

@@ -103,6 +103,24 @@ public static class Rats
     }
 
     /// <summary>
+    /// <c>Hospital:removeRatholesAroundRoom</c>, from <c>Room:deactivate</c>: the holes in the room's walls close, those of
+    /// the corridor tiles along its four sides in the wall towards the room.
+    /// </summary>
+    internal static void RemoveRatholesAroundRoom(Simulation simulation, Room room)
+    {
+        var area = room.Area;
+        bool Facing(Rathole hole) =>
+            (hole.Wall == Direction.South && hole.Tile.Y == area.Y - 1 && hole.Tile.X >= area.X && hole.Tile.X < area.Right)
+            || (hole.Wall == Direction.North && hole.Tile.Y == area.Bottom && hole.Tile.X >= area.X && hole.Tile.X < area.Right)
+            || (hole.Wall == Direction.East && hole.Tile.X == area.X - 1 && hole.Tile.Y >= area.Y && hole.Tile.Y < area.Bottom)
+            || (hole.Wall == Direction.West && hole.Tile.X == area.Right && hole.Tile.Y >= area.Y && hole.Tile.Y < area.Bottom);
+        foreach (var hospital in simulation.Hospitals)
+        {
+            hospital.RemoveRatholes(Facing);
+        }
+    }
+
+    /// <summary>
     /// <c>Hospital:getWallsAround</c>: the walls of a tile, west, north, east and south, the east and south ones being
     /// the neighbours' west and north walls.
     /// </summary>
