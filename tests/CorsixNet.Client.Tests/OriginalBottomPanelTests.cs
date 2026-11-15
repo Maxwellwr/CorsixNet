@@ -36,9 +36,42 @@ public sealed class OriginalBottomPanelTests
     public void ThePanelSitsAtTheBottomMiddleAndScriptsFindItsButtons()
     {
         var viewport = new Viewport(0, 0, 1280, 800);
-        Assert.Equal(new Rectangle(320, 752, 640, 48), OriginalBottomPanel.Bounds(viewport));
-        Assert.Equal(new Point(320 + 322 + 18, 752 + 24), OriginalBottomPanel.FindButton(viewport, "Hire"));
+        Assert.Equal(new Rectangle(302, 752, 676, 48), OriginalBottomPanel.Bounds(viewport));
+        Assert.Equal(new Point(302 + 322 + 18, 752 + 24), OriginalBottomPanel.FindButton(viewport, "Hire"));
         Assert.Null(OriginalBottomPanel.FindButton(viewport, "Nothing"));
+    }
+
+    [Fact]
+    public void TheMachineMenuButtonWidensThePanelOnWideScreensWhenSwitchedOn()
+    {
+        var viewport = new Viewport(0, 0, 1280, 800);
+        Assert.Equal(new Point(302 + 407 + 20, 752 + 24), OriginalBottomPanel.FindButton(viewport, "Machines"));
+        Assert.Equal(new Point(302 + 407 + 38 + 18, 752 + 24), OriginalBottomPanel.FindButton(viewport, "Town"));
+        Assert.Equal(new Point(302 + 364 + 23, 752 + 24), OriginalBottomPanel.FindButton(viewport, "Staff"));
+
+        var narrow = new Viewport(0, 0, 676, 480);
+        Assert.Equal(new Rectangle(18, 432, 640, 48), OriginalBottomPanel.Bounds(narrow));
+        Assert.Null(OriginalBottomPanel.FindButton(narrow, "Machines"));
+
+        OriginalBottomPanel.MachineMenuButton = false;
+        try
+        {
+            Assert.Equal(new Rectangle(320, 752, 640, 48), OriginalBottomPanel.Bounds(viewport));
+            Assert.Equal(new Point(320 + 407 + 18, 752 + 24), OriginalBottomPanel.FindButton(viewport, "Town"));
+        }
+        finally
+        {
+            OriginalBottomPanel.MachineMenuButton = true;
+        }
+    }
+
+    [Fact]
+    public void CorsixThsOwnSpritesHaveTheMachineMenuButton()
+    {
+        var sheet = AuxSprites.Load();
+        Assert.NotNull(sheet);
+        Assert.Equal((38, 48), (sheet[22].Width, sheet[22].Height));
+        Assert.Equal((38, 48), (sheet[23].Width, sheet[23].Height));
     }
 
     [Fact]

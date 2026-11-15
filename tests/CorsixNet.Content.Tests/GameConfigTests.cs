@@ -40,6 +40,7 @@ public sealed class GameConfigTests : IDisposable
             free_build_mode: true
             enable_avg_contents: true
             enable_insurance_blue_banknote: false
+            machine_menu_button: false
             """);
 
         AssertReadSettings(config);
@@ -59,6 +60,7 @@ public sealed class GameConfigTests : IDisposable
         Assert.True(config.FreeBuildMode);
         Assert.True(config.EnableAverageContents);
         Assert.False(config.EnableInsuranceBlueBanknote);
+        Assert.False(config.MachineMenuButton);
         Assert.False(config.PlaySounds);
         Assert.Equal(0.25m, config.SoundVolume);
         Assert.Equal(new(3, 6.5, 120, 0.5, true), config.ScrollSettings());

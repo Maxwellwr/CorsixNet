@@ -16,6 +16,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Assets/aux_ui.tab" LogicalName="CorsixNet.Client.Assets.aux_ui.tab" />
+    <EmbeddedResource Include="Assets/aux_ui.dat" LogicalName="CorsixNet.Client.Assets.aux_ui.dat" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="CorsixNet.Client.Tests" />
     <ProjectReference Include="../CorsixNet.Content/CorsixNet.Content.csproj" />
     <ProjectReference Include="../CorsixNet.Formats/CorsixNet.Formats.csproj" />

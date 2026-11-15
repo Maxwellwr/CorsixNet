@@ -123,6 +123,9 @@ public sealed record GameConfig
     /// </summary>
     public bool EnableInsuranceBlueBanknote { get; init; } = true;
 
+    /// <summary>Whether the bottom panel has CorsixTH's machine menu button (<c>machine_menu_button</c>, on by default).</summary>
+    public bool MachineMenuButton { get; init; } = true;
+
     /// <summary>Whether sound effects are played (<c>play_sounds</c>).</summary>
     public bool PlaySounds { get; init; } = true;
 
@@ -241,6 +244,7 @@ public sealed record GameConfig
             RemoveDestroyedRooms = Bool("remove_destroyed_rooms", defaults.RemoveDestroyedRooms),
             EnableAverageContents = Bool("enable_avg_contents", defaults.EnableAverageContents),
             EnableInsuranceBlueBanknote = Bool("enable_insurance_blue_banknote", defaults.EnableInsuranceBlueBanknote),
+            MachineMenuButton = Bool("machine_menu_button", defaults.MachineMenuButton),
             PlaySounds = Bool("play_sounds", defaults.PlaySounds),
             SoundVolume = Number("sound_volume", defaults.SoundVolume),
             PlayAnnouncements = Bool("play_announcements", defaults.PlayAnnouncements),
@@ -384,6 +388,15 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"enable_insurance_blue_banknote: {Yaml(EnableInsuranceBlueBanknote)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # By default machine menu is shown in a bottom panel. If you would like the
+            # game to hide it change this option to false.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"machine_menu_button: {Yaml(MachineMenuButton)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------
