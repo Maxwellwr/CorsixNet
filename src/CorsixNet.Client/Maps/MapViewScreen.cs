@@ -2339,9 +2339,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var roomId = simulation.Map[tile.X, tile.Y].RoomId;
         if (roomId == 0)
         {
-            // Over a door from the corridor: its room.
-            roomId = simulation.Entities.OfType<RoomDoor>()
-                .FirstOrDefault(door => door.Tile == tile || (door.Edge == EdgeOrientation.North ? door.Tile with { Y = door.Tile.Y - 1 } : door.Tile with { X = door.Tile.X - 1 }) == tile)?.RoomId ?? 0;
+            // Over a door from the corridor: its room, picked by the door's sprite as GameUI's hitTestObjects does (the
+            // door drawn in front), else by the tiles on either side of it.
+            roomId = DoorRoomUnderCursor(simulation)?.Id
+                ?? simulation.Entities.OfType<RoomDoor>()
+                    .FirstOrDefault(door => door.Tile == tile || (door.Edge == EdgeOrientation.North ? door.Tile with { Y = door.Tile.Y - 1 } : door.Tile with { X = door.Tile.X - 1 }) == tile)?.RoomId ?? 0;
         }
 
         if (roomId != _hoveredRoom)
