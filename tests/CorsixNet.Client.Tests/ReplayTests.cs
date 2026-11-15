@@ -11,6 +11,58 @@ namespace CorsixNet.Client.Tests;
 public class ReplayTests
 {
     [Fact]
+    public void AReplayCanBeWoundBackAndForward()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var local = new LocalSession("TEST.L1", simulation);
+        local.Submit(new BorrowCommand(false));
+        for (var i = 0; i < 12_000; i++)
+        {
+            if (i == 4_000)
+            {
+                local.Submit(new HireStaffCommand(StaffClass.Doctor, 0, new TilePosition(6, 6)));
+            }
+
+            if (i == 10_500)
+            {
+                local.Submit(new HireStaffCommand(StaffClass.Nurse, 0, new TilePosition(7, 7)));
+            }
+
+            simulation.Step();
+        }
+
+        local.Recording.Finish(simulation);
+        var reference = new ReplaySession("reference", local.Recording, simulation.Content);
+        var hashes = new Dictionary<long, ulong>();
+        while (!reference.IsFinished)
+        {
+            reference.Step();
+            if (reference.Simulation.Tick is 3_000 or 11_000)
+            {
+                hashes[reference.Simulation.Tick] = reference.Simulation.ComputeStateHash();
+            }
+        }
+
+        var replay = new ReplaySession("replay", local.Recording, simulation.Content);
+        replay.Seek(11_000);
+        Assert.Equal(hashes[11_000], replay.Simulation.ComputeStateHash());
+
+        replay.Seek(3_000);
+        Assert.Equal(3_000, replay.Simulation.Tick);
+        Assert.Equal(hashes[3_000], replay.Simulation.ComputeStateHash());
+
+        // Forward again from the state kept at tick 10,000, then past the end, which stops there.
+        replay.Seek(11_000);
+        Assert.Equal(hashes[11_000], replay.Simulation.ComputeStateHash());
+        replay.Seek(-5);
+        Assert.Equal(0, replay.Simulation.Tick);
+        replay.Seek(long.MaxValue);
+        Assert.Equal(12_000, replay.Simulation.Tick);
+        Assert.True(replay.Matches);
+    }
+
+    [Fact]
     public void AReplayPlaysTheGameOutTheSameWay()
     {
         var host = new WindowTestHost();

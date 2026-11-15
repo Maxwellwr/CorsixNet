@@ -237,7 +237,7 @@ and state hashing; tests for save/load round trips.
 - Loading CorsixTH saves (likely never: CorsixTH persists the Lua heap) and original `SAVE*.SAV`.
 - Replays: local games are recorded (initial save plus command log) and can be saved and watched from the menu,
   checked against the recorded state hash; network games too, from the joining client's state and the server's
-  commands (`LockstepClient.Recording`). Not yet seeking or rewinding.
+  commands (`LockstepClient.Recording`), and wound back and forward while watching (`ReplaySession.Seek`, [ and ]).
 
 ## 9. Sound and music
 
