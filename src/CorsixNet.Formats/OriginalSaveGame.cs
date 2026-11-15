@@ -34,6 +34,9 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// <summary>Slot of the next entity on the same tile, or 0; the tile's <see cref="OriginalSaveTile.Entity"/> is the first.</summary>
     public int NextOnTile => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span);
 
+    /// <summary>Objects only: slot of the next object of the same type, or 0 (see <see cref="OriginalSaveGame.FirstObjectOfType"/>).</summary>
+    public int NextOfType => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[75..]);
+
     /// <summary>Position along x in 1/256 tile (8.8 fixed point).</summary>
     public int X => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[4..]);
 
@@ -344,6 +347,12 @@ public sealed class OriginalSaveGame
     /// <summary>Number of bank statement lines kept.</summary>
     public const int StatementCount = 50;
 
+    /// <summary>Offset of the object type lists: for each object type a 16-bit slot of its first object.</summary>
+    public const int ObjectListOffset = 0x616B8;
+
+    /// <summary>Number of object types with a list.</summary>
+    public const int ObjectTypes = 64;
+
     /// <summary>Offset of the day of the month (1-based); the month follows.</summary>
     public const int DateOffset = 399030;
 
@@ -394,6 +403,16 @@ public sealed class OriginalSaveGame
         ArgumentOutOfRangeException.ThrowIfNegative(parcel);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(parcel, MaxPlots);
         return Data.Span[PlotOffset + parcel];
+    }
+
+    /// <summary>
+    /// Slot of the first object of a type, or 0; the others follow through <see cref="OriginalSaveEntity.NextOfType"/>.
+    /// </summary>
+    public int FirstObjectOfType(int type)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(type);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(type, ObjectTypes);
+        return BinaryPrimitives.ReadUInt16LittleEndian(Data.Span[(ObjectListOffset + (2 * type))..]);
     }
 
     /// <summary>The 12 most recent values of a chart series, oldest first, from the first of its three copies.</summary>

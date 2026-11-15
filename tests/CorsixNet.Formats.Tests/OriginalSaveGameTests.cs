@@ -280,8 +280,26 @@ public class OriginalSaveGameTests
             Assert.NotEmpty(local.Name);
             Assert.Equal(local.Staff, local.Nurses + local.Doctors + local.Handymen + local.Receptionists);
 
+            var bySlotAll = save.Entities.ToDictionary(e => e.Slot);
+
             // The chart history is recorded month by month, so it never runs ahead of today's totals.
             Assert.True(save.Chart(OriginalSaveChart.Cures).Max() <= local.PeopleCured);
+
+            // Following an object type's list from its first object visits objects of that type.
+            var listed = 0;
+            var wrongType = 0;
+            for (var type = 1; type < OriginalSaveGame.ObjectTypes; type++)
+            {
+                var seen = new HashSet<int>();
+                for (var objectSlot = save.FirstObjectOfType(type); objectSlot != 0 && seen.Add(objectSlot) && bySlotAll.TryGetValue(objectSlot, out var item); objectSlot = item.NextOfType)
+                {
+                    listed++;
+                    wrongType += item.Type == type ? 0 : 1;
+                }
+            }
+
+            // A fresh level carries a few stale entries over, so only judge saves with real furniture.
+            Assert.True(listed < 20 || wrongType * 10 <= listed, $"{wrongType} of {listed} listed objects have another type");
 
             // Rooms lie on the map with their door on their edge and the outside tile next to it.
             foreach (var room in save.Rooms.Where(r => r.Width > 1))

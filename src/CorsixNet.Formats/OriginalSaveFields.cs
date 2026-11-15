@@ -41,6 +41,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.File, OriginalSaveGame.PlotOffset, OriginalSaveGame.MaxPlots, "plot owners", true),
         new(OriginalSaveArea.File, OriginalSaveGame.ChartOffset, 8 * 3 * 12 * 4, "chart history", true),
         new(OriginalSaveArea.File, OriginalSaveGame.StatementOffset, OriginalSaveGame.StatementCount * 8, "bank statement", true),
+        new(OriginalSaveArea.File, OriginalSaveGame.ObjectListOffset, OriginalSaveGame.ObjectTypes * 2, "first object of each type", true),
         new(OriginalSaveArea.File, OriginalSaveGame.DateOffset, 1, "day", true),
         new(OriginalSaveArea.File, OriginalSaveGame.DateOffset + 1, 1, "month", true),
 
@@ -66,6 +67,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Entity, 133, 1, "name start", true),
         new(OriginalSaveArea.Entity, 138, 2, "description", true),
         new(OriginalSaveArea.Entity, 158, 10, "patient health history", true),
+        new(OriginalSaveArea.Entity, 75, 2, "next object of the same type", true),
         new(OriginalSaveArea.Entity, 81, 1, "morale / happiness", true),
         new(OriginalSaveArea.Entity, 120, 2, "staff energy", true),
         new(OriginalSaveArea.Entity, 83, 1, "patient warmth", true),
