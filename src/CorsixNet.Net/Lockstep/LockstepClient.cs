@@ -25,7 +25,7 @@ public sealed class LockstepClient : IDisposable
     {
         _connection = connection;
         _content = content ?? GameContent.Empty;
-        _connection.Send(new HelloMessage(MessageCodec.ProtocolVersion, playerName));
+        _connection.Send(new HelloMessage(MessageCodec.ProtocolVersion, playerName, ContentFingerprint.Compute(_content)));
     }
 
     /// <summary>The simulation, once the server has sent it.</summary>

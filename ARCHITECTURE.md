@@ -62,7 +62,8 @@ Deterministic lockstep, as in OpenTTD and Factorio:
    broadcasts it. Every client executes the same commands on the same ticks.
 3. Every N ticks clients report a **hash of the simulation state**. A mismatch is a desync.
 4. Joining a running game, and recovering from a desync, means transferring a save: the client
-   whose hash differs gets the server's state again (`ResyncMessage`).
+   whose hash differs gets the server's state again (`ResyncMessage`). A client joins only with the
+   server's game content: its hello carries a `ContentFingerprint` of its `GameContent`.
 5. A replay is an initial save plus the command log.
 
 UI state never enters the simulation.

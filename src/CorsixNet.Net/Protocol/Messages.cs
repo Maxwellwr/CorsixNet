@@ -7,7 +7,10 @@ namespace CorsixNet.Net.Protocol;
 public abstract record Message;
 
 /// <summary>Client → server: first message on a connection.</summary>
-public sealed record HelloMessage(int ProtocolVersion, string PlayerName) : Message;
+/// <param name="ProtocolVersion">The client's <see cref="MessageCodec.ProtocolVersion"/>.</param>
+/// <param name="PlayerName">Name shown to the server.</param>
+/// <param name="ContentHash">The <see cref="ContentFingerprint"/> of the client's game content.</param>
+public sealed record HelloMessage(int ProtocolVersion, string PlayerName, ulong ContentHash) : Message;
 
 /// <summary>
 /// Server → client: the client has joined. Carries the complete simulation state, and the

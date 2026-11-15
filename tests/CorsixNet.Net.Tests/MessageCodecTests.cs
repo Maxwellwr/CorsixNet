@@ -10,7 +10,7 @@ public class MessageCodecTests
 {
     public static TheoryData<Message> Messages() =>
     [
-        new HelloMessage(MessageCodec.ProtocolVersion, "Dr. Ñandú"),
+        new HelloMessage(MessageCodec.ProtocolVersion, "Dr. Ñandú", 0x0123456789ABCDEF),
         new RejectMessage("full"),
         new CommandRequestMessage(new WalkToCommand(3, new(4, 5))),
         new CommandRequestMessage(new BuildRoomCommand(new RoomPlan("gp", new TileRect(1, 2, 4, 5), new DoorPlacement(new(3, 7), EdgeOrientation.North)))),
@@ -57,6 +57,15 @@ public class MessageCodecTests
 
         Assert.Equal(99, decoded.AllowedTick);
         Assert.Equal(resync.State, decoded.State);
+    }
+
+    [Fact]
+    public void ReadsAHelloWithoutAContentHashAsZero()
+    {
+        // Type, protocol version 2, the name "A".
+        byte[] old = [1, 2, 0, 0, 0, 1, 0, 0, 0, (byte)'A'];
+
+        Assert.Equal(new HelloMessage(2, "A", 0), MessageCodec.Decode(old));
     }
 
     [Fact]
