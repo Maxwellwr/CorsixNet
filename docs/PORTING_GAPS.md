@@ -92,13 +92,15 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 
 - (Done: the looks of the visual diseases, `PatientLook` and its humanoid types.)
 - (Done: diagnosis in every diagnosis room and treatment in every treatment room, `RoomVisits`.)
-- Patient needs: a patient fed up near death in a room that does not cure them goes home once their visit is over,
-  where CorsixTH sends them at once (`PatientBehaviour.IsFedUp`; `entities/humanoids/patient.lua`). The rest
-  (warmth, thirst, toilets, happiness, prices, waiting, vomiting) is done (`Needs`, `Feelings`).
-- Health and death: the dying mood icons and the death sounds; the gates to hell blocking their tile and CorsixTH's check
-  that they leave a way round. Health running down, the step aside, the fall, the trip to heaven and, for 65 % of the men,
-  the trip to hell with the grim reaper and the gates to hell are done (`PatientBehaviour.UpdateDying`, `DeathAnimations`,
-  `GrimReaperBehaviour`); those killed when a room crashes simply vanish, as in CorsixTH.
+- (Done: patient needs: warmth, thirst, toilets, happiness, prices, waiting, vomiting (`Needs`, `Feelings`); a patient
+  fed up near death in a room that does not cure them leaves it at once and goes home, as `goHome("kicked")` with
+  `room:makeHumanoidLeave` in `entities/humanoids/patient.lua` (`PatientBehaviour.LeaveFedUp`); a step with the staff
+  at a machine, undressed, in a ward bed or at the toilets is seen through first.)
+- (Done: health and death: health running down, the dying mood icons (`HumanoidMoods`), the step aside, the fall with
+  its animations' sounds, the trip to heaven and, for 65 % of the men, the trip to hell with the grim reaper and the
+  gates to hell, which block their tile and are only opened where they leave a way round, as `gates_to_hell.lua` and
+  `grim_reaper.lua` check (`PatientBehaviour.UpdateDying`, `DeathAnimations`, `GrimReaperBehaviour`); those killed when
+  a room crashes simply vanish, as in CorsixTH.)
 - (Done: queue features: benches and the queue window. Priorities for VIPs,
   the inspector and emergency patients, rooms taking patients from other rooms' queues (`TryToFindNearbyPatients`), and
   the window's size buttons, moving patients in the queue and sending a patient to another room of the same type as
@@ -153,8 +155,9 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   rats, plants, staff and patient happiness, cleanliness, emergencies, waiting times, machines and research; the
   salary ranking. The hospital's value, the year's counts, the player's salary (`Hospital.PlayerSalary`, with the
   level 3 rise and the offer on winning) and the other trophies and awards are done.
-- Town map screen as the original draws it (`fullscreen/town_map.lua`); F4 is a text window with counts, heating and
-  parcels to buy (`TownMapWindow`). Parcels nobody owns showing as grass, divider walls, buying parcels
+- (Done: town map screen as the original draws it (`fullscreen/town_map.lua`, `TownMapScreen`); F4 opens it, and falls
+  back to a text window with counts, heating and parcels to buy only without the game's graphics (`TownMapWindow`).)
+  Parcels nobody owns showing as grass, divider walls, buying parcels
   (N in the client), their prices, the heating level (T in the client), the heating bill and the boiler breaking
   down are done, and so is the temperature of tiles (`th_map.cpp`'s `updateTemperatures`, `TileTemperatures`, the
   O overlay), and people and plants feel it, and the adviser warns when the boiler breaks.
