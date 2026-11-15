@@ -68,9 +68,16 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     public byte Direction => Raw.Span[17];
 
     /// <summary>
-    /// Patients only: the history drawn in the patient window's health graph, oldest first (how values map to height is not settled).
+    /// Patients only: the history drawn in the patient window's health graph, oldest first, from 0 to 100;
+    /// values above 100 mark points not recorded yet (a patient who just arrived).
     /// </summary>
     public ReadOnlySpan<byte> HealthHistory => Raw.Span.Slice(158, 10);
+
+    /// <summary>Patients only: happiness from 0 to 100, the first bar of the patient window.</summary>
+    public byte Happiness => Raw.Span[81];
+
+    /// <summary>Patients only: the thirst bar from 0 (very thirsty) to 100 (not thirsty).</summary>
+    public byte Thirst => Raw.Span[134];
 
     /// <summary>
     /// Staff only: role bits, 1 receptionist, 2 handyman, 4 nurse, 8 junior, 16 doctor, 32 surgeon,
