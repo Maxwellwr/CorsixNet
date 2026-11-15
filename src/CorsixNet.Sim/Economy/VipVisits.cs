@@ -99,10 +99,47 @@ public sealed class VipVisits
     /// </summary>
     internal static void OnEndDay(Simulation simulation, Hospital hospital)
     {
+        var shared = Disasters.Emergencies.IsShared(simulation);
+        if (shared && hospital.Player != 0)
+        {
+            return;
+        }
+
         var vips = hospital.Vips;
         var today = simulation.Hours / GameDate.HoursPerDay;
         if (today != vips.NextVipDay)
         {
+            return;
+        }
+
+        if (shared)
+        {
+            // The network game: the VIP asks every hospital that could receive them at once, planned by the first
+            // hospital's schedule; the first to accept receives the visit (NETPLAY.TXT, "Emergencies & VIP Visits").
+            int? name = null;
+            long expires = 0;
+            foreach (var each in simulation.Hospitals)
+            {
+                if (!each.Vips.IsInvitationPending && HasRoom(simulation, each.Player) && ReceptionDesks.OfHospital(simulation, each.Player, staffedOnly: true).Any())
+                {
+                    if (name is null)
+                    {
+                        Invite(simulation, each);
+                        (name, expires) = (each.Vips.InvitedName, each.Vips.InvitationExpires);
+                    }
+                    else
+                    {
+                        each.Vips.InvitedName = name.Value;
+                        each.Vips.InvitationExpires = expires;
+                    }
+                }
+            }
+
+            if (name is null)
+            {
+                vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, today);
+            }
+
             return;
         }
 
@@ -149,6 +186,35 @@ public sealed class VipVisits
         var hospital = simulation.Hospitals[player];
         var vips = hospital.Vips;
         var name = vips.InvitedName;
+        if (Disasters.Emergencies.IsShared(simulation))
+        {
+            // First come, first served: the first to accept receives the VIP and the others' invitations go; a refusal
+            // takes only this hospital's. The first hospital's schedule plans the next visit once nobody's is left.
+            var others = simulation.Hospitals.Where(other => other.Player != player && other.Vips.IsInvitationPending
+                && other.Vips.InvitedName == name && other.Vips.InvitationExpires == vips.InvitationExpires).ToList();
+            vips.InvitedName = 0;
+            if (accept)
+            {
+                foreach (var other in others)
+                {
+                    other.Vips.InvitedName = 0;
+                }
+            }
+
+            if (accept || others.Count == 0)
+            {
+                simulation.Hospitals[0].Vips.ScheduleNext(simulation.Random, simulation.Rules.MayorLaunch, simulation.Hours / GameDate.HoursPerDay);
+            }
+
+            if (accept)
+            {
+                vips.Count++;
+                Spawn(simulation, hospital, name);
+            }
+
+            return;
+        }
+
         vips.InvitedName = 0;
         var ignoresRefusal = simulation.Random.NextInclusive(1, 2) == 2;
         if (!accept && vips.Declined > 2 && ignoresRefusal)

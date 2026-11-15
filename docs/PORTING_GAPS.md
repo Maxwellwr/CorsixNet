@@ -277,8 +277,11 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
 in-process host (`--host`) and headless server.
 
 CorsixTH has no network game, so there is nothing to port here; the original's network game is the
-model. Missing relative to the original's network game: litter bombs, mini missions and emergencies and VIPs taken by
-whoever accepts first. (Done: referrals, `ReferPatientCommand`, `PatientBehaviour.Refer`: the patient window's button
+model. Missing relative to the original's network game, both held up for want of a reference: litter bombs (object 18 of
+the original, whose animations CorsixTH never mapped, and NETPLAY.TXT gives neither their price nor how much litter they
+spread) and mini missions (NETPLAY.TXT gives one example; the list of missions and their rules are in the original's
+program, which we may not disassemble). (Done: emergencies and VIP visits offered to every hospital at once by the first
+hospital's schedule, the first to accept receiving them, `Emergencies.IsShared`; referrals, `ReferPatientCommand`, `PatientBehaviour.Refer`: the patient window's button
 sends a patient between rooms to another hospital's reception; poaching staff, `PoachStaffCommand`, `StaffEmployment.Poach`: a click on
 another hospital's member of staff asks them; an unhappy one demands double their wage of their employer and, if it is
 not met, joins the poacher; land auctions, `LandAuction`, `BidForParcelCommand`,

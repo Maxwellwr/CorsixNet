@@ -361,6 +361,13 @@ public static class Emergencies
     /// </summary>
     internal static void OnEndDay(Simulation simulation, Hospital hospital)
     {
+        // The network game: every emergency comes to all the hospitals at once, planned by the first hospital's
+        // schedule (the original's NETPLAY.TXT, "Emergencies & VIP Visits").
+        if (IsShared(simulation) && hospital.Player != 0)
+        {
+            return;
+        }
+
         var state = hospital.Emergencies;
         var date = simulation.Date;
         if (date.MonthOfGame != state.NextMonth || date.Day != state.NextDay)
@@ -384,6 +391,28 @@ public static class Emergencies
             planned = new Emergency(disease.Id, simulation.Random.NextInclusive(next.Min, next.Max), next.Bonus, next.PercWin);
         }
 
+        if (IsShared(simulation))
+        {
+            // Offered to every hospital that can take it, the same emergency; the first to accept receives it.
+            var offered = false;
+            foreach (var each in simulation.Hospitals)
+            {
+                if (each.IsOpen && each.Emergencies.Current is not { IsAccepted: true }
+                    && Create(simulation, each, planned is null ? null : Copy(planned), available))
+                {
+                    planned ??= Copy(each.Emergencies.Current!);
+                    offered = true;
+                }
+            }
+
+            if (!offered)
+            {
+                NextEmergency(simulation, hospital);
+            }
+
+            return;
+        }
+
         // CorsixTH gives up the emergency without planning the next, which ends the level's emergencies; here the
         // next one is planned.
         if (!Create(simulation, hospital, planned, available))
@@ -391,6 +420,16 @@ public static class Emergencies
             NextEmergency(simulation, hospital);
         }
     }
+
+    /// <summary>Whether emergencies and VIP visits go to all the hospitals at once: a game of several hospitals.</summary>
+    internal static bool IsShared(Simulation simulation) => simulation.Hospitals.Count > 1;
+
+    private static Emergency Copy(Emergency emergency) => new(emergency.DiseaseId, emergency.Victims, emergency.Bonus, emergency.Percentage);
+
+    /// <summary>The other hospitals' copies of the same offer, not yet answered.</summary>
+    private static IEnumerable<Hospital> OthersOffered(Simulation simulation, int player, Emergency emergency) =>
+        simulation.Hospitals.Where(other => other.Player != player
+            && other.Emergencies.Current is { IsAccepted: false } offer && offer.DiseaseId == emergency.DiseaseId && offer.OfferExpires == emergency.OfferExpires);
 
     /// <summary>
     /// <c>Hospital:createEmergency</c>: a random disease and number are drawn either way; with a heliport and a staffed
@@ -447,7 +486,34 @@ public static class Emergencies
 
         var hospital = simulation.Hospitals[player];
         var state = hospital.Emergencies;
-        if (!accept)
+        if (IsShared(simulation))
+        {
+            // First come, first served: accepted, the others' offers go; refused, only this hospital's goes. The first
+            // hospital's schedule plans the next once nobody's offer is left.
+            var others = OthersOffered(simulation, player, emergency).ToList();
+            if (accept)
+            {
+                foreach (var other in others)
+                {
+                    other.Emergencies.Current = null;
+                }
+            }
+            else
+            {
+                state.Current = null;
+            }
+
+            if (accept || others.Count == 0)
+            {
+                NextEmergency(simulation, simulation.Hospitals[0]);
+            }
+
+            if (!accept)
+            {
+                return;
+            }
+        }
+        else if (!accept)
         {
             state.Current = null;
             NextEmergency(simulation, hospital);
