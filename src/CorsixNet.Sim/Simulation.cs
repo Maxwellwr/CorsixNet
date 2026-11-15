@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 94;
+    private const int FormatVersion = 95;
 
     /// <summary>
     /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
@@ -80,6 +80,9 @@ public sealed class Simulation
             _hospitals[player] = new Hospital(player, Rules.StartCash, Rules.StartReputation, land + Hospital.StartValueBesidesLand, Rules.InterestRate, Rules.OverdraftDifferential);
             _hospitals[player].Policies = new HospitalPolicies(Rules.Tiredness.Tired);
             _hospitals[player].FreeBuild = Rules.FreeBuild;
+
+            // Hospital:Hospital's three insurance companies, from a stream of their own so the game's draws stay as they were.
+            _hospitals[player].ChooseInsurers(new SimRandom(seed, sequence: 0x1A5u + (ulong)player));
 
             _hospitals[player].ScheduleNextDisaster(Random, Rules.Difficulty);
             _hospitals[player].Vips.ScheduleNext(Random, Rules.MayorLaunch, today: 0);

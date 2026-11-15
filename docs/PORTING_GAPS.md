@@ -138,7 +138,7 @@ rules, wages, patient payments with inflation and insurers, drug cost.
 
 - Bank manager: drawn as the original's (`BankManagerScreen` over Bank01V and Stat01V: the face's animation, loans,
   insurance with its graph picture, rates, the statement page, tooltips, the dollar and pie chart cursors from
-  QData/SPointer). Missing: real insurance company names (CorsixTH picks three at random, here the first three); F2 still opens the statement as a
+  QData/SPointer). The three insurance companies are picked as CorsixTH does (`Hospital.ChooseInsurers`). Missing: F2 still opens the statement as a
   text window. Fullscreen dialogs now draw themselves where `UiWindow.IsFullscreen` says so (`OriginalGraphics`).
 - Casebook: drawn as the original's (`CasebookScreen` over DrugN01V: the list with diagnoses first, the figures, the
   charge as a percentage for a moment after a change, the cure's kind and whether it can be cured, research, repeat
