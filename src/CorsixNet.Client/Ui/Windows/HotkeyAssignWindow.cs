@@ -27,6 +27,9 @@ internal interface IKeyCaptureWindow
 /// </remarks>
 internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept, Action? back = null) : UiWindow, IKeyCaptureWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     /// <summary>The panes (<c>key_options</c>): an id, the button's title and tooltip, and the sections' titles and actions.</summary>
     internal static readonly IReadOnlyList<(string Id, string Title, string Tooltip, IReadOnlyList<(string Title, IReadOnlyList<string> Keys)> Sections)> Panes = BuildPanes();
 

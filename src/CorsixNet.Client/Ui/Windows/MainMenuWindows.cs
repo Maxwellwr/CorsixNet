@@ -15,6 +15,9 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class MainMenuWindow(Action<string> action, string version) : UiWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     public override string Title => UiText.Get("corsixnet.main_menu.caption", "Main menu");
 
     public override bool IsPinned => true;
@@ -50,6 +53,9 @@ internal sealed class MainMenuWindow(Action<string> action, string version) : Ui
 /// </summary>
 internal sealed class CustomLevelWindow(IReadOnlyList<CustomLevelEntry> levels, bool freeBuild, Action<CustomLevelEntry, bool> start) : UiWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     private CustomLevelEntry? _selected = levels.Count > 0 ? levels[0] : null;
     private bool _freeBuild = freeBuild;
 
@@ -92,6 +98,9 @@ internal sealed class CustomLevelWindow(IReadOnlyList<CustomLevelEntry> levels, 
 /// <summary><c>UICustomCampaign</c>: the player's own campaigns; a click on one shows its description, Start plays its first level.</summary>
 internal sealed class CustomCampaignWindow(IReadOnlyList<CustomCampaignEntry> campaigns, Action<CustomCampaignEntry> start) : UiWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     private CustomCampaignEntry? _selected = campaigns.Count > 0 ? campaigns[0] : null;
 
     public override string Title => UiText.Get("custom_campaign_window.caption", "Custom Campaign");

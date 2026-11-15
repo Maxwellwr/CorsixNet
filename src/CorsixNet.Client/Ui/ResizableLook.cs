@@ -68,7 +68,7 @@ internal sealed class ResizableLook : IDisposable
     /// <c>panel_bevel_draw</c>: raised, the shadow one pixel down and right, the highlight, then the colour inside; lowered
     /// (a button held down), the highlight, the shadow, then the colour inside. The label goes in the middle.
     /// </summary>
-    public void DrawBevel(SpriteBatch batch, Rectangle area, Color colour, bool lowered, string? label = null, TextRenderer? font = null)
+    public void DrawBevel(SpriteBatch batch, Rectangle area, Color colour, bool lowered, string? label = null, TextRenderer? font = null, Color? tint = null)
     {
         var (highlight, shadow) = (Shade(colour, 60), Shade(colour, -60));
         if (lowered)
@@ -86,9 +86,21 @@ internal sealed class ResizableLook : IDisposable
         if (label is not null && font is not null)
         {
             var (width, height) = font.Measure(label);
-            font.Draw(batch, label, new Vector2(area.X + 2 + ((area.Width - 4 - width) / 2), area.Y + 1 + ((area.Height - height) / 2)));
+            font.Draw(batch, label, new Vector2(area.X + 2 + ((area.Width - 4 - width) / 2), area.Y + 1 + ((area.Height - height) / 2)), tint: tint);
         }
     }
+
+    /// <summary>CorsixTH's panel colours (utility.lua's <c>Colours</c>): the default pale purple of its windows and buttons.</summary>
+    public static readonly Color PanelDefault = new(154, 146, 198);
+
+    /// <summary>A button under the mouse (<c>Colours.SettingHover</c>).</summary>
+    public static readonly Color SettingHover = new(133, 128, 183);
+
+    /// <summary>A disabled button (<c>Colours.Disabled</c>).</summary>
+    public static readonly Color Disabled = new(127, 123, 149);
+
+    /// <summary>A dialog's title (<c>Colours.Title</c>).</summary>
+    public static readonly Color Title = new(174, 166, 218);
 
     /// <summary><c>addBevelPanel</c>'s highlight and shadow: each component 60 lighter or darker, kept within 0 to 255.</summary>
     public static Color Shade(Color colour, int by) =>

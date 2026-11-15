@@ -433,6 +433,12 @@ internal abstract class UiWindow
     /// <summary>Where on the screen the window in its original look goes, kept within the area, such as a popup at the cursor; before <see cref="FullscreenPosition"/>.</summary>
     public virtual Point? FullscreenScreenPosition => null;
 
+    /// <summary>
+    /// Whether the window, one CorsixTH added to the game (a <c>UIResizable</c>: options, menus, file browsers), is drawn
+    /// in CorsixTH's own look (<see cref="ResizableLook"/>) when its sprites are there, rather than as a plain table.
+    /// </summary>
+    public virtual bool UsesResizableLook => false;
+
     /// <summary>Whether the window takes the mouse wherever it is (dragging something out of it), not only over it.</summary>
     public virtual bool CapturesMouse => false;
 

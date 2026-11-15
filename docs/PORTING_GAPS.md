@@ -286,6 +286,9 @@ to the client that diverged, `ResyncMessage`.)
 
 **Has:** command-line options only (`--level`, `--map`, `--zoom`, `--speed`, `--upscale`, ...).
 
+- The windows CorsixTH added (options, main menu, new game, file browser, custom levels and campaigns, hotkeys, cheats,
+  map editor, adviser history) are drawn in CorsixTH's own look (`UiWindow.UsesResizableLook`, `ResizableLook`), with
+  our table layout inside rather than each dialog's own.
 - Options dialog: resolution, fullscreen, CorsixTH's own translations (the installed original languages can be
   chosen), audio, scroll speed, edge scrolling, zoom, mouse
   capture, adviser on/off, ... (`resizables/options.lua`, `graphics_settings.lua`, `customise.lua`). Of `customise.lua`'s

@@ -17,6 +17,9 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class MapEditorWindow(MapEditorTool tool, SpriteAtlas blocks, Action<string> action) : UiWindow, IKeyCaptureWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     private static readonly Color ButtonColor = new(55, 55, 80);
     private static readonly Color SelectedColor = new(154, 146, 198);
 

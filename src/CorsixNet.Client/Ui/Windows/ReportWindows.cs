@@ -14,6 +14,9 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class CheatsWindow : UiWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     public override string Title => UiText.Get("cheats_window.caption", "Cheats");
 
     public override string? Hotkey => "F11";
