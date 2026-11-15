@@ -53,13 +53,13 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
         return picture;
     }
 
-    /// <summary>A sheet of sprites (<c>loadSpriteTable</c>, complex) with the palette named <paramref name="palette"/>.</summary>
-    public SpriteAtlas? Sheet(string name, string palette, string folder = "QDATA")
+    /// <summary>A sheet of sprites (<c>loadSpriteTable</c>, complex unless said) with the palette named <paramref name="palette"/>.</summary>
+    public SpriteAtlas? Sheet(string name, string palette, string folder = "QDATA", bool complex = true)
     {
-        var key = folder + "/" + name + "/" + palette;
+        var key = folder + "/" + name + "/" + palette + (complex ? string.Empty : "/simple");
         if (!_sheets.TryGetValue(key, out var sheet))
         {
-            sheet = Palette(palette) is { } colours ? Try(() => new SpriteAtlas(device, install.LoadSpriteSheet(folder, name, complex: true), colours)) : null;
+            sheet = Palette(palette) is { } colours ? Try(() => new SpriteAtlas(device, install.LoadSpriteSheet(folder, name, complex), colours)) : null;
             _sheets[key] = sheet;
         }
 
