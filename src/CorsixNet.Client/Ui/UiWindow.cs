@@ -295,6 +295,9 @@ internal interface IWindowHost
     /// <summary>The fullscreen dialogs' pictures, sprites and fonts, or null without the original's graphics.</summary>
     OriginalGraphics? Graphics => null;
 
+    /// <summary>The warmth colours chosen in the options menu (1 red, 2 blue green red, 3 yellow orange red).</summary>
+    int TemperatureTheme => 2;
+
     /// <summary>The background music, for the jukebox; null without one.</summary>
     Audio.BackgroundMusic? Music => null;
 

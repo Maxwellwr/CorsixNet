@@ -156,6 +156,12 @@ public sealed record GameConfig
     /// <summary>The SoundFont the default MIDI synthesiser plays the music with (<c>soundfont</c>); empty to look for one.</summary>
     public string Soundfont { get; init; } = string.Empty;
 
+    /// <summary>Whether the menu bar's clock shows 24 hours rather than AM and PM (<c>twentyfour_hour_clock</c>).</summary>
+    public bool TwentyFourHourClock { get; init; } = true;
+
+    /// <summary>The warmth colours at the start: 1 red, 2 blue green red, 3 yellow orange red (<c>warmth_colors_display_default</c>).</summary>
+    public int WarmthColorsDisplayDefault { get; init; } = 1;
+
     /// <summary>Whether movies play at all (<c>movies</c>).</summary>
     public bool Movies { get; init; } = true;
 
@@ -282,6 +288,8 @@ public sealed record GameConfig
             AnnouncementVolume = Number("announcement_volume", defaults.AnnouncementVolume),
             PlayMusic = Bool("play_music", defaults.PlayMusic),
             Movies = Bool("movies", defaults.Movies),
+            TwentyFourHourClock = Bool("twentyfour_hour_clock", defaults.TwentyFourHourClock),
+            WarmthColorsDisplayDefault = Math.Clamp(Int("warmth_colors_display_default", defaults.WarmthColorsDisplayDefault), 1, 3),
             MidiApi = Text("midi_api", defaults.MidiApi),
             MidiPort = Text("midi_port", defaults.MidiPort),
             Soundfont = Text("soundfont", defaults.Soundfont),
@@ -553,6 +561,24 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"movies: {Yaml(Movies)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # The menu bar's clock: 24 hours (true) or AM and PM (false).
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"twentyfour_hour_clock: {Yaml(TwentyFourHourClock)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Warmth Colors display settings.
+            # This specifies which display method is set for warmth colours by default.
+            # Possible values: 1 (Red), 2 (Blue Green Red) and 3 (Yellow Orange Red).
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"warmth_colors_display_default: {WarmthColorsDisplayDefault}\n");
         text.Append("""
 
             # Intro movie: Enabled by default

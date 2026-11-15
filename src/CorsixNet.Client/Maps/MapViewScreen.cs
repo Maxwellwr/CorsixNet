@@ -344,6 +344,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>CorsixTH's picture behind the main menu, loaded while the menu shows.</summary>
     private MenuBackground? _menuBackground;
 
+    /// <summary>
+    /// The warmth colours of the town map and the O overlay (<c>Map:setTemperatureDisplayMethod</c>): 1 red, 2 blue
+    /// green red, 3 yellow orange red; <c>warmth_colors_display_default</c> to begin with.
+    /// </summary>
+    private int _temperatureTheme = 1;
+
     /// <summary>The last answer to the player's poaching already told, and the staff employed elsewhere at the last look.</summary>
     private PoachAnswer? _lastPoachSeen;
 
@@ -452,6 +458,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _buildTool.PlaySound = name => _sounds.Play(name);
         _buildTool.AverageContents = _config.EnableAverageContents;
         OriginalBottomPanel.MachineMenuButton = _config.MachineMenuButton;
+        _temperatureTheme = _config.WarmthColorsDisplayDefault;
         _buildTool.AbandonRequested = () => _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
         {
             _session?.Submit(new AbandonRebuildCommand());
@@ -987,7 +994,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
             if (OriginalMenuBar.IsAvailable(this) && (!inMainMenu || _menuBackground is null))
             {
-                _menuBar.Draw(batch, this, MenuBarMenus(), viewport.Width, DateTime.Now);
+                _menuBar.Draw(batch, this, MenuBarMenus(), viewport.Width, DateTime.Now, _config.TwentyFourHourClock);
             }
             if (_bottomPanel is not null && OriginalBottomPanel.TooltipAt(viewport, new Point(pointer.X, pointer.Y), ((IWindowHost)this).HotkeyText) is { } tooltip)
             {
@@ -3054,7 +3061,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         return _overlay switch
         {
             MapOverlay.Temperature => tile.Has(TileFlags.Hospital) && Simulation is { } simulation
-                ? TemperatureColor(simulation.Temperatures[x, y]) * 0.6f
+                ? TemperatureColor(simulation.Temperatures[x, y], _temperatureTheme) * 0.6f
                 : Color.Transparent,
             MapOverlay.Passable => tile.Has(TileFlags.Passable) ? new Color(0, 200, 0) * 0.4f : new Color(200, 0, 0) * 0.4f,
             MapOverlay.Hospital => tile.Has(TileFlags.Buildable) ? new Color(0, 120, 255) * 0.45f
@@ -3066,18 +3073,26 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>
-    /// The town map's blue, green and red warmth colours (CorsixTH's th_lua_ui.cpp, <c>temperature_theme::multi_colour</c>):
-    /// blue below 11 °C, green up to 18 °C, red above.
+    /// The town map's warmth colours (CorsixTH's th_lua_ui.cpp, <c>temperature_theme</c>): 1, red, red rising with the
+    /// heat over a blue of 70; 2, blue below 11 °C, green up to 18 °C, red above; 3, yellow below 11 °C, orange to red
+    /// above.
     /// </summary>
-    internal static Color TemperatureColor(ushort temperature)
+    internal static Color TemperatureColor(ushort temperature, int theme = 2)
     {
         // 4 °C and below is 0, 25 °C and above 255.
         var scaled = temperature < 5200 ? 0 : temperature > 32767 ? 255 : (temperature - 5200) / 108;
         const int MinOk = 140;
         const int MaxOk = 180;
-        return scaled < MinOk ? new Color(0, 0, Channel(0, MinOk - 1, scaled, 200, 60))
-            : scaled < MaxOk ? new Color(0, Channel(MinOk, MaxOk - 1, scaled, 140, 224), 70)
-            : new Color(Channel(MaxOk, 255, scaled, 224, 255), 0, 70);
+        return theme switch
+        {
+            1 => new Color(scaled, 0, 70),
+            3 => scaled < MinOk
+                ? new Color(Channel(0, MinOk - 1, scaled, 100, 213), Channel(0, MinOk - 1, scaled, 80, 180), 0)
+                : new Color(Channel(MinOk, 255, scaled, 223, 235), Channel(MinOk, 255, scaled, 184, 104), Channel(MinOk, 255, scaled, 0, 53)),
+            _ => scaled < MinOk ? new Color(0, 0, Channel(0, MinOk - 1, scaled, 200, 60))
+                : scaled < MaxOk ? new Color(0, Channel(MinOk, MaxOk - 1, scaled, 140, 224), 70)
+                : new Color(Channel(MaxOk, 255, scaled, 224, 255), 0, 70),
+        };
 
         // map_color_channel in th_lua_ui.h.
         static int Channel(int low, int high, int value, int start, int end) =>
@@ -3617,13 +3632,27 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     : Array.Empty<MenuBarItem>()),
                 new(Item("menu_options.adviser_disabled", "ADVISER"), ToggleAdviser, () => !_config.AdviserDisabled),
                 new(Item("menu_debug.transparent_walls", "TRANSPARENT WALLS"), () => _wallsTransparentToggled = !_wallsTransparentToggled, () => _wallsTransparentToggled),
-                Speed("menu_options_game_speed.pause", "PAUSE", GameSpeed.Pause),
-                Speed("menu_options_game_speed.slowest", "SLOWEST", GameSpeed.Slowest),
-                Speed("menu_options_game_speed.slower", "SLOWER", GameSpeed.Slower),
-                Speed("menu_options_game_speed.normal", "NORMAL", GameSpeed.Normal),
-                Speed("menu_options_game_speed.max_speed", "MAX SPEED", GameSpeed.MaxSpeed),
-                Speed("menu_options_game_speed.and_then_some_more", "AND THEN SOME MORE", GameSpeed.AndThenSomeMore),
-                Speed("corsixnet.menu.insane_speed", "Insane", GameSpeed.Insane)]),
+                // appendVolume's submenus of the sound, announcements and music volumes, 10 % to 100 %.
+                MenuBarItem.Menu(Item("menu_options.sound_vol", "SOUND VOLUME"), Volumes(_config.SoundVolume, v => _config with { SoundVolume = v, PlaySounds = true })),
+                MenuBarItem.Menu(Item("menu_options.announcements_vol", "ANNOUNCEMENTS VOLUME"), Volumes(_config.AnnouncementVolume, v => _config with { AnnouncementVolume = v, PlayAnnouncements = true })),
+                .. (_music.HasMusic ? [MenuBarItem.Menu(Item("menu_options.music_vol", "MUSIC VOLUME"), Volumes(_config.MusicVolume, v => _config with { MusicVolume = v }))] : Array.Empty<MenuBarItem>()),
+                new(Item("menu_options.edge_scrolling", "EDGE SCROLLING"), () => ApplyConfig(_config with { PreventEdgeScrolling = !_config.PreventEdgeScrolling }), () => !_config.PreventEdgeScrolling),
+                new(Item("menu_options.twentyfour_hour_clock", "24 HOUR CLOCK"), () => ApplyConfig(_config with { TwentyFourHourClock = !_config.TwentyFourHourClock }), () => _config.TwentyFourHourClock),
+                MenuBarItem.Menu(Item("menu_options.wage_increase", "WAGE REQUESTS"), [
+                    new(Item("menu_options_wage_increase.grant", "GRANT"), () => _session?.Submit(new SetPolicyCommand(PolicyKind.GrantWageIncrease, 1)), () => OwnPolicies()?.GrantWageIncrease == true),
+                    new(Item("menu_options_wage_increase.deny", "DENY"), () => _session?.Submit(new SetPolicyCommand(PolicyKind.GrantWageIncrease, 0)), () => OwnPolicies()?.GrantWageIncrease == false)]),
+                MenuBarItem.Menu(Item("menu_options.warmth_colors", "WARMTH COLOURS"), [
+                    new(Item("menu_options_warmth_colors.choice_1", "RED"), () => _temperatureTheme = 1, () => _temperatureTheme == 1),
+                    new(Item("menu_options_warmth_colors.choice_2", "BLUE GREEN RED"), () => _temperatureTheme = 2, () => _temperatureTheme == 2),
+                    new(Item("menu_options_warmth_colors.choice_3", "YELLOW ORANGE RED"), () => _temperatureTheme = 3, () => _temperatureTheme == 3)]),
+                MenuBarItem.Menu(Item("menu_options.game_speed", "GAME SPEED"), [
+                    Speed("menu_options_game_speed.pause", "PAUSE", GameSpeed.Pause),
+                    Speed("menu_options_game_speed.slowest", "SLOWEST", GameSpeed.Slowest),
+                    Speed("menu_options_game_speed.slower", "SLOWER", GameSpeed.Slower),
+                    Speed("menu_options_game_speed.normal", "NORMAL", GameSpeed.Normal),
+                    Speed("menu_options_game_speed.max_speed", "MAX SPEED", GameSpeed.MaxSpeed),
+                    Speed("menu_options_game_speed.and_then_some_more", "AND THEN SOME MORE", GameSpeed.AndThenSomeMore),
+                    Speed("corsixnet.menu.insane_speed", "Insane", GameSpeed.Insane)])]),
             new(Item("menu.charts", "CHARTS"), [
                 new(Item("menu_charts.bank_manager", "BANK MANAGER"), () => OpenBank(statement: false)),
                 new(Item("menu_charts.statement", "STATEMENT"), () => OpenBank(statement: true)),
@@ -3636,6 +3665,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Open("menu_charts.policy", "POLICY", () => new PolicyWindow()),
                 Open("menu_charts.machine_menu", "MACHINE MENU", () => new MachineMenuWindow())]),
             new(Item("menu.debug", "DEBUG"), [
+                // makeDebugMenu's map overlay submenu: none, the passable flags, the parcels.
+                MenuBarItem.Menu(Item("menu_debug.map_overlay", "MAP OVERLAY"), [
+                    new(Item("menu_debug_overlay.none", "NONE"), () => _overlay = MapOverlay.None, () => _overlay == MapOverlay.None),
+                    new(Item("menu_debug_overlay.flags", "FLAGS"), () => _overlay = MapOverlay.Passable, () => _overlay == MapOverlay.Passable),
+                    new(Item("menu_debug_overlay.parcel", "PARCEL"), () => _overlay = MapOverlay.Parcels, () => _overlay == MapOverlay.Parcels)]),
                 Do("corsixnet.menu.save_replay", "Save replay", "savereplay"),
                 Do("corsixnet.menu.watch_replay", "Watch replay", "replays"),
                 Do("menu_debug.make_debug_rat", "MAKE DEBUG RAT", "debugrat")]),
@@ -3647,6 +3681,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         return menus;
     }
+
+    /// <summary>appendVolume: 10 % to 100 %, the one nearest the volume ticked; picking one sets it and saves it.</summary>
+    private List<MenuBarItem> Volumes(decimal current, Func<decimal, GameConfig> set) =>
+    [
+        .. Enumerable.Range(1, 10).Select(level => new MenuBarItem(
+            UiText.Get("menu_options_volume." + (level * 10).ToString(CultureInfo.InvariantCulture), (level * 10).ToString(CultureInfo.InvariantCulture) + "%").Trim(),
+            () => ApplyConfig(set(level / 10m)),
+            () => Math.Round(current * 10) == level)),
+    ];
+
+    /// <summary>The player's hospital's policies, for the wage requests submenu.</summary>
+    private Sim.Economy.HospitalPolicies? OwnPolicies() =>
+        Simulation is { } simulation && _session is { } session && session.Player < simulation.Hospitals.Count ? simulation.Hospitals[session.Player].Policies : null;
 
     private void MenuAction(string action)
     {
@@ -4002,6 +4049,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <inheritdoc/>
     BackgroundMusic? IWindowHost.Music => _music;
+
+    /// <inheritdoc/>
+    int IWindowHost.TemperatureTheme => _temperatureTheme;
 
     /// <inheritdoc/>
     void IWindowHost.SetPlayMusic(bool on)

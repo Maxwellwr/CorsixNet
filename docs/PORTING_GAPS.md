@@ -175,7 +175,10 @@ fonts, faces) and the details listed.
   date, reputation meter, fax door, dynamic info and pause text, fax icons by kind). The fax icons slide out of the door,
   the emergency's siren turns and a right click dismisses a fax with one choice (`FaxDrawer`). The dynamic info's lines and its diagnosis and tiredness bars are drawn (`DynamicInfoLines`), and so is CorsixTH's
   machine menu button with its aux_ui sprites (`machine_menu_button`, `AuxSprites`); the adviser's messages are on their hotkey only.
-- Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock); CorsixTH's music, warmth colour and wage options, its debug items and submenus are not in it. Esc still opens the menu window too.
+- Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock with `twentyfour_hour_clock`); submenus (`MenuBarItem.Submenu`) with the sound,
+  announcements and music volumes, wage requests, warmth colours (`warmth_colors_display_default`, the three
+  `temperature_theme`s), game speed and the debug map overlays; edge scrolling and the 24 hour clock as check items.
+  CorsixTH's lock windows, capture mouse and other debug items are not in it. Esc still opens the menu window too.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
   edit panel are drawn as the original's (`FurnishCorridorScreen`, `RoomEditScreen`). A finished room is resized or gets its door moved by going back to its blueprint (Esc while

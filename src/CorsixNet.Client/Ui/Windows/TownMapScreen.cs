@@ -279,7 +279,7 @@ internal sealed class TownMapScreen
                     }
                     else
                     {
-                        colour = heat ? MapViewScreen.TemperatureColor(simulation.Temperatures[x, y]) : new Color(0, 0, 70);
+                        colour = heat ? MapViewScreen.TemperatureColor(simulation.Temperatures[x, y], host.TemperatureTheme) : new Color(0, 0, 70);
                     }
 
                     if (colour is { } fill)
