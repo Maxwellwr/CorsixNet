@@ -68,7 +68,7 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     public byte Direction => Raw.Span[17];
 
     /// <summary>
-    /// Patients only: the health history drawn in the patient window's graph, oldest first, higher is healthier.
+    /// Patients only: the history drawn in the patient window's health graph, oldest first (how values map to height is not settled).
     /// </summary>
     public ReadOnlySpan<byte> HealthHistory => Raw.Span.Slice(158, 10);
 
