@@ -229,10 +229,11 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   `Campaigns/`, `Levels/`). Loading a custom level (`.level` + `.map`, with overlays) and reading a campaign file are
   done (`LevelMapLoader.LoadCustom`, `LoadCampaign`, `--map`, `--campaign`). The difficulty and what it changes (`LevelRules.Difficulty`, `--difficulty`)
   are done, the ward's healing too.
-- Free build mode (Done in the simulation: `LevelRules.WithFreeBuild`, `free_build_mode` in `config.txt` for `--map`
-  levels outside a campaign, `--free-build` on the server; the progress report's free build text and the VIP and
-  emergency faxes' free build remarks are shown). Sandbox options
-  beyond it are not done.
+- (Done: free build mode, which is all CorsixTH's sandbox is (`config_finder.lua`: "Free Build or Sandbox mode"):
+  `LevelRules.WithFreeBuild`, `free_build_mode` in `config.txt` for `--map` levels outside a campaign and the custom
+  level window's switch, `--free-build` on the server; nothing costs or earns money, no loans, wages or raises, free
+  research objects and parcels, no heating bill; the progress report's free build text, the VIP and emergency faxes'
+  free build remarks, and no adviser talk about money (`PlayerHospital:_adviseMoney`).)
 - Main menu (`resizables/main_menu.lua`): done as a window over the paused first level when the command line names
   nothing to play (`MainMenuWindow`: Campaign, Custom Campaign, Single Scenario with Free Build, Continue Game, Load
   Game, Settings, Exit, the map editor; `CustomGames`, `levels`/`campaigns` in `config.txt`), and the new game dialog
