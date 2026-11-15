@@ -145,6 +145,7 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         "ingame_openFirstMessage" => "Level Message",
         "ingame_quickSave" => "Quick Save",
         "ingame_quickLoad" => "Quick Load",
+        "global_screenshot" => "Screenshot",
         "ingame_pause" => "Pause",
         "ingame_gamespeed_slowest" => "Slowest",
         "ingame_gamespeed_slower" => "Slower",
