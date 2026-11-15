@@ -8,6 +8,7 @@ namespace CorsixNet.Client;
 internal sealed class CorsixNetGame : Game
 {
     private readonly Func<GraphicsDevice, IScreen> _createScreen;
+    private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch? _batch;
     private IScreen? _screen;
 
@@ -18,7 +19,7 @@ internal sealed class CorsixNetGame : Game
     public CorsixNetGame(string title, Func<GraphicsDevice, IScreen> createScreen, int width = 1280, int height = 800, bool fullscreen = false)
     {
         _createScreen = createScreen;
-        _ = new GraphicsDeviceManager(this)
+        _graphics = new GraphicsDeviceManager(this)
         {
             PreferredBackBufferWidth = Math.Max(MinWidth, width),
             PreferredBackBufferHeight = Math.Max(MinHeight, height),
@@ -48,6 +49,11 @@ internal sealed class CorsixNetGame : Game
 
         // Keep updating without focus: a network game must keep up with the server. A script's input counts as focused.
         _screen?.Update(gameTime, IsActive || script is not null);
+        if (_screen?.TakeFullscreenToggleRequest() == true)
+        {
+            _graphics.ToggleFullScreen();
+        }
+
         IsMouseVisible = _screen?.DrawsCursor != true;
 
         if (_screen?.ExitRequested == true || script?.QuitRequested == true)

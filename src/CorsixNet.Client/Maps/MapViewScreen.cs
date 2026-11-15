@@ -3111,6 +3111,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             RequestScreenshot();
         }
 
+        if (HotkeyInput.Pressed(_hotkeys["global_fullscreen_toggle"], keys, pressed))
+        {
+            ToggleFullscreen();
+        }
+
         if (HotkeyInput.Pressed(_hotkeys["ingame_toggleSounds"], keys, pressed))
         {
             ToggleSounds();
@@ -3498,10 +3503,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
-    /// <summary>
-    /// <c>GameUI:toggleAdviser</c> (Shift+A by default): the adviser falls silent or speaks again, and the setting is
-    /// saved.
-    /// </summary>
     private string? _screenshotRequest;
 
     /// <inheritdoc/>
@@ -3527,6 +3528,24 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _screenshotRequest = path;
+    }
+
+    private bool _fullscreenToggleRequested;
+
+    /// <inheritdoc/>
+    public bool TakeFullscreenToggleRequest()
+    {
+        var requested = _fullscreenToggleRequested;
+        _fullscreenToggleRequested = false;
+        return requested;
+    }
+
+    /// <summary><c>UI:fullscreenHotkey</c>: the window goes fullscreen or back, and the settings keep it (<c>setVideoMode</c>).</summary>
+    private void ToggleFullscreen()
+    {
+        _fullscreenToggleRequested = true;
+        _config = _config with { Fullscreen = !_config.Fullscreen };
+        SaveConfig();
     }
 
     /// <summary><c>UI:togglePlaySounds</c>: sound effects on or off, kept in the settings.</summary>
@@ -3563,6 +3582,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
+    /// <summary>
+    /// <c>GameUI:toggleAdviser</c> (Shift+A by default): the adviser falls silent or speaks again, and the setting is
+    /// saved.
+    /// </summary>
     private void ToggleAdviser()
     {
         _config = _config with { AdviserDisabled = !_config.AdviserDisabled };

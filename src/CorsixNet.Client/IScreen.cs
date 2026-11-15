@@ -20,4 +20,7 @@ internal interface IScreen : IDisposable
 
     /// <summary>The file a screenshot of the frame just drawn should be saved to, once asked for (<c>UI:makeScreenshot</c>), else null.</summary>
     string? TakeScreenshotRequest() => null;
+
+    /// <summary>Whether fullscreen was asked to be switched on or off since the last call (<c>UI:fullscreenHotkey</c>).</summary>
+    bool TakeFullscreenToggleRequest() => false;
 }

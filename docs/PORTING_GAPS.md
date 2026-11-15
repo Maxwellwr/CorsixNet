@@ -285,6 +285,7 @@ join.
   (`HotkeyAssignWindow`). Still on fixed keys: Esc and this game's stand-in keys;
   The sound and announcements toggles (Alt+S, Alt+A, also in the menu bar's options) are done.
   The screenshot key (Ctrl+S, `global_screenshot`, into Screenshots beside the settings; the `screenshots` setting is not read) is done.
+  Alt+Enter switches fullscreen and keeps it in the settings (`global_fullscreen_toggle`, `UI:fullscreenHotkey`).
   CorsixTH's other actions (music toggle, logs, furnish corridor, edit room,
   sell the picked up item) are not read. The rotate object key (`ingame_rotateobject`, space) turns the object being
   placed, as a right click does; outside placing, space still pauses.
