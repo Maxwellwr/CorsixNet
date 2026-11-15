@@ -192,6 +192,11 @@ strings:
   transactions:
     remove_room: 'Bygge: ta bort förstört rum'
   corsixnet:
+    poach:
+      asked: 'Du frågar %1% om de hellre vill arbeta för dig'
+      listened: '%1% är missnöjd och kräver mycket mer pengar av sitt sjukhus'
+      refused: '%1% trivs där de är'
+      joined: '%1% har lämnat sitt sjukhus och börjat hos dig'
     auction:
       caption: 'Tomtauktion'
       lot: 'Tomt %1%: bud på $%2% från %3%'

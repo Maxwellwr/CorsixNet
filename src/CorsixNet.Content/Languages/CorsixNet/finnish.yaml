@@ -243,6 +243,11 @@ strings:
   transactions:
     remove_room: 'Rakennus: tuhoutuneen huoneen poisto'
   corsixnet:
+    poach:
+      asked: 'Kysyt, haluaisiko %1% mieluummin työskennellä sinulle'
+      listened: '%1% on tyytymätön ja pyytää sairaalaltaan paljon lisää rahaa'
+      refused: '%1% viihtyy siellä missä on'
+      joined: '%1% on jättänyt sairaalansa ja siirtynyt sinulle'
     auction:
       caption: 'Tonttihuutokauppa'
       lot: 'Tontti %1%: tarjous $%2%, %3%'

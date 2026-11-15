@@ -106,6 +106,11 @@ strings:
         patient_happiness: Die Zufriedenheit Ihrer Patienten sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
         staff_happiness: Die Zufriedenheit Ihres Personals sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
   corsixnet:
+    poach:
+      asked: 'Sie fragen %1%, ob er lieber für Sie arbeiten würde'
+      listened: '%1% ist unzufrieden und verlangt von seinem Krankenhaus viel mehr Geld'
+      refused: '%1% ist zufrieden, wo er ist'
+      joined: '%1% hat sein Krankenhaus verlassen und arbeitet jetzt für Sie'
     auction:
       caption: 'Grundstücksauktion'
       lot: 'Grundstück %1%: Gebot $%2% von %3%'

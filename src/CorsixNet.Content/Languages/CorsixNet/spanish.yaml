@@ -25,6 +25,11 @@ strings:
         months_played: 'Debes ganar antes del final de %s de %d. Ahora es %s de %d'
         years_played: 'Debes llegar al año %d. Ahora es el año %d'
   corsixnet:
+    poach:
+      asked: 'Preguntas a %1% si preferiría trabajar para ti'
+      listened: '%1% no está contento y pide mucho más dinero a su hospital'
+      refused: '%1% está contento donde está'
+      joined: '%1% ha dejado su hospital y se ha unido al tuyo'
     auction:
       caption: 'Subasta de terreno'
       lot: 'Parcela %1%: puja de $%2% de %3%'

@@ -172,6 +172,15 @@ public sealed class Humanoid : Entity
     /// </summary>
     public bool IsCrazy { get; internal set; }
 
+    /// <summary>
+    /// The player (0-based) of the network game who has tempted this member of staff to work for them, while their
+    /// outrageous pay demand waits for an answer, or -1 (<see cref="Staff.StaffEmployment.Poach"/>).
+    /// </summary>
+    public int PoachedBy { get; internal set; } = -1;
+
+    /// <summary>Whether the pay demand was not met and the member of staff goes to the poacher as soon as they are free.</summary>
+    public bool IsLeavingForPoacher { get; internal set; }
+
     /// <summary>Fired or quit: leaving the hospital and no longer counted as its staff (CorsixTH's <c>fired</c>).</summary>
     public bool IsFired { get; internal set; }
 
@@ -209,10 +218,10 @@ public sealed class Humanoid : Entity
     public StaffProfile? Profile { get; private init; }
 
     /// <summary>The player (0-based) whose hospital employs the member of staff, or −1.</summary>
-    public int Employer { get; private init; } = -1;
+    public int Employer { get; internal set; } = -1;
 
     /// <summary>The player (0-based) whose hospital the humanoid works at or visits, or −1.</summary>
-    public int HospitalPlayer { get; private init; } = -1;
+    public int HospitalPlayer { get; internal set; } = -1;
 
     /// <summary>What the humanoid is doing: a patient's visit or a member of staff's job. Null for none.</summary>
     public HumanoidBehaviour? Behaviour { get; internal set; }
@@ -787,6 +796,8 @@ public sealed class Humanoid : Entity
             IsFast = reader.ReadBool(),
             _fastStep = reader.ReadBool(),
             IsCrazy = reader.Version is 0 or >= 91 && reader.ReadBool(),
+            PoachedBy = reader.Version is 0 or >= 97 ? reader.ReadInt32() : -1,
+            IsLeavingForPoacher = reader.Version is 0 or >= 97 && reader.ReadBool(),
         };
 
         var count = reader.ReadCount(1 << 20);
@@ -852,6 +863,8 @@ public sealed class Humanoid : Entity
         writer.WriteBool(IsFast);
         writer.WriteBool(_fastStep);
         writer.WriteBool(IsCrazy);
+        writer.WriteInt32(PoachedBy);
+        writer.WriteBool(IsLeavingForPoacher);
 
         writer.WriteInt32(_path.Count);
         foreach (var tile in _path)

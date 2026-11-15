@@ -626,6 +626,9 @@ public sealed class Hospital
     /// <summary>The hospital policy window's settings.</summary>
     public HospitalPolicies Policies { get; internal set; } = new();
 
+    /// <summary>The answer to the player's last try at poaching another hospital's member of staff, if any.</summary>
+    public PoachAnswer? LastPoach { get; internal set; }
+
     /// <summary>VIPs asking to visit, on their way and gone (<see cref="VipVisits"/>).</summary>
     public VipVisits Vips { get; internal set; } = new();
 
@@ -1607,6 +1610,14 @@ public sealed class Hospital
         {
             writer.WriteByte((byte)insurer);
         }
+
+        writer.WriteBool(LastPoach is not null);
+        if (LastPoach is { } poach)
+        {
+            writer.WriteInt32(poach.StaffId);
+            writer.WriteBool(poach.Listened);
+            writer.WriteInt64(poach.Tick);
+        }
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1783,6 +1794,11 @@ public sealed class Hospital
             }
         }
 
+        if ((reader.Version is 0 or >= 97) && reader.ReadBool())
+        {
+            hospital.LastPoach = new PoachAnswer(reader.ReadInt32(), reader.ReadBool(), reader.ReadInt64());
+        }
+
         return hospital;
     }
 
@@ -1798,3 +1814,6 @@ public sealed class Hospital
 
 /// <summary>A fax telling of a disease newly discovered, until <see cref="Expires"/>.</summary>
 public readonly record struct DiseaseReport(string DiseaseId, long Expires);
+
+/// <summary>A member of staff's answer to another hospital's offer: whether they listened, and when.</summary>
+public sealed record PoachAnswer(int StaffId, bool Listened, long Tick);

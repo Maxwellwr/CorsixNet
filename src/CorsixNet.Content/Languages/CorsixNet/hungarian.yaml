@@ -259,6 +259,11 @@ strings:
   transactions:
     remove_room: 'Építés: lerombolt szoba eltávolítása'
   corsixnet:
+    poach:
+      asked: 'Megkérdezed, hogy %1% nem dolgozna-e inkább neked'
+      listened: '%1% elégedetlen, és sokkal több pénzt kér a kórházától'
+      refused: '%1% elégedett ott, ahol van'
+      joined: '%1% otthagyta a kórházát, és hozzád szerződött'
     auction:
       caption: 'Telekárverés'
       lot: '%1%. telek: $%2% ajánlat, %3%'

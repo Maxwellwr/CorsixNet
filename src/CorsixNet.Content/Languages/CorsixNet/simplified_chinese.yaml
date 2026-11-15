@@ -94,6 +94,11 @@ strings:
     toolbar:
       machine_menu: '机器菜单 (%s)'
   corsixnet:
+    poach:
+      asked: '你询问%1%是否愿意为你工作'
+      listened: '%1%不满意，向所在医院要求大幅加薪'
+      refused: '%1%对现在的工作很满意'
+      joined: '%1%离开了原医院，加入了你的医院'
     auction:
       caption: '土地拍卖'
       lot: '地块%1%：%3%出价$%2%'

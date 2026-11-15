@@ -74,6 +74,11 @@ strings:
     toolbar:
       machine_menu: 'Menu de máquinas (%s)'
   corsixnet:
+    poach:
+      asked: 'Você pergunta a %1% se prefere trabalhar para você'
+      listened: '%1% está infeliz e pede muito mais dinheiro ao seu hospital'
+      refused: '%1% está feliz onde está'
+      joined: '%1% deixou o hospital dele e juntou-se ao seu'
     auction:
       caption: 'Leilão de terreno'
       lot: 'Lote %1%: lance de $%2% de %3%'

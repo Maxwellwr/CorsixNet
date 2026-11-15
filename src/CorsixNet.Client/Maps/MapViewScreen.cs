@@ -341,6 +341,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Whether a movie with sound paused the music, to go on with it afterwards (<c>holding_bg_music</c>).</summary>
     private bool _holdingMusic;
 
+    /// <summary>The last answer to the player's poaching already told, and the staff employed elsewhere at the last look.</summary>
+    private PoachAnswer? _lastPoachSeen;
+
+    private HashSet<int>? _staffElsewhere;
+
     /// <summary>The last auction's result already told, and whether the auctions have been watched since the game began.</summary>
     private AuctionResult? _lastAuctionSeen;
 
@@ -2157,6 +2162,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     // A click on a member of staff opens their window (CorsixTH's UIStaff), on a patient theirs (UIPatient).
                     _windows.Open(new StaffWindow(here.Id));
                 }
+                else if (here.Profile is not null && here.Employer >= 0 && here.Employer != _session.Player && !here.IsFired && _session.Player < simulation.Hospitals.Count)
+                {
+                    // The network game's poaching: a click on another hospital's member of staff asks them to work for us.
+                    _session.Submit(new PoachStaffCommand(here.Id));
+                    ShowNotice(UiText.Format("corsixnet.poach.asked", "You ask %1% whether they would rather work for you", StaffLabels.Name(this, here)));
+                }
                 else if (here.Behaviour is PatientBehaviour && here.HospitalPlayer == _session.Player)
                 {
                     // Patient:onClick: an infected patient during the cover-up is picked for vaccination (vaccin.wav).
@@ -3171,6 +3182,31 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _auctionWatched = true;
+
+        // Poaching: the member of staff's answer, and whoever has joined from another hospital.
+        if (Simulation.Hospitals[_session.Player].LastPoach is { } answer && !ReferenceEquals(answer, _lastPoachSeen))
+        {
+            if (_lastPoachSeen is not null || answer.Tick >= Simulation.Tick - 1)
+            {
+                var name = Simulation.FindEntity(answer.StaffId) is Humanoid asked ? StaffLabels.Name(this, asked) : "?";
+                ShowNotice(answer.Listened
+                    ? UiText.Format("corsixnet.poach.listened", "%1% is unhappy and asks their hospital for much more money", name)
+                    : UiText.Format("corsixnet.poach.refused", "%1% is happy where they are", name));
+            }
+
+            _lastPoachSeen = answer;
+        }
+
+        var elsewhere = Simulation.Entities.OfType<Humanoid>().Where(h => h.Profile is not null && h.Employer >= 0 && h.Employer != _session.Player).Select(h => h.Id).ToHashSet();
+        if (_staffElsewhere is not null)
+        {
+            foreach (var joined in Simulation.Entities.OfType<Humanoid>().Where(h => h.Profile is not null && h.Employer == _session.Player && _staffElsewhere.Contains(h.Id)))
+            {
+                ShowNotice(UiText.Format("corsixnet.poach.joined", "%1% has left their hospital and joined yours", StaffLabels.Name(this, joined)));
+            }
+        }
+
+        _staffElsewhere = elsewhere;
 
         // The annual report at the year end, the winning letter or losing fax at the level's end.
         var hospital = Simulation!.Hospitals[_session.Player];

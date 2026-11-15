@@ -63,6 +63,7 @@ public enum CommandKind : ushort
     SendPatientToReception = 48,
     MakeDebugRat = 49,
     BidForParcel = 50,
+    PoachStaff = 51,
 }
 
 /// <summary>
@@ -137,6 +138,7 @@ public abstract record Command
             CommandKind.SendPatientToReception => new SendPatientToReceptionCommand(reader.ReadInt32()),
             CommandKind.MakeDebugRat => new MakeDebugRatCommand(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.BidForParcel => new BidForParcelCommand(reader.ReadInt32()),
+            CommandKind.PoachStaff => new PoachStaffCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -702,6 +704,25 @@ public sealed record PurchaseParcelCommand(int Parcel) : Command
     public override void Execute(Simulation simulation, int player) => simulation.PurchaseParcel(Parcel, player);
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Parcel);
+}
+
+/// <summary>
+/// Asks another hospital's member of staff to work for the player (the network game's poaching,
+/// <see cref="Staff.StaffEmployment.Poach"/>); the hospital remembers the answer (<see cref="Economy.Hospital.LastPoach"/>).
+/// </summary>
+public sealed record PoachStaffCommand(int StaffId) : Command
+{
+    public override CommandKind Kind => CommandKind.PoachStaff;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < simulation.Hospitals.Count && simulation.FindEntity(StaffId) is Entities.Humanoid { Profile: not null } staff)
+        {
+            simulation.Hospitals[player].LastPoach = new Economy.PoachAnswer(StaffId, Staff.StaffEmployment.Poach(simulation, staff, player), simulation.Tick);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(StaffId);
 }
 
 /// <summary>Bids for the parcel up for auction (<see cref="LandAuction"/>): the next bid, if the player may and can pay it.</summary>
