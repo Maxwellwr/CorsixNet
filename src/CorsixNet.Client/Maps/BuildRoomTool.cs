@@ -24,6 +24,7 @@ namespace CorsixNet.Client.Maps;
 /// <param name="Back">The player steps back (Esc).</param>
 /// <param name="PickUp">The player toggles picking objects up (P).</param>
 /// <param name="Rotate">The rotate object key was pressed (<c>ingame_rotateobject</c>, space by default).</param>
+/// <param name="Sell">The sell picked up item key was pressed (<c>ingame_sellPickedUpItem</c>, Delete by default).</param>
 internal readonly record struct BuildInput(
     TilePosition? Hovered,
     int FractionX,
@@ -35,7 +36,8 @@ internal readonly record struct BuildInput(
     bool Confirm,
     bool Back,
     bool PickUp,
-    bool Rotate = false);
+    bool Rotate = false,
+    bool Sell = false);
 
 /// <summary>
 /// The player's room building flow, after the original game and CorsixTH's <c>UIEditRoom</c>:

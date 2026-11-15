@@ -65,6 +65,8 @@ public enum CommandKind : ushort
     BidForParcel = 50,
     PoachStaff = 51,
     ReferPatient = 52,
+    MoveCorridorObject = 53,
+    SellCorridorObject = 54,
 }
 
 /// <summary>
@@ -141,6 +143,8 @@ public abstract record Command
             CommandKind.BidForParcel => new BidForParcelCommand(reader.ReadInt32()),
             CommandKind.PoachStaff => new PoachStaffCommand(reader.ReadInt32()),
             CommandKind.ReferPatient => new ReferPatientCommand(reader.ReadInt32(), reader.ReadInt32()),
+            CommandKind.MoveCorridorObject => new MoveCorridorObjectCommand(reader.ReadInt32(), reader.ReadTile(), (Direction)reader.ReadByte()),
+            CommandKind.SellCorridorObject => new SellCorridorObjectCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -388,6 +392,46 @@ public sealed record PlaceObjectCommand(string ObjectType, TilePosition Tile, Di
         writer.WriteTile(Tile);
         writer.WriteByte((byte)Orientation);
     }
+}
+
+/// <summary>
+/// Puts a corridor object the player picked up (a right click, <c>Object:onClick</c>) down elsewhere, or back where it
+/// was if it cannot stand there (<see cref="CorridorObjects.Move"/>).
+/// </summary>
+public sealed record MoveCorridorObjectCommand(int ObjectId, TilePosition Tile, Direction Orientation) : Command
+{
+    public override CommandKind Kind => CommandKind.MoveCorridorObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (CorridorObjects.CanPickUp(simulation, ObjectId, player))
+        {
+            CorridorObjects.Move(simulation, (RoomObject)simulation.FindEntity(ObjectId)!, Tile, Orientation, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(ObjectId);
+        writer.WriteTile(Tile);
+        writer.WriteByte((byte)Orientation);
+    }
+}
+
+/// <summary>Sells a corridor object the player picked up (<c>UIPlaceObjects:sell</c>): it goes, and its build cost comes back.</summary>
+public sealed record SellCorridorObjectCommand(int ObjectId) : Command
+{
+    public override CommandKind Kind => CommandKind.SellCorridorObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (CorridorObjects.CanPickUp(simulation, ObjectId, player))
+        {
+            CorridorObjects.Sell(simulation, (RoomObject)simulation.FindEntity(ObjectId)!, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(ObjectId);
 }
 
 /// <summary>Picks an object up from a room that is still being built, if it belongs to the issuing player.</summary>

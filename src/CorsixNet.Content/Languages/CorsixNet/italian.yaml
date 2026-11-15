@@ -299,6 +299,7 @@ strings:
       cannot_build_there: 'la stanza non si può costruire qui'
       not_enough_money: 'soldi insufficienti'
       corridor_object: '%1%%2%: clicca per comprarlo e posizionarlo, clic destro per ruotarlo, Tab: oggetto successivo%3%   Esc: annulla'
+      move_object: "%1%: clicca per posarlo, clic destro per ruotarlo, Canc per venderlo%2%   Esc: rimettilo a posto"
       too_small: 'troppo piccola'
       outside_map: 'fuori dalla mappa'
       not_buildable: 'qui non si può costruire'

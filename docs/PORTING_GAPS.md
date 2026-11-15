@@ -28,7 +28,15 @@ objects from the level file.
 - (Done: the bench drawn split over three tiles facing north, as `bench.lua`'s `render_attach_position` (the other
   facings from its own tile, as there; `ObjectDrawing.Split`). The furnish corridor window with counts and prices
   (`FurnishCorridorScreen`, `dialogs/furnish_corridor.lua`).)
-- Side objects inside a room's area when the room is built, and moving or selling corridor objects.
+- (Done: moving and selling corridor objects: a right click picks one of ours up off the corridor floor (`Object:onClick`,
+  pickup.wav), a click puts it down elsewhere at no cost (`MoveCorridorObjectCommand`, `CorridorObjects.Move`, checked
+  with the object out of the way), Esc puts it back (`UIPlaceObjects:undo`) and Delete sells it for its build cost
+  (`ingame_sellPickedUpItem`, `SellCorridorObjectCommand`); its tiles are given back (`ObjectPlacer.Vacate`), patients
+  heading for a picked up reception desk look for another (`rerouteAllPatients`). Side objects (radiators,
+  extinguishers, bins) inside a new room's area become the room's and keep their side (`ObjectPlacer.AdoptSideObjects`,
+  `World:resetSideObjects`).) Corridor objects in a finished room are not picked up (CorsixTH lets you); side objects
+  are not picked up off the corridor yet. While one is on the cursor, others may still use it, where CorsixTH sends
+  them off at once.
 - (Done: every room of the original with its objects and machines, `BaseGameContent`, `RoomVisits`.)
 - Machines: the gear icon over a machine a handyman was called to is drawn. The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
   invulnerable and repair-all cheats are done. Strength, wear per use,
@@ -59,8 +67,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - Keys in windows: a window on top in its original look takes the keys it handles (`UiWindow.TakesKey`): the arrows in
   staff management and the casebook, Enter in the confirmation, information, hire and buy objects windows, H (`ingame_patient_gohome`) in the patient
   window. The place objects rotate key is done (`ingame_rotateobject`), and so is its sell key (`ingame_sellPickedUpItem`,
-  Delete: `UIPlaceObjects:sell` ends placing corridor objects, not in a room being edited); corridor objects cannot be
-  picked up off the floor yet.
+  Delete: `UIPlaceObjects:sell` sells a picked up corridor object, or ends buying them; not in a room being edited).
 - Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;

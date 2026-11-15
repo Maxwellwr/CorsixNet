@@ -306,6 +306,7 @@ strings:
       cannot_build_there: 'de kamer kan daar niet gebouwd worden'
       not_enough_money: 'te weinig geld'
       corridor_object: '%1%%2%: klik om te kopen en neer te zetten, rechts klikken draait, Tab: volgend voorwerp%3%   Esc: annuleren'
+      move_object: "%1%: klik om neer te zetten, rechts klikken draait, Delete verkoopt%2%   Esc: terugzetten"
       too_small: 'te klein'
       outside_map: 'buiten de kaart'
       not_buildable: 'daar kan niet gebouwd worden'

@@ -252,6 +252,7 @@ strings:
       cannot_build_there: la salle ne peut pas être construite ici
       not_enough_money: pas assez d'argent
       corridor_object: "%1%%2% : cliquez pour l'acheter et le placer, clic droit pour tourner, Tab : objet suivant%3%   Échap : annuler"
+      move_object: "%1% : cliquez pour le poser, clic droit pour tourner, Suppr pour le vendre%2%   Échap : le remettre en place"
       too_small: trop petite
       outside_map: hors de la carte
       not_buildable: construction impossible ici

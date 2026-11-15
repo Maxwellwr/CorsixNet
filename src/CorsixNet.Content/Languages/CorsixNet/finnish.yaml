@@ -456,6 +456,7 @@ strings:
       cannot_build_there: 'huonetta ei voi rakentaa siihen'
       not_enough_money: 'rahaa ei ole tarpeeksi'
       corridor_object: '%1%%2%: osta ja sijoita klikkaamalla, oikea klikkaus kääntää, Tab: seuraava esine%3%   Esc: peruuta'
+      move_object: "%1%: sijoita klikkaamalla, oikea klikkaus kääntää, Delete myy%2%   Esc: palauta paikalleen"
       too_small: 'liian pieni'
       outside_map: 'kartan ulkopuolella'
       not_buildable: 'siihen ei voi rakentaa'

@@ -379,6 +379,7 @@ strings:
       cannot_build_there: 'そこには部屋を建てられません'
       not_enough_money: 'お金が足りません'
       corridor_object: '%1%%2%：クリックで購入して設置、右クリックで回転、Tab：次の物品%3%   Esc：キャンセル'
+      move_object: "%1%：クリックで設置、右クリックで回転、Deleteで売却%2%   Esc：元に戻す"
       too_small: '小さすぎます'
       outside_map: 'マップの外です'
       not_buildable: 'そこには建てられません'

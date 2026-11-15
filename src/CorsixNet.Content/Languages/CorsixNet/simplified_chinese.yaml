@@ -307,6 +307,7 @@ strings:
       cannot_build_there: '房间不能建在这里'
       not_enough_money: '钱不够'
       corridor_object: '%1%%2%：点击购买并放置，右键旋转，Tab：下一个物品%3%   Esc：取消'
+      move_object: "%1%：点击放置，右键旋转，Delete出售%2%   Esc：放回原处"
       too_small: '太小'
       outside_map: '在地图外'
       not_buildable: '这里不能建造'

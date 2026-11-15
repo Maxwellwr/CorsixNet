@@ -3,6 +3,7 @@ using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Objects;
+using CorsixNet.Sim.Serialization;
 using static CorsixNet.Sim.Definitions.FootprintFlags;
 
 namespace CorsixNet.Sim.Tests;
@@ -125,6 +126,94 @@ public class CorridorObjectTests
         // The bench's use position may be shared, so a radiator may go there.
         Place(simulation, "bench", new(6, 4), Direction.North);
         Assert.Equal(ObjectPlacementProblem.None, Check(simulation, "radiator", new(6, 3), Direction.North));
+    }
+
+    [Fact]
+    public void APickedUpDrinksMachineMovesAndItsOldTilesAreFreeAgain()
+    {
+        var simulation = NewSimulation();
+        Place(simulation, "drinks_machine", new(3, 4), Direction.North);
+        var machine = simulation.Entities.OfType<RoomObject>().Single();
+        Assert.True(CorridorObjects.CanPickUp(simulation, machine.Id, 0));
+        Assert.False(CorridorObjects.CanPickUp(simulation, machine.Id, 1));
+
+        var command = new MoveCorridorObjectCommand(machine.Id, new(6, 4), Direction.North);
+        using (var wire = new MemoryStream())
+        {
+            command.Write(new SimWriter(wire));
+            wire.Position = 0;
+            Assert.Equal(command, Command.Read(new SimReader(wire)));
+        }
+
+        simulation.Schedule(0, command);
+        simulation.Step();
+
+        var moved = simulation.Entities.OfType<RoomObject>().Single();
+        Assert.Equal(new TilePosition(6, 4), moved.Tile);
+        Assert.Equal(0, simulation.Map[3, 4].ObjectId);
+        Assert.True(simulation.Map[3, 4].Has(TileFlags.Buildable));
+        Assert.True(simulation.Map[3, 4].Has(TileFlags.Passable));
+        Assert.Equal(moved.Id, simulation.Map[6, 4].ObjectId);
+        Assert.Equal(ObjectPlacementProblem.None, Check(simulation, "radiator", new(3, 3), Direction.North));
+    }
+
+    [Fact]
+    public void AnObjectMayBePutDownOverWhereItStoodItself()
+    {
+        var simulation = NewSimulation();
+        Place(simulation, "drinks_machine", new(3, 4), Direction.North);
+        var machine = simulation.Entities.OfType<RoomObject>().Single();
+
+        // One tile south: its use position is now where the machine stood.
+        Assert.Equal(ObjectPlacementProblem.Blocked, Check(simulation, "drinks_machine", new(3, 5), Direction.North));
+        Assert.Equal(ObjectPlacementProblem.None, CorridorObjects.CheckMove(simulation, machine, new(3, 5), Direction.North, 0));
+        Assert.Equal(machine.Id, simulation.Map[3, 4].ObjectId);
+
+        simulation.Schedule(0, new MoveCorridorObjectCommand(machine.Id, new(3, 5), Direction.North));
+        simulation.Step();
+        Assert.Equal(new TilePosition(3, 5), simulation.Entities.OfType<RoomObject>().Single().Tile);
+        Assert.Equal(0, simulation.Map[3, 4].ObjectId);
+        Assert.True(simulation.Map[3, 4].Has(TileFlags.Passable));
+    }
+
+    [Fact]
+    public void AMoveWhereTheObjectCannotStandPutsItBack()
+    {
+        var simulation = NewSimulation();
+        Place(simulation, "drinks_machine", new(3, 4), Direction.North);
+        Place(simulation, "bench", new(6, 4), Direction.North);
+        var machine = simulation.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "drinks_machine");
+
+        simulation.Schedule(0, new MoveCorridorObjectCommand(machine.Id, new(6, 4), Direction.North));
+        simulation.Step();
+
+        var back = simulation.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "drinks_machine");
+        Assert.Equal(new TilePosition(3, 4), back.Tile);
+        Assert.Equal(back.Id, simulation.Map[3, 4].ObjectId);
+        Assert.False(simulation.Map[3, 4].Has(TileFlags.Buildable));
+    }
+
+    [Fact]
+    public void ASoldBenchGoesAndTheSharedTileKeepsTheOtherBench()
+    {
+        var simulation = NewSimulation();
+
+        // Two benches facing each other share the tile between them (their use positions).
+        Place(simulation, "bench", new(4, 4), Direction.North);
+        Place(simulation, "bench", new(4, 2), Direction.East);
+        var first = simulation.Entities.OfType<RoomObject>().First(o => o.Tile == new TilePosition(4, 4));
+        var balance = simulation.Hospitals[0].Balance;
+
+        simulation.Schedule(0, new SellCorridorObjectCommand(first.Id));
+        simulation.Step();
+
+        Assert.Single(simulation.Entities.OfType<RoomObject>());
+        Assert.Equal(0, simulation.Map[4, 4].ObjectId);
+        Assert.True(simulation.Map[4, 4].Has(TileFlags.Buildable));
+        Assert.True(simulation.Hospitals[0].Balance >= balance);
+
+        // The other bench's own tile is still taken.
+        Assert.False(simulation.Map[4, 2].Has(TileFlags.Buildable));
     }
 
     private static Dictionary<Direction, ObjectOrientation> Side(params Direction[] facings)

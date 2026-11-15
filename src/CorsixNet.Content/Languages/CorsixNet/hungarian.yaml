@@ -472,6 +472,7 @@ strings:
       cannot_build_there: 'a szoba nem építhető ide'
       not_enough_money: 'nincs elég pénz'
       corridor_object: '%1%%2%: kattints a vásárláshoz és elhelyezéshez, jobb klikk forgat, Tab: következő tárgy%3%   Esc: mégse'
+      move_object: "%1%: kattints a lerakáshoz, jobb klikk forgat, Delete eladja%2%   Esc: vissza a helyére"
       too_small: 'túl kicsi'
       outside_map: 'a térképen kívül'
       not_buildable: 'ide nem lehet építeni'

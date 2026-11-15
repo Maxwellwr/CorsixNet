@@ -420,6 +420,7 @@ strings:
       cannot_build_there: '그곳에는 방을 지을 수 없습니다'
       not_enough_money: '돈이 부족합니다'
       corridor_object: '%1%%2%: 클릭해서 사서 놓기, 오른쪽 클릭으로 회전, Tab: 다음 물건%3%   Esc: 취소'
+      move_object: "%1%: 클릭해서 놓기, 오른쪽 클릭으로 회전, Delete로 판매%2%   Esc: 제자리로"
       too_small: '너무 작음'
       outside_map: '지도 밖'
       not_buildable: '지을 수 없는 곳'

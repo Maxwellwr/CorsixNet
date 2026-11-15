@@ -2062,6 +2062,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _windows.Open(new RoomEditWindow(_buildTool, button => _buildButton = button));
         }
 
+        // Object:onClick: a right click (not a drag, which pans) on a corridor object of ours picks it up.
+        if (!_buildTool.IsActive && !_furnishTool.IsActive
+            && mouse.RightButton == ButtonState.Released && _previousMouse.RightButton == ButtonState.Pressed
+            && Math.Abs(mouse.X - _rightPressedAt.X) + Math.Abs(mouse.Y - _rightPressedAt.Y) < 6
+            && _hoveredTile is { } under && simulation.Map.Contains(under.X, under.Y)
+            && simulation.FindEntity(simulation.Map[under.X, under.Y].ObjectId) is RoomObject grabbed
+            && CorridorObjects.CanPickUp(simulation, grabbed.Id, _session.Player)
+            && simulation.Content.FindObject(grabbed.ObjectType) is { } grabbedDefinition)
+        {
+            _furnishTool.StartMove(grabbedDefinition, grabbed);
+            return;
+        }
+
         if (_buildTool.IsActive || _furnishTool.IsActive)
         {
             // While building, the mouse belongs to the build tool; a right click (not a drag, which pans) turns objects.
@@ -2078,9 +2091,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 !leftDown && leftWasDown,
                 rightClicked,
                 pressed(Keys.Enter) || TakeButton(BuildButton.Confirm),
-                back || TakeButton(BuildButton.Back) || (_furnishTool.IsActive && !_buildTool.IsActive && HotkeyInput.Pressed(_hotkeys["ingame_sellPickedUpItem"], keys, pressed)),
+                back || TakeButton(BuildButton.Back),
                 pressed(Keys.P) || TakeButton(BuildButton.PickUp),
-                IsPlacingObject && HotkeyInput.Pressed(_hotkeys["ingame_rotateobject"], keys, pressed));
+                IsPlacingObject && HotkeyInput.Pressed(_hotkeys["ingame_rotateobject"], keys, pressed),
+                _furnishTool.IsActive && !_buildTool.IsActive && HotkeyInput.Pressed(_hotkeys["ingame_sellPickedUpItem"], keys, pressed));
             var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
             if (tool is { } command)
             {
@@ -2397,7 +2411,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
             // Someone shown by another's animation, such as a patient at the pharmacy cabinet.
             // The pickup action: one being carried is drawn on the cursor instead.
-            if (entity is Humanoid { IsHidden: true } || (entity is Humanoid && entity.Id == _pickedUpStaff))
+            if (entity is Humanoid { IsHidden: true } || (entity is Humanoid && entity.Id == _pickedUpStaff)
+                || (entity is RoomObject && entity.Id == _furnishTool.MovingId))
             {
                 continue;
             }
