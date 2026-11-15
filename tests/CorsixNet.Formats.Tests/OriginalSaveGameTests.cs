@@ -238,6 +238,7 @@ public class OriginalSaveGameTests
         data[entity + 81] = 68;
         data[entity + 134] = 42;
         data[entity + 83] = 31;
+        data[entity + 168] = 16;
 
         var patient = Assert.Single(OriginalSaveGame.Parse(data).Entities);
 
@@ -245,6 +246,7 @@ public class OriginalSaveGameTests
         Assert.Equal(68, patient.Happiness);
         Assert.Equal(42, patient.Thirst);
         Assert.Equal(31, patient.Warmth);
+        Assert.Equal(16, patient.Disease);
     }
 
     [Fact]
@@ -300,6 +302,11 @@ public class OriginalSaveGameTests
 
             // A fresh level carries a few stale entries over, so only judge saves with real furniture.
             Assert.True(listed < 20 || wrongType * 10 <= listed, $"{wrongType} of {listed} listed objects have another type");
+
+            // Patients have diseases the hospital's casebook knows (0 is seen on a few visitors without one).
+            var patients = save.Entities.Where(e => e.Kind == 2 && e.Disease != 0).ToList();
+            var known = patients.Count(p => p.Disease is > 0 and < OriginalSaveHospital.DiseaseCount && local.Disease(p.Disease).Known);
+            Assert.True(known * 10 >= patients.Count * 9, $"{known} of {patients.Count} patients have a known disease");
 
             // Rooms lie on the map with their door on their edge and the outside tile next to it.
             foreach (var room in save.Rooms.Where(r => r.Width > 1))

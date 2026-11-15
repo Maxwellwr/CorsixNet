@@ -76,6 +76,12 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// </summary>
     public ReadOnlySpan<byte> HealthHistory => Raw.Span.Slice(158, 10);
 
+    /// <summary>
+    /// Patients only: the disease, as an index of <c>#expertise[n]</c> (the casebook order, see
+    /// <see cref="OriginalSaveHospital.Disease"/>); set from arrival, even before diagnosis.
+    /// </summary>
+    public byte Disease => Raw.Span[168];
+
     /// <summary>Patients only: happiness from 0 to 100, the first bar of the patient window.</summary>
     public byte Happiness => Raw.Span[81];
 
