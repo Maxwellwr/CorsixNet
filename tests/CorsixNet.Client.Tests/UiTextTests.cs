@@ -23,11 +23,16 @@ public partial class UiTextTests
     public void LabelsDropTheMenusHotkeysAndPadding() =>
         Assert.Equal("LOAD", UiText.Label("menu_file.load", "  (%1%) LOAD  "));
 
+    /// <summary>The languages with a file of CorsixNet's own strings, by English name.</summary>
+    public static TheoryData<string> OwnLanguages()
+    {
+        var folder = Path.Combine(AppContext.BaseDirectory, "Languages", CorsixLanguages.OwnStringsFolder);
+        var files = Directory.EnumerateFiles(folder, "*" + CorsixLanguages.Extension).Select(path => (Path.GetFileName(path), File.ReadAllText(path)));
+        return [.. new CorsixLanguages(files).Languages.Select(language => language.EnglishName)];
+    }
+
     [Theory]
-    [InlineData("Russian")]
-    [InlineData("German")]
-    [InlineData("French")]
-    [InlineData("Spanish")]
+    [MemberData(nameof(OwnLanguages))]
     public void ATranslationHasEveryOwnStringTheClientUses(string language)
     {
         var strings = CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages")).Load(language, _ => null);
