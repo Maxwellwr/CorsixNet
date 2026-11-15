@@ -16,6 +16,7 @@ const string Usage = """
     usage: CorsixNet.SaveDump summary <save>
            CorsixNet.SaveDump entities <save> [<kind>]
            CorsixNet.SaveDump diff <save a> <save b>
+           CorsixNet.SaveDump coverage <save> [<save>...]
     """;
 
 try
@@ -33,6 +34,9 @@ try
             return 0;
         case ["diff", var a, var b]:
             Diff(Load(a), Load(b));
+            return 0;
+        case ["coverage", _, ..]:
+            Coverage(args[1..].Select(Load).ToList());
             return 0;
         default:
             Console.Error.WriteLine(Usage);
@@ -130,7 +134,7 @@ static void Diff(OriginalSaveGame a, OriginalSaveGame b)
 
         changed++;
         var end = offset;
-        while (end + 1 < OriginalSaveGame.Length && x[end + 1] != y[end + 1] && OriginalSaveGame.DescribeOffset(end + 1).StartsWith(Area(offset), StringComparison.Ordinal))
+        while (end + 1 < OriginalSaveGame.Length && x[end + 1] != y[end + 1] && Group(end + 1) == Group(offset))
         {
             end++;
             changed++;
@@ -144,13 +148,57 @@ static void Diff(OriginalSaveGame a, OriginalSaveGame b)
     Console.WriteLine($"{changed} bytes differ");
 }
 
-// Groups a run of changed bytes only while it stays in one tile, entity or hospital block.
-static string Area(int offset)
+// Groups a run of changed bytes only while it stays in one field, or in the unknown bytes of one record.
+static (OriginalSaveArea Area, int Index, OriginalSaveField? Field) Group(int offset)
 {
-    var description = OriginalSaveGame.DescribeOffset(offset);
-    var cut = description.LastIndexOf(description.StartsWith("tile", StringComparison.Ordinal) ? " byte" : " +", StringComparison.Ordinal);
-    return cut < 0 ? description : description[..cut];
+    var (area, relative) = OriginalSaveGame.Locate(offset, out var index);
+    return (area, index, OriginalSaveFields.Find(area, relative));
 }
+
+// Of the bytes that differ between the given saves (the bytes that carry state), how many lie in known fields.
+static void Coverage(IReadOnlyList<OriginalSaveGame> saves)
+{
+    var counts = new Dictionary<(OriginalSaveArea Area, string Status), int>();
+    var first = saves[0].Data.Span;
+    for (var offset = 0; offset < OriginalSaveGame.Length; offset++)
+    {
+        var value = first[offset];
+        var varies = saves.Any(save => save.Data.Span[offset] != value) || (saves.Count == 1 && value != 0);
+        if (!varies)
+        {
+            continue;
+        }
+
+        var (area, _) = OriginalSaveGame.Locate(offset);
+        var status = OriginalSaveFields.FindInFile(offset) switch
+        {
+            { Verified: true } => "known",
+            { } => "spec only",
+            null => "unknown",
+        };
+        counts[(area, status)] = counts.GetValueOrDefault((area, status)) + 1;
+    }
+
+    var basis = saves.Count == 1 ? "non-zero" : "varying";
+    var total = counts.Values.Sum();
+    Console.WriteLine($"{total} {basis} bytes of {OriginalSaveGame.Length}");
+    foreach (var area in Enum.GetValues<OriginalSaveArea>())
+    {
+        var known = counts.GetValueOrDefault((area, "known"));
+        var spec = counts.GetValueOrDefault((area, "spec only"));
+        var unknown = counts.GetValueOrDefault((area, "unknown"));
+        var all = known + spec + unknown;
+        if (all > 0)
+        {
+            Console.WriteLine($"  {area,-9} {all,7}: known {Percent(known, all)}, spec only {Percent(spec, all)}, unknown {Percent(unknown, all)}");
+        }
+    }
+
+    var allKnown = counts.Where(c => c.Key.Status == "known").Sum(c => c.Value);
+    Console.WriteLine($"  total     {total,7}: known {Percent(allKnown, total)}");
+}
+
+static string Percent(int part, int whole) => $"{100.0 * part / whole,5:0.0}%";
 
 static string Numbers(ReadOnlySpan<byte> x, ReadOnlySpan<byte> y, int offset, int length) => length switch
 {

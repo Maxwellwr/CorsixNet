@@ -310,55 +310,52 @@ public sealed class OriginalSaveGame
     }
 
     /// <summary>
-    /// Names the part of the file an offset falls in, such as <c>tile (7,5) byte 2</c>,
-    /// <c>entity 9 +14</c> or <c>hospital 1 +53</c>; for comparing saves.
+    /// Finds the area an offset falls in, the index of the tile, entity, room or hospital record there,
+    /// and the offset inside that record (or in the file, for <see cref="OriginalSaveArea.File"/>).
     /// </summary>
-    public static string DescribeOffset(int offset)
+    public static (OriginalSaveArea Area, int Relative) Locate(int offset) => Locate(offset, out _);
+
+    /// <inheritdoc cref="Locate(int)"/>
+    public static (OriginalSaveArea Area, int Relative) Locate(int offset, out int index)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(offset);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(offset, Length);
-        if (offset < TileOffset)
+        (OriginalSaveArea, int)? InTable(OriginalSaveArea area, int start, int length, int count, out int record)
         {
-            return $"header +{offset}";
+            record = (offset - start) / length;
+            return offset >= start && offset < start + (length * count) ? (area, (offset - start) % length) : null;
         }
 
-        if (offset < EntityOffset)
+        var found = InTable(OriginalSaveArea.Tile, TileOffset, TileLength, MapSize * MapSize, out index)
+            ?? InTable(OriginalSaveArea.Entity, EntityOffset, EntityLength, EntityCount, out index)
+            ?? InTable(OriginalSaveArea.Room, RoomOffset, RoomLength, RoomCount, out index)
+            ?? InTable(OriginalSaveArea.Hospital, HospitalOffset, HospitalLength, MaxPlayers, out index);
+        if (found is { } inTable)
         {
-            var tile = (offset - TileOffset) / TileLength;
-            return $"tile ({tile % MapSize},{tile / MapSize}) byte {(offset - TileOffset) % TileLength}";
+            return inTable;
         }
 
-        if (offset < EntityOffset + (EntityCount * EntityLength))
-        {
-            return $"entity {(offset - EntityOffset) / EntityLength} +{(offset - EntityOffset) % EntityLength}";
-        }
+        index = 0;
+        return (OriginalSaveArea.File, offset);
+    }
 
-        if (offset >= RoomOffset && offset < RoomOffset + (RoomCount * RoomLength))
+    /// <summary>
+    /// Names the part of the file an offset falls in, such as <c>tile (7,5) byte 2 floor</c>,
+    /// <c>entity 9 +14 type</c> or <c>hospital 1 +53 money</c>; for comparing saves.
+    /// </summary>
+    public static string DescribeOffset(int offset)
+    {
+        var (area, relative) = Locate(offset, out var index);
+        var place = area switch
         {
-            return $"room {(offset - RoomOffset) / RoomLength} +{(offset - RoomOffset) % RoomLength}";
-        }
-
-        if (offset >= PlotOffset && offset < PlotOffset + MaxPlots)
-        {
-            return $"plot {offset - PlotOffset}";
-        }
-
-        if (offset is DateOffset)
-        {
-            return "day";
-        }
-
-        if (offset is DateOffset + 1)
-        {
-            return "month";
-        }
-
-        if (offset >= HospitalOffset && offset < HospitalOffset + (MaxPlayers * HospitalLength))
-        {
-            return $"hospital {(offset - HospitalOffset) / HospitalLength} +{(offset - HospitalOffset) % HospitalLength}";
-        }
-
-        return $"unknown 0x{offset:X5}";
+            OriginalSaveArea.Tile => $"tile ({index % MapSize},{index / MapSize}) byte {relative}",
+            OriginalSaveArea.Entity => $"entity {index} +{relative}",
+            OriginalSaveArea.Room => $"room {index} +{relative}",
+            OriginalSaveArea.Hospital => $"hospital {index} +{relative}",
+            _ when offset < TileOffset => $"header +{offset}",
+            _ => $"0x{offset:X5}",
+        };
+        return OriginalSaveFields.Find(area, relative) is { } field ? $"{place} {field.Name}" : place;
     }
 
     private static OriginalSaveHospital ParseHospital(ReadOnlyMemory<byte> block)

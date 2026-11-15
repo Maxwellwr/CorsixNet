@@ -74,15 +74,15 @@ public class OriginalSaveGameTests
     }
 
     [Theory]
-    [InlineData(2, "header +2")]
-    [InlineData(13 + (((5 * 128) + 7) * 8) + 2, "tile (7,5) byte 2")]
-    [InlineData(131085 + (9 * 175) + 14, "entity 9 +14")]
-    [InlineData(0x60194 + (17 * 35) + 2, "room 17 +2")]
-    [InlineData(0x6661C + 2, "plot 2")]
-    [InlineData(399030, "day")]
-    [InlineData(399031, "month")]
-    [InlineData(399968 + 4697 + 53, "hospital 1 +53")]
-    [InlineData(399000, "unknown 0x61698")]
+    [InlineData(2, "header +2 level")]
+    [InlineData(13 + (((5 * 128) + 7) * 8) + 2, "tile (7,5) byte 2 floor")]
+    [InlineData(131085 + (9 * 175) + 14, "entity 9 +14 type")]
+    [InlineData(0x60194 + (17 * 35) + 2, "room 17 +2 height")]
+    [InlineData(0x6661C + 2, "0x6661E plot owners")]
+    [InlineData(399030, "0x616B6 day")]
+    [InlineData(399031, "0x616B7 month")]
+    [InlineData(399968 + 4697 + 53, "hospital 1 +53 money")]
+    [InlineData(399000, "0x61698")]
     public void DescribesOffsets(int offset, string expected)
     {
         Assert.Equal(expected, OriginalSaveGame.DescribeOffset(offset));
