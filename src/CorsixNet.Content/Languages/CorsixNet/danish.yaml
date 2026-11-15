@@ -330,8 +330,6 @@ strings:
       assign: 'Tildel'
       game_font: 'Spillets skrifttype'
       system_font: 'System'
-    new_game:
-      player_name_hint: '(player_name i config.yaml)'
     custom_game:
       none: 'Ingen baner fundet: læg .level- og .map-filer i banemappen (levels i config.yaml).'
     custom_campaign:

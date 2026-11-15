@@ -266,8 +266,6 @@ strings:
       assign: '설정'
       game_font: '게임 글꼴'
       system_font: '시스템'
-    new_game:
-      player_name_hint: '(config.yaml의 player_name)'
     custom_game:
       none: '레벨이 없습니다. .level과 .map 파일을 레벨 폴더(config.yaml의 levels)에 넣으세요.'
     custom_campaign:

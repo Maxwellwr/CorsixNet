@@ -302,8 +302,6 @@ strings:
       assign: 'Aseta'
       game_font: 'Pelin fontti'
       system_font: 'Järjestelmä'
-    new_game:
-      player_name_hint: '(player_name tiedostossa config.yaml)'
     custom_game:
       none: 'Tasoja ei löytynyt: laita .level- ja .map-tiedostot tasokansioon (levels tiedostossa config.yaml).'
     custom_campaign:

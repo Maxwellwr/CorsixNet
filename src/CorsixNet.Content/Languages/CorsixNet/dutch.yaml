@@ -152,8 +152,6 @@ strings:
       assign: 'Toewijzen'
       game_font: 'Lettertype van het spel'
       system_font: 'Systeem'
-    new_game:
-      player_name_hint: '(player_name in config.yaml)'
     custom_game:
       none: 'Geen levels gevonden: zet .level- en .map-bestanden in de levelmap (levels in config.yaml).'
     custom_campaign:

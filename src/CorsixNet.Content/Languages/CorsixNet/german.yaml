@@ -165,8 +165,6 @@ strings:
       assign: Belegen
       game_font: Spielschrift
       system_font: System
-    new_game:
-      player_name_hint: (player_name in config.yaml)
     custom_game:
       none: 'Keine Level gefunden: Legen Sie .level- und .map-Dateien in den Level-Ordner (levels in config.yaml).'
     custom_campaign:

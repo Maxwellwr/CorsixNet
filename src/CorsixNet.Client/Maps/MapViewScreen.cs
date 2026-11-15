@@ -3505,7 +3505,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new ReplayListWindow(Path.Combine(_saves.Directory, Replay.Folder), WatchReplay));
                 break;
             case "newgame":
-                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, (difficulty, tutorial) => StartCampaign(difficulty, tutorial)));
+                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, (difficulty, tutorial) => StartCampaign(difficulty, tutorial), SavePlayerName));
                 break;
             case "levels" when _levels.Count > 0:
                 _levelList = true;
@@ -3681,6 +3681,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void ToggleAnnouncements()
     {
         _config = _config with { PlayAnnouncements = !_config.PlayAnnouncements };
+        SaveConfig();
+    }
+
+    /// <summary>The new game dialog's name, kept in the settings (<c>UINewGame:saveToConfig</c>).</summary>
+    private void SavePlayerName(string name)
+    {
+        _config = _config with { PlayerName = name };
         SaveConfig();
     }
 
@@ -3943,7 +3950,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         switch (action)
         {
             case "newgame":
-                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, (difficulty, tutorial) => StartCampaign(difficulty, tutorial)));
+                _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, (difficulty, tutorial) => StartCampaign(difficulty, tutorial), SavePlayerName));
                 break;
             case "campaign":
                 _windows.Open(new CustomCampaignWindow(CustomGames.FindCampaigns(GameConfig.UserFolder(_config.Campaigns, saves, "Campaigns")), StartCustomCampaign));

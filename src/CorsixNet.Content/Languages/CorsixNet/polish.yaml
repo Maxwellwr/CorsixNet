@@ -255,8 +255,6 @@ strings:
       assign: 'Przypisz'
       game_font: 'Czcionka gry'
       system_font: 'Systemowa'
-    new_game:
-      player_name_hint: '(player_name w config.yaml)'
     custom_game:
       none: 'Nie znaleziono poziomów: umieść pliki .level i .map w folderze poziomów (levels w config.yaml).'
     custom_campaign:

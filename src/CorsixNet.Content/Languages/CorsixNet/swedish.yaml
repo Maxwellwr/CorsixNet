@@ -251,8 +251,6 @@ strings:
       assign: 'Tilldela'
       game_font: 'Spelets typsnitt'
       system_font: 'System'
-    new_game:
-      player_name_hint: '(player_name i config.yaml)'
     custom_game:
       none: 'Inga banor hittades: lägg .level- och .map-filer i banmappen (levels i config.yaml).'
     custom_campaign:

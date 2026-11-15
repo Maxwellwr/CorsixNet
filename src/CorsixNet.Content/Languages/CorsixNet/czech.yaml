@@ -81,8 +81,6 @@ strings:
       assign: 'Přiřadit'
       game_font: 'Písmo hry'
       system_font: 'Systémové'
-    new_game:
-      player_name_hint: '(player_name v config.yaml)'
     custom_game:
       none: 'Nenalezeny žádné úrovně: vložte soubory .level a .map do složky úrovní (levels v config.yaml).'
     custom_campaign:

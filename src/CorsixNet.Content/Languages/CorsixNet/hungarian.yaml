@@ -318,8 +318,6 @@ strings:
       assign: 'Hozzárendelés'
       game_font: 'A játék betűtípusa'
       system_font: 'Rendszer'
-    new_game:
-      player_name_hint: '(player_name a config.yaml fájlban)'
     custom_game:
       none: 'Nem található pálya: tedd a .level és .map fájlokat a pályák mappájába (levels a config.yaml fájlban).'
     custom_campaign:

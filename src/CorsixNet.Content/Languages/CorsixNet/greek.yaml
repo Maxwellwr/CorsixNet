@@ -183,8 +183,6 @@ strings:
       assign: 'Ορισμός'
       game_font: 'Γραμματοσειρά παιχνιδιού'
       system_font: 'Συστήματος'
-    new_game:
-      player_name_hint: '(player_name στο config.yaml)'
     custom_game:
       none: 'Δεν βρέθηκαν επίπεδα: βάλτε αρχεία .level και .map στον φάκελο επιπέδων (levels στο config.yaml).'
     custom_campaign:
