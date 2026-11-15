@@ -180,6 +180,7 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         "ingame_jukebox" => "Jukebox",
         "ingame_toggleAdvisor" => "Advisor",
         "ingame_rotateobject" => "Rotate Object",
+        "ingame_sellPickedUpItem" => "Sell Picked-up Item",
         "ingame_patient_gohome" => "Send Patient Home",
         _ when action.StartsWith("ingame_storePosition_", StringComparison.Ordinal) || action.StartsWith("ingame_recallPosition_", StringComparison.Ordinal) =>
             action[^1] == '0' ? "10" : action[^1].ToString(),
@@ -193,7 +194,7 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         var digits = new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" };
         var panes = new List<(string Id, string Title, string Tooltip, (string Title, string[] Keys)[] Sections)>
         {
-            ("ingame", "General In-Game Keys", "Assign general in-game hotkeys", [("General In-Game Keys", ["ingame_jukebox", "ingame_openFirstMessage", "ingame_quickSave", "ingame_quickLoad", "ingame_showCheatWindow", "ingame_rotateobject", "ingame_patient_gohome"])]),
+            ("ingame", "General In-Game Keys", "Assign general in-game hotkeys", [("General In-Game Keys", ["ingame_jukebox", "ingame_openFirstMessage", "ingame_quickSave", "ingame_quickLoad", "ingame_showCheatWindow", "ingame_rotateobject", "ingame_sellPickedUpItem", "ingame_patient_gohome"])]),
             ("speed", "Game Speed Keys", "Assign hotkeys to control the game speed", [("Game Speed Keys", ["ingame_pause", "ingame_gamespeed_slowest", "ingame_gamespeed_slower", "ingame_gamespeed_normal", "ingame_gamespeed_max", "ingame_gamespeed_thensome", "ingame_gamespeed_speedup"])]),
             ("scroll", "Scroll Keys", "Assign hotkeys to scroll the screen", [("Scroll Keys", ["ingame_scroll_up", "ingame_scroll_down", "ingame_scroll_left", "ingame_scroll_right"])]),
             ("zoom", "Zoom Keys", "Assign hotkeys to zoom in and out", [("Zoom Keys", ["ingame_zoom_in", "ingame_zoom_in_more", "ingame_zoom_out", "ingame_zoom_out_more", "ingame_reset_zoom"])]),

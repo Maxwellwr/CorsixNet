@@ -38,7 +38,7 @@ objects from the level file.
   average room's extras (`enable_avg_contents`, `BuildRoomTool.ComputeAverageContents`).
 - (Done: benches, the staff room's sofa, video game and pool table, the training room's projector and lecture chairs,
   the research room's desks, computer and autopsy.)
-- The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
+- (Done: the crash trolley drawn split over two tiles, its use too (`ObjectDrawing.Split`, `render_attach_position`).)
 - (Done: special entities: the helicopter of emergencies and the gates to hell (`objects/helicopter.lua`,
   `gates_to_hell.lua`; the helicopter's depth sorting is in §4); rat holes and rats (`Rats`, `Rat`) with the rat cursor
   and the shot's sound, the holes in a room's walls closing when it is edited or crashes
@@ -57,7 +57,9 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   that opens `StaffRiseWindow` (`staff_rise.lua`: Req12V, grant or refuse, Esc does not close it, the game pauses).
 - Keys in windows: a window on top in its original look takes the keys it handles (`UiWindow.TakesKey`): the arrows in
   staff management and the casebook, Enter in the confirmation, information, hire and buy objects windows, H (`ingame_patient_gohome`) in the patient
-  window. The place objects rotate key is done (`ingame_rotateobject`); its sell key waits for picking up corridor objects.
+  window. The place objects rotate key is done (`ingame_rotateobject`), and so is its sell key (`ingame_sellPickedUpItem`,
+  Delete: `UIPlaceObjects:sell` ends placing corridor objects, not in a room being edited); corridor objects cannot be
+  picked up off the floor yet.
 - Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
@@ -180,8 +182,9 @@ fonts, faces) and the details listed.
   machine menu button with its aux_ui sprites (`machine_menu_button`, `AuxSprites`); the adviser's messages are on their hotkey only.
 - Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock with `twentyfour_hour_clock`); submenus (`MenuBarItem.Submenu`) with the sound,
   announcements and music volumes, wage requests, warmth colours (`warmth_colors_display_default`, the three
-  `temperature_theme`s), game speed and the debug map overlays; edge scrolling and the 24 hour clock as check items.
-  CorsixTH's lock windows, capture mouse and other debug items are not in it. Esc still opens the menu window too.
+  `temperature_theme`s), game speed and the debug map overlays; lock windows (`WindowLayer.LockWindows`, for the run
+  only as CorsixTH's `runtime_config`), edge scrolling, capture mouse and the 24 hour clock as check items. CorsixTH's
+  other debug items are not in it. Esc still opens the menu window too.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
   edit panel are drawn as the original's (`FurnishCorridorScreen`, `RoomEditScreen`). A finished room is resized or gets its door moved by going back to its blueprint (Esc while
@@ -319,20 +322,21 @@ to the client that diverged, `ResyncMessage`.)
   switches, removing destroyed rooms, the average contents and the insurance's blue banknote are in the options
   window (`OptionsWindow`).
 - The rest of the config file (`config_finder.lua`): announcements, music, movies, `right_mouse_scrolling` (the
-  right and middle buttons both drag), `capture_mouse`, the options dialog's game rules, `config.path.txt`; game
+  right and middle buttons both drag), the options dialog's game rules, `config.path.txt`; game
   data folder selection (`resizables/folder_settings.lua`, `directory_browser.lua`). `config.txt` with the language,
   window, screen shake, autosave frequency, game folder, player name, sound effects and scrolling
-  (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`) is done
+  (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`), `capture_mouse`
+  (the cursor kept in the window while it has focus, `MouseCapture`, SDL_SetWindowGrab) and `screenshots` is done
   (`GameConfig`).
 - Hotkeys file (`hotkeys.txt`): read, and written with the defaults when missing, for the dialogs (F1–F9, Shift+F3,
   Ctrl+H, Y, C, F11), pause, speed up, quick save/load, the adviser toggle, the speeds, scrolling, zoom, remembered
   views and the room list (`Hotkeys`, `HotkeyInput`), and changed in the hotkey assignment dialog from the options
   (`HotkeyAssignWindow`). Still on fixed keys: Esc and this game's stand-in keys;
   The sound and announcements toggles (Alt+S, Alt+A, also in the menu bar's options) are done.
-  The screenshot key (Ctrl+S, `global_screenshot`, into Screenshots beside the settings; the `screenshots` setting is not read) is done.
+  The screenshot key (Ctrl+S, `global_screenshot`, into the `screenshots` folder, else Screenshots beside the settings) is done.
   Alt+Enter switches fullscreen and keeps it in the settings (`global_fullscreen_toggle`, `UI:fullscreenHotkey`).
-  CorsixTH's other actions (music toggle, logs, furnish corridor, edit room,
-  sell the picked up item) are not read. The rotate object key (`ingame_rotateobject`, space) turns the object being
+  CorsixTH's other actions (music toggle, logs, furnish corridor, edit room) are not read; the sell picked up item key
+  (`ingame_sellPickedUpItem`) is. The rotate object key (`ingame_rotateobject`, space) turns the object being
   placed, as a right click does; outside placing, space still pauses.
 - Update check (`resizables/update.lua`).
 

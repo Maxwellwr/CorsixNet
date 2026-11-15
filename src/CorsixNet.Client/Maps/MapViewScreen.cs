@@ -1020,6 +1020,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <inheritdoc/>
     public bool DrawsCursor => _cursors is not null;
 
+    /// <inheritdoc/>
+    public bool CapturesMouse => _config.CaptureMouse;
+
     /// <summary>
     /// GameUI:onCursorWorldPositionChange's cursor: the epidemic's over an infected patient during a cover-up, else the
     /// hover cursor of what is under it (a patient, staff, a door or reception desk's queue, a machine to repair, a rat),
@@ -2075,7 +2078,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 !leftDown && leftWasDown,
                 rightClicked,
                 pressed(Keys.Enter) || TakeButton(BuildButton.Confirm),
-                back || TakeButton(BuildButton.Back),
+                back || TakeButton(BuildButton.Back) || (_furnishTool.IsActive && !_buildTool.IsActive && HotkeyInput.Pressed(_hotkeys["ingame_sellPickedUpItem"], keys, pressed)),
                 pressed(Keys.P) || TakeButton(BuildButton.PickUp),
                 IsPlacingObject && HotkeyInput.Pressed(_hotkeys["ingame_rotateobject"], keys, pressed));
             var tool = _buildTool.IsActive ? _buildTool.Update(simulation, _session.Player, input) : _furnishTool.Update(simulation, _session.Player, input);
@@ -3636,7 +3639,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 MenuBarItem.Menu(Item("menu_options.sound_vol", "SOUND VOLUME"), Volumes(_config.SoundVolume, v => _config with { SoundVolume = v, PlaySounds = true })),
                 MenuBarItem.Menu(Item("menu_options.announcements_vol", "ANNOUNCEMENTS VOLUME"), Volumes(_config.AnnouncementVolume, v => _config with { AnnouncementVolume = v, PlayAnnouncements = true })),
                 .. (_music.HasMusic ? [MenuBarItem.Menu(Item("menu_options.music_vol", "MUSIC VOLUME"), Volumes(_config.MusicVolume, v => _config with { MusicVolume = v }))] : Array.Empty<MenuBarItem>()),
+                // display_options: lock windows (for this run only), edge scrolling, capture mouse, the 24 hour clock.
+                new(Item("menu_options.lock_windows", "LOCK WINDOWS"), () => _windows.LockWindows = !_windows.LockWindows, () => _windows.LockWindows),
                 new(Item("menu_options.edge_scrolling", "EDGE SCROLLING"), () => ApplyConfig(_config with { PreventEdgeScrolling = !_config.PreventEdgeScrolling }), () => !_config.PreventEdgeScrolling),
+                new(Item("menu_options.capture_mouse", "CAPTURE MOUSE"), () => ApplyConfig(_config with { CaptureMouse = !_config.CaptureMouse }), () => _config.CaptureMouse),
                 new(Item("menu_options.twentyfour_hour_clock", "24 HOUR CLOCK"), () => ApplyConfig(_config with { TwentyFourHourClock = !_config.TwentyFourHourClock }), () => _config.TwentyFourHourClock),
                 MenuBarItem.Menu(Item("menu_options.wage_increase", "WAGE REQUESTS"), [
                     new(Item("menu_options_wage_increase.grant", "GRANT"), () => _session?.Submit(new SetPolicyCommand(PolicyKind.GrantWageIncrease, 1)), () => OwnPolicies()?.GrantWageIncrease == true),
@@ -3831,7 +3837,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// </summary>
     private void RequestScreenshot()
     {
-        var folder = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_configPath ?? GameConfig.FileName)) ?? ".", "Screenshots");
+        // App:initScreenshotsDir: the screenshots setting, else "Screenshots" beside the config file.
+        var folder = _config.Screenshots is { Length: > 0 } configured
+            ? configured.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            : Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_configPath ?? GameConfig.FileName)) ?? ".", "Screenshots");
         var path = Path.Combine(folder, string.Create(CultureInfo.InvariantCulture, $"Screenshot_{DateTime.Now:yyyyMMdd-HHmmss}.png"));
         if (File.Exists(path))
         {

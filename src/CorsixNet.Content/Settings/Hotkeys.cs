@@ -112,6 +112,7 @@ public sealed class Hotkeys
         ("ingame_jukebox", new("j")),
         ("ingame_toggleAdvisor", new("a", Shift: true)),
         ("ingame_rotateobject", new("space")),
+        ("ingame_sellPickedUpItem", new("delete")),
         ("ingame_patient_gohome", new("h")),
         ("global_fullscreen_toggle", new("return", Alt: true)),
         ("ingame_quickSave", new("s", Shift: true, Alt: true)),
