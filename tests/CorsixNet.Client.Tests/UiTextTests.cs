@@ -44,6 +44,7 @@ public partial class UiTextTests
         Assert.Equal("Звуковые эффекты", russian.Get("corsixnet.options.sound_effects"));
         Assert.Equal("Тряска экрана", russian.Get("accessibility_window.enable_screen_shake"));
         Assert.Equal("Настройки", russian.Get("options_window.caption"));
+        Assert.Equal("Внимание! Больницей управляет мошенник!", russian.Get("subtitles.cheat002"));
     }
 
     /// <summary>The <c>corsixnet.*</c> names in the client's code.</summary>

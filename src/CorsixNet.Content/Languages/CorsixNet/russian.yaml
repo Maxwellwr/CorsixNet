@@ -3,6 +3,9 @@
 # CorsixLanguages; the English stand-ins live in the code. Placeholders: %1%, %2%... by number, %% for a percent sign.
 language: [Русский, Russian, ru, rus]
 strings:
+  subtitles:
+    cheat002: Внимание! Больницей управляет мошенник!
+    rand017: Беспокойных пациентов просят вести себя как можно тише.
   accessibility_window:
     enable_screen_shake: Тряска экрана
     scroll_speed: Скорость прокрутки
