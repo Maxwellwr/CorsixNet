@@ -242,6 +242,7 @@ public class OriginalSaveGameTests
         data[entity + 134] = 42;
         data[entity + 83] = 31;
         data[entity + 168] = 16;
+        data[entity + 146] = 248;
 
         var patient = Assert.Single(OriginalSaveGame.Parse(data).Entities);
 
@@ -250,6 +251,7 @@ public class OriginalSaveGameTests
         Assert.Equal(42, patient.Thirst);
         Assert.Equal(31, patient.Warmth);
         Assert.Equal(16, patient.Disease);
+        Assert.Equal(248, patient.DiagnosisCertainty);
     }
 
     [Fact]

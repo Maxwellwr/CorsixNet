@@ -92,6 +92,12 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// </summary>
     public byte Disease => Raw.Span[168];
 
+    /// <summary>
+    /// Patients only: how certain the diagnosis is, from 0 to 255. Patients below the policy's "guess at cure"
+    /// share go back to the GP's office; above it they head for treatment.
+    /// </summary>
+    public byte DiagnosisCertainty => Raw.Span[146];
+
     /// <summary>Patients only: happiness from 0 to 100, the first bar of the patient window.</summary>
     public byte Happiness => Raw.Span[81];
 
