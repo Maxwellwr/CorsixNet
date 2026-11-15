@@ -97,9 +97,28 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
         }
     }
 
+    private ResizableLook? _resizable;
+    private bool _resizableTried;
+
+    /// <summary>CorsixTH's own window look (<see cref="ResizableLook"/>), or null without its sprites or the game's palette.</summary>
+    public ResizableLook? Resizable
+    {
+        get
+        {
+            if (!_resizableTried)
+            {
+                _resizableTried = true;
+                _resizable = Palette(MainPalette) is { } colours ? new ResizableLook(device, colours) : null;
+            }
+
+            return _resizable is { IsAvailable: true } ? _resizable : null;
+        }
+    }
+
     public void Dispose()
     {
         _pixel?.Dispose();
+        _resizable?.Dispose();
         foreach (var picture in _pictures.Values)
         {
             picture?.Dispose();

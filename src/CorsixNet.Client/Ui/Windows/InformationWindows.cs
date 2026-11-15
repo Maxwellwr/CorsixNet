@@ -193,6 +193,70 @@ internal sealed class TipOfTheDayWindow(int first) : UiWindow
     /// <summary>The tip shown, 0-based.</summary>
     public int Tip => _tip;
 
+    /// <summary>The window's colour, picked at random once a game (<c>col_bg</c>: each of red, green and blue from 20 to 200).</summary>
+    private static readonly Color Colour = new(Random.Shared.Next(20, 201), Random.Shared.Next(20, 201), Random.Shared.Next(20, 201));
+
+    /// <summary>The window in CorsixTH's look: 380 by 110 (UITipOfTheDay on a screen wide enough).</summary>
+    public static readonly Point LookSize = new(380, 110);
+
+    /// <summary>The previous and next buttons side by side at the bottom (<c>add_nav_buttons</c>).</summary>
+    private static readonly Rectangle PreviousButton = new(10, LookSize.Y - 30, (LookSize.X / 2) - 20, 20);
+
+    private static readonly Rectangle NextButton = new((LookSize.X / 2) + 10, LookSize.Y - 30, (LookSize.X / 2) - 20, 20);
+
+    private string? _pressed;
+
+    /// <summary>CorsixTH's look (<see cref="ResizableLook"/>) where its sprites and the game's font are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => host.Graphics is { Resizable: not null } graphics && graphics.Font("FONT01V", OriginalGraphics.MainPalette) is not null;
+
+    public override Point FullscreenSize => LookSize;
+
+    public override Vector2? FullscreenPosition => new(-20, -20);
+
+    /// <summary><c>UITipOfTheDay:draw</c>: the window, the tip in white wrapped 10 pixels in, and the two buttons.</summary>
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
+    {
+        var graphics = host.Graphics!;
+        var look = graphics.Resizable!;
+        var font = graphics.Font("FONT01V", OriginalGraphics.MainPalette)!;
+        look.DrawWindow(batch, new Rectangle(origin, LookSize), Colour);
+        var y = origin.Y + 10;
+        foreach (var line in Maps.MapViewScreen.WrapToWidth(UiText.Get(TipNames[_tip], Tips[_tip]), LookSize.X - 20, text => font.Measure(text).Width))
+        {
+            font.Draw(batch, line, new Vector2(origin.X + 10, y));
+            y += font.LineHeight;
+        }
+
+        var local = new Point(mouse.X, mouse.Y) - origin;
+        var down = mouse.LeftButton == ButtonState.Pressed;
+        look.DrawBevel(batch, new Rectangle(origin + PreviousButton.Location, PreviousButton.Size), Colour, down && _pressed == "previous" && PreviousButton.Contains(local), UiText.Get("totd_window.previous", "Previous tip"), font);
+        look.DrawBevel(batch, new Rectangle(origin + NextButton.Location, NextButton.Size), Colour, down && _pressed == "next" && NextButton.Contains(local), UiText.Get("totd_window.next", "Next tip"), font);
+    }
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        string? At(Point at) => PreviousButton.Contains(at) ? "previous" : NextButton.Contains(at) ? "next" : null;
+        if (mouse.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released)
+        {
+            _pressed = At(local);
+        }
+        else if (mouse.LeftButton == ButtonState.Released && previous.LeftButton == ButtonState.Pressed)
+        {
+            var pressed = _pressed;
+            _pressed = null;
+            if (pressed is not null && pressed == At(local))
+            {
+                // buttonPrev and buttonNext, going round.
+                _tip = pressed == "previous" ? (_tip + Tips.Count - 1) % Tips.Count : (_tip + 1) % Tips.Count;
+            }
+        }
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) =>
+        PreviousButton.Contains(local) ? UiText.Get("tooltip.totd_window.previous", "Display the previous tip")
+        : NextButton.Contains(local) ? UiText.Get("tooltip.totd_window.next", "Display the next tip")
+        : null;
+
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         foreach (var line in BottomPanel.Wrap(UiText.Get(TipNames[_tip], Tips[_tip]), 60))
