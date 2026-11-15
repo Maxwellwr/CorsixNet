@@ -3105,6 +3105,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ToggleAdviser();
         }
 
+        if (HotkeyInput.Pressed(_hotkeys["global_screenshot"], keys, pressed))
+        {
+            RequestScreenshot();
+        }
+
         if (HotkeyInput.Pressed(_hotkeys["ingame_toggleSounds"], keys, pressed))
         {
             ToggleSounds();
@@ -3496,6 +3501,33 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <c>GameUI:toggleAdviser</c> (Shift+A by default): the adviser falls silent or speaks again, and the setting is
     /// saved.
     /// </summary>
+    private string? _screenshotRequest;
+
+    /// <inheritdoc/>
+    public string? TakeScreenshotRequest()
+    {
+        var request = _screenshotRequest;
+        _screenshotRequest = null;
+        return request;
+    }
+
+    /// <summary>
+    /// <c>UI:makeScreenshot</c>: the next frame goes to <c>Screenshot_yyyyMMdd-HHmmss.png</c> in the Screenshots folder
+    /// beside the settings file; not twice in one second.
+    /// </summary>
+    private void RequestScreenshot()
+    {
+        var folder = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_configPath ?? GameConfig.FileName)) ?? ".", "Screenshots");
+        var path = Path.Combine(folder, string.Create(CultureInfo.InvariantCulture, $"Screenshot_{DateTime.Now:yyyyMMdd-HHmmss}.png"));
+        if (File.Exists(path))
+        {
+            Console.Error.WriteLine("Screenshot failed: File already exists");
+            return;
+        }
+
+        _screenshotRequest = path;
+    }
+
     /// <summary><c>UI:togglePlaySounds</c>: sound effects on or off, kept in the settings.</summary>
     private void ToggleSounds()
     {

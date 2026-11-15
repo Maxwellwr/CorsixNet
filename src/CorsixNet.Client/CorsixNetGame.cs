@@ -63,6 +63,18 @@ internal sealed class CorsixNetGame : Game
         if (_screen is not null && _batch is not null)
         {
             _screen.Draw(_batch);
+            if (_screen.TakeScreenshotRequest() is { } screenshot)
+            {
+                try
+                {
+                    SaveScreenshot(screenshot);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    Console.Error.WriteLine($"Screenshot failed: {e.Message}");
+                }
+            }
+
             if (InputScript.Current is { PendingShot: { } shot } script)
             {
                 SaveScreenshot(shot);
@@ -91,6 +103,6 @@ internal sealed class CorsixNetGame : Game
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)) ?? ".");
         using var file = File.Create(path);
         texture.SaveAsPng(file, width, height);
-        Console.WriteLine($"script: saved {path}");
+        Console.WriteLine($"saved {path}");
     }
 }

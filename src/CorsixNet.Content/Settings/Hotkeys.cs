@@ -113,6 +113,7 @@ public sealed class Hotkeys
         ("ingame_patient_gohome", new("h")),
         ("ingame_quickSave", new("s", Shift: true, Alt: true)),
         ("ingame_quickLoad", new("l", Shift: true, Alt: true)),
+        ("global_screenshot", new("s", Ctrl: true)),
         ("ingame_storePosition_1", new("1", Alt: true)),
         ("ingame_storePosition_2", new("2", Alt: true)),
         ("ingame_storePosition_3", new("3", Alt: true)),
