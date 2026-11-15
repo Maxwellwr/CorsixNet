@@ -638,7 +638,7 @@ internal sealed class FaxWindow : UiWindow
         });
 
     /// <summary>StaffProfile.translateStaffClass: staff_title (S[34]).</summary>
-    private static string StaffTitle(IWindowHost host, string kind) => kind switch
+    internal static string StaffTitle(IWindowHost host, string kind) => kind switch
     {
         "Nurse" => host.Texts?.String(34, 3) ?? "Nurse",
         "Surgeon" => host.Texts?.String(34, 6) ?? "Surgeon",

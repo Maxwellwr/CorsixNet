@@ -141,7 +141,7 @@ internal sealed class CasebookScreen
 
         if (!disease.IsPseudo)
         {
-            sheet.Draw(batch, MissingRooms(host, disease).Count == 0 ? 11 : 12, origin.X + 335, origin.Y + 352, Color.White);
+            sheet.Draw(batch, FaxWindow.DiseaseRequirements(host.Simulation, host.Player, disease) is null ? 11 : 12, origin.X + 335, origin.Y + 352, Color.White);
         }
 
         // The list: up to seven names above the chosen one, it in the middle, up to seven below.
@@ -257,28 +257,31 @@ internal sealed class CasebookScreen
 
         if (new Rectangle(335, 352, 29, 29).Contains(local) && !disease.IsPseudo)
         {
-            var missing = MissingRooms(host, disease);
-            if (missing.Count == 0)
-            {
-                return Tip(153, "You can treat this disease");
-            }
-
-            var names = string.Join(", ", missing.Select(room => UiText.RoomName(host.Simulation.Content, room)));
-            return string.Create(CultureInfo.InvariantCulture, $"{Tip(155, "Build")} ({names}).");
+            return CureRequirementTooltip(host, disease);
         }
 
         return null;
     }
 
-    /// <summary>The treatment rooms of the disease the hospital has no finished room of.</summary>
-    private static List<string> MissingRooms(IWindowHost host, DiseaseDefinition disease)
+    /// <summary>
+    /// UICasebook:updateIcons' tooltip on the cure requirement icon: the rooms still to research, the rooms to build and
+    /// the staff to hire (<c>Hospital:checkDiseaseRequirements</c>), or that the disease can be treated.
+    /// </summary>
+    internal static string CureRequirementTooltip(IWindowHost host, DiseaseDefinition disease)
     {
-        var simulation = host.Simulation;
-        var built = simulation.Entities.OfType<Room>()
-            .Where(room => room.IsActive && RoomBuilder.IsOwnedBy(simulation.Map, room, host.Player))
-            .Select(room => room.RoomType)
-            .ToHashSet(StringComparer.Ordinal);
-        return disease.TreatmentRooms.Where(room => !built.Contains(room)).ToList();
+        string Tip(int index, string fallback) => OriginalTooltips.Get(host, index, fallback);
+        if (FaxWindow.DiseaseRequirements(host.Simulation, host.Player, disease) is not { } needs)
+        {
+            return Tip(153, "You can treat this disease");
+        }
+
+        var hospital = host.Simulation.Hospitals[host.Player];
+        string Room(string room) => UiText.RoomName(host.Simulation.Content, room);
+        string Part(string text, IEnumerable<string> names) => names.ToList() is { Count: > 0 } list ? string.Create(CultureInfo.InvariantCulture, $"{text} ({string.Join(", ", list)}). ") : string.Empty;
+        var research = Part(Tip(154, "Research"), needs.Rooms.Where(room => !hospital.IsRoomDiscovered(room)).Select(Room));
+        var build = Part(Tip(155, "Build"), needs.Rooms.Select(Room));
+        var staff = Part(UiText.Get("tooltip.casebook.cure_requirement.hire_staff", "You need to employ staff to handle this treatment"), needs.Staff.Select(s => string.Create(CultureInfo.InvariantCulture, $"{FaxWindow.StaffTitle(host, s.Kind)}: {s.Count}")));
+        return (research + build + staff).TrimEnd();
     }
 
     private void Act(IWindowHost host, UiWindow window, string key)

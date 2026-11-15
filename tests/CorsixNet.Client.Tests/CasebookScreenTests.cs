@@ -26,4 +26,18 @@ public sealed class CasebookScreenTests
         Assert.Equal(expected.Select(disease => disease.Id), known.Select(disease => disease.Id));
         Assert.False(new CasebookWindow().IsFullscreen(host));
     }
+
+    [Fact]
+    public void TheCureRequirementTooltipNamesTheRoomsToBuildAndTheStaffToHire()
+    {
+        var host = new WindowTestHost();
+        var surgery = new DiseaseDefinition("s", 1, 1) { TreatmentRooms = ["ward", "operating_theatre"] };
+
+        var tooltip = CasebookScreen.CureRequirementTooltip(host, surgery);
+
+        Assert.Contains("Build (", tooltip, StringComparison.Ordinal);
+        Assert.Contains("You need to employ staff to handle this treatment (", tooltip, StringComparison.Ordinal);
+        Assert.Contains("Surgeon: 2", tooltip, StringComparison.Ordinal);
+        Assert.EndsWith(").", tooltip, StringComparison.Ordinal);
+    }
 }
