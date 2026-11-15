@@ -4,6 +4,7 @@ using CorsixNet.Sim.Disasters;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Rooms;
+using CorsixNet.Sim.Serialization;
 
 namespace CorsixNet.Sim.Tests;
 
@@ -126,6 +127,40 @@ public class RatTests
         Rats.RemoveRatholesAroundRoom(simulation, room);
 
         Assert.Equal([new Rathole(new TilePosition(6, 4), Direction.North, 1), new Rathole(new TilePosition(3, 2), Direction.North, 1)], hospital.Ratholes);
+    }
+
+    [Fact]
+    public void A_debug_rat_comes_out_of_new_holes_nearest_the_middle_of_the_view()
+    {
+        var simulation = NewSimulation();
+        var hospital = simulation.Hospitals[0];
+        // The north wall's tiles (x, 2) have their top corners at (32·(x − 2), 16·(x + 2)): x = 2 to 12 are in view, and
+        // x = 7 and 8 nearest its middle (160, 150).
+        var command = new MakeDebugRatCommand(0, 0, 320, 300);
+        using (var wire = new MemoryStream())
+        {
+            command.Write(new SimWriter(wire));
+            wire.Position = 0;
+            Assert.Equal(command, Command.Read(new SimReader(wire)));
+        }
+
+        simulation.Schedule(0, command);
+        simulation.Step();
+
+        Assert.Equal([new Rathole(new TilePosition(7, 2), Direction.North, 1), new Rathole(new TilePosition(8, 2), Direction.North, 1)], hospital.Ratholes);
+        var rat = Assert.Single(simulation.Entities.OfType<Rat>());
+        Assert.Equal(new TilePosition(7, 2), rat.Origin.Tile);
+
+        // With two holes in view already, the next rat comes out of one of them, and no hole is added.
+        simulation.Schedule(0, command);
+        simulation.Step();
+        Assert.Equal(2, hospital.Ratholes.Count);
+        Assert.Equal(2, simulation.Entities.OfType<Rat>().Count());
+
+        // A view with no corridor wall in it makes nothing.
+        simulation.Schedule(0, new MakeDebugRatCommand(2000, 2000, 2100, 2100));
+        simulation.Step();
+        Assert.Equal(2, simulation.Entities.OfType<Rat>().Count());
     }
 
     private static void StepDay(Simulation simulation)

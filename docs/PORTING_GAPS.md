@@ -39,9 +39,10 @@ objects from the level file.
 - (Done: benches, the staff room's sofa, video game and pool table, the training room's projector and lecture chairs,
   the research room's desks, computer and autopsy.)
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).
-- Special entities: helicopter (emergencies), gates to hell (death) (`objects/helicopter.lua`, `gates_to_hell.lua`).
-  Rat holes and rats are done (`Rats`, `Rat`), except the kill
-  cursor and sounds, the debug rat, (rat holes in a room's walls close when it is edited or crashes, `Rats.RemoveRatholesAroundRoom`).
+- (Done: special entities: the helicopter of emergencies and the gates to hell (`objects/helicopter.lua`,
+  `gates_to_hell.lua`; the helicopter's depth sorting is in §4); rat holes and rats (`Rats`, `Rat`) with the rat cursor
+  and the shot's sound, the holes in a room's walls closing when it is edited or crashes
+  (`Rats.RemoveRatholesAroundRoom`), and the debug menu's rat (`MakeDebugRatCommand`, `Hospital:makeDebugRat`).)
 
 ## 3. Staff and their behaviour
 

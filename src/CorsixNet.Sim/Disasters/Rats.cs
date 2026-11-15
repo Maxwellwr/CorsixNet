@@ -1,5 +1,6 @@
 // Rat holes and rats, ported from CorsixTH CorsixTH/Lua/hospital.lua (dailyUpdateRatholes, dailyUpdateRats,
-// Hospital:spawnRat, getWallsAround, addRathole, removeRatholeXY, getOwnedTileCount), CorsixTH/Src/th_lua_map.cpp
+// Hospital:spawnRat, getWallsAround, addRathole, removeRatholeXY, getOwnedTileCount, makeDebugRat, findRatholeTiles,
+// isRatholeInView), CorsixTH/Src/th_lua_map.cpp
 // (l_map_get_litter_fraction) and CorsixTH/Lua/entities/rat.lua (Rat:onClick).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
@@ -88,6 +89,99 @@ public static class Rats
             // CorsixTH makes the dead rat without Litter.resolveTileRank, so it may lie on other litter.
             simulation.AddEntity(id => new Litter(id, player, LitterType.DeadRat, tile, isMirrored: false));
         }
+    }
+
+    /// <summary>
+    /// <c>Hospital:makeDebugRat</c>: the hospital gets rat holes in view until two are, nearest the view's centre first,
+    /// and a rat comes out of the first new one, else of a random one in view. Nothing happens without a hole in view.
+    /// </summary>
+    internal static void MakeDebugRat(Simulation simulation, Hospital hospital, int left, int top, int right, int bottom)
+    {
+        var visible = hospital.Ratholes.Where(hole => IsInView(hole, left, top, right, bottom)).ToList();
+        Rathole? emerge = null;
+        foreach (var hole in FindRatholeTiles(simulation, hospital, Math.Max(0, 2 - visible.Count), left, top, right, bottom))
+        {
+            hospital.AddRathole(hole);
+            visible.Add(hole);
+            emerge ??= hole;
+        }
+
+        if (visible.Count == 0)
+        {
+            return;
+        }
+
+        var origin = emerge ?? visible[simulation.Random.NextInclusive(1, visible.Count) - 1];
+        Rat.Spawn(simulation, hospital.Player, origin, hospital.Ratholes);
+    }
+
+    /// <summary><c>isRatholeInView</c>: a hole in a north or west wall whose tile's top corner is in view.</summary>
+    private static bool IsInView(Rathole hole, int left, int top, int right, int bottom)
+    {
+        if (hole.Wall is not (Direction.North or Direction.West))
+        {
+            return false;
+        }
+
+        var (x, y) = ScreenPosition(hole.Tile);
+        return x >= left && x <= right && y >= top && y <= bottom;
+    }
+
+    /// <summary><c>Map:WorldToScreen</c>: a tile's top corner in the map's pixels.</summary>
+    private static (int X, int Y) ScreenPosition(TilePosition tile) => (32 * (tile.X - tile.Y), 16 * (tile.X + tile.Y));
+
+    /// <summary>
+    /// <c>Hospital:findRatholeTiles</c>: up to <paramref name="count"/> corridor tiles of the hospital in view with a
+    /// north wall, or else a west one, without a hole in it yet, nearest the view's centre first.
+    /// </summary>
+    private static List<Rathole> FindRatholeTiles(Simulation simulation, Hospital hospital, int count, int left, int top, int right, int bottom)
+    {
+        var map = simulation.Map;
+        var candidates = new List<(Rathole Hole, long Distance)>();
+        if (count <= 0)
+        {
+            return [];
+        }
+
+        for (var x = 0; x < map.Width; x++)
+        {
+            for (var y = 0; y < map.Height; y++)
+            {
+                var tile = new TilePosition(x, y);
+                var cell = map[x, y];
+                if (!Epidemics.IsInHospital(simulation, hospital.Player, tile) || cell.RoomId != 0 || !cell.Has(TileFlags.Buildable))
+                {
+                    continue;
+                }
+
+                Rathole? pick = null;
+                foreach (var wall in WallsAround(map, tile))
+                {
+                    if (wall.Wall == Direction.North)
+                    {
+                        pick = wall;
+                        break;
+                    }
+
+                    if (wall.Wall == Direction.West && pick is null)
+                    {
+                        pick = wall;
+                    }
+                }
+
+                if (pick is { } hole && IsInView(hole, left, top, right, bottom)
+                    && !hospital.Ratholes.Any(other => other.Tile == hole.Tile && other.Wall == hole.Wall))
+                {
+                    // Twice the distance from the centre on each axis, to stay in whole numbers.
+                    var (sx, sy) = ScreenPosition(tile);
+                    long dx = (2L * sx) - left - right;
+                    long dy = (2L * sy) - top - bottom;
+                    candidates.Add((hole, (dx * dx) + (dy * dy)));
+                }
+            }
+        }
+
+        return candidates.OrderBy(candidate => candidate.Distance).Take(count).Select(candidate => candidate.Hole).ToList();
     }
 
     /// <summary>
