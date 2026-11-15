@@ -58,7 +58,7 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   that opens `StaffRiseWindow` (`staff_rise.lua`: Req12V, grant or refuse, Esc does not close it, the game pauses).
 - Keys in windows: a window on top in its original look takes the keys it handles (`UiWindow.TakesKey`): the arrows in
   staff management and the casebook, Enter in the confirmation, information, hire and buy objects windows, H (`ingame_patient_gohome`) in the patient
-  window. Not yet: the place objects keys (sell, rotate).
+  window. The place objects rotate key is done (`ingame_rotateobject`); its sell key waits for picking up corridor objects.
 - Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
   command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
@@ -284,7 +284,8 @@ join.
   views and the room list (`Hotkeys`, `HotkeyInput`), and changed in the hotkey assignment dialog from the options
   (`HotkeyAssignWindow`). Still on fixed keys: Esc and this game's stand-in keys;
   CorsixTH's other actions (sound, music, announcements toggles, screenshots, logs, furnish corridor, edit room,
-  rotate object, sell the picked up item) are not read.
+  sell the picked up item) are not read. The rotate object key (`ingame_rotateobject`, space) turns the object being
+  placed, as a right click does; outside placing, space still pauses.
 - Update check (`resizables/update.lua`).
 
 ## 12. Map editor and tools

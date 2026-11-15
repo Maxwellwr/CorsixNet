@@ -108,9 +108,9 @@ internal sealed class FurnishCorridorTool
             return null;
         }
 
-        if (input.RightClicked)
+        if (input.RightClicked || input.Rotate)
         {
-            // UIPlaceObjects:tryNextOrientation.
+            // UIPlaceObjects:tryNextOrientation, on a right click or the rotate object key.
             PlaySound?.Invoke("swoosh.wav");
             Turn();
         }
