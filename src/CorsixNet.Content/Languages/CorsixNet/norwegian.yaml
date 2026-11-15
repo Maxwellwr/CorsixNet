@@ -384,6 +384,7 @@ strings:
       cannot_build_there: 'rommet kan ikke bygges der'
       not_enough_money: 'ikke nok penger'
       corridor_object: '%1%%2%: klikk for å kjöpe og plassere, höyreklikk snur, Tab: neste gjenstand%3%   Esc: avbryt'
+      move_object: "%1%: klikk for å sette den ned, höyreklikk snur, Delete selger%2%   Esc: sett tilbake"
       too_small: 'for lite'
       outside_map: 'utenfor kartet'
       not_buildable: 'kan ikke bygges der'

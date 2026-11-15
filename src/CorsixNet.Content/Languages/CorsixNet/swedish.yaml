@@ -405,6 +405,7 @@ strings:
       cannot_build_there: 'rummet kan inte byggas där'
       not_enough_money: 'inte tillräckligt med pengar'
       corridor_object: '%1%%2%: klicka för att köpa och placera, högerklick vrider, Tab: nästa föremål%3%   Esc: avbryt'
+      move_object: "%1%: klicka för att ställa ner, högerklick vrider, Delete säljer%2%   Esc: ställ tillbaka"
       too_small: 'för litet'
       outside_map: 'utanför kartan'
       not_buildable: 'går inte att bygga där'

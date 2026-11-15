@@ -409,6 +409,7 @@ strings:
       cannot_build_there: 'tu nie można zbudować pomieszczenia'
       not_enough_money: 'za mało pieniędzy'
       corridor_object: '%1%%2%: kliknij, aby kupić i postawić, prawy przycisk obraca, Tab: następny przedmiot%3%   Esc: anuluj'
+      move_object: "%1%: kliknij, aby postawić, prawy przycisk obraca, Delete sprzedaje%2%   Esc: odstaw na miejsce"
       too_small: 'za małe'
       outside_map: 'poza mapą'
       not_buildable: 'tu nie można budować'

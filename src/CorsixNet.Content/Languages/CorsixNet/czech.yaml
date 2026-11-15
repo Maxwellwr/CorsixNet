@@ -235,6 +235,7 @@ strings:
       cannot_build_there: 'místnost zde nelze postavit'
       not_enough_money: 'nedostatek peněz'
       corridor_object: '%1%%2%: klepnutím koupíte a umístíte, pravé tlačítko otočí, Tab: další předmět%3%   Esc: zrušit'
+      move_object: "%1%: klepnutím položíte, pravé tlačítko otočí, Delete prodá%2%   Esc: vrátit na místo"
       too_small: 'příliš malá'
       outside_map: 'mimo mapu'
       not_buildable: 'zde nelze stavět'

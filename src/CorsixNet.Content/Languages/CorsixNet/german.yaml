@@ -319,6 +319,7 @@ strings:
       cannot_build_there: der Raum kann dort nicht gebaut werden
       not_enough_money: nicht genug Geld
       corridor_object: '%1%%2%: zum Kaufen und Aufstellen klicken, Rechtsklick dreht, Tab: nächster Gegenstand%3%   Esc: abbrechen'
+      move_object: "%1%: zum Abstellen klicken, Rechtsklick dreht, Entf verkauft%2%   Esc: zurückstellen"
       too_small: zu klein
       outside_map: außerhalb der Karte
       not_buildable: dort kann nicht gebaut werden

@@ -474,6 +474,7 @@ public static class RoomBuilder
             SetSwingWalls(map, walls, area, door);
         }
         room.DoorId = door.Id;
+        Objects.ObjectPlacer.AdoptSideObjects(simulation, room);
 
         map.UpdatePathfinding();
         map.UpdateShadows();

@@ -287,6 +287,7 @@ strings:
       cannot_build_there: 'a sala näo pode ser construída aí'
       not_enough_money: 'dinheiro insuficiente'
       corridor_object: '%1%%2%: clique para comprar e colocar, botäo direito gira, Tab: próximo objeto%3%   Esc: cancelar'
+      move_object: "%1%: clique para colocar, botäo direito gira, Delete vende%2%   Esc: devolver ao lugar"
       too_small: 'pequena demais'
       outside_map: 'fora do mapa'
       not_buildable: 'näo dá para construir aí'

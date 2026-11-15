@@ -32,6 +32,12 @@ internal sealed class FurnishCorridorTool
 
     public bool IsActive => _placing is not null;
 
+    /// <summary>
+    /// The corridor object picked up off the floor (a right click, <c>Object:onClick</c>) and on the cursor, or 0 when
+    /// buying: put down it moves there; Esc puts it back (<c>UIPlaceObjects:undo</c>); the sell key sells it.
+    /// </summary>
+    public int MovingId { get; private set; }
+
     /// <summary>The object on the cursor, or null.</summary>
     public string? PlacingId => _placing?.Id;
 
@@ -62,8 +68,22 @@ internal sealed class FurnishCorridorTool
         }
     }
 
+    /// <summary>
+    /// <c>Object:onClick</c> with the right button on a corridor object: it comes onto the cursor turned as it stood, and
+    /// <c>pickup.wav</c> plays.
+    /// </summary>
+    public void StartMove(ObjectDefinition definition, RoomObject placed)
+    {
+        _queue.Clear();
+        Start(definition);
+        _orientation = placed.Orientation;
+        MovingId = placed.Id;
+        PlaySound?.Invoke("pickup.wav");
+    }
+
     public void Start(ObjectDefinition definition)
     {
+        MovingId = 0;
         _placing = definition;
         _orientation = Turns.First(definition.Orientations.ContainsKey);
         _ghostTile = null;
@@ -72,6 +92,7 @@ internal sealed class FurnishCorridorTool
     public void Stop()
     {
         _placing = null;
+        MovingId = 0;
         _queue.Clear();
     }
 
@@ -102,8 +123,24 @@ internal sealed class FurnishCorridorTool
             return null;
         }
 
-        if (input.Back)
+        if (MovingId != 0 && simulation.FindEntity(MovingId) is not RoomObject)
         {
+            // Gone meanwhile (sold by another command, or a disaster).
+            Stop();
+            return null;
+        }
+
+        if (input.Sell && MovingId != 0)
+        {
+            // UIPlaceObjects:sell: the picked up object is sold for its build cost.
+            var sold = new SellCorridorObjectCommand(MovingId);
+            Stop();
+            return sold;
+        }
+
+        if (input.Back || input.Sell)
+        {
+            // UIPlaceObjects:undo (a picked up object stays where it stood) or sell (nothing bought yet).
             Stop();
             return null;
         }
@@ -116,9 +153,21 @@ internal sealed class FurnishCorridorTool
         }
 
         _ghostTile = input.Hovered;
-        _problem = _ghostTile is { } tile ? ObjectPlacer.Check(simulation, _placing.Id, tile, _orientation, player) : ObjectPlacementProblem.OutsideMap;
-        _cannotAfford = !RoomPurchases.CanAffordObject(simulation, _placing.Id, player);
-        if (input.LeftPressed && _ghostTile is { } target && _problem == ObjectPlacementProblem.None && !_cannotAfford)
+        var moving = simulation.FindEntity(MovingId) as RoomObject;
+        _problem = _ghostTile is not { } tile ? ObjectPlacementProblem.OutsideMap
+            : moving is not null ? CorridorObjects.CheckMove(simulation, moving, tile, _orientation, player)
+            : ObjectPlacer.Check(simulation, _placing.Id, tile, _orientation, player);
+        _cannotAfford = moving is null && !RoomPurchases.CanAffordObject(simulation, _placing.Id, player);
+        if (moving is not null && input.LeftPressed && _ghostTile is { } spot && _problem == ObjectPlacementProblem.None)
+        {
+            // Put down: the object moves there, at no cost.
+            var move = new MoveCorridorObjectCommand(moving.Id, spot, _orientation);
+            Stop();
+            PlaySound?.Invoke("place_r.wav");
+            return move;
+        }
+
+        if (moving is null && input.LeftPressed && _ghostTile is { } target && _problem == ObjectPlacementProblem.None && !_cannotAfford)
         {
             var command = new PlaceObjectCommand(_placing.Id, target, _orientation);
             if (_queue.TryDequeue(out var next))
@@ -147,6 +196,12 @@ internal sealed class FurnishCorridorTool
         if (_placing is null)
         {
             return string.Empty;
+        }
+
+        if (MovingId != 0)
+        {
+            var reason = _problem is ObjectPlacementProblem.None or ObjectPlacementProblem.OutsideMap ? string.Empty : "  " + BuildRoomTool.ExplainPlacement(_problem);
+            return UiText.Format("corsixnet.build_tool.move_object", "%1%: click to put it down, right click turns it, Delete sells it%2%   Esc: put it back", UiText.Object(_placing), reason);
         }
 
         var price = simulation is null ? string.Empty : $" ({MoneyText.Format(simulation.Rules.ObjectCost(_placing.Id))})";

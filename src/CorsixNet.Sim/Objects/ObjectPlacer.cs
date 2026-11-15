@@ -389,6 +389,86 @@ public static class ObjectPlacer
     }
 
     /// <summary>
+    /// The corridor's side objects (radiators, extinguishers, bins against a wall) standing inside a new room's area
+    /// become the room's (CorsixTH's objects belong to the room their tile is in, and <c>World:resetSideObjects</c> puts
+    /// them on their tiles again once the walls are up): each takes its side of its tile again under the room.
+    /// </summary>
+    internal static void AdoptSideObjects(Simulation simulation, Room room)
+    {
+        var map = simulation.Map;
+        var inside = simulation.Entities.OfType<RoomObject>().Where(o => o.RoomId == 0 && room.Area.Contains(o.Tile)).ToList();
+        foreach (var placed in inside)
+        {
+            if (simulation.Content.FindObject(placed.ObjectType) is not { } definition
+                || !definition.Orientations.TryGetValue(placed.Orientation, out var layout)
+                || !layout.Footprint.Any(part => part.IsSide))
+            {
+                continue;
+            }
+
+            simulation.RemoveEntity(placed.Id);
+            var adopted = simulation.AddEntity(id => new RoomObject(id, placed.ObjectType, placed.Tile, placed.Orientation, room.Id));
+            OccupySide(map, placed.Tile, SideOf(definition, placed.Orientation), adopted.Id);
+        }
+    }
+
+    /// <summary>
+    /// Gives back the tiles a corridor object took (after it is taken off the map): buildable and passable as the map
+    /// file has them, its sides buildable again where the file has them so and the tile beyond is not in a room, and
+    /// then every other corridor object on them takes its footprint again (occupying only clears flags).
+    /// </summary>
+    internal static void Vacate(Simulation simulation, RoomObject placed)
+    {
+        var map = simulation.Map;
+        if (simulation.Content.FindObject(placed.ObjectType) is not { } definition
+            || !definition.Orientations.TryGetValue(placed.Orientation, out var layout))
+        {
+            return;
+        }
+
+        var tiles = new HashSet<TilePosition>();
+        foreach (var part in layout.Footprint)
+        {
+            var x = placed.Tile.X + part.X;
+            var y = placed.Tile.Y + part.Y;
+            if (!map.Contains(x, y))
+            {
+                continue;
+            }
+
+            tiles.Add(new TilePosition(x, y));
+            ref var cell = ref map[x, y];
+            var original = map.HasOriginalTiles ? map.OriginalTile(x, y).Flags : TileFlags.Buildable | TileFlags.Passable
+                | TileFlags.BuildableNorth | TileFlags.BuildableEast | TileFlags.BuildableSouth | TileFlags.BuildableWest;
+            cell.Set(TileFlags.Buildable, (original & TileFlags.Buildable) != 0);
+            cell.Set(TileFlags.Passable, (original & TileFlags.Passable) != 0);
+            if (cell.ObjectId == placed.Id)
+            {
+                cell.ObjectId = 0;
+            }
+
+            foreach (var side in Sides)
+            {
+                var beyond = (X: x + side.Dx, Y: y + side.Dy);
+                var sameArea = map.Contains(beyond.X, beyond.Y) && map[beyond.X, beyond.Y].RoomId == cell.RoomId;
+                cell.Set(side.Buildable, sameArea && (original & side.Buildable) != 0);
+            }
+        }
+
+        foreach (var other in simulation.Entities.OfType<RoomObject>())
+        {
+            if (other.RoomId == 0 && other.Id != placed.Id
+                && simulation.Content.FindObject(other.ObjectType) is { } otherDefinition
+                && otherDefinition.Orientations.TryGetValue(other.Orientation, out var otherLayout)
+                && !otherLayout.Footprint.Any(part => part.IsSide)
+                && otherLayout.Footprint.Any(part => tiles.Contains(new TilePosition(other.Tile.X + part.X, other.Tile.Y + part.Y))))
+            {
+                Occupy(map, other.Tile, otherLayout, other.Id);
+            }
+        }
+    }
+
+    /// <summary>
     /// Recomputes which tiles of a room its objects take: the tiles go back to how they were before
     /// the room, the door's walkway is kept clear, and every remaining object occupies its footprint.
     /// Occupying only clears flags, so the order of the objects does not matter.
