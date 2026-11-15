@@ -310,6 +310,12 @@ internal sealed class WindowLayer
                 continue;
             }
 
+            if (open.Window.UsesResizableLook && _host?.Graphics?.Resizable is { } look)
+            {
+                DrawResizable(batch, look, text, pixel, open, layout, mouse);
+                continue;
+            }
+
             batch.Draw(pixel, layout.Bounds, PanelColor);
             if (!open.Window.IsPinned)
             {
@@ -357,6 +363,44 @@ internal sealed class WindowLayer
             var y = Math.Max(0, mouse.Y - RowHeight - 8);
             batch.Draw(pixel, new Rectangle(x, y, width, RowHeight), TooltipColor);
             text.Draw(batch, tooltip, new Vector2(x + 4, y + 3));
+        }
+    }
+
+    /// <summary>
+    /// A table window in CorsixTH's look (<c>UIResizable</c>): the pale purple window in its aux_ui frame, the title on a
+    /// lowered panel, buttons as raised panels (darker under the mouse, pressed while held, grey when disabled), the
+    /// rest as text.
+    /// </summary>
+    private void DrawResizable(SpriteBatch batch, ResizableLook look, TextRenderer text, Texture2D pixel, OpenWindow open, WindowLayout layout, Point mouse)
+    {
+        look.DrawWindow(batch, layout.Bounds, ResizableLook.PanelDefault);
+        if (!open.Window.IsPinned)
+        {
+            look.DrawBevel(batch, layout.TitleBar, ResizableLook.Title, lowered: true, layout.TitleText, text);
+            look.DrawBevel(batch, layout.Close, layout.Close.Contains(mouse) ? ResizableLook.SettingHover : ResizableLook.PanelDefault, lowered: false, "x", text);
+        }
+
+        var front = ReferenceEquals(open, _open[^1]) || open.Window.IsPinned;
+        var held = InputScript.Mouse().LeftButton == ButtonState.Pressed;
+        foreach (var (area, cell) in layout.Cells)
+        {
+            var tint = cell.Dim ? DimText : cell.Highlight ? HighlightText : Color.White;
+            if (cell.IsButton)
+            {
+                var hover = cell.OnClick is not null && area.Contains(mouse) && front;
+                var colour = cell.OnClick is null ? ResizableLook.Disabled : hover ? ResizableLook.SettingHover : ResizableLook.PanelDefault;
+                look.DrawBevel(batch, area, colour, lowered: hover && held, cell.Text, text, tint);
+                continue;
+            }
+
+            var width = _measure(cell.Text);
+            var x = cell.Align == CellAlign.Right ? area.Right - width : area.X;
+            text.Draw(batch, cell.Text, new Vector2(x, area.Y + 3), tint: tint);
+        }
+
+        if (layout.Canvas != Rectangle.Empty)
+        {
+            open.Window.DrawCanvas(batch, layout.Canvas, pixel, text);
         }
     }
 

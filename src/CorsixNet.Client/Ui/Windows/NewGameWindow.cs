@@ -21,6 +21,9 @@ namespace CorsixNet.Client.Ui.Windows;
 internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string playerName, Action<Difficulty, bool> start, Action<string>? saveName = null)
     : UiWindow, ITextInputWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     /// <summary>The name box's <c>characterLimit</c>.</summary>
     public const int NameLimit = 15;
 

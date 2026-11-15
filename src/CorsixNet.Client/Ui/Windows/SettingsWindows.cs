@@ -11,6 +11,9 @@ namespace CorsixNet.Client.Ui.Windows;
 /// </summary>
 internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<string, bool> save, Func<string, bool> load) : UiWindow, IKeyCaptureWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     /// <summary>The longest name typed for a new save.</summary>
     public const int MaxNameLength = 40;
 
@@ -201,6 +204,9 @@ internal sealed record LanguageFontChoices(string Default, IReadOnlyList<(string
 /// </param>
 internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, LanguageFontChoices?>? fonts = null, Action<GameConfig>? preview = null) : UiWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     private readonly IReadOnlyList<string> _languages = languages ?? [];
 
     private readonly GameConfig _current = current;

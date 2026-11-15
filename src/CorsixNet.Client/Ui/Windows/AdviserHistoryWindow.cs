@@ -8,6 +8,9 @@ namespace CorsixNet.Client.Ui.Windows;
 /// <summary>The last things the adviser said, newest first, to read again or delete.</summary>
 internal sealed class AdviserHistoryWindow : UiWindow
 {
+    /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
+    public override bool UsesResizableLook => true;
+
     public override string Title => UiText.Get("corsixnet.adviser_history.caption", "Adviser's messages");
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
