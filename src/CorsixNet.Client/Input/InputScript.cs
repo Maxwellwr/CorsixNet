@@ -17,6 +17,7 @@ namespace CorsixNet.Client.Input;
 /// button Hire [2]        click the (second) button reading Hire in the front window that has one
 /// wheel 1                notches; negative zooms out
 /// shot menu.png          screenshot, relative to the script's folder
+/// type hello there       characters typed as text input (a chat line, a save's name)
 /// log some text          written to the console
 /// quit
 /// </code>
@@ -49,6 +50,9 @@ internal sealed class InputScript
 
     /// <summary>Finds a window's button by its text and number (from 1) for <c>button</c>; set by the map screen.</summary>
     public static Func<string, int, Microsoft.Xna.Framework.Point?>? ButtonFinder { get; set; }
+
+    /// <summary>Where <c>type</c> sends its characters, as the window's text input would (set by the game).</summary>
+    public static Action<char>? TextTyped { get; set; }
 
     /// <summary>A screenshot to save after the next frame is drawn, or null.</summary>
     public string? PendingShot { get; private set; }
@@ -160,6 +164,13 @@ internal sealed class InputScript
             case Log log:
                 Console.WriteLine($"script: {log.Text}");
                 break;
+            case TypeText typed:
+                foreach (var character in typed.Text)
+                {
+                    TextTyped?.Invoke(character);
+                }
+
+                break;
             case Quit:
                 QuitRequested = true;
                 break;
@@ -238,6 +249,8 @@ internal sealed class InputScript
                 return [new Shot(rest)];
             case "log":
                 return [new Log(rest)];
+            case "type":
+                return [new TypeText(rest), new Wait(KeyMilliseconds)];
             case "quit":
                 return [new Quit()];
             default:
@@ -258,6 +271,9 @@ internal sealed class InputScript
     private sealed record Button(bool Right, bool Down) : Step;
 
     private sealed record KeyChange(Keys Key, bool Down) : Step;
+
+    /// <summary>Characters typed, as text input (a chat line, a save's name).</summary>
+    private sealed record TypeText(string Text) : Step;
 
     private sealed record Wheel(int Notches) : Step;
 
