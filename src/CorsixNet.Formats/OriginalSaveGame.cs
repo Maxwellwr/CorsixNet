@@ -88,6 +88,12 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// </summary>
     public int StaffFlags => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[124..]);
 
+    /// <summary>Staff and patients: morale or happiness from 0 to 100 (the first bar of their windows).</summary>
+    public byte Morale => Raw.Span[81];
+
+    /// <summary>Staff only: energy from 0 to 1000; the tiredness bar shows 1000 minus this.</summary>
+    public int Energy => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[120..]);
+
     /// <summary>Staff only: skill from 0 to 1000.</summary>
     public int Skill => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[126..]);
 
