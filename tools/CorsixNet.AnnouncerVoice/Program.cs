@@ -1,4 +1,4 @@
-// Speaks a translation's announcer subtitles (subtitles.* of Languages/<language>.yaml) with a Piper voice, through a
+// Speaks a translation's announcer subtitles (subtitles.* of Languages/<language>.yaml) with a Piper or Vosk TTS voice, through a
 // hospital loudspeaker, into Languages/Voice/<language>, where the game hears them instead of the original's.
 //
 //   dotnet run --project tools/CorsixNet.AnnouncerVoice -- --voice <voice.onnx | Vosk model folder> [--speaker 0]
@@ -6,7 +6,7 @@
 //       [--force] [--out <folder>]
 //
 // A Piper voice (pip install piper-tts; python -m piper.download_voices ru_RU-denis-medium) or a Vosk TTS model folder
-// and speaker (pip install vosk-tts) is needed. --out speaks into another folder, to try a voice out. Only the
+// and speaker (pip install vosk-tts) is needed. Russian is spoken with vosk-model-tts-ru-0.9-multi, --speaker 2. --out speaks into another folder, to try a voice out. Only the
 // sounds whose text, voice or settings changed since voice.yaml was written are spoken again (--force: all of them;
 // --only: just those named). A speech.yaml beside them may give, by subtitle name, what to say instead of the subtitle
 // (to help pronunciation).

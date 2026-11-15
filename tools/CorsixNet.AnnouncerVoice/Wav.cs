@@ -3,7 +3,7 @@ using System.Text;
 
 namespace CorsixNet.AnnouncerVoice;
 
-/// <summary>Reading 16-bit PCM WAV files (as Piper writes them) and writing the original's format, 8-bit mono.</summary>
+/// <summary>Reading 16-bit PCM WAV files (as Piper and Vosk TTS write them) and writing the original's format, 8-bit mono.</summary>
 internal static class Wav
 {
     /// <summary>The samples of a 16-bit PCM WAV file, between -1 and 1, its channels mixed, and their rate.</summary>
