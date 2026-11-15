@@ -2067,13 +2067,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (!_buildTool.IsActive && !_furnishTool.IsActive
             && mouse.RightButton == ButtonState.Released && _previousMouse.RightButton == ButtonState.Pressed
             && Math.Abs(mouse.X - _rightPressedAt.X) + Math.Abs(mouse.Y - _rightPressedAt.Y) < 6
-            && _hoveredTile is { } under && simulation.Map.Contains(under.X, under.Y)
-            && simulation.FindEntity(simulation.Map[under.X, under.Y].ObjectId) is RoomObject grabbed
-            && CorridorObjects.CanPickUp(simulation, grabbed.Id, _session.Player)
+            && _hoveredTile is { } under && GrabbableObjectAt(simulation, new TilePosition(under.X, under.Y)) is { } grabbed
             && simulation.Content.FindObject(grabbed.ObjectType) is { } grabbedDefinition)
         {
+            _session.Submit(new PickUpCorridorObjectCommand(grabbed.Id));
             _furnishTool.StartMove(grabbedDefinition, grabbed);
             return;
+        }
+
+        // An object carried with nothing on the cursor (a game loaded meanwhile, or a put down refused): back on the cursor.
+        if (!_buildTool.IsActive && !_furnishTool.IsActive && _session.Player < simulation.Hospitals.Count
+            && simulation.Hospitals[_session.Player].Carried is { } carriedObject
+            && simulation.Content.FindObject(carriedObject.ObjectType) is { } carriedDefinition)
+        {
+            _furnishTool.StartCarrying(carriedDefinition, carriedObject.Orientation);
         }
 
         if (_buildTool.IsActive || _furnishTool.IsActive)
@@ -4446,6 +4453,28 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>The main menu's items (<c>UIMainMenu:button*</c>).</summary>
+    /// <summary>
+    /// The corridor object of ours a right click on <paramref name="tile"/> picks up: the one on that tile, or else a
+    /// side object on the north wall of the tile south of it or the west wall of the tile east of it, whose sprite
+    /// stands over this tile (CorsixTH hit-tests the sprites themselves).
+    /// </summary>
+    private RoomObject? GrabbableObjectAt(Simulation simulation, TilePosition tile)
+    {
+        RoomObject? At(int x, int y, Direction? facing)
+        {
+            if (!simulation.Map.Contains(x, y) || simulation.FindEntity(simulation.Map[x, y].ObjectId) is not RoomObject placed
+                || (facing is { } side && placed.Orientation != side)
+                || !CorridorObjects.CanPickUp(simulation, placed.Id, _session!.Player))
+            {
+                return null;
+            }
+
+            return placed;
+        }
+
+        return At(tile.X, tile.Y, null) ?? At(tile.X, tile.Y + 1, Direction.North) ?? At(tile.X + 1, tile.Y, Direction.West);
+    }
+
     /// <summary>App:checkForUpdates, once a launch, in the background; null when not asked for.</summary>
     private Task<UpdateInfo?>? _updateCheck;
 

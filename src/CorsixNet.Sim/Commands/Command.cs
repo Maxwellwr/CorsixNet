@@ -67,6 +67,10 @@ public enum CommandKind : ushort
     ReferPatient = 52,
     MoveCorridorObject = 53,
     SellCorridorObject = 54,
+    PickUpCorridorObject = 55,
+    PutDownCarriedObject = 56,
+    PutBackCarriedObject = 57,
+    SellCarriedObject = 58,
 }
 
 /// <summary>
@@ -145,6 +149,10 @@ public abstract record Command
             CommandKind.ReferPatient => new ReferPatientCommand(reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.MoveCorridorObject => new MoveCorridorObjectCommand(reader.ReadInt32(), reader.ReadTile(), (Direction)reader.ReadByte()),
             CommandKind.SellCorridorObject => new SellCorridorObjectCommand(reader.ReadInt32()),
+            CommandKind.PickUpCorridorObject => new PickUpCorridorObjectCommand(reader.ReadInt32()),
+            CommandKind.PutDownCarriedObject => new PutDownCarriedObjectCommand(reader.ReadTile(), (Direction)reader.ReadByte()),
+            CommandKind.PutBackCarriedObject => new PutBackCarriedObjectCommand(),
+            CommandKind.SellCarriedObject => new SellCarriedObjectCommand(),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -432,6 +440,81 @@ public sealed record SellCorridorObjectCommand(int ObjectId) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(ObjectId);
+}
+
+/// <summary>
+/// Picks up a corridor object (a right click, <c>Object:onClick</c>): it comes off the map and the player's hospital
+/// carries it, unused, until it is put down, put back or sold (<see cref="CorridorObjects.PickUp"/>).
+/// </summary>
+public sealed record PickUpCorridorObjectCommand(int ObjectId) : Command
+{
+    public override CommandKind Kind => CommandKind.PickUpCorridorObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (CorridorObjects.CanPickUp(simulation, ObjectId, player))
+        {
+            CorridorObjects.PickUp(simulation, (RoomObject)simulation.FindEntity(ObjectId)!, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(ObjectId);
+}
+
+/// <summary>Puts the carried object down, if it may stand there (<c>UIPlaceObjects:placeObject</c>).</summary>
+public sealed record PutDownCarriedObjectCommand(TilePosition Tile, Direction Orientation) : Command
+{
+    public override CommandKind Kind => CommandKind.PutDownCarriedObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            CorridorObjects.PutDown(simulation, player, Tile, Orientation);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteTile(Tile);
+        writer.WriteByte((byte)Orientation);
+    }
+}
+
+/// <summary>Puts the carried object back where it stood (<c>UIPlaceObjects:undo</c>).</summary>
+public sealed record PutBackCarriedObjectCommand : Command
+{
+    public override CommandKind Kind => CommandKind.PutBackCarriedObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            CorridorObjects.PutBack(simulation, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+    }
+}
+
+/// <summary>Sells the carried object for its build cost (<c>UIPlaceObjects:sell</c>).</summary>
+public sealed record SellCarriedObjectCommand : Command
+{
+    public override CommandKind Kind => CommandKind.SellCarriedObject;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            CorridorObjects.SellCarried(simulation, player);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+    }
 }
 
 /// <summary>Picks an object up from a room that is still being built, if it belongs to the issuing player.</summary>

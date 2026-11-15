@@ -393,6 +393,25 @@ public static class ObjectPlacer
     /// become the room's (CorsixTH's objects belong to the room their tile is in, and <c>World:resetSideObjects</c> puts
     /// them on their tiles again once the walls are up): each takes its side of its tile again under the room.
     /// </summary>
+    internal static void ReleaseSideObjects(Simulation simulation, Rooms.TileRect area)
+    {
+        foreach (var placed in simulation.Entities.OfType<RoomObject>().Where(o => o.RoomId == 0 && area.Contains(o.Tile)).ToList())
+        {
+            if (simulation.Content.FindObject(placed.ObjectType) is { } definition
+                && definition.Orientations.TryGetValue(placed.Orientation, out var layout)
+                && layout.Footprint.Any(part => part.IsSide))
+            {
+                VacateSide(simulation.Map, placed, SideOf(definition, placed.Orientation));
+            }
+        }
+    }
+
+    /// <summary>
+    /// After <see cref="ReleaseSideObjects"/> and the room's walls: the side objects in the area become the room's (see
+    /// below).
+    /// </summary>
+    /// <param name="simulation">The simulation.</param>
+    /// <param name="room">The new room.</param>
     internal static void AdoptSideObjects(Simulation simulation, Room room)
     {
         var map = simulation.Map;
@@ -423,6 +442,19 @@ public static class ObjectPlacer
         if (simulation.Content.FindObject(placed.ObjectType) is not { } definition
             || !definition.Orientations.TryGetValue(placed.Orientation, out var layout))
         {
+            return;
+        }
+
+        if (placed.RoomId != 0 && simulation.FindEntity(placed.RoomId) is Room room)
+        {
+            // In a room: the room's tiles as they were before its objects, then the others take theirs again.
+            Reoccupy(simulation, room, placed.Id);
+            return;
+        }
+
+        if (layout.Footprint.Any(part => part.IsSide))
+        {
+            VacateSide(map, placed, SideOf(definition, placed.Orientation));
             return;
         }
 
@@ -473,7 +505,13 @@ public static class ObjectPlacer
     /// the room, the door's walkway is kept clear, and every remaining object occupies its footprint.
     /// Occupying only clears flags, so the order of the objects does not matter.
     /// </summary>
-    internal static void Reoccupy(Simulation simulation, Room room)
+    internal static void Reoccupy(Simulation simulation, Room room) => Reoccupy(simulation, room, 0);
+
+    /// <summary>
+    /// <see cref="Reoccupy(Simulation, Room)"/> as if the object <paramref name="leaveOut"/> were not there; side objects
+    /// take their side again, not their tile.
+    /// </summary>
+    private static void Reoccupy(Simulation simulation, Room room, int leaveOut)
     {
         var map = simulation.Map;
         var area = room.Area;
@@ -495,11 +533,18 @@ public static class ObjectPlacer
 
         foreach (var placed in simulation.Entities.OfType<RoomObject>())
         {
-            if (placed.RoomId == room.Id && !placed.IsDestroyed
+            if (placed.RoomId == room.Id && !placed.IsDestroyed && placed.Id != leaveOut
                 && simulation.Content.FindObject(placed.ObjectType) is { } definition
                 && definition.Orientations.TryGetValue(placed.Orientation, out var layout))
             {
-                Occupy(map, placed.Tile, layout, placed.Id);
+                if (layout.Footprint.Any(part => part.IsSide))
+                {
+                    OccupySide(map, placed.Tile, SideOf(definition, placed.Orientation), placed.Id);
+                }
+                else
+                {
+                    Occupy(map, placed.Tile, layout, placed.Id);
+                }
             }
         }
     }
@@ -565,6 +610,49 @@ public static class ObjectPlacer
     }
 
     /// <summary>
+    /// Takes a corridor side object off its tile (the reverse of <see cref="OccupySide"/>, <c>deoccupyTilesByObjectFootprintAt</c>
+    /// for an <c>only_side</c> tile): the side is buildable again as the map file has it, and the edge it closed is open
+    /// again unless the file has it closed. Travel across it comes back with the next <see cref="LevelMap.UpdatePathfinding"/>.
+    /// </summary>
+    private static void VacateSide(LevelMap map, RoomObject placed, (Direction Side, int Dx, int Dy, TileFlags Buildable, FootprintFlags Needed) side)
+    {
+        var tile = placed.Tile;
+        if (!map.Contains(tile.X, tile.Y))
+        {
+            return;
+        }
+
+        ref var cell = ref map[tile.X, tile.Y];
+        var original = map.HasOriginalTiles ? map.OriginalTile(tile.X, tile.Y).Flags : side.Buildable;
+        cell.Set(side.Buildable, (original & side.Buildable) != 0);
+        if (cell.ObjectId == placed.Id)
+        {
+            cell.ObjectId = 0;
+        }
+
+        var beyond = new TilePosition(tile.X + side.Dx, tile.Y + side.Dy);
+        var (blockedAt, flag) = side.Side switch
+        {
+            Direction.North => (tile, TileFlags.BlockedNorth),
+            Direction.West => (tile, TileFlags.BlockedWest),
+            Direction.South => (beyond, TileFlags.BlockedNorth),
+            _ => (beyond, TileFlags.BlockedWest),
+        };
+        if (map.Contains(blockedAt.X, blockedAt.Y) && map.Contains(beyond.X, beyond.Y))
+        {
+            var wasBlocked = map.HasOriginalTiles && map.OriginalTile(blockedAt.X, blockedAt.Y).Has(flag);
+            ref var edge = ref map[blockedAt.X, blockedAt.Y];
+            edge.Set(flag, wasBlocked);
+
+            // The edge is open again where no wall stands on it (as UpdatePathfinding would work it out).
+            var wall = flag == TileFlags.BlockedNorth ? edge.NorthWall : edge.WestWall;
+            var open = wall == 0 && !wasBlocked;
+            map[tile.X, tile.Y].Set(TravelFlag(side.Side), open);
+            map[beyond.X, beyond.Y].Set(TravelFlag((Direction)(((int)side.Side + 2) % 4)), open);
+        }
+    }
+
+    /// <summary>
     /// Marks a side object on the map, as CorsixTH's <c>occupyTilesByObjectFootprintAt</c> does for an <c>only_side</c>
     /// tile: the side is no longer buildable, and an open edge is closed to walking.
     /// </summary>
@@ -606,8 +694,11 @@ public static class ObjectPlacer
             return definition.CorridorObject;
         }
 
-        // Objects go into rooms while they are being built, as in CorsixTH's edit room dialog.
-        return simulation.FindEntity(roomId) is Room { IsActive: false, IsClosing: false, IsCrashed: false } room
+        // World:willObjectsFootprintTileBeWithinItsAllowedRoomIfLocatedAt: an object the room needs or may have extra.
+        // Objects go into rooms while they are being built, as in CorsixTH's edit room dialog; a corridor object (a plant,
+        // a radiator, a bin) also goes into a finished room that may have it, as UIPlaceObjects lets it outside editing.
+        return simulation.FindEntity(roomId) is Room { IsClosing: false, IsCrashed: false } room
+            && (!room.IsActive || definition.CorridorObject)
             && simulation.Content.FindRoom(room.RoomType) is { } roomDefinition
             && roomDefinition.Allows(definition.Id);
     }

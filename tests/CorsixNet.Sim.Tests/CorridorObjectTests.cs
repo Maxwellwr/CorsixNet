@@ -216,6 +216,91 @@ public class CorridorObjectTests
         Assert.False(simulation.Map[4, 2].Has(TileFlags.Buildable));
     }
 
+    [Fact]
+    public void APickedUpObjectIsOffTheMapUntilPutDownAndThenStandsThere()
+    {
+        var simulation = NewSimulation();
+        Place(simulation, "drinks_machine", new(3, 4), Direction.North);
+        var machine = simulation.Entities.OfType<RoomObject>().Single();
+
+        foreach (var command in new Command[] { new PickUpCorridorObjectCommand(machine.Id), new PutDownCarriedObjectCommand(new(6, 4), Direction.North), new PutBackCarriedObjectCommand(), new SellCarriedObjectCommand() })
+        {
+            using var wire = new MemoryStream();
+            command.Write(new SimWriter(wire));
+            wire.Position = 0;
+            Assert.Equal(command, Command.Read(new SimReader(wire)));
+        }
+
+        Run(simulation, new PickUpCorridorObjectCommand(machine.Id));
+
+        // Carried: nobody can use it, its tiles are free, and nothing else can be picked up meanwhile.
+        Assert.Empty(simulation.Entities.OfType<RoomObject>());
+        Assert.Equal(new CarriedObject("drinks_machine", new(3, 4), Direction.North, null), simulation.Hospitals[0].Carried);
+        Assert.True(simulation.Map[3, 4].Has(TileFlags.Buildable));
+
+        // Somewhere it cannot stand: still carried.
+        Place(simulation, "bench", new(8, 4), Direction.North);
+        Assert.False(CorridorObjects.CanPickUp(simulation, simulation.Entities.OfType<RoomObject>().Single().Id, 0));
+        Run(simulation, new PutDownCarriedObjectCommand(new(8, 4), Direction.North));
+        Assert.NotNull(simulation.Hospitals[0].Carried);
+
+        Run(simulation, new PutDownCarriedObjectCommand(new(5, 4), Direction.North));
+        Assert.Null(simulation.Hospitals[0].Carried);
+        Assert.Equal(new TilePosition(5, 4), simulation.Entities.OfType<RoomObject>().Single(o => o.ObjectType == "drinks_machine").Tile);
+    }
+
+    [Fact]
+    public void ACarriedObjectIsPutBackOrSoldAndSurvivesASave()
+    {
+        var simulation = NewSimulation();
+        Place(simulation, "drinks_machine", new(3, 4), Direction.North);
+        Run(simulation, new PickUpCorridorObjectCommand(simulation.Entities.OfType<RoomObject>().Single().Id));
+
+        using (var stream = new MemoryStream())
+        {
+            simulation.Save(stream);
+            stream.Position = 0;
+            var loaded = Simulation.Load(stream, Content);
+            Assert.Equal(simulation.Hospitals[0].Carried, loaded.Hospitals[0].Carried);
+            Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+        }
+
+        Run(simulation, new PutBackCarriedObjectCommand());
+        Assert.Null(simulation.Hospitals[0].Carried);
+        Assert.Equal(new TilePosition(3, 4), simulation.Entities.OfType<RoomObject>().Single().Tile);
+
+        Run(simulation, new PickUpCorridorObjectCommand(simulation.Entities.OfType<RoomObject>().Single().Id));
+        Run(simulation, new SellCarriedObjectCommand());
+        Assert.Null(simulation.Hospitals[0].Carried);
+        Assert.Empty(simulation.Entities.OfType<RoomObject>());
+    }
+
+    [Fact]
+    public void ARadiatorAgainstAWallIsPickedUpAndItsSideIsFreeAgain()
+    {
+        var simulation = NewSimulation();
+        Place(simulation, "radiator", new(3, 3), Direction.South);
+        Assert.False(simulation.Map[3, 3].Has(TileFlags.CanTravelSouth));
+        var radiator = simulation.Entities.OfType<RoomObject>().Single();
+
+        Run(simulation, new PickUpCorridorObjectCommand(radiator.Id));
+
+        Assert.Empty(simulation.Entities.OfType<RoomObject>());
+        Assert.True(simulation.Map[3, 3].Has(TileFlags.BuildableSouth));
+        Assert.False(simulation.Map[3, 4].Has(TileFlags.BlockedNorth));
+        Assert.True(simulation.Map[3, 3].Has(TileFlags.CanTravelSouth));
+        Assert.Equal(0, simulation.Map[3, 3].ObjectId);
+
+        Run(simulation, new PutDownCarriedObjectCommand(new(5, 3), Direction.North));
+        Assert.Equal(new TilePosition(5, 3), simulation.Entities.OfType<RoomObject>().Single().Tile);
+    }
+
+    private static void Run(Simulation simulation, Command command)
+    {
+        simulation.Schedule(0, command);
+        simulation.Step();
+    }
+
     private static Dictionary<Direction, ObjectOrientation> Side(params Direction[] facings)
     {
         return facings.ToDictionary(facing => facing, _ => new ObjectOrientation([new(0, 0, OnlySide)]));

@@ -28,15 +28,16 @@ objects from the level file.
 - (Done: the bench drawn split over three tiles facing north, as `bench.lua`'s `render_attach_position` (the other
   facings from its own tile, as there; `ObjectDrawing.Split`). The furnish corridor window with counts and prices
   (`FurnishCorridorScreen`, `dialogs/furnish_corridor.lua`).)
-- (Done: moving and selling corridor objects: a right click picks one of ours up off the corridor floor (`Object:onClick`,
-  pickup.wav), a click puts it down elsewhere at no cost (`MoveCorridorObjectCommand`, `CorridorObjects.Move`, checked
-  with the object out of the way), Esc puts it back (`UIPlaceObjects:undo`) and Delete sells it for its build cost
-  (`ingame_sellPickedUpItem`, `SellCorridorObjectCommand`); its tiles are given back (`ObjectPlacer.Vacate`), patients
-  heading for a picked up reception desk look for another (`rerouteAllPatients`). Side objects (radiators,
-  extinguishers, bins) inside a new room's area become the room's and keep their side (`ObjectPlacer.AdoptSideObjects`,
-  `World:resetSideObjects`).) Corridor objects in a finished room are not picked up (CorsixTH lets you); side objects
-  are not picked up off the corridor yet. While one is on the cursor, others may still use it, where CorsixTH sends
-  them off at once.
+- (Done: moving and selling corridor objects (`Object:onClick`, `UIPlaceObjects`): a right click picks one of ours up
+  (pickup.wav), in the corridor or in a finished room not being edited, side objects (radiators, extinguishers, bins)
+  too; it comes off the map and the hospital carries it, so nobody uses it meanwhile (`PickUpCorridorObjectCommand`,
+  `Hospital.Carried`, kept in saves); a click puts it down wherever it may stand, in the corridor or a room that may
+  have it (`PutDownCarriedObjectCommand`; `World:willObjectsFootprintTileBeWithinItsAllowedRoomIfLocatedAt`), Esc puts
+  it back (`UIPlaceObjects:undo`, sold if its place was taken meanwhile) and Delete sells it for its build cost
+  (`ingame_sellPickedUpItem`). Its tiles are given back (`ObjectPlacer.Vacate`, a room's through `Reoccupy`), patients
+  heading for a picked up reception desk look for another (`rerouteAllPatients`). Side objects inside a new room's
+  area become the room's and keep their side (`ObjectPlacer.AdoptSideObjects`, `World:resetSideObjects`).) A click
+  finds a wall's side object from the tile in front of the wall, not by its sprite as CorsixTH does.
 - (Done: every room of the original with its objects and machines, `BaseGameContent`, `RoomVisits`.)
 - Machines: the gear icon over a machine a handyman was called to is drawn. The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
   invulnerable and repair-all cheats are done. Strength, wear per use,
