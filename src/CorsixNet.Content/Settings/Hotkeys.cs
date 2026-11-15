@@ -75,6 +75,9 @@ public sealed class Hotkeys
     [
         ("ingame_showCheatWindow", new("f11")),
         ("global_showLuaConsole", new("f12")),
+        ("global_releaseMouse", new("f10", Ctrl: true)),
+        ("global_resetApp", new("f10", Shift: true)),
+        ("ingame_panel_casebook_alt02", new("c", Shift: true)),
         ("ingame_pause", new("p")),
         ("ingame_gamespeed_slowest", new("1")),
         ("ingame_gamespeed_slower", new("2")),

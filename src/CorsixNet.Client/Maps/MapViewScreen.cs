@@ -185,7 +185,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private IGameSession? _session;
 
     /// <summary>The saves folder: the quick save and the monthly autosaves.</summary>
-    private readonly SaveGameStore _saves = new(SaveGameStore.DefaultDirectory());
+    /// <summary>Where games are saved: the <c>savegames</c> setting, else the default Saves folder.</summary>
+    private SaveGameStore _saves = new(SaveGameStore.DefaultDirectory());
+
+    /// <summary><c>App:initSavegameDir</c>: the configured folder, else the default.</summary>
+    internal static string SavesDirectory(GameConfig config) => config.Savegames is { Length: > 0 } folder ? folder : SaveGameStore.DefaultDirectory();
     private int _levelIndex;
 
     private string? _error;
@@ -390,6 +394,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         bool mapEditor = false)
     {
         _config = config ?? new GameConfig();
+        _saves = new SaveGameStore(SavesDirectory(_config));
         _adviser.IsEnabled = !_config.AdviserDisabled;
         _adviserChecks = new AdviserChecks(_adviser, _adviserRandom);
         _configPath = configPath;
@@ -565,6 +570,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     public void Update(GameTime gameTime, bool hasFocus)
     {
+        if (_mouseReleased && hasFocus && InputScript.Mouse() is var down
+            && (down.LeftButton == ButtonState.Pressed || down.RightButton == ButtonState.Pressed || down.MiddleButton == ButtonState.Pressed))
+        {
+            // UI:onMouseDown: a click takes the cursor back.
+            _mouseReleased = false;
+        }
+
         _music.Update();
         ShowUpdateFound();
         if (_movie.IsPlaying)
@@ -769,7 +781,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var keyY = (ScrollKeyHeld("ingame_scroll_down", keys) || (wasd && keys.IsKeyDown(Keys.S)) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_up", keys) || (wasd && keys.IsKeyDown(Keys.W)) ? 1 : 0);
         var shiftHeld = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         // In the map editor the right button copies an area (UIMapEditor); the middle one still drags the view.
-        var rightPans = _editorTool is null;
+        var rightPans = _editorTool is null && _config.RightMouseScrolling;
         var dragging = (rightPans && mouse.RightButton == ButtonState.Pressed) || mouse.MiddleButton == ButtonState.Pressed;
         var wasDragging = (rightPans && _previousMouse.RightButton == ButtonState.Pressed) || _previousMouse.MiddleButton == ButtonState.Pressed;
         if (dragging && wasDragging)
@@ -1022,7 +1034,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     public bool DrawsCursor => _cursors is not null;
 
     /// <inheritdoc/>
-    public bool CapturesMouse => _config.CaptureMouse;
+    public bool CapturesMouse => _config.CaptureMouse && !_mouseReleased;
+
+    /// <summary><c>UI:releaseMouse</c> (Ctrl+F10): the cursor is let go until a mouse button is pressed (<c>onMouseDown</c>).</summary>
+    private bool _mouseReleased;
 
     /// <summary>
     /// GameUI:onCursorWorldPositionChange's cursor: the epidemic's over an infected patient during a cover-up, else the
@@ -3315,6 +3330,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ToggleAdviser();
         }
 
+        if (HotkeyInput.Pressed(_hotkeys["global_releaseMouse"], keys, pressed))
+        {
+            _mouseReleased = true;
+        }
+
+        if (HotkeyInput.Pressed(_hotkeys["global_resetApp"], keys, pressed))
+        {
+            // UI:resetApp: the game starts again.
+            Restart();
+        }
+
         if (HotkeyInput.Pressed(_hotkeys["global_screenshot"], keys, pressed))
         {
             RequestScreenshot();
@@ -3360,6 +3386,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ("ingame_panel_adviserHistory", () => new AdviserHistoryWindow()),
             ("ingame_showCheatWindow", () => new CheatsWindow()),
             ("global_showLuaConsole", () => new DebugConsoleWindow(MenuAction)),
+            ("ingame_panel_casebook_alt02", () => new CasebookWindow()),
         ];
         foreach (var (action, window) in dialogs)
         {
@@ -4191,7 +4218,34 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The options, with the hotkey assignment dialog (<c>UIOptions:buttonHotkey</c>), which goes back to them.</summary>
     private OptionsWindow NewOptionsWindow() =>
-        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage, OpenSettingsDialog);
+        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage, OpenSettingsDialog,
+            () => _windows.Open(new FolderSettingsWindow(_config, ApplyConfig, () => _windows.Open(NewOptionsWindow()), SaveGameStore.DefaultDirectory(),
+                Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_configPath ?? GameConfig.FileName)) ?? ".", "Screenshots"), Restart)));
+
+    /// <summary><c>App:restart</c> after a new game data folder: the game starts again with the same command line.</summary>
+    private void Restart()
+    {
+        if (Environment.ProcessPath is not { } executable)
+        {
+            return;
+        }
+
+        try
+        {
+            var start = new System.Diagnostics.ProcessStartInfo(executable) { UseShellExecute = false };
+            foreach (var argument in Environment.GetCommandLineArgs().Skip(1))
+            {
+                start.ArgumentList.Add(argument);
+            }
+
+            System.Diagnostics.Process.Start(start)?.Dispose();
+            ExitRequested = true;
+        }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Console.Error.WriteLine("Could not restart: " + e.Message);
+        }
+    }
 
     /// <summary>
     /// <c>Audio:init</c>: the playlist, the game's XMI music or with <c>play_own_music</c> the player's own in
@@ -4753,7 +4807,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         var midiChanged = config.MidiApi != _config.MidiApi || config.MidiPort != _config.MidiPort || config.Soundfont != _config.Soundfont;
         var playlistChanged = config.PlayOwnMusic != _config.PlayOwnMusic || config.AudioMusic != _config.AudioMusic;
+        var savesChanged = !string.Equals(config.Savegames, _config.Savegames, StringComparison.Ordinal);
         _config = config;
+        if (savesChanged)
+        {
+            // App:initSavegameDir: saves go to the new folder from now on.
+            _saves = new SaveGameStore(SavesDirectory(config));
+        }
+
         if (playlistChanged)
         {
             // The sound dialog's own music switch: a new playlist, its first track at random if music plays.

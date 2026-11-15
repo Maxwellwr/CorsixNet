@@ -306,7 +306,7 @@ internal sealed record LanguageFontChoices(string Default, IReadOnlyList<(string
 /// Opens one of the settings dialogs (graphics, customise, sound, accessibility): with it and CorsixTH's sprites the
 /// window is CorsixTH's <c>UIOptions</c>, whose changes apply at once; without, the table below with Apply.
 /// </param>
-internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, LanguageFontChoices?>? fonts = null, Action<GameConfig>? preview = null, Action<SettingsDialogKind>? openDialog = null) : UiWindow
+internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, LanguageFontChoices?>? fonts = null, Action<GameConfig>? preview = null, Action<SettingsDialogKind>? openDialog = null, Action? folders = null) : UiWindow
 {
     /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
     public override bool UsesResizableLook => true;
@@ -390,6 +390,11 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
             }, Tip("hotkey"))],
             Dialog("sound", "Sound", SettingsDialogKind.Sound),
             Dialog("accessibility", "Accessibility", SettingsDialogKind.Accessibility),
+            .. folders is null ? Array.Empty<DialogNavButton>() : [new DialogNavButton(Text("folder", "Folders"), () =>
+            {
+                _host?.Close(this);
+                folders();
+            }, Tip("folder"))],
             new(Text("back", "Back"), () => _host?.Close(this), Tip("back")),
         ];
         return SettingsDialogLayout.Build(Title, settings, navigation, extraHeight: 250);

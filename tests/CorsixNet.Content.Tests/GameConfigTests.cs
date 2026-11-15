@@ -115,6 +115,8 @@ public sealed class GameConfigTests : IDisposable
             PreventEdgeScrolling = true,
             CaptureMouse = false,
             CheckForUpdates = false,
+            Savegames = "D:/Saves",
+            RightMouseScrolling = false,
             Screenshots = @"D:\Shots",
             ScrollingMomentum = 0.9m,
             ZoomSpeed = 200,
@@ -126,6 +128,15 @@ public sealed class GameConfigTests : IDisposable
         };
 
         Assert.Equal(config, GameConfig.Parse(config.ToText()));
+    }
+
+    [Fact]
+    public void AConfigPathFileNamesTheFolderOrTheFile()
+    {
+        Assert.Null(GameConfig.FromPathFile("  \n"));
+        Assert.Equal(Path.Combine("D:/Games/CorsixNet", GameConfig.FileName), GameConfig.FromPathFile(" D:/Games/CorsixNet \n"));
+        Assert.Equal("D:/Games/my.yaml", GameConfig.FromPathFile("D:/Games/my.yaml"));
+        Assert.Equal("D:/Games/config.txt", GameConfig.FromPathFile("D:/Games/config.txt"));
     }
 
     [Fact]
