@@ -1,3 +1,4 @@
+using CorsixNet.Content.Interface;
 using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Protocol;
 using CorsixNet.Net.Transport;
@@ -164,6 +165,92 @@ public sealed class LockstepTests : IDisposable
 
         Assert.False(clientEnd.IsConnected);
         Assert.Empty(_server.Simulation.PendingCommands);
+    }
+
+    [Fact]
+    public void AnyPlayerPausesTheGameForEveryone()
+    {
+        var a = Connect("Alice");
+        var b = Connect("Bob");
+        Exchange();
+
+        b.RequestSpeed(GameSpeed.Pause);
+        Exchange();
+        var tick = _server.Simulation.Tick;
+        Assert.Equal(0, _server.Run(TimeSpan.FromSeconds(1)));
+        Exchange();
+
+        Assert.Equal(GameSpeed.Pause, _server.Speed);
+        Assert.Equal(tick, _server.Simulation.Tick);
+        Assert.All(new[] { a, b }, client =>
+        {
+            Assert.Equal(GameSpeed.Pause, client.Speed);
+            Assert.Equal(b.Player, client.SpeedSetBy);
+        });
+
+        // Going back to the previous speed, as CorsixTH's World:previousSpeed: Normal, a tick every 54 ms.
+        a.RequestSpeed(null);
+        Exchange();
+        Assert.Equal(GameSpeed.Normal, _server.Speed);
+        Assert.Equal(10, _server.Run(GameSpeeds.Interval(GameSpeed.Normal) * 10));
+        Exchange();
+
+        Assert.Equal(GameSpeed.Normal, b.Speed);
+        Assert.Equal(a.Player, b.SpeedSetBy);
+        AssertInSync();
+    }
+
+    [Fact]
+    public void TheServersSpeedSetsHowManyTicksRealTimeIsWorth()
+    {
+        Connect("Alice");
+        Exchange();
+
+        _server.SetSpeed(GameSpeed.Insane);
+
+        // Seven hours every frame of 18 ms.
+        Assert.Equal(70, _server.Run(GameSpeeds.Frame * 10));
+    }
+
+    [Fact]
+    public void SpeedUpDoesNothingWhilePaused()
+    {
+        var a = Connect("Alice");
+        Exchange();
+        a.RequestSpeed(GameSpeed.Pause);
+        Exchange();
+
+        a.RequestSpeed(GameSpeed.SpeedUp);
+        Exchange();
+
+        Assert.Equal(GameSpeed.Pause, a.Speed);
+    }
+
+    [Fact]
+    public void LateJoinerLearnsTheSpeed()
+    {
+        Connect("Alice");
+        Exchange();
+        _server.SetSpeed(GameSpeed.MaxSpeed);
+
+        var late = Connect("Late");
+        Exchange();
+
+        Assert.Equal(GameSpeed.MaxSpeed, late.Speed);
+        Assert.Equal(-1, late.SpeedSetBy);
+    }
+
+    [Fact]
+    public void ServerDropsSpeedRequestsBeforeJoining()
+    {
+        var (serverEnd, clientEnd) = InMemoryConnection.CreatePair();
+        _server.AddConnection(serverEnd);
+        clientEnd.Send(new SpeedRequestMessage(GameSpeed.Pause));
+
+        _server.ProcessMessages();
+
+        Assert.False(clientEnd.IsConnected);
+        Assert.Equal(GameSpeed.Normal, _server.Speed);
     }
 
     private static Simulation NewSimulation()

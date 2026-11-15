@@ -231,6 +231,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Whether a window that must pause the game (<see cref="UiWindow.MustPause"/>) paused it.</summary>
     private bool _pausedForWindow;
 
+    /// <summary>Whether this player holds the speed-up key, so that letting go of it ends the speed-up.</summary>
+    private bool _speedUpHeld;
+
     /// <summary>Announces machines that start needing a repair urgently (CorsixTH's <c>announceRepair</c>).</summary>
     private readonly RepairAnnouncer _repairs = new();
 
@@ -1703,13 +1706,19 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
+        // In a network game another player may hold it: only letting go of one's own key ends it.
         if (HotkeyInput.Held(_hotkeys["ingame_gamespeed_speedup"], keys))
         {
             session.SetSpeed(GameSpeed.SpeedUp);
+            _speedUpHeld = true;
         }
-        else if (session.Speed == GameSpeed.SpeedUp)
+        else if (_speedUpHeld)
         {
-            session.ResumeSpeed();
+            _speedUpHeld = false;
+            if (session.Speed == GameSpeed.SpeedUp)
+            {
+                session.ResumeSpeed();
+            }
         }
     }
 
@@ -4749,7 +4758,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// </summary>
     private void PauseForWindows()
     {
-        if (_session is not { CanChangeSpeed: true } session)
+        // A network game's speed is everyone's: a window one player opens does not pause it.
+        if (_session is not { CanChangeSpeed: true, IsShared: false } session)
         {
             return;
         }

@@ -118,7 +118,7 @@ else
             var level = levels[0];
             var server = new LockstepServer(level.Load().StartSimulation(seed: 1)) { Log = Console.WriteLine };
             var listener = new TcpConnectionListener(options.PublicHost ? IPAddress.Any : IPAddress.Loopback, port);
-            var runner = new ServerRunner(server, listener, LocalSession.TickInterval);
+            var runner = new ServerRunner(server, listener);
             Console.WriteLine($"Hosting {level.Name} on port {runner.Port}{(options.PublicHost ? " for all network interfaces" : " (this machine only; add --public for others)")}.");
             var connection = TcpConnection.ConnectAsync("127.0.0.1", runner.Port).GetAwaiter().GetResult();
             networkSession = new NetworkSession(level.Name, new LockstepClient(connection, playerName, BaseGameContent.Create()), runner);

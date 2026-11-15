@@ -1,3 +1,4 @@
+using CorsixNet.Content.Interface;
 using CorsixNet.Net.Protocol;
 using CorsixNet.Net.Transport;
 using CorsixNet.Sim;
@@ -43,6 +44,12 @@ public sealed class LockstepClient : IDisposable
     /// <summary>Why the client is not in the game, if it was rejected or lost the connection.</summary>
     public string? Problem { get; private set; }
 
+    /// <summary>The speed the server runs the game at.</summary>
+    public GameSpeed Speed { get; private set; } = GameSpeed.Normal;
+
+    /// <summary>The player who last changed <see cref="Speed"/>, or -1 when no player did.</summary>
+    public int SpeedSetBy { get; private set; } = -1;
+
     /// <summary>The most recent desync reported by the server, if any.</summary>
     public DesyncMessage? LastDesync { get; private set; }
 
@@ -68,6 +75,10 @@ public sealed class LockstepClient : IDisposable
                 case AdvanceMessage advance when Simulation is not null:
                     AllowedTick = Math.Max(AllowedTick, advance.AllowedTick);
                     break;
+                case SpeedMessage speed:
+                    Speed = speed.Speed;
+                    SpeedSetBy = speed.Player;
+                    break;
                 case RejectMessage reject:
                     Problem = reject.Reason;
                     break;
@@ -89,6 +100,18 @@ public sealed class LockstepClient : IDisposable
         if (IsJoined)
         {
             _connection.Send(new CommandRequestMessage(command));
+        }
+    }
+
+    /// <summary>
+    /// Asks the server to run the game at <paramref name="speed"/> for everyone, or with null to go back to the speed
+    /// before a pause or speed-up. <see cref="Speed"/> changes when the server says so.
+    /// </summary>
+    public void RequestSpeed(GameSpeed? speed)
+    {
+        if (IsJoined)
+        {
+            _connection.Send(new SpeedRequestMessage(speed));
         }
     }
 

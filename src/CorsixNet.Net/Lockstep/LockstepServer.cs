@@ -1,3 +1,4 @@
+using CorsixNet.Content.Interface;
 using CorsixNet.Net.Protocol;
 using CorsixNet.Net.Transport;
 using CorsixNet.Sim;
@@ -19,6 +20,10 @@ namespace CorsixNet.Net.Lockstep;
 /// Every <see cref="HashInterval"/> ticks the server records the hash of its state. Clients
 /// report theirs for the same ticks; a mismatch is a desync, reported to everyone.
 /// </para>
+/// <para>
+/// The server keeps the game's one clock (<see cref="GameClock"/>): any player may pause the game or change its speed,
+/// and everyone is told (<see cref="SpeedMessage"/>), so the game runs at the same speed for all.
+/// </para>
 /// <para>Not thread-safe: drive it from one thread (see <see cref="ServerRunner"/>).</para>
 /// </remarks>
 public sealed class LockstepServer : IDisposable
@@ -32,6 +37,7 @@ public sealed class LockstepServer : IDisposable
     private readonly List<Peer> _peers = [];
     private readonly SortedDictionary<long, ulong> _hashes = [];
     private readonly List<DesyncMessage> _desyncs = [];
+    private readonly GameClock _clock = new();
 
     public LockstepServer(Simulation simulation)
     {
@@ -53,6 +59,9 @@ public sealed class LockstepServer : IDisposable
 
     /// <summary>Number of clients that have joined and are still connected.</summary>
     public int JoinedCount => _peers.Count(peer => peer.Player is not null && peer.Connection.IsConnected);
+
+    /// <summary>The speed the game runs at; CorsixTH's Normal at first.</summary>
+    public GameSpeed Speed => _clock.Speed;
 
     /// <summary>Every desync detected so far.</summary>
     public IReadOnlyList<DesyncMessage> Desyncs => _desyncs;
@@ -104,6 +113,44 @@ public sealed class LockstepServer : IDisposable
         Broadcast(new AdvanceMessage(Simulation.Tick));
     }
 
+    /// <summary>
+    /// Lets <paramref name="elapsed"/> real time pass at the game's <see cref="Speed"/>: executes the ticks it is worth
+    /// and allows clients to execute them too. Returns how many ticks ran.
+    /// </summary>
+    public int Run(TimeSpan elapsed)
+    {
+        var ticks = _clock.Advance(elapsed);
+        for (var i = 0; i < ticks; i++)
+        {
+            AdvanceTick();
+        }
+
+        return ticks;
+    }
+
+    /// <summary>
+    /// Changes the game's speed, or with null goes back to the speed before a pause or speed-up, and tells everyone.
+    /// <paramref name="player"/> is who asked, or -1 for the server itself.
+    /// </summary>
+    public void SetSpeed(GameSpeed? speed, int player = -1)
+    {
+        var before = _clock.Speed;
+        if (speed is { } wanted)
+        {
+            _clock.SetSpeed(wanted);
+        }
+        else
+        {
+            _clock.Resume();
+        }
+
+        if (_clock.Speed != before)
+        {
+            Log?.Invoke($"{(player < 0 ? "The server" : $"Player {player}")} set the speed to {GameSpeeds.Name(_clock.Speed)}.");
+            Broadcast(new SpeedMessage(_clock.Speed, player));
+        }
+    }
+
     public void Dispose()
     {
         foreach (var peer in _peers)
@@ -127,6 +174,9 @@ public sealed class LockstepServer : IDisposable
                 break;
             case StateHashMessage hash when peer.Player is { } player:
                 CheckHash(player, hash);
+                break;
+            case SpeedRequestMessage request when peer.Player is { } player:
+                SetSpeed(request.Speed, player);
                 break;
             default:
                 throw new InvalidDataException($"Unexpected {message.GetType().Name} from {Describe(peer)}.");
@@ -155,6 +205,7 @@ public sealed class LockstepServer : IDisposable
         using var state = new MemoryStream();
         Simulation.Save(state);
         peer.Connection.Send(new WelcomeMessage(peer.Player.Value, state.ToArray(), Simulation.Tick));
+        peer.Connection.Send(new SpeedMessage(_clock.Speed, -1));
         Log?.Invoke($"{Describe(peer)} joined at tick {Simulation.Tick}.");
     }
 

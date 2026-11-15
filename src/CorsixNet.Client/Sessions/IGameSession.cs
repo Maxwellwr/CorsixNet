@@ -19,10 +19,16 @@ internal interface IGameSession : IDisposable
     /// <summary>The local player's number (0-based).</summary>
     int Player { get; }
 
-    /// <summary>Whether the player can pause and change the game speed; only local games can.</summary>
+    /// <summary>Whether the player can pause and change the game speed (in a network game, for everyone).</summary>
     bool CanChangeSpeed { get; }
 
-    /// <summary>The current game speed; a network game runs at the server's Normal speed.</summary>
+    /// <summary>
+    /// Whether other players share the game, so that its speed is theirs too: windows that pause a local game
+    /// (<c>World:mustPauseWindowAdd</c>) do not pause it.
+    /// </summary>
+    bool IsShared => false;
+
+    /// <summary>The current game speed; a network game's is the server's.</summary>
     GameSpeed Speed { get; }
 
     bool IsPaused => Speed == GameSpeed.Pause;

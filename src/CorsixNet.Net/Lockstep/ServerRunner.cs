@@ -5,7 +5,8 @@ namespace CorsixNet.Net.Lockstep;
 
 /// <summary>
 /// Runs a <see cref="LockstepServer"/> on its own thread: accepts TCP connections, handles
-/// messages, and advances one tick per <see cref="TickInterval"/> while anyone is connected.
+/// messages, and lets real time pass at the server's game speed (<see cref="LockstepServer.Run"/>) while anyone is
+/// connected.
 /// </summary>
 public sealed class ServerRunner : IDisposable
 {
@@ -14,16 +15,13 @@ public sealed class ServerRunner : IDisposable
     private readonly Thread _thread;
     private volatile bool _running = true;
 
-    public ServerRunner(LockstepServer server, TcpConnectionListener listener, TimeSpan tickInterval)
+    public ServerRunner(LockstepServer server, TcpConnectionListener listener)
     {
         _server = server;
         _listener = listener;
-        TickInterval = tickInterval;
         _thread = new Thread(Run) { IsBackground = true, Name = "CorsixNet server" };
         _thread.Start();
     }
-
-    public TimeSpan TickInterval { get; }
 
     public int Port => _listener.Port;
 
@@ -38,7 +36,7 @@ public sealed class ServerRunner : IDisposable
     private void Run()
     {
         var clock = Stopwatch.StartNew();
-        var nextTick = TimeSpan.Zero;
+        var last = TimeSpan.Zero;
         while (_running)
         {
             while (_listener.TryAccept(out var connection))
@@ -48,28 +46,14 @@ public sealed class ServerRunner : IDisposable
 
             _server.ProcessMessages();
 
-            if (_server.JoinedCount == 0)
+            var now = clock.Elapsed;
+            if (_server.JoinedCount > 0)
             {
-                // Game time stands still while nobody is playing.
-                nextTick = clock.Elapsed + TickInterval;
-            }
-            else
-            {
-                // Catch up after a stall, but by a bounded amount.
-                var ticks = 0;
-                while (clock.Elapsed >= nextTick && ticks < 10)
-                {
-                    _server.AdvanceTick();
-                    nextTick += TickInterval;
-                    ticks++;
-                }
-
-                if (clock.Elapsed >= nextTick)
-                {
-                    nextTick = clock.Elapsed + TickInterval;
-                }
+                // Game time stands still while nobody is playing. A stall is caught up by a bounded amount.
+                _server.Run(now - last);
             }
 
+            last = now;
             Thread.Sleep(1);
         }
     }
