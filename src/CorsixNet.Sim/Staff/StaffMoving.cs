@@ -31,13 +31,8 @@ public static class StaffMoving
         }
 
         // CorsixTH lets the room deal with a member of staff leaving in the middle of a treatment: here one using an
-        // object with a patient stops (StaffEmployment.Detach) and the patient waits for the next. Only the operating
-        // theatre's two surgeons, working the table together, finish first.
-        if (StaffEmployment.IsBusyWithPatient(simulation, staff) && staff.Behaviour is DoctorBehaviour surgeon
-            && simulation.FindEntity(surgeon.RoomId) is Room { RoomType: RoomVisits.OperatingTheatreRoom })
-        {
-            return StaffHireProblem.BusyWithPatient;
-        }
+        // object with a patient stops (StaffEmployment.Detach) and the patient waits for the next. The operating
+        // theatre's surgeons, whose table actions must happen, finish the operation first (see Move).
 
         return StaffHiring.CheckPlacement(simulation, profile.Class, tile, player, staffId);
     }
@@ -49,6 +44,13 @@ public static class StaffMoving
     /// </summary>
     internal static void Move(Simulation simulation, Humanoid staff, TilePosition tile)
     {
+        if (IsOperating(simulation, staff))
+        {
+            // Staff:setPickup with the operation's actions still to happen: done once the operation is over.
+            ((DoctorBehaviour)staff.Behaviour!).DeferMove(tile);
+            return;
+        }
+
         var parcel = staff.Behaviour is HandymanBehaviour handyman ? handyman.Parcel : 0;
         StaffEmployment.Detach(simulation, staff);
         simulation.NotifyOccupantChange(tile, 1);
@@ -64,5 +66,28 @@ public static class StaffMoving
 
         // Room:onHumanoidEnter, when put down in a room.
         RoomVisits.SettleIdleStaff(simulation, staff, placed: true);
+    }
+
+    /// <summary>Whether the member of staff is a surgeon in the middle of an operation.</summary>
+    private static bool IsOperating(Simulation simulation, Humanoid staff) =>
+        StaffEmployment.IsBusyWithPatient(simulation, staff) && staff.Behaviour is DoctorBehaviour surgeon
+        && simulation.FindEntity(surgeon.RoomId) is Room { RoomType: RoomVisits.OperatingTheatreRoom };
+
+    /// <summary>
+    /// After an operation: a surgeon picked up during it is put down where the player put them, if they may still stand
+    /// there; otherwise they stay.
+    /// </summary>
+    internal static void MovePending(Simulation simulation, Humanoid staff)
+    {
+        if (staff.Behaviour is not DoctorBehaviour { PendingMove: { } tile } surgeon)
+        {
+            return;
+        }
+
+        surgeon.ClearPendingMove();
+        if (Check(simulation, staff.Id, tile, staff.Employer) == StaffHireProblem.None)
+        {
+            Move(simulation, staff, tile);
+        }
     }
 }

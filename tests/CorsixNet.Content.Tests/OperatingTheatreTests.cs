@@ -83,6 +83,49 @@ public class OperatingTheatreTests
     }
 
     [Fact]
+    public void ASurgeonPickedUpDuringAnOperationFinishesItAndThenGoes()
+    {
+        var simulation = NewStaffedHospital(Rules());
+        BuildWard(simulation);
+        var theatre = BuildTheatre(simulation);
+        Humanoid? patient = null;
+        for (var tick = 0; tick < 5 * 31 * GameDate.HoursPerDay && patient is null; tick++)
+        {
+            simulation.Step();
+            patient = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h =>
+                h.Behaviour is PatientBehaviour { Phase: PatientPhase.OnTrolley, TrolleyUse: not null } p && p.TargetId == theatre.Id);
+        }
+
+        Assert.NotNull(patient);
+        var surgeon = RoomVisits.Surgeons(simulation, theatre).First();
+        var target = new TilePosition(3, 20);
+
+        // Staff:setPickup behind the operation's must-happen actions: allowed, but done once the operation is over.
+        Assert.Equal(StaffHireProblem.None, StaffMoving.Check(simulation, surgeon.Id, target, 0));
+        Run(simulation, new MoveStaffCommand(surgeon.Id, target));
+        Assert.NotEqual(target, surgeon.Tile);
+        Assert.Equal(target, ((DoctorBehaviour)surgeon.Behaviour!).PendingMove);
+
+        using (var stream = new MemoryStream())
+        {
+            simulation.Save(stream);
+            stream.Position = 0;
+            var loaded = Simulation.Load(stream, BaseGameContent.Create());
+            Assert.Equal(simulation.ComputeStateHash(), loaded.ComputeStateHash());
+        }
+
+        var behaviour = (PatientBehaviour)patient.Behaviour!;
+        for (var tick = 0; tick < 10 * GameDate.HoursPerDay && behaviour.TrolleyUse is not null; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.Null(behaviour.TrolleyUse);
+        Assert.Equal(target, surgeon.Tile);
+        Assert.Null(((DoctorBehaviour)surgeon.Behaviour!).PendingMove);
+    }
+
+    [Fact]
     public void SurgeonsLeavingChangeBackIntoDoctorsAtTheScreen()
     {
         var simulation = NewStaffedHospital(Rules());

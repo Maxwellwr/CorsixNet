@@ -2560,6 +2560,12 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                     {
                         ((DoctorBehaviour)surgeon.Behaviour!).OnOperated();
                     }
+
+                    // The pickup action waiting behind the operation: a surgeon picked up meanwhile goes now.
+                    foreach (var surgeon in RoomVisits.Surgeons(simulation, room))
+                    {
+                        Staff.StaffMoving.MovePending(simulation, surgeon);
+                    }
                 }
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour examiner })
                 {
