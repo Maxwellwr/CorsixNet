@@ -1,6 +1,6 @@
-# What the announcer says instead of a subtitle (by its name), where the voice would read the subtitle badly: a typo,
-# an abbreviation, a foreign word, a missing "со". tools/CorsixNet.AnnouncerVoice reads it; the subtitles stay as they are.
-cheat002: Внимание! Больницей управляет мошенник!
+# What the announcer says instead of a subtitle (by its name), where the voice would read the subtitle badly: an
+# abbreviation, a foreign word, a slip of grammar ("с спонтанным", "Господинам"). tools/CorsixNet.AnnouncerVoice reads it;
+# the subtitles stay as they are (fix their typos in the translation, Languages/CorsixNet/russian.yaml).
 emerg003: 'Объявление для персонала: прибывают пациенты с тэвэ-манией.'
 emerg013: 'Объявление для персонала: прибывают пациенты со спонтанным зудом.'
 emerg016: 'Объявление для персонала: прибывают пациенты со взрывным метеоризмом.'
@@ -10,7 +10,6 @@ emerg030: 'Объявление для персонала: прибывают п
 maint006: Требуется мастер для ремонта исправителя дэ-эн-ка.
 maint012: Требуется мастер для ремонта обеззараживающего душа.
 reqd015: Доктора просят пройти в кабинет восстановления дэ-эн-ка.
-rand017: Беспокойных пациентов просят вести себя как можно тише.
 rand029: Следите за другими продуктами Буллфрог.
 rand035: Господам Берку и Хэру просьба пройти к заднему выходу.
 vip001: Внимание, у нас в здании вип-персона.

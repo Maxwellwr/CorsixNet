@@ -4,7 +4,7 @@ namespace CorsixNet.AnnouncerVoice;
 
 /// <summary>
 /// speech.yaml beside the sounds: by subtitle name, what to say instead of the subtitle, where the voice reads it badly
-/// (a typo, a stress in the wrong place, an abbreviation).
+/// (a slip of grammar, a stress in the wrong place, an abbreviation).
 /// </summary>
 internal static class SpeechOverrides
 {
