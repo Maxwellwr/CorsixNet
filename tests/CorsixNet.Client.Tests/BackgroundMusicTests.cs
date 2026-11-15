@@ -108,6 +108,39 @@ public class BackgroundMusicTests
     }
 
     [Fact]
+    public void TheOwnMusicsMidiFilesPlayOnTheMidiPlayer()
+    {
+        var output = new RecordingOutput();
+        byte[] track = [0x00, 0x90, 0x40, 0x50, 0x01, 0x80, 0x40, 0x00, 0x00, 0xFF, 0x2F, 0x00];
+        byte[] midi = [.. "MThd"u8, 0, 0, 0, 6, 0, 0, 0, 1, 0, 96, .. "MTrk"u8, 0, 0, 0, (byte)track.Length, .. track];
+        using var music = new BackgroundMusic([new MusicTrack("own.mid", "Own")], new MidiPlayer(output), _ => midi, new Random(1));
+
+        music.Play(0);
+        Assert.Equal(0, music.Current);
+        Assert.True(SpinWait.SpinUntil(() => output.Messages.Any(m => m.SequenceEqual(new byte[] { 0x90, 0x40, 0x50 })), TimeSpan.FromSeconds(5)));
+
+        // A recorded track without a player for recorded music cannot play.
+        using var recordedOnly = new BackgroundMusic([new MusicTrack("own.ogg", "Own")], new MidiPlayer(new RecordingOutput()), _ => [], new Random(1));
+        Assert.False(recordedOnly.HasMusic);
+    }
+
+    [Fact]
+    public void AWavFileGivesItsSamples()
+    {
+        byte[] data = [0x00, 0x40, 0x00, 0xC0];
+        byte[] wav = [.. "RIFF"u8, .. BitConverter.GetBytes(36 + data.Length), .. "WAVE"u8, .. "fmt "u8, .. BitConverter.GetBytes(16),
+            .. BitConverter.GetBytes((short)1), .. BitConverter.GetBytes((short)1), .. BitConverter.GetBytes(22050), .. BitConverter.GetBytes(44100),
+            .. BitConverter.GetBytes((short)2), .. BitConverter.GetBytes((short)16), .. "data"u8, .. BitConverter.GetBytes(data.Length), .. data];
+        using var source = WavSource.Read(new MemoryStream(wav));
+        var buffer = new float[8];
+
+        Assert.Equal((22050, 1), (source.SampleRate, source.Channels));
+        Assert.Equal(2, source.Read(buffer));
+        Assert.Equal([0.5f, -0.5f], buffer[..2]);
+        Assert.Throws<InvalidDataException>(() => WavSource.Read(new MemoryStream([.. "RIFF0000AVI "u8])));
+    }
+
+    [Fact]
     public void WithoutAMidiOutputThereIsNoMusic()
     {
         using var music = new BackgroundMusic([new MusicTrack("a", "A")], null, _ => [], new Random(1));

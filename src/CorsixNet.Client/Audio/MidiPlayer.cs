@@ -48,12 +48,42 @@ internal sealed class MidiPlayer(IMidiOutput output) : IDisposable
     public double Volume => Volatile.Read(ref _volume);
 
     /// <summary><c>play_xmi</c>: stops what is playing and plays the song's events from the start.</summary>
-    public void PlayXmi(ReadOnlySpan<byte> xmi)
+    public void PlayXmi(ReadOnlySpan<byte> xmi) => Play(FromXmi(Xmi.Events(xmi)));
+
+    /// <summary>The player's own music in a standard MIDI file (SDL_mixer's MIDI in CorsixTH): played as an XMI song is.</summary>
+    public void PlayMidiFile(ReadOnlySpan<byte> midi) => Play(StandardMidiFile.Messages(midi));
+
+    private void Play(IReadOnlyList<TimedMidiMessage> messages)
     {
-        var events = Xmi.Events(xmi);
         Stop();
-        _thread = new Thread(() => PlaybackLoop(events)) { IsBackground = true, Name = "MIDI playback" };
+        _thread = new Thread(() => PlaybackLoop(messages)) { IsBackground = true, Name = "MIDI playback" };
         _thread.Start();
+    }
+
+    /// <summary>
+    /// An XMI song's events as messages with their times, up to the end of the track; meta events are not sent, and
+    /// CorsixTH sends the first data byte of a system exclusive message too, which XMI leaves as 0 there.
+    /// </summary>
+    public static IReadOnlyList<TimedMidiMessage> FromXmi(IReadOnlyList<XmiEvent> events)
+    {
+        var messages = new List<TimedMidiMessage>(events.Count);
+        foreach (var current in events)
+        {
+            if (current.Type == Meta)
+            {
+                if (current.Data == EndOfTrack)
+                {
+                    break;
+                }
+
+                continue;
+            }
+
+            byte[] message = current.Type is 0xF0 or 0xF7 ? [current.Type, .. current.Buffer] : [current.Type, current.Data, .. current.Buffer];
+            messages.Add(new TimedMidiMessage(Xmi.ToMicroseconds(current.Time), message));
+        }
+
+        return messages;
     }
 
     /// <summary><c>set_volume</c>.</summary>
@@ -135,7 +165,7 @@ internal sealed class MidiPlayer(IMidiOutput output) : IDisposable
         }
     }
 
-    private void PlaybackLoop(IReadOnlyList<XmiEvent> events)
+    private void PlaybackLoop(IReadOnlyList<TimedMidiMessage> events)
     {
         // init_playback: General MIDI on, and every channel's volume at the player's volume.
         lock (_outputLock)
@@ -150,7 +180,6 @@ internal sealed class MidiPlayer(IMidiOutput output) : IDisposable
         var pauseTime = TimeSpan.Zero;
         var channelVolumes = Enumerable.Repeat(MaxChannelVolume, Channels).ToArray();
         var index = 0;
-        var message = new List<byte>(8);
         while (index < events.Count)
         {
             switch (Pop(paused))
@@ -189,12 +218,7 @@ internal sealed class MidiPlayer(IMidiOutput output) : IDisposable
             }
 
             var current = events[index];
-            if (current.Type == Meta && current.Data == EndOfTrack)
-            {
-                break;
-            }
-
-            var due = start + TimeSpan.FromMicroseconds(Xmi.ToMicroseconds(current.Time));
+            var due = start + TimeSpan.FromMicroseconds(current.Microseconds);
             if (due > clock.Elapsed)
             {
                 // Commands are seen while waiting, as CorsixTH's loop sees them after its sleep.
@@ -206,31 +230,17 @@ internal sealed class MidiPlayer(IMidiOutput output) : IDisposable
             }
 
             index++;
-            if (current.Type == Meta)
-            {
-                // Meta events are not sent, except that the end of the track ends the song.
-                continue;
-            }
-
-            message.Clear();
-            message.Add(current.Type);
-            if (current.Type is not (0xF0 or 0xF7))
-            {
-                // CorsixTH sends the first data byte of a system exclusive message too, which XMI leaves as 0 there.
-                message.Add(current.Data);
-            }
-
-            message.AddRange(current.Buffer);
-            if ((current.Type & 0xF0) == ControlChange && current.Data == ControlVolume && message.Count == 3)
+            var message = current.Message;
+            if (message.Length == 3 && (message[0] & 0xF0) == ControlChange && message[1] == ControlVolume)
             {
                 // The track's channel volume, kept for a later change of volume, scaled by the player's.
-                channelVolumes[current.Type & 0x0F] = message[2];
-                message[2] = ScaledVolume(message[2], Volume);
+                channelVolumes[message[0] & 0x0F] = message[2];
+                message = [message[0], message[1], ScaledVolume(message[2], Volume)];
             }
 
             lock (_outputLock)
             {
-                output.Send(message.ToArray());
+                output.Send(message);
             }
         }
 

@@ -147,6 +147,12 @@ public sealed record GameConfig
     /// <summary>The MIDI output of that API (<c>midi_port</c>); empty for the system's default.</summary>
     public string MidiPort { get; init; } = string.Empty;
 
+    /// <summary>Whether the player's own music in <see cref="AudioMusic"/> plays instead of the game's (<c>play_own_music</c>).</summary>
+    public bool PlayOwnMusic { get; init; }
+
+    /// <summary>The folder of the player's own music (<c>audio_music</c>); empty for none.</summary>
+    public string AudioMusic { get; init; } = string.Empty;
+
     /// <summary>The SoundFont the default MIDI synthesiser plays the music with (<c>soundfont</c>); empty to look for one.</summary>
     public string Soundfont { get; init; } = string.Empty;
 
@@ -279,6 +285,8 @@ public sealed record GameConfig
             MidiApi = Text("midi_api", defaults.MidiApi),
             MidiPort = Text("midi_port", defaults.MidiPort),
             Soundfont = Text("soundfont", defaults.Soundfont),
+            PlayOwnMusic = Bool("play_own_music", defaults.PlayOwnMusic),
+            AudioMusic = Text("audio_music", defaults.AudioMusic),
             PlayIntro = Bool("play_intro", defaults.PlayIntro),
             PlayDemo = Bool("play_demo", defaults.PlayDemo),
             MusicVolume = Number("music_volume", defaults.MusicVolume),
@@ -526,6 +534,17 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"soundfont: {Quote(Soundfont)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Custom music. If you want to listen to your own music, set play_own_music to
+            # true and audio_music to the folder of your music (OGG, MP3, WAV or MIDI
+            # files). A file called "names.txt" with a file name on one row followed by the
+            # name to show on the next names the songs.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"play_own_music: {Yaml(PlayOwnMusic)}\naudio_music: {Quote(AudioMusic)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------

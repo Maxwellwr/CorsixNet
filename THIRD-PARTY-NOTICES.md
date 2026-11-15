@@ -205,6 +205,12 @@ license: Copyright (c) Antoine Aubry and contributors.
 CorsixNet plays the music on a software synthesiser by default with MeltySynth (https://github.com/sinshu/meltysynth),
 used under the MIT license: Copyright (c) 2021 Nobuaki Tanaka. No SoundFont is included; the player supplies one.
 
+## NLayer and NVorbis
+
+The player's own MP3 music is decoded with NLayer (https://github.com/naudio/NLayer, MIT: Copyright (c) Mark Heath
+and the NLayer contributors) and Ogg Vorbis music with NVorbis (https://github.com/NVorbis/NVorbis, MIT: Copyright (c)
+Andrew Ward), which MonoGame brings.
+
 ## FreeType
 
 CorsixNet draws TrueType fonts with FreeType through FreeTypeSharp (MIT, https://github.com/ryancheung/FreeTypeSharp),
