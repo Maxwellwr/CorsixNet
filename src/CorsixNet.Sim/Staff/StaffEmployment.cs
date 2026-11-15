@@ -48,9 +48,9 @@ internal static class StaffEmployment
 
         Tiredness.TireIfWorking(simulation, humanoid);
 
-        // Very unhappy staff ask for a raise after a while, except in free build mode (World:World's
-        // debug_disable_salary_raise).
-        if (humanoid.Happiness < UnhappyForRaise && !simulation.Rules.FreeBuild)
+        // Very unhappy staff ask for a raise after a while, unless world.debug_disable_salary_raise (on to begin with in
+        // free build mode, switched from the debug menu).
+        if (humanoid.Happiness < UnhappyForRaise && !Economy.Cheats.SalaryRaiseDisabled(simulation, simulation.Hospitals[humanoid.Employer]))
         {
             if (humanoid.RaiseTimer < 0)
             {

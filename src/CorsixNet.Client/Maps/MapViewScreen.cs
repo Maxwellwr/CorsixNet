@@ -1702,6 +1702,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
+    /// <summary>The debug menu's limit camera (<c>limit_to_visible_diamond</c>, on to begin with).</summary>
+    private bool _limitCamera = true;
+
+    /// <summary>
+    /// With the camera limited, its middle stays over the map's diamond (<c>GameUI:limitCamera</c>); without, only within
+    /// the map's bounding box.
+    /// </summary>
     private void ClampCamera()
     {
         if (Map is not { } map)
@@ -1709,9 +1716,48 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
+        if (_limitCamera)
+        {
+            var tileX = Math.Clamp(((_camera.Center.X / 32f) + (_camera.Center.Y / 16f)) / 2f, 0f, map.Width);
+            var tileY = Math.Clamp(((_camera.Center.Y / 16f) - (_camera.Center.X / 32f)) / 2f, 0f, map.Height);
+            _camera.Center = new Vector2(32f * (tileX - tileY), 16f * (tileX + tileY));
+            return;
+        }
+
         _camera.Center = new Vector2(
             Math.Clamp(_camera.Center.X, -32f * map.Height, 32f * map.Width),
             Math.Clamp(_camera.Center.Y, 0f, 16f * (map.Width + map.Height)));
+    }
+
+    /// <summary>
+    /// <c>UIMakeDebugPatient:buttonClicked</c>: a diagnosed patient with the disease, on the passable tile nearest the
+    /// view's middle.
+    /// </summary>
+    private void MakeDebugPatient(Sim.Diseases.DiseaseDefinition disease)
+    {
+        if (Simulation is not { } simulation || _session is null)
+        {
+            return;
+        }
+
+        var middle = Camera.WorldToTile(_camera.Center);
+        for (var radius = 0; radius < 12; radius++)
+        {
+            for (var dy = -radius; dy <= radius; dy++)
+            {
+                for (var dx = -radius; dx <= radius; dx++)
+                {
+                    var x = middle.X + dx;
+                    var y = middle.Y + dy;
+                    if ((Math.Abs(dx) == radius || Math.Abs(dy) == radius) && simulation.Map.Contains(x, y)
+                        && simulation.Map[x, y].Has(TileFlags.Passable) && simulation.Map[x, y].Has(TileFlags.Hospital))
+                    {
+                        _session.Submit(new MakeDebugPatientCommand(disease.Id, new TilePosition(x, y)));
+                        return;
+                    }
+                }
+            }
+        }
     }
 
     private void EnsureTarget(Point size)
@@ -3078,6 +3124,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 {
                     batch.Draw(_diamond, new Vector2((32 * (x - y)) - 32, 16 * (x + y)), tint);
                 }
+
+                if (_overlay == MapOverlay.Positions)
+                {
+                    // overlay("positions"): the tile's coordinates written on it.
+                    var label = string.Create(CultureInfo.InvariantCulture, $"{x},{y}");
+                    _text.Draw(batch, label, new Vector2((32 * (x - y)) - (_text.Measure(label).Width / 2f), (16 * (x + y)) + 8));
+                }
             }
         }
     }
@@ -3695,15 +3748,26 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Open("menu_charts.policy", "POLICY", () => new PolicyWindow()),
                 Open("menu_charts.machine_menu", "MACHINE MENU", () => new MachineMenuWindow())]),
             new(Item("menu.debug", "DEBUG"), [
-                // makeDebugMenu's map overlay submenu: none, the passable flags, the parcels.
+                // makeDebugMenu: jump to level (local games), limit camera, disable salary raise, the debug patient and
+                // rat, the console, and the map overlays.
+                .. (_session is LocalSession && _levels.Count > 0
+                    ? [MenuBarItem.Menu(Item("menu_debug.jump_to_level", "JUMP TO LEVEL"), [.. _levels.Take(12).Select((_, index) =>
+                        new MenuBarItem(string.Create(CultureInfo.InvariantCulture, $"L{index + 1}"), () => SelectLevel(index), () => _levelIndex == index))])]
+                    : Array.Empty<MenuBarItem>()),
+                new(Item("menu_debug.limit_camera", "LIMIT CAMERA"), () => _limitCamera = !_limitCamera, () => _limitCamera),
+                new(Item("menu_debug.disable_salary_raise", "DISABLE SALARY RAISE"), () => _session?.Submit(new CheatCommand(CheatKind.ToggleSalaryRaise)),
+                    () => Simulation is { } shown && _session is { } own && own.Player < shown.Hospitals.Count && Cheats.SalaryRaiseDisabled(shown, shown.Hospitals[own.Player])),
+                Open("menu_debug.make_debug_patient", "MAKE DEBUG PATIENT", () => new DebugPatientWindow(MakeDebugPatient)),
+                Do("menu_debug.make_debug_rat", "MAKE DEBUG RAT", "debugrat"),
+                Open("menu_debug.lua_console", "LUA CONSOLE", () => new DebugConsoleWindow(MenuAction)),
                 MenuBarItem.Menu(Item("menu_debug.map_overlay", "MAP OVERLAY"), [
                     new(Item("menu_debug_overlay.none", "NONE"), () => _overlay = MapOverlay.None, () => _overlay == MapOverlay.None),
                     new(Item("menu_debug_overlay.flags", "FLAGS"), () => _overlay = MapOverlay.Passable, () => _overlay == MapOverlay.Passable),
+                    new(Item("menu_debug_overlay.positions", "POSITIONS"), () => _overlay = MapOverlay.Positions, () => _overlay == MapOverlay.Positions),
+                    new(Item("menu_debug_overlay.heat", "HEAT"), () => _overlay = MapOverlay.Temperature, () => _overlay == MapOverlay.Temperature),
                     new(Item("menu_debug_overlay.parcel", "PARCEL"), () => _overlay = MapOverlay.Parcels, () => _overlay == MapOverlay.Parcels)]),
                 Do("corsixnet.menu.save_replay", "Save replay", "savereplay"),
-                Do("corsixnet.menu.watch_replay", "Watch replay", "replays"),
-                Do("menu_debug.make_debug_rat", "MAKE DEBUG RAT", "debugrat"),
-                Open("menu_debug.lua_console", "LUA CONSOLE", () => new DebugConsoleWindow(MenuAction))]),
+                Do("corsixnet.menu.watch_replay", "Watch replay", "replays")]),
         ];
         if (_cheatsMenuUnlocked)
         {
@@ -5856,6 +5920,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 internal enum MapOverlay
 {
     None,
+
+    /// <summary>The debug menu's positions: each tile's coordinates (<c>overlay("positions")</c>).</summary>
+    Positions,
     Passable,
     Hospital,
     Parcels,

@@ -87,6 +87,12 @@ public enum CheatKind : byte
 
     /// <summary><c>show_infected</c>: the infected patients of the epidemics not shown yet show their icon, or no longer; nothing without such an epidemic.</summary>
     ShowInfected = 24,
+
+    /// <summary>
+    /// The debug menu's disable salary raise switch (<c>world.debug_disable_salary_raise</c>, on to begin with in free
+    /// build mode); not a cheat, so the hospital is not marked as having cheated.
+    /// </summary>
+    ToggleSalaryRaise = 25,
 }
 
 /// <summary>CorsixTH's fax code cheats (<c>toggle_cheats</c>), which stay on until the code is sent again.</summary>
@@ -110,7 +116,10 @@ public enum ToggleCheats : byte
     /// <summary><c>invulnerable_machines</c> (a menu cheat in CorsixTH, kept with the switches here).</summary>
     InvulnerableMachines = 16,
 
-    All = SpawnRate | NoRest | QueueJump | SuperDoctor | InvulnerableMachines,
+    /// <summary>The debug menu's salary raise switch turned from where the level set it (see <see cref="Cheats.SalaryRaiseDisabled"/>).</summary>
+    SalaryRaiseFlipped = 32,
+
+    All = SpawnRate | NoRest | QueueJump | SuperDoctor | InvulnerableMachines | SalaryRaiseFlipped,
 }
 
 /// <summary>
@@ -221,6 +230,9 @@ public static class Cheats
             case CheatKind.ToggleInvulnerableMachines:
                 Toggle(simulation, hospital, ToggleCheats.InvulnerableMachines);
                 break;
+            case CheatKind.ToggleSalaryRaise:
+                hospital.ActiveCheats ^= ToggleCheats.SalaryRaiseFlipped;
+                return;
             case CheatKind.ShowInfected:
                 // Cheats:cheatShowInfected: each hidden epidemic's cheat_always_show_mood flips.
                 if (hospital.Epidemics.Future.Count == 0)
@@ -240,6 +252,13 @@ public static class Cheats
 
         hospital.Cheated = true;
     }
+
+    /// <summary>
+    /// <c>world.debug_disable_salary_raise</c>: no staff ask for a raise; on to begin with in free build mode, and switched
+    /// by the debug menu.
+    /// </summary>
+    public static bool SalaryRaiseDisabled(Simulation simulation, Hospital hospital) =>
+        simulation.Rules.FreeBuild != ((hospital.ActiveCheats & ToggleCheats.SalaryRaiseFlipped) != 0);
 
     /// <summary>
     /// <c>Cheats:toggleCheat</c>: the fax code cheat goes on or off, either way marking the hospital as having cheated

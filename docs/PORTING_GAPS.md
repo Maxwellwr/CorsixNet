@@ -198,8 +198,14 @@ fonts, faces) and the details listed.
 - Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock with `twentyfour_hour_clock`); submenus (`MenuBarItem.Submenu`) with the sound,
   announcements and music volumes, wage requests, warmth colours (`warmth_colors_display_default`, the three
   `temperature_theme`s), game speed and the debug map overlays; lock windows (`WindowLayer.LockWindows`, for the run
-  only as CorsixTH's `runtime_config`), edge scrolling, capture mouse and the 24 hour clock as check items. CorsixTH's
-  other debug items are not in it. Esc still opens the menu window too.
+  only as CorsixTH's `runtime_config`), edge scrolling, capture mouse and the 24 hour clock as check items. The debug
+  menu has CorsixTH's jump to level (local games), limit camera (`limit_to_visible_diamond`), disable salary raise
+  (`debug_disable_salary_raise`, `CheatKind.ToggleSalaryRaise`), make debug patient (`DebugPatientWindow`,
+  `MakeDebugPatientCommand`), the debug rat, the console and the overlays none, flags, positions, heat and parcel. Not
+  in it: the blocking off areas choice (CorsixTH's soft and hard placement rules; ours is the soft one), the Lua debug
+  script, the calls dispatcher window (there is no call queue to show), dumping strings and the game log, the byte
+  overlays of CorsixTH's own map format and the sprite viewer (a separate mode here, `--sprite-viewer`). Esc still opens the
+  menu window too.
 - Build room window with its kinds of room, list and prices (`BuildRoomWindow`, on B and the panel's button; a plain
   list only without the game's graphics), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
