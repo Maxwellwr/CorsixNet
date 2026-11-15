@@ -52,7 +52,7 @@ internal sealed class BankManagerWindow : UiWindow
         yield return WindowCell.Line(UiText.Get("corsixnet.bank.insurance_owed", "Insurance companies owe"), highlight: true);
         for (var company = 1; company <= Hospital.InsuranceCompanies; company++)
         {
-            yield return WindowRow.Of(host.Texts?.String(20, company + 1) ?? UiText.Format("corsixnet.bank.company", "Company %1%", company), WindowCell.Number(MoneyText.Format(hospital.InsuranceOwed(company))));
+            yield return WindowRow.Of(MoneyPanels.InsuranceCompanyName(host.Texts, hospital, company) ?? UiText.Format("corsixnet.bank.company", "Company %1%", company), WindowCell.Number(MoneyText.Format(hospital.InsuranceOwed(company))));
         }
     }
 

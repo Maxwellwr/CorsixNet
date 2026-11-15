@@ -283,6 +283,33 @@ public sealed class Hospital
     /// <summary>Insurance companies a hospital deals with.</summary>
     public const int InsuranceCompanies = 3;
 
+    /// <summary>The insurance companies there are to choose from (<c>insurance_companies</c>, the original's S[20][2] to [12]).</summary>
+    public const int InsuranceCompanyNames = 11;
+
+    private readonly int[] _insurers = [1, 2, 3];
+
+    /// <summary>
+    /// The companies the hospital deals with, each a number from 1 to <see cref="InsuranceCompanyNames"/> in the list of
+    /// <c>insurance_companies</c> (string S[20][n + 1]); the first three unless <see cref="ChooseInsurers"/> picked others.
+    /// </summary>
+    public IReadOnlyList<int> Insurers => _insurers;
+
+    /// <summary>
+    /// <c>Hospital:Hospital</c>: three different companies, each a number up to a quarter of those left with half the
+    /// chance, else any of those left.
+    /// </summary>
+    public void ChooseInsurers(SimRandom random)
+    {
+        var companies = Enumerable.Range(1, InsuranceCompanyNames).ToList();
+        for (var i = 0; i < InsuranceCompanies; i++)
+        {
+            var count = companies.Count;
+            var index = random.NextInclusive(1, 2) == 1 ? random.NextInclusive(1, (count + 3) / 4) : random.NextInclusive(1, count);
+            _insurers[i] = companies[index - 1];
+            companies.RemoveAt(index - 1);
+        }
+    }
+
     /// <summary>Months an insurance company keeps what it owes: payments of one month are paid two months later.</summary>
     private const int InsuranceMonths = 3;
 
@@ -1575,6 +1602,11 @@ public sealed class Hospital
             writer.WriteInt32(result.Amount);
             writer.WriteInt64(result.Expires);
         }
+
+        foreach (var insurer in _insurers)
+        {
+            writer.WriteByte((byte)insurer);
+        }
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1739,6 +1771,15 @@ public sealed class Hospital
                     ended <= (byte)Disasters.EpidemicOutcome.Evacuated ? (Disasters.EpidemicOutcome)ended : throw new InvalidDataException($"Unknown epidemic outcome {ended}."),
                     reader.ReadInt32(),
                     reader.ReadInt64());
+            }
+        }
+
+        if (reader.Version is 0 or >= 95)
+        {
+            for (var i = 0; i < InsuranceCompanies; i++)
+            {
+                var insurer = reader.ReadByte();
+                hospital._insurers[i] = insurer is >= 1 and <= InsuranceCompanyNames ? insurer : throw new InvalidDataException($"Unknown insurance company {insurer}.");
             }
         }
 

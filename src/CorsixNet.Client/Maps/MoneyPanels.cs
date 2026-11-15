@@ -28,14 +28,21 @@ internal static class MoneyPanels
             var date = GameDate.FromHours(transaction.Hour);
             yield return new StatementLine(
                 string.Create(CultureInfo.InvariantCulture, $"{date.Day,2}/{date.Month,2}/{date.Year}"),
-                Describe(transaction),
+                Describe(transaction, hospital),
                 transaction.Amount,
                 transaction.Balance);
         }
     }
 
+    /// <summary>
+    /// The name of the hospital's insurance company numbered <paramref name="company"/> (from 1): <c>hospital.insurance</c>,
+    /// the original's S[20] string of the company it picked, or null without the game's strings.
+    /// </summary>
+    public static string? InsuranceCompanyName(CorsixNet.Content.OriginalTexts? texts, Hospital hospital, int company) =>
+        company is >= 1 and <= Hospital.InsuranceCompanies ? texts?.String(20, hospital.Insurers[company - 1] + 1) : null;
+
     /// <summary>What a transaction was for, as the statement reads it.</summary>
-    public static string Describe(Transaction transaction) => transaction.Kind switch
+    public static string Describe(Transaction transaction, Hospital hospital) => transaction.Kind switch
     {
         TransactionKind.BuyObject => $"{UiText.Get("transactions.buy_object", "Buy")}: {UiText.ObjectName(transaction.Subject)}",
         TransactionKind.SellObject => $"{UiText.Get("transactions.sell_object", "Sell")}: {UiText.ObjectOrRoomName(transaction.Subject)}",
@@ -43,7 +50,7 @@ internal static class MoneyPanels
         TransactionKind.HireStaff => UiText.Get("transactions.hire_staff", "Hire staff"),
         TransactionKind.Wages => UiText.Get("transactions.wages", "Wages"),
         TransactionKind.Treatment => $"{UiText.Get("transactions.cure_colon", "Treatment:")} {UiText.Current?.DiseaseName(transaction.Subject) ?? transaction.Subject}",
-        TransactionKind.Insurance => $"{UiText.Get("transactions.insurance_colon", "Insurance:")} {(int.TryParse(transaction.Subject, out var company) ? UiText.Current?.String(20, company) : null) ?? transaction.Subject}",
+        TransactionKind.Insurance => $"{UiText.Get("transactions.insurance_colon", "Insurance:")} {(int.TryParse(transaction.Subject, out var company) ? InsuranceCompanyName(UiText.Current, hospital, company) : null) ?? transaction.Subject}",
         TransactionKind.DrugCost => UiText.Get("transactions.drug_cost", "Drug costs"),
         TransactionKind.TrophyBonus => UiText.Get("transactions.eoy_trophy_bonus", "Trophy money"),
         TransactionKind.AwardBonus => UiText.Get("transactions.eoy_bonus_penalty", "Awards and fines"),

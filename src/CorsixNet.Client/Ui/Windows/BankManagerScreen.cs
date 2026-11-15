@@ -301,7 +301,7 @@ internal sealed class BankManagerScreen
             var y = (no * 15) + 60;
             var date = GameDate.FromHours(transaction.Hour);
             At(string.Create(CultureInfo.InvariantCulture, $"{date.Day} {host.Texts?.String(6, date.Month) ?? CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(date.Month)}"), 48, y);
-            At(MoneyPanels.Describe(transaction), 129, y);
+            At(MoneyPanels.Describe(transaction, hospital), 129, y);
             At(Money(Math.Abs((long)transaction.Amount)), transaction.Amount < 0 ? 377 : 453, y);
             At(Money(transaction.Balance), 529, y);
         }
@@ -333,7 +333,7 @@ internal sealed class BankManagerScreen
 
     /// <summary>The insurance company's name: the first three of the original's (S[20]), as CorsixTH picks them.</summary>
     private static string Company(IWindowHost host, int company) =>
-        host.Texts?.String(20, company + 1) ?? string.Create(CultureInfo.InvariantCulture, $"Company {company}");
+        MoneyPanels.InsuranceCompanyName(host.Texts, host.Simulation.Hospitals[host.Player], company) ?? string.Create(CultureInfo.InvariantCulture, $"Company {company}");
 
     private static string Money(long amount) => string.Create(CultureInfo.InvariantCulture, $"$ {amount}");
 
