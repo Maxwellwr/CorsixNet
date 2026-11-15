@@ -25,8 +25,9 @@ bin, plant; side objects; the corridor path check), bought one at a time with F 
 of the three rooms (desk, cabinet, chair, pharmacy cabinet, screen, crash trolley). Map-placed
 objects from the level file.
 
-- The bench drawn split over three tiles as CorsixTH does (drawn from its own tile for now). The furnish corridor
-  window with counts and prices is done (`FurnishCorridorScreen`, `dialogs/furnish_corridor.lua`).
+- (Done: the bench drawn split over three tiles facing north, as `bench.lua`'s `render_attach_position` (the other
+  facings from its own tile, as there; `ObjectDrawing.Split`). The furnish corridor window with counts and prices
+  (`FurnishCorridorScreen`, `dialogs/furnish_corridor.lua`).)
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - (Done: every room of the original with its objects and machines, `BaseGameContent`, `RoomVisits`.)
 - Machines: the gear icon over a machine a handyman was called to is drawn. The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
@@ -185,7 +186,8 @@ fonts, faces) and the details listed.
   `temperature_theme`s), game speed and the debug map overlays; lock windows (`WindowLayer.LockWindows`, for the run
   only as CorsixTH's `runtime_config`), edge scrolling, capture mouse and the 24 hour clock as check items. CorsixTH's
   other debug items are not in it. Esc still opens the menu window too.
-- Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
+- Build room window with its kinds of room, list and prices (`BuildRoomWindow`, on B and the panel's button; a plain
+  list only without the game's graphics), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
   edit panel are drawn as the original's (`FurnishCorridorScreen`, `RoomEditScreen`). A finished room is resized or gets its door moved by going back to its blueprint (Esc while
   editing, `ReturnToBlueprintCommand`).
