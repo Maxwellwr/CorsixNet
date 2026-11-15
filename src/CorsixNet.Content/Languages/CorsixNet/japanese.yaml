@@ -166,6 +166,9 @@ strings:
     severance: '退職金'
     wages: '給料'
   corsixnet:
+    referral:
+      refer: '%1%へ紹介'
+      tooltip: '患者を他のプレイヤーの病院へ送ります。右クリックで別の病院を選びます'
     poach:
       asked: '%1%に自分の病院で働かないか尋ねました'
       listened: '%1%は不満で、病院に大幅な昇給を求めています'

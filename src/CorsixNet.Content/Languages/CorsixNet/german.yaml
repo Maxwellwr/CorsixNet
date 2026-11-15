@@ -106,6 +106,9 @@ strings:
         patient_happiness: Die Zufriedenheit Ihrer Patienten sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
         staff_happiness: Die Zufriedenheit Ihres Personals sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
   corsixnet:
+    referral:
+      refer: 'Überweisen an %1%'
+      tooltip: 'Überweist den Patienten in das Krankenhaus eines anderen Spielers; Rechtsklick wählt ein anderes'
     poach:
       asked: 'Sie fragen %1%, ob er lieber für Sie arbeiten würde'
       listened: '%1% ist unzufrieden und verlangt von seinem Krankenhaus viel mehr Geld'

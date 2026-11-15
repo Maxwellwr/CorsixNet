@@ -259,6 +259,9 @@ strings:
   transactions:
     remove_room: 'Építés: lerombolt szoba eltávolítása'
   corsixnet:
+    referral:
+      refer: 'Beutalás ide: %1%'
+      tooltip: 'A beteget egy másik játékos kórházába küldi; jobb gombbal másik kórház választható'
     poach:
       asked: 'Megkérdezed, hogy %1% nem dolgozna-e inkább neked'
       listened: '%1% elégedetlen, és sokkal több pénzt kér a kórházától'

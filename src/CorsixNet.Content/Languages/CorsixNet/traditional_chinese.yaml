@@ -94,6 +94,9 @@ strings:
     toolbar:
       machine_menu: '機器選單 (%s)'
   corsixnet:
+    referral:
+      refer: '轉診到%1%'
+      tooltip: '把病人送到另一位玩家的醫院；右鍵選擇其他醫院'
     poach:
       asked: '你詢問%1%是否願意為你工作'
       listened: '%1%不滿意，向所在醫院要求大幅加薪'

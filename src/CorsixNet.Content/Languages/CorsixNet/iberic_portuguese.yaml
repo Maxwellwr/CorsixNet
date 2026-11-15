@@ -321,6 +321,9 @@ strings:
     severance: 'Indemnizaçäo'
     wages: 'Salários'
   corsixnet:
+    referral:
+      refer: 'Encaminhar para %1%'
+      tooltip: 'Envia o paciente para o hospital de outro jogador; o botão direito escolhe outro hospital'
     poach:
       asked: 'Pergunta a %1% se prefere trabalhar para si'
       listened: '%1% está descontente e pede muito mais dinheiro ao seu hospital'

@@ -196,6 +196,9 @@ strings:
   transactions:
     remove_room: 'Budowa: usunięcie zniszczonego pomieszczenia'
   corsixnet:
+    referral:
+      refer: 'Skieruj do: %1%'
+      tooltip: 'Wysyła pacjenta do szpitala innego gracza; prawy przycisk wybiera inny szpital'
     poach:
       asked: 'Pytasz, czy %1% wolałby pracować dla ciebie'
       listened: '%1% jest niezadowolony i żąda od szpitala dużo więcej pieniędzy'

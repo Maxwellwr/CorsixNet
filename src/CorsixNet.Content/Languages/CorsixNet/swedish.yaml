@@ -192,6 +192,9 @@ strings:
   transactions:
     remove_room: 'Bygge: ta bort förstört rum'
   corsixnet:
+    referral:
+      refer: 'Remittera till %1%'
+      tooltip: 'Skickar patienten till en annan spelares sjukhus; högerklick väljer ett annat sjukhus'
     poach:
       asked: 'Du frågar %1% om de hellre vill arbeta för dig'
       listened: '%1% är missnöjd och kräver mycket mer pengar av sitt sjukhus'

@@ -22,6 +22,9 @@ strings:
         months_played: 'Musíte vyhrát do konce měsíce %s %d. Nyní je %s %d'
         years_played: 'Musíte vydržet do roku %d. Nyní je rok %d'
   corsixnet:
+    referral:
+      refer: 'Poslat do: %1%'
+      tooltip: 'Pošle pacienta do nemocnice jiného hráče; pravé tlačítko vybere jinou nemocnici'
     poach:
       asked: 'Ptáte se, zda by %1% raději nepracoval(a) pro vás'
       listened: '%1% je nespokojen(a) a žádá svou nemocnici o mnohem více peněz'

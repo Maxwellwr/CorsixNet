@@ -207,6 +207,9 @@ strings:
   transactions:
     remove_room: '건설: 파괴된 방 철거'
   corsixnet:
+    referral:
+      refer: '%1%(으)로 전원'
+      tooltip: '환자를 다른 플레이어의 병원으로 보냅니다. 오른쪽 클릭으로 다른 병원을 고릅니다'
     poach:
       asked: '%1%에게 당신을 위해 일할 생각이 있는지 물었습니다'
       listened: '%1%은(는) 불만이 있어 병원에 훨씬 많은 돈을 요구합니다'

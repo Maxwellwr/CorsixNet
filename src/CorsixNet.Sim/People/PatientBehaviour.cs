@@ -987,6 +987,29 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <c>UIQueuePopup:sendToReception</c> (<c>setNextAction(SeekReceptionAction())</c>): a patient on their way to a
     /// room, or queueing at its door, leaves the queue and looks for a reception desk again.
     /// </summary>
+    /// <summary>
+    /// The network game's referral (the original's NETPLAY.TXT, "Referrals", the Patient Redirection Panel): a patient
+    /// between rooms goes to another player's hospital instead, to its reception, as one arriving there would.
+    /// Emergency patients stay.
+    /// </summary>
+    /// <returns>Whether the patient went.</returns>
+    internal bool Refer(Simulation simulation, Humanoid humanoid, int hospital)
+    {
+        if (Phase is not (PatientPhase.SeekRoom or PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue) || EmergencyIndex > 0
+            || hospital < 0 || hospital >= simulation.Hospitals.Count || hospital == humanoid.HospitalPlayer)
+        {
+            return false;
+        }
+
+        LeaveQueue(simulation, humanoid);
+        humanoid.StopWalking();
+        Waiting = -1;
+        TargetId = 0;
+        humanoid.HospitalPlayer = hospital;
+        Phase = PatientPhase.SeekReception;
+        return true;
+    }
+
     internal void SendToReception(Simulation simulation, Humanoid humanoid)
     {
         if (Phase is not (PatientPhase.WalkingToRoom or PatientPhase.InDoorQueue))
