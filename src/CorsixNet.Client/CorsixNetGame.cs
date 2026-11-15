@@ -29,6 +29,7 @@ internal sealed class CorsixNetGame : Game
         Window.AllowUserResizing = true;
         Window.Title = title;
         Window.TextInput += (_, e) => _screen?.TextInput(e.Character);
+        InputScript.TextTyped = character => _screen?.TextInput(character);
     }
 
     protected override void LoadContent()

@@ -48,6 +48,23 @@ public sealed class InputScriptTests : IDisposable
     }
 
     [Fact]
+    public void TypesTextAsTextInput()
+    {
+        var typed = new List<char>();
+        InputScript.TextTyped = typed.Add;
+        try
+        {
+            var script = Load("type hi there\nquit");
+            script.Advance(0);
+            Assert.Equal("hi there", new string([.. typed]));
+        }
+        finally
+        {
+            InputScript.TextTyped = null;
+        }
+    }
+
+    [Fact]
     public void AnUnknownCommandNamesItsLine()
     {
         var error = Assert.Throws<InvalidDataException>(() => Load("wait 10\njump 3"));
