@@ -539,7 +539,7 @@ strings:
       parcel_not_for_sale: '地块 %1% 不出售'
       cannot_hire: '无法雇用（%1%）：%2%'
       only_local_save: '只有本地游戏可以存档和载入'
-      only_local_replay: '只有本地游戏会被录像'
+      no_replay: '没有可录像的游戏'
       replay_saved: '已保存录像 %1%'
       cannot_save_replay: '无法保存录像：%1%'
       cannot_watch: '无法观看 %1%：%2%'

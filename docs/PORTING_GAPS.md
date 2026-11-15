@@ -236,7 +236,8 @@ and state hashing; tests for save/load round trips.
 - The file browser's look (`resizables/file_browser.lua`, `file_browsers/`): the save and load windows are text windows (`SaveLoadWindow`: the saves newest first, a new save under a typed name (ASCII letters for now) or the date, overwriting after a question). The quick save, monthly autosaves, `--load`, `--continue` and `autosave_frequency` are done (`SaveGameStore`).
 - Loading CorsixTH saves (likely never: CorsixTH persists the Lua heap) and original `SAVE*.SAV`.
 - Replays: local games are recorded (initial save plus command log) and can be saved and watched from the menu,
-  checked against the recorded state hash; not yet for network games, nor seeking or rewinding.
+  checked against the recorded state hash; network games too, from the joining client's state and the server's
+  commands (`LockstepClient.Recording`). Not yet seeking or rewinding.
 
 ## 9. Sound and music
 

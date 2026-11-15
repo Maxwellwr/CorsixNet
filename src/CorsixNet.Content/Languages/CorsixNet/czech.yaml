@@ -467,7 +467,7 @@ strings:
       parcel_not_for_sale: 'Parcela %1% není na prodej'
       cannot_hire: 'Nelze najmout (%1%): %2%'
       only_local_save: 'Ukládat a nahrávat lze jen místní hry'
-      only_local_replay: 'Zaznamenávají se jen místní hry'
+      no_replay: 'Není co zaznamenat'
       replay_saved: 'Záznam %1% uložen'
       cannot_save_replay: 'Záznam nelze uložit: %1%'
       cannot_watch: '%1% nelze přehrát: %2%'

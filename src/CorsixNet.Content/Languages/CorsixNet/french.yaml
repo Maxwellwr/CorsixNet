@@ -484,7 +484,7 @@ strings:
       parcel_not_for_sale: Le terrain %1% n'est pas à vendre
       cannot_hire: 'Embauche impossible (%1%) : %2%'
       only_local_save: Seules les parties locales se sauvegardent et se chargent
-      only_local_replay: Seules les parties locales sont enregistrées
+      no_replay: 'Aucune partie à enregistrer'
       replay_saved: Rediffusion %1% enregistrée
       cannot_save_replay: "Impossible d'enregistrer la rediffusion : %1%"
       cannot_watch: 'Impossible de voir %1% : %2%'

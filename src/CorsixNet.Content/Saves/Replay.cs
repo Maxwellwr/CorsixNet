@@ -54,6 +54,12 @@ public sealed class Replay
     /// <summary>Notes a command scheduled now, to run in the next step.</summary>
     public void Record(Simulation simulation, int player, Command command) => _commands.Add(new ReplayCommand(simulation.Tick, player, command));
 
+    /// <summary>
+    /// Notes a command scheduled to run in the step from <paramref name="tick"/>, as a network game's server schedules
+    /// them. Commands must be noted in the order they run.
+    /// </summary>
+    public void Record(long tick, int player, Command command) => _commands.Add(new ReplayCommand(tick, player, command));
+
     /// <summary>Notes where the game has got to, so that a playback can be checked against it.</summary>
     public void Finish(Simulation simulation) => End = (simulation.Tick, simulation.ComputeStateHash());
 

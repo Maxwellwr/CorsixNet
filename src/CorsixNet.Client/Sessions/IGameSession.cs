@@ -1,4 +1,5 @@
 using CorsixNet.Content.Interface;
+using CorsixNet.Content.Saves;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 
@@ -41,6 +42,9 @@ internal interface IGameSession : IDisposable
 
     /// <summary>One line describing the session's state for the status bar.</summary>
     string Status { get; }
+
+    /// <summary>The replay of this game so far, if it is recorded (local and network games are).</summary>
+    Replay? Recording => null;
 
     /// <summary>Issues a command on behalf of the local player.</summary>
     void Submit(Command command);

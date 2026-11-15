@@ -716,7 +716,7 @@ strings:
       parcel_not_for_sale: 'Grund %1% er ikke til salg'
       cannot_hire: 'Kunne ikke ansætte (%1%): %2%'
       only_local_save: 'Kun lokale spil kan gemmes og indlæses'
-      only_local_replay: 'Kun lokale spil optages til genafspilning'
+      no_replay: 'Der er intet spil at optage'
       replay_saved: 'Genafspilning %1% gemt'
       cannot_save_replay: 'Kunne ikke gemme genafspilningen: %1%'
       cannot_watch: 'Kunne ikke afspille %1%: %2%'

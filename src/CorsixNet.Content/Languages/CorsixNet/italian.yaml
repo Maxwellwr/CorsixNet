@@ -531,7 +531,7 @@ strings:
       parcel_not_for_sale: 'Il lotto %1% non è in vendita'
       cannot_hire: 'Impossibile assumere (%1%): %2%'
       only_local_save: 'Si possono salvare e caricare solo partite locali'
-      only_local_replay: 'Si registrano solo partite locali'
+      no_replay: 'Non c''è nessuna partita da registrare'
       replay_saved: 'Replay %1% salvato'
       cannot_save_replay: 'Impossibile salvare il replay: %1%'
       cannot_watch: 'Impossibile guardare %1%: %2%'

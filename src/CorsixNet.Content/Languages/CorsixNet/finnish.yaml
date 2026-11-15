@@ -688,7 +688,7 @@ strings:
       parcel_not_for_sale: 'Tontti %1% ei ole myynnissä'
       cannot_hire: 'Palkkaus epäonnistui (%1%): %2%'
       only_local_save: 'Vain paikallisia pelejä voi tallentaa ja ladata'
-      only_local_replay: 'Vain paikalliset pelit tallennetaan uusinnoiksi'
+      no_replay: 'Ei tallennettavaa peliä'
       replay_saved: 'Uusinta %1% tallennettu'
       cannot_save_replay: 'Uusinnan tallennus epäonnistui: %1%'
       cannot_watch: 'Kohteen %1% toisto epäonnistui: %2%'

@@ -207,6 +207,44 @@ public sealed class LockstepTests : IDisposable
     }
 
     [Fact]
+    public void AClientsRecordingPlaysTheGameOutAgain()
+    {
+        var a = Connect("Alice");
+        Exchange();
+        a.Submit(new SpawnHumanoidCommand(new(1, 1)));
+        Run(ticks: 10);
+
+        // A late joiner records from its joining, with a command pending in the state it joins with.
+        var late = Connect("Late");
+        a.Submit(new WalkToCommand(1, new(8, 8)));
+        Exchange();
+        late.Submit(new SpawnHumanoidCommand(new(5, 5)));
+        Run(ticks: 5);
+        a.Submit(new SpawnHumanoidCommand(new(2, 7)));
+        late.Submit(new WalkToCommand(2, new(1, 8)));
+        Run(ticks: 100);
+
+        var recording = late.Recording!;
+        recording.Finish(late.Simulation!);
+        Assert.Equal(3, recording.Commands.Count);
+
+        var playback = recording.StartingState(GameContent.Empty);
+        var next = 0;
+        while (playback.Tick < recording.End.Tick)
+        {
+            while (next < recording.Commands.Count && recording.Commands[next].Tick <= playback.Tick)
+            {
+                playback.Schedule(recording.Commands[next].Player, recording.Commands[next].Command);
+                next++;
+            }
+
+            playback.Step();
+        }
+
+        Assert.Equal(recording.End.Hash, playback.ComputeStateHash());
+    }
+
+    [Fact]
     public void RejectsClientsWithOtherContent()
     {
         var (serverEnd, clientEnd) = InMemoryConnection.CreatePair();

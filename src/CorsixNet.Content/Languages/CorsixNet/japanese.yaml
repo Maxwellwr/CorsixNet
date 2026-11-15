@@ -611,7 +611,7 @@ strings:
       parcel_not_for_sale: '区画 %1% は売りに出ていません'
       cannot_hire: '雇えません（%1%）：%2%'
       only_local_save: 'セーブとロードはローカルゲームだけです'
-      only_local_replay: '記録されるのはローカルゲームだけです'
+      no_replay: '記録するゲームがありません'
       replay_saved: 'リプレイ %1% を保存しました'
       cannot_save_replay: 'リプレイを保存できません：%1%'
       cannot_watch: '%1% を見られません：%2%'

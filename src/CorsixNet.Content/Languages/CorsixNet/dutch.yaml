@@ -538,7 +538,7 @@ strings:
       parcel_not_for_sale: 'Perceel %1% is niet te koop'
       cannot_hire: 'Aannemen lukt niet (%1%): %2%'
       only_local_save: 'Alleen lokale spellen kunnen opgeslagen en geladen worden'
-      only_local_replay: 'Alleen lokale spellen worden opgenomen'
+      no_replay: 'Er is geen spel om op te nemen'
       replay_saved: 'Herhaling %1% opgeslagen'
       cannot_save_replay: 'Herhaling opslaan mislukt: %1%'
       cannot_watch: '%1% kan niet bekeken worden: %2%'

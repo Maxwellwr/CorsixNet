@@ -470,7 +470,7 @@ strings:
       parcel_not_for_sale: 'La parcela %1% no está en venta'
       cannot_hire: 'No se puede contratar (%1%): %2%'
       only_local_save: 'Solo se pueden guardar y cargar partidas locales'
-      only_local_replay: 'Solo se graban las partidas locales'
+      no_replay: 'No hay ninguna partida que grabar'
       replay_saved: 'Repetición %1% guardada'
       cannot_save_replay: 'No se pudo guardar la repetición: %1%'
       cannot_watch: 'No se puede ver %1%: %2%'
