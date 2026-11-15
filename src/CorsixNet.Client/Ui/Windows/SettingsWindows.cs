@@ -1,6 +1,9 @@
 using System.Globalization;
 using CorsixNet.Content.Saves;
 using CorsixNet.Content.Settings;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -202,7 +205,11 @@ internal sealed record LanguageFontChoices(string Default, IReadOnlyList<(string
 /// Shows the game in a language and font without saving them: the settings the window opened with but for the draft's
 /// language and fonts, or those it opened with when it closes without Apply.
 /// </param>
-internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, LanguageFontChoices?>? fonts = null, Action<GameConfig>? preview = null) : UiWindow
+/// <param name="openDialog">
+/// Opens one of the settings dialogs (graphics, customise, sound, accessibility): with it and CorsixTH's sprites the
+/// window is CorsixTH's <c>UIOptions</c>, whose changes apply at once; without, the table below with Apply.
+/// </param>
+internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply, IReadOnlyList<string>? languages = null, Action? hotkeys = null, Func<string, LanguageFontChoices?>? fonts = null, Action<GameConfig>? preview = null, Action<SettingsDialogKind>? openDialog = null) : UiWindow
 {
     /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
     public override bool UsesResizableLook => true;
@@ -218,6 +225,83 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
     private bool _applied;
 
     public override string Title => UiText.Get("options_window.caption", "Options");
+
+    private readonly ResizablePanels _panels = new();
+
+    private IWindowHost? _host;
+
+    public override bool IsFullscreen(IWindowHost host) => openDialog is not null && ResizablePanels.IsAvailable(host);
+
+    public override Point FullscreenSize => Look().Size;
+
+    public override Vector2? FullscreenPosition => new(0.5f, 0.25f);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse)
+    {
+        _host = host;
+        var (size, panels) = Look();
+        _panels.Draw(batch, host, origin, size, panels, mouse);
+    }
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        _host = host;
+        _panels.Mouse(host, Look().Panels, local, mouse, previous);
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => ResizablePanels.Tooltip(Look().Panels, local);
+
+    public override Point? FindFullscreenButton(IWindowHost host, string text, int nth) => ResizablePanels.FindButton(Look().Panels, text, nth);
+
+    /// <summary>
+    /// <c>UIOptions</c>: the language and the autosave frequency, which apply at once (where CorsixTH drops down a list,
+    /// the button goes to the next one, the right button to the one before), and under them the buttons to the graphics,
+    /// customise, hotkey, sound and accessibility dialogs and Back, two a row (<c>nav_buttons</c>).
+    /// </summary>
+    private (Point Size, List<DialogPanel> Panels) Look()
+    {
+        string Text(string name, string fallback) => UiText.Get("options_window." + name, fallback);
+        string? Tip(string name) => UiText.Current?.Named("tooltip.options_window." + name);
+        var autosave = _draft.AutosaveFrequency switch
+        {
+            0 => Text("option_off", "Off"),
+            1 => UiText.Get("autosave_frequency.monthly", "Monthly"),
+            2 => UiText.Get("autosave_frequency.weekly", "Weekly"),
+            _ => UiText.Get("autosave_frequency.daily", "Daily"),
+        };
+        List<DialogSetting> settings =
+        [
+            new(Text("language", "Game Language"), _draft.Language, step => ApplyNow(() => StepLanguage(step)), Tip("language")),
+            new(Text("autosave_frequency", "Autosave Frequency"), autosave, step => ApplyNow(() => _draft = _draft with { AutosaveFrequency = (_draft.AutosaveFrequency + step + 4) % 4 }), Tip("autosave_frequency")),
+        ];
+        DialogNavButton Dialog(string name, string fallback, SettingsDialogKind kind) => new(Text(name, fallback), () =>
+        {
+            _host?.Close(this);
+            openDialog?.Invoke(kind);
+        }, Tip(name));
+        List<DialogNavButton> navigation =
+        [
+            Dialog("graphics", "Graphics", SettingsDialogKind.Graphics),
+            Dialog("customise", "Customise", SettingsDialogKind.Customise),
+            .. hotkeys is null ? Array.Empty<DialogNavButton>() : [new DialogNavButton(Text("hotkey", "Hotkeys"), () =>
+            {
+                _host?.Close(this);
+                hotkeys();
+            }, Tip("hotkey"))],
+            Dialog("sound", "Sound", SettingsDialogKind.Sound),
+            Dialog("accessibility", "Accessibility", SettingsDialogKind.Accessibility),
+            new(Text("back", "Back"), () => _host?.Close(this), Tip("back")),
+        ];
+        return SettingsDialogLayout.Build(Title, settings, navigation, extraHeight: 250);
+    }
+
+    /// <summary>A change in CorsixTH's look: used and saved at once, as <c>UIResizable:_buttonPressed</c> does.</summary>
+    private void ApplyNow(Action change)
+    {
+        change();
+        _applied = true;
+        apply(_draft);
+    }
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {

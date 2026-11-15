@@ -5,6 +5,9 @@
 
 using CorsixNet.Content.Settings;
 using CorsixNet.Sim.Economy;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui.Windows;
 
@@ -118,6 +121,78 @@ internal sealed class NewGameWindow(IReadOnlyList<Difficulty> available, string 
         {
             _typed += character;
         }
+    }
+
+    /// <summary><c>UINewGame</c>'s size in CorsixTH's look.</summary>
+    public static readonly Point LookSize = new(320, 220);
+
+    private readonly ResizablePanels _panels = new();
+
+    public override bool IsFullscreen(IWindowHost host) => ResizablePanels.IsAvailable(host);
+
+    public override Point FullscreenSize => LookSize;
+
+    public override Vector2? FullscreenPosition => new(0.5f, 0.25f);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _panels.Draw(batch, host, origin, LookSize, Panels(host), mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _panels.Mouse(host, Panels(host), local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => ResizablePanels.Tooltip(Panels(host), local);
+
+    public override Point? FindFullscreenButton(IWindowHost host, string text, int nth) => ResizablePanels.FindButton(Panels(host), text, nth);
+
+    /// <summary>
+    /// <c>UINewGame</c>'s panels: the title; the player's name in a black text box; the difficulty, whose button goes to
+    /// the next one (the right button to the one before) where CorsixTH drops down a list; the tutorial's switch; Start
+    /// and Cancel.
+    /// </summary>
+    private List<DialogPanel> Panels(IWindowHost host)
+    {
+        string Text(string key, string fallback) => CorsixText.Get(host, "new_game_window." + key, fallback);
+        string Tip(string key, string fallback) => CorsixText.Get(host, "tooltip.new_game_window." + key, fallback);
+        var index = Math.Max(0, available.ToList().IndexOf(Selected));
+        return
+        [
+            DialogPanel.Title(new Rectangle(80, 10, 160, 20), Title),
+            DialogPanel.Caption(new Rectangle(20, 45, 140, 30), Text("player_name", "Player name")),
+            new(new Rectangle(165, 45, 140, 30), IsCapturing ? _typed + "_" : PlayerName, DialogPanel.TextboxColour, Lowered: IsCapturing,
+                Click: _ => ToggleTyping(), Tooltip: Tip("player_name", "Enter the name you wish to be referred to as in the game"),
+                Highlight: ResizableLook.PanelDefault, Shadow: ResizableLook.PanelDefault),
+            DialogPanel.Caption(new Rectangle(20, 80, 140, 30), Text("difficulty", "Difficulty")),
+            DialogPanel.Button(new Rectangle(165, 80, 140, 30), Name(Selected), step => Selected = available.Count == 0 ? Selected : available[(index + step + available.Count) % available.Count],
+                Tip("difficulty", "Select which difficulty level you want to play the game in"), enabled: available.Count > 0),
+            DialogPanel.Caption(new Rectangle(20, 115, 140, 30), Text("tutorial", "Tutorial")),
+            DialogPanel.Button(new Rectangle(165, 115, 140, 30), Tutorial ? Text("option_on", "On") : Text("option_off", "Off"), _ => Tutorial = !Tutorial,
+                Tip("tutorial", "Click this box if you want some help to get started in the game"), on: Tutorial),
+            DialogPanel.Button(new Rectangle(20, 165, 140, 40), Text("start", "Start"), _ => StartGame(host), Tip("start", "Start the game with the chosen settings"), enabled: available.Count > 0),
+            DialogPanel.Button(new Rectangle(165, 165, 140, 40), Text("cancel", "Cancel"), _ => Cancel(host), Tip("cancel", "Oh, I didn't really mean to start a new game!")),
+        ];
+    }
+
+    private void ToggleTyping()
+    {
+        if (IsCapturing)
+        {
+            ConfirmName();
+        }
+        else
+        {
+            StartTyping();
+        }
+    }
+
+    private void StartGame(IWindowHost host)
+    {
+        ConfirmName();
+        host.Close(this);
+        start(Selected, Tutorial);
+    }
+
+    private void Cancel(IWindowHost host)
+    {
+        ConfirmName();
+        host.Close(this);
     }
 
     public override IEnumerable<WindowRow> Rows(IWindowHost host)

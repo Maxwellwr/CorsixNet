@@ -452,6 +452,12 @@ internal abstract class UiWindow
     {
     }
 
+    /// <summary>
+    /// The middle of the <paramref name="nth"/> button reading <paramref name="text"/> in the fullscreen dialog, from its
+    /// top left corner, for <c>--script</c>; null if it has none.
+    /// </summary>
+    public virtual Point? FindFullscreenButton(IWindowHost host, string text, int nth) => null;
+
     /// <summary>The fullscreen dialog's tooltip at <paramref name="local"/>, if any.</summary>
     public virtual string? FullscreenTooltip(IWindowHost host, Point local) => null;
 

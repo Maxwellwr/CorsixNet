@@ -22,6 +22,61 @@ internal sealed class MainMenuWindow(Action<string> action, string version) : Ui
 
     public override bool IsPinned => true;
 
+    /// <summary>The menu's items: the language files' names, the action's name, and the English stand-ins.</summary>
+    private static readonly (string Key, string Text, string Name, string Tooltip)[] Items =
+    [
+        ("new_game", "Campaign", "newgame", "Start the first level on the campaign"),
+        ("custom_campaign", "Custom Campaign", "campaign", "Play a campaign created by the community"),
+        ("custom_level", "Single Scenario", "scenario", "Build your hospital in a single scenario"),
+        ("continue", "Continue Game", "continue", "Continue your latest saved game"),
+        ("load_game", "Load Game", "load", "Load a saved game"),
+        ("options", "Settings", "options", "Tweak various settings"),
+        ("map_edit", "Map Editor", "mapeditor", "Create a custom map"),
+        ("exit", "Exit", "exit", "No, no, please don't leave!"),
+    ];
+
+    /// <summary>A menu item's height (<c>menu_item_height</c>).</summary>
+    private const int ItemHeight = 40;
+
+    /// <summary>
+    /// <c>UIMainMenu</c>'s size: 200 wide; 20 above the items, 50 for each, and a line of 15 for the version under them.
+    /// </summary>
+    public static readonly Point LookSize = new(200, 20 + ((ItemHeight + 10) * 8) + 15);
+
+    private readonly ResizablePanels _panels = new();
+
+    public override bool IsFullscreen(IWindowHost host) => ResizablePanels.IsAvailable(host);
+
+    public override Point FullscreenSize => LookSize;
+
+    public override Vector2? FullscreenPosition => new(0.5f, 0.25f);
+
+    /// <summary><c>addMenuItem</c>: a button 160 by 40 for each item, 20 in, 50 apart from 20 down.</summary>
+    private List<DialogPanel> Panels(IWindowHost host) =>
+    [
+        .. Items.Select((item, i) => DialogPanel.Button(
+            new Rectangle(20, 20 + (i * (ItemHeight + 10)), 160, ItemHeight),
+            CorsixText.Get(host, "main_menu." + item.Key, item.Text),
+            _ => action(item.Name),
+            CorsixText.Get(host, "tooltip.main_menu." + item.Key, item.Tooltip))),
+    ];
+
+    /// <summary><c>UIMainMenu:draw</c>: the items, then the version at the bottom right, 15 up.</summary>
+    public override void DrawFullscreen(Microsoft.Xna.Framework.Graphics.SpriteBatch batch, IWindowHost host, Point origin, Microsoft.Xna.Framework.Input.MouseState mouse)
+    {
+        _panels.Draw(batch, host, origin, LookSize, Panels(host), mouse);
+        var font = ResizablePanels.Font(host);
+        var text = CorsixText.Get(host, "main_menu.version", "Version: ") + version;
+        font.Draw(batch, text, new Vector2(origin.X + 5 + 190 - font.Measure(text).Width, origin.Y + LookSize.Y - 15), tint: new Color(255, 255, 255, 192));
+    }
+
+    public override void FullscreenMouse(IWindowHost host, Point local, Microsoft.Xna.Framework.Input.MouseState mouse, Microsoft.Xna.Framework.Input.MouseState previous) =>
+        _panels.Mouse(host, Panels(host), local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => ResizablePanels.Tooltip(Panels(host), local);
+
+    public override Point? FindFullscreenButton(IWindowHost host, string text, int nth) => ResizablePanels.FindButton(Panels(host), text, nth);
+
     /// <summary>A quarter down the screen, as <c>setDefaultPosition(0.5, 0.25)</c>.</summary>
     public override Vector2? DefaultPosition => new(0.5f, 0.25f);
 
