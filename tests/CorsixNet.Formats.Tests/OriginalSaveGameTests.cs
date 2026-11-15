@@ -77,6 +77,7 @@ public class OriginalSaveGameTests
     [InlineData(2, "header +2")]
     [InlineData(13 + (((5 * 128) + 7) * 8) + 2, "tile (7,5) byte 2")]
     [InlineData(131085 + (9 * 175) + 14, "entity 9 +14")]
+    [InlineData(0x60194 + (17 * 35) + 2, "room 17 +2")]
     [InlineData(399030, "day")]
     [InlineData(399031, "month")]
     [InlineData(399968 + 4697 + 53, "hospital 1 +53")]
@@ -84,6 +85,28 @@ public class OriginalSaveGameTests
     public void DescribesOffsets(int offset, string expected)
     {
         Assert.Equal(expected, OriginalSaveGame.DescribeOffset(offset));
+    }
+
+    [Fact]
+    public void ReadsRooms()
+    {
+        var data = new byte[OriginalSaveGame.Length];
+        var room = OriginalSaveGame.RoomOffset + (17 * OriginalSaveGame.RoomLength);
+        data[room] = 7;
+        data[room + 1] = 4;
+        data[room + 2] = 5;
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 4), (81 * 128) + 82);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 6), (81 * 128) + 83);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 8), (80 * 128) + 83);
+
+        var parsed = Assert.Single(OriginalSaveGame.Parse(data).Rooms);
+
+        Assert.Equal(17, parsed.Index);
+        Assert.Equal(7, parsed.Type);
+        Assert.Equal((4, 5), (parsed.Width, parsed.Height));
+        Assert.Equal((83, 80), parsed.Origin);
+        Assert.Equal((83, 81), parsed.Door);
+        Assert.Equal((82, 81), parsed.Outside);
     }
 
     [Fact]
@@ -145,6 +168,14 @@ public class OriginalSaveGameTests
             Assert.Equal(1, local.Kind);
             Assert.NotEmpty(local.Name);
             Assert.Equal(local.Staff, local.Nurses + local.Doctors + local.Handymen + local.Receptionists);
+
+            // Rooms lie on the map with their door on their edge and the outside tile next to it.
+            foreach (var room in save.Rooms.Where(r => r.Width > 1))
+            {
+                Assert.InRange(room.Door.X, room.Origin.X, room.Origin.X + room.Width - 1);
+                Assert.InRange(room.Door.Y, room.Origin.Y, room.Origin.Y + room.Height - 1);
+                Assert.Equal(1, Math.Abs(room.Door.X - room.Outside.X) + Math.Abs(room.Door.Y - room.Outside.Y));
+            }
 
             // Every staff member on the payroll has an entity, and tiles point at entities standing on them.
             Assert.Equal(local.Staff, save.Entities.Count(e => e.Kind == 4 && e.TileX != 0));

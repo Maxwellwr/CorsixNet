@@ -65,6 +65,15 @@ static void Summary(OriginalSaveGame save)
         Console.WriteLine($"  kind {group.Key,2} ({KindName(group.Key)}): {group.Count()}");
     }
 
+    if (save.Rooms.Count > 0)
+    {
+        Console.WriteLine("Rooms:");
+        foreach (var room in save.Rooms)
+        {
+            Console.WriteLine($"  #{room.Index,-3} {RoomName(room.Type),-20} {room.Width}x{room.Height} at ({room.Origin.X},{room.Origin.Y}), door ({room.Door.X},{room.Door.Y})");
+        }
+    }
+
     var staff = save.Entities.Where(e => e.Kind == 4).ToList();
     if (staff.Count > 0)
     {
@@ -185,6 +194,38 @@ static string Roles(int flags)
 
     return string.Join(' ', roles);
 }
+
+// Numbered as #rooms[n] in the level .SAM files.
+static string RoomName(byte type) => type switch
+{
+    1 => "(hospital?)",
+    4 => "(unknown 4)",
+    7 => "GP's office",
+    8 => "psychiatry",
+    9 => "ward",
+    10 => "operating theatre",
+    11 => "pharmacy",
+    12 => "cardiogram",
+    13 => "scanner",
+    14 => "ultrascan",
+    15 => "blood machine",
+    16 => "x-ray",
+    17 => "inflation",
+    18 => "dna fixer",
+    19 => "hair restoration",
+    20 => "slack tongue",
+    21 => "fracture clinic",
+    22 => "training",
+    23 => "electrolysis",
+    24 => "jelly vat",
+    25 => "staff room",
+    26 => "tv",
+    27 => "general diagnosis",
+    28 => "research",
+    29 => "toilets",
+    30 => "decontamination",
+    _ => $"room type {type}",
+};
 
 static string KindName(byte kind) => kind switch
 {

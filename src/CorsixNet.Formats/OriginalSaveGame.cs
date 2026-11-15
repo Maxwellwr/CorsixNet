@@ -89,6 +89,39 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     public (byte Misc, byte Character) Description => (Raw.Span[138], Raw.Span[139]);
 }
 
+/// <summary>One 35-byte record of the room table. Only the first ten bytes are understood.</summary>
+/// <param name="Index">Index of the record from the start of the table.</param>
+/// <param name="Raw">The 35 stored bytes.</param>
+public sealed record OriginalSaveRoom(int Index, ReadOnlyMemory<byte> Raw)
+{
+    /// <summary>
+    /// Room type, numbered as <c>#rooms[n]</c> in the level <c>.SAM</c> files (7 GP's office, 9 ward, 12 cardiogram...).
+    /// Every save starts with four type-1 records of size 0, presumably one per hospital.
+    /// </summary>
+    public byte Type => Raw.Span[0];
+
+    /// <summary>Width along x, in tiles.</summary>
+    public int Width => Raw.Span[1];
+
+    /// <summary>Height along y, in tiles.</summary>
+    public int Height => Raw.Span[2];
+
+    /// <summary>Corner tile with the smallest x and y.</summary>
+    public (int X, int Y) Origin => ReadTile(8);
+
+    /// <summary>Tile of the door, inside the room.</summary>
+    public (int X, int Y) Door => ReadTile(6);
+
+    /// <summary>Tile just outside the door.</summary>
+    public (int X, int Y) Outside => ReadTile(4);
+
+    private (int X, int Y) ReadTile(int offset)
+    {
+        int index = BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[offset..]);
+        return (index % OriginalSaveGame.MapSize, index / OriginalSaveGame.MapSize);
+    }
+}
+
 /// <summary>Per-player hospital data of an original save (4697 bytes each).</summary>
 /// <param name="Name">Hospital (player) name.</param>
 /// <param name="Kind">1 local player, 2 computer player, 0 unused.</param>
@@ -151,6 +184,15 @@ public sealed class OriginalSaveGame
     /// <summary>Offset of the entity table.</summary>
     public const int EntityOffset = TileOffset + (MapSize * MapSize * TileLength);
 
+    /// <summary>Offset of the room table.</summary>
+    public const int RoomOffset = 0x60194;
+
+    /// <summary>Size of one room record.</summary>
+    public const int RoomLength = 35;
+
+    /// <summary>Number of room records read; the real limit is not known, but no data follows this many.</summary>
+    public const int RoomCount = 100;
+
     /// <summary>Offset of the day of the month (1-based); the month follows.</summary>
     public const int DateOffset = 399030;
 
@@ -167,11 +209,12 @@ public sealed class OriginalSaveGame
 
     private readonly OriginalSaveTile[] _tiles;
 
-    private OriginalSaveGame(byte[] data, OriginalSaveTile[] tiles, IReadOnlyList<OriginalSaveEntity> entities, IReadOnlyList<OriginalSaveHospital> hospitals)
+    private OriginalSaveGame(byte[] data, OriginalSaveTile[] tiles, IReadOnlyList<OriginalSaveEntity> entities, IReadOnlyList<OriginalSaveRoom> rooms, IReadOnlyList<OriginalSaveHospital> hospitals)
     {
         Data = data;
         _tiles = tiles;
         Entities = entities;
+        Rooms = rooms;
         Hospitals = hospitals;
     }
 
@@ -198,6 +241,9 @@ public sealed class OriginalSaveGame
 
     /// <summary>The four hospital blocks; unused players have <see cref="OriginalSaveHospital.Kind"/> 0.</summary>
     public IReadOnlyList<OriginalSaveHospital> Hospitals { get; }
+
+    /// <summary>Room records in use (non-zero type), in table order.</summary>
+    public IReadOnlyList<OriginalSaveRoom> Rooms { get; }
 
     /// <summary>Parses a save file.</summary>
     /// <exception cref="InvalidDataException">The data does not have the size of a save.</exception>
@@ -226,13 +272,23 @@ public sealed class OriginalSaveGame
             }
         }
 
+        var rooms = new List<OriginalSaveRoom>();
+        for (var index = 0; index < RoomCount; index++)
+        {
+            var record = data.AsMemory(RoomOffset + (index * RoomLength), RoomLength);
+            if (record.Span[0] != 0)
+            {
+                rooms.Add(new OriginalSaveRoom(index, record));
+            }
+        }
+
         var hospitals = new OriginalSaveHospital[MaxPlayers];
         for (var player = 0; player < MaxPlayers; player++)
         {
             hospitals[player] = ParseHospital(data.AsMemory(HospitalOffset + (player * HospitalLength), HospitalLength));
         }
 
-        return new OriginalSaveGame(data, tiles, entities, hospitals);
+        return new OriginalSaveGame(data, tiles, entities, rooms, hospitals);
     }
 
     /// <summary>
@@ -257,6 +313,11 @@ public sealed class OriginalSaveGame
         if (offset < EntityOffset + (EntityCount * EntityLength))
         {
             return $"entity {(offset - EntityOffset) / EntityLength} +{(offset - EntityOffset) % EntityLength}";
+        }
+
+        if (offset >= RoomOffset && offset < RoomOffset + (RoomCount * RoomLength))
+        {
+            return $"room {(offset - RoomOffset) / RoomLength} +{(offset - RoomOffset) % RoomLength}";
         }
 
         if (offset is DateOffset)
