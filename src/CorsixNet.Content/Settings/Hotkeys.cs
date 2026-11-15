@@ -109,6 +109,7 @@ public sealed class Hotkeys
         ("ingame_toggleAnnouncements", new("a", Alt: true)),
         ("ingame_toggleSounds", new("s", Alt: true)),
         ("ingame_toggleMusic", new("m", Alt: true)),
+        ("ingame_jukebox", new("j")),
         ("ingame_toggleAdvisor", new("a", Shift: true)),
         ("ingame_rotateobject", new("space")),
         ("ingame_patient_gohome", new("h")),

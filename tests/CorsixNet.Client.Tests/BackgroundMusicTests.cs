@@ -1,4 +1,5 @@
 using CorsixNet.Client.Audio;
+using CorsixNet.Client.Ui.Windows;
 using CorsixNet.Formats;
 
 namespace CorsixNet.Client.Tests;
@@ -72,6 +73,38 @@ public class BackgroundMusicTests
         Assert.True(music.TogglePlayMusic());
         Assert.NotNull(music.Current);
         Assert.NotEqual(1, music.Current);
+    }
+
+    [Fact]
+    public void TheJukeboxLoopsATrackAndKeepsTheDisabledOnes()
+    {
+        var song = Song([0x90, 0x3C, 0x64, 0x01, 0x7F, 0x7F, 0xFF, 0x2F, 0x00]);
+        using var music = new BackgroundMusic(
+            [new MusicTrack(Path.Combine("x", "A.XMI"), "A"), new MusicTrack(Path.Combine("x", "B.XMI"), "B"), new MusicTrack(Path.Combine("x", "C.XMI"), "C")],
+            new MidiPlayer(new RecordingOutput()),
+            _ => song,
+            new Random(1));
+        music.ReadDisabledTracks([string.Join(Path.DirectorySeparatorChar, "Sound", "Midi", "C.XMI")]);
+        Assert.Equal([true, true, false], music.Playlist.Select(entry => entry.Enabled));
+
+        music.Play(0);
+        music.ToggleLoop();
+        Assert.True(music.Playlist[0].Loop);
+        Assert.Equal([true, false, false], music.Playlist.Select(entry => entry.Enabled));
+        music.ToggleLoop();
+        Assert.Equal([true, true, false], music.Playlist.Select(entry => entry.Enabled));
+
+        // Turning off the track playing plays another.
+        music.ToggleTrack(0);
+        Assert.Equal(1, music.Current);
+        Assert.Equal([string.Join(Path.DirectorySeparatorChar, "Sound", "Midi", "A.XMI"), string.Join(Path.DirectorySeparatorChar, "Sound", "Midi", "C.XMI")], music.DisabledTracks());
+    }
+
+    [Fact]
+    public void ALongTitleLosesFiveLettersAtATime()
+    {
+        Assert.Equal("Short", JukeboxScreen.Shorten("Short", text => text.Length * 10));
+        Assert.Equal("ABCDEFGHIJKLMNO...", JukeboxScreen.Shorten("ABCDEFGHIJKLMNOPQRSTUVWX", text => text.Length * 10));
     }
 
     [Fact]

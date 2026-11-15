@@ -261,7 +261,8 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
 - Music playback is done on Windows: the XMI songs go to the MIDI mapper as CorsixTH's MIDI player sends them
   (`MidiPlayer`, `WinMmMidiOutput`, `Src/midi_player.cpp`), a random track first and then the next enabled one
   (`BackgroundMusic`, `audio.lua`), with `play_music`, `music_volume`, Alt+M, the menu bar's music item and the options'
-  music switch and volume. Still: the jukebox (`dialogs/jukebox.lua`), the player's own MP3 music (`play_own_music`),
+  music switch and volume, and the jukebox (`JukeboxWindow`, `dialogs/jukebox.lua`: J or the options menu, play, pause,
+  previous, next, stop, loop, tracks left out kept in `disabledtracks.txt`). Still: the player's own MP3 music (`play_own_music`),
   the choice of MIDI device, and music on Linux and macOS (CorsixTH uses SDL_mixer with a SoundFont there).
 
 ## 10. Network

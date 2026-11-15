@@ -421,6 +421,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             PlayMusic = _config.PlayMusic,
         };
         _music.SetVolume(_config.MusicVolume);
+        try
+        {
+            if (File.Exists(DisabledTracksPath))
+            {
+                _music.ReadDisabledTracks(File.ReadAllLines(DisabledTracksPath));
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // readPlaylistPreferences fails silently.
+        }
+
         _music.PlayRandom();
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
@@ -1829,18 +1841,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _session.Submit(new AnswerPatientCommand(asking.Id, ctrl ? PatientAnswer.GuessCure : shift ? PatientAnswer.SendHome : PatientAnswer.Wait));
         }
 
-        // Until patients can be clicked, J picks every infected patient for vaccination during a cover-up.
-        if (pressed(Keys.J) && simulation.Hospitals[_session.Player].Epidemics.Current is { IsCoverUp: true, IsWatchRunning: true } coverUp)
-        {
-            foreach (var id in coverUp.InfectedIds)
-            {
-                if (simulation.FindEntity(id) is Humanoid { Behaviour: PatientBehaviour { IsVaccinated: false, IsMarkedForVaccination: false } })
-                {
-                    _session.Submit(new VaccinateCommand(id));
-                }
-            }
-        }
-
         // GameUI's ingame_setTransparent (X, while held) and ingame_toggleTransparent (Shift+X): walls half transparent.
         if (HotkeyInput.Pressed(_hotkeys["ingame_toggleTransparent"], keys, pressed))
         {
@@ -3183,6 +3183,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ToggleMusic();
         }
 
+        if (HotkeyInput.Pressed(_hotkeys["ingame_jukebox"], keys, pressed) && _music.HasMusic)
+        {
+            // UIBottomPanel:openJukebox.
+            _windows.Toggle(new JukeboxWindow(_music.Playlist.Count));
+        }
+
         (string Action, Func<UiWindow> Window)[] dialogs =
         [
             ("ingame_panel_hireStaff", () => new HireWindow()),
@@ -3462,7 +3468,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Do("corsixnet.menu.levels", "Levels", "levels"),
                 new(Item("menu_options.sound", "SOUND"), ToggleSounds, () => _config.PlaySounds),
                 new(Item("menu_options.announcements", "ANNOUNCEMENTS"), ToggleAnnouncements, () => _config.PlayAnnouncements),
-                .. (_music.HasMusic ? [new MenuBarItem(Item("menu_options.music", "MUSIC"), ToggleMusic, () => _config.PlayMusic)] : Array.Empty<MenuBarItem>()),
+                .. (_music.HasMusic
+                    ? [new MenuBarItem(Item("menu_options.music", "MUSIC"), ToggleMusic, () => _config.PlayMusic), new MenuBarItem(Item("menu_options.jukebox", "JUKEBOX"), () => _windows.Open(new JukeboxWindow(_music.Playlist.Count)))]
+                    : Array.Empty<MenuBarItem>()),
                 new(Item("menu_options.adviser_disabled", "ADVISER"), ToggleAdviser, () => !_config.AdviserDisabled),
                 new(Item("menu_debug.transparent_walls", "TRANSPARENT WALLS"), () => _wallsTransparentToggled = !_wallsTransparentToggled, () => _wallsTransparentToggled),
                 Speed("menu_options_game_speed.pause", "PAUSE", GameSpeed.Pause),
@@ -3714,6 +3722,33 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _config = _config with { PlayAnnouncements = !_config.PlayAnnouncements };
         SaveConfig();
+    }
+
+    /// <summary><c>disabledtracks.txt</c> beside the settings file: the tracks the jukebox leaves out.</summary>
+    private string DisabledTracksPath => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_configPath ?? GameConfig.FileName)) ?? ".", "disabledtracks.txt");
+
+    /// <inheritdoc/>
+    BackgroundMusic? IWindowHost.Music => _music;
+
+    /// <inheritdoc/>
+    void IWindowHost.SetPlayMusic(bool on)
+    {
+        _music.PlayMusic = on;
+        _config = _config with { PlayMusic = on };
+        SaveConfig();
+    }
+
+    /// <inheritdoc/>
+    void IWindowHost.SavePlaylist()
+    {
+        try
+        {
+            File.WriteAllLines(DisabledTracksPath, _music.DisabledTracks());
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // updatePlaylistPreferences fails silently.
+        }
     }
 
     /// <summary><c>UI:togglePlayMusic</c>: the background music on (a random track) or off, kept in the settings.</summary>
