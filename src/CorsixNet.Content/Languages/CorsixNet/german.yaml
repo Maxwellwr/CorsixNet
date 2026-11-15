@@ -110,6 +110,11 @@ strings:
       caption: 'Chat'
       none: 'Bisher hat niemand etwas gesagt.'
       start: 'Eingabetaste zum Schreiben'
+    lobby:
+      caption: 'Level'
+      confirm: 'Alle beginnen %1% von vorn. Fortfahren?'
+      host_only: 'Nur Spieler 1 wählt das Level.'
+      none: 'Der Server bietet keine anderen Level an.'
     hospital_number: Krankenhaus %1%
     main_menu:
       caption: Hauptmenü

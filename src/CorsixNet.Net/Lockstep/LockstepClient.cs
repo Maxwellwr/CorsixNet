@@ -77,6 +77,15 @@ public sealed class LockstepClient : IDisposable
     /// <summary>How many chat lines have arrived in all, including those no longer kept.</summary>
     public int ChatCount { get; private set; }
 
+    /// <summary>The levels the host may switch the game to, as the server last said; empty when it offers none.</summary>
+    public IReadOnlyList<string> Levels { get; private set; } = [];
+
+    /// <summary>The level being played, as the server last said, or null.</summary>
+    public string? Level { get; private set; }
+
+    /// <summary>Whether this client is the host, player 1, who chooses the level.</summary>
+    public bool IsHost => IsJoined && Player == 0;
+
     /// <summary>How many times the server replaced this client's state after a desync.</summary>
     public int Resyncs { get; private set; }
 
@@ -91,7 +100,14 @@ public sealed class LockstepClient : IDisposable
                     Simulation = LoadState(welcome.State);
                     Player = welcome.Player;
                     AllowedTick = welcome.AllowedTick;
-                    Recording = Replay.Start(RecordingName, Simulation);
+                    Recording = Replay.Start(Level ?? RecordingName, Simulation);
+
+                    // The hash of the state as sent, which the server checks first after switching levels.
+                    _connection.Send(new StateHashMessage(Simulation.Tick, Simulation.ComputeStateHash()));
+                    break;
+                case LevelsMessage levels:
+                    Levels = levels.Levels;
+                    Level = levels.Current;
                     break;
                 case ResyncMessage resync when Simulation is not null:
                     Simulation = LoadState(resync.State);
@@ -169,6 +185,18 @@ public sealed class LockstepClient : IDisposable
         if (IsJoined)
         {
             _connection.Send(new SpeedRequestMessage(speed));
+        }
+    }
+
+    /// <summary>
+    /// As the host, asks the server to switch everyone to one of the offered <see cref="Levels"/> from its start; the new
+    /// state comes as on joining.
+    /// </summary>
+    public void ChooseLevel(string level)
+    {
+        if (IsHost)
+        {
+            _connection.Send(new ChooseLevelRequestMessage(level));
         }
     }
 

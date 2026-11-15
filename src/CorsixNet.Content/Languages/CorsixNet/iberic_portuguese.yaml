@@ -325,6 +325,11 @@ strings:
       caption: 'Conversa'
       none: 'Ainda ninguém disse nada.'
       start: 'Prima Enter para falar'
+    lobby:
+      caption: 'Níveis'
+      confirm: 'Todos começarão %1% do início. Continuar?'
+      host_only: 'Só o jogador 1 escolhe o nível.'
+      none: 'O servidor não oferece outros níveis.'
     hospital_number: 'Hospital %1%'
     main_menu:
       caption: 'Menu principal'

@@ -25,6 +25,11 @@ namespace CorsixNet.Net.Lockstep;
 /// The server keeps the game's one clock (<see cref="GameClock"/>): any player may pause the game or change its speed,
 /// and everyone is told (<see cref="SpeedMessage"/>), so the game runs at the same speed for all.
 /// </para>
+/// <para>
+/// The server may offer levels (<see cref="LobbyLevel"/>): the host, player 1, can switch everyone to another one
+/// (<see cref="ChooseLevelRequestMessage"/>). The game then starts that level paused, and every client gets its state as
+/// on joining; players the new level has no room for are told so and dropped.
+/// </para>
 /// <para>Not thread-safe: drive it from one thread (see <see cref="ServerRunner"/>).</para>
 /// </remarks>
 public sealed class LockstepServer : IDisposable
@@ -43,17 +48,33 @@ public sealed class LockstepServer : IDisposable
     private readonly List<DesyncMessage> _desyncs = [];
     private readonly GameClock _clock = new();
 
-    public LockstepServer(Simulation simulation)
+    private readonly IReadOnlyList<LobbyLevel> _levels;
+
+    /// <summary>The tick the level chosen last started at, whose hash switched clients report first.</summary>
+    private long _restartTick;
+
+    /// <param name="simulation">The game, at its start or loaded.</param>
+    /// <param name="level">The name of the level being played.</param>
+    /// <param name="levels">The levels the host may switch the game to; none by default.</param>
+    public LockstepServer(Simulation simulation, string level = "", IReadOnlyList<LobbyLevel>? levels = null)
     {
         Simulation = simulation;
+        Level = level;
+        _levels = levels ?? [];
         ContentHash = ContentFingerprint.Compute(simulation.Content);
     }
+
+    /// <summary>The name of the level being played.</summary>
+    public string Level { get; private set; }
+
+    /// <summary>The levels offered to the host.</summary>
+    public IReadOnlyList<LobbyLevel> Levels => _levels;
 
     /// <summary>The fingerprint of the simulation's content, which a joining client's must match.</summary>
     public ulong ContentHash { get; }
 
     /// <summary>The authoritative simulation. Only the server's thread may touch it.</summary>
-    public Simulation Simulation { get; }
+    public Simulation Simulation { get; private set; }
 
     /// <summary>
     /// Ticks between receiving a command and executing it. 0 is safe, because clients may only run
@@ -189,6 +210,9 @@ public sealed class LockstepServer : IDisposable
             case SpeedRequestMessage request when peer.Player is { } player:
                 SetSpeed(request.Speed, player);
                 break;
+            case ChooseLevelRequestMessage request when peer.Player is { } player:
+                ChooseLevel(peer, player, request.Level);
+                break;
             default:
                 throw new InvalidDataException($"Unexpected {message.GetType().Name} from {Describe(peer)}.");
         }
@@ -219,6 +243,11 @@ public sealed class LockstepServer : IDisposable
         peer.Player = free[0];
         peer.Name = hello.PlayerName;
 
+        if (_levels.Count > 0)
+        {
+            peer.Connection.Send(LevelsMessage());
+        }
+
         peer.Connection.Send(new WelcomeMessage(peer.Player.Value, SaveState(), Simulation.Tick));
         peer.Connection.Send(new SpeedMessage(_clock.Speed, -1));
         Log?.Invoke($"{Describe(peer)} joined at tick {Simulation.Tick}.");
@@ -243,8 +272,78 @@ public sealed class LockstepServer : IDisposable
         Broadcast(new ChatMessage(player, peer.Name ?? string.Empty, line));
     }
 
+    private LevelsMessage LevelsMessage() => new([.. _levels.Select(level => level.Name)], Level);
+
+    /// <summary>
+    /// The host switches the game to an offered level: it starts paused, everyone it has room for gets its state, and
+    /// the others are told why they must go.
+    /// </summary>
+    private void ChooseLevel(Peer peer, int player, string name)
+    {
+        if (player != 0)
+        {
+            Log?.Invoke($"{Describe(peer)} may not choose the level; only player 1 may.");
+            return;
+        }
+
+        if (_levels.FirstOrDefault(level => string.Equals(level.Name, name, StringComparison.OrdinalIgnoreCase)) is not { } chosen)
+        {
+            Log?.Invoke($"{Describe(peer)} chose {name}, which is not offered.");
+            return;
+        }
+
+        Simulation simulation;
+        try
+        {
+            simulation = chosen.Start();
+        }
+        catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
+        {
+            Log?.Invoke($"Cannot load {chosen.Name}: {e.Message}");
+            Broadcast(new ChatMessage(-1, string.Empty, $"Cannot load {chosen.Name}: {e.Message}"));
+            return;
+        }
+
+        Simulation = simulation;
+        Level = chosen.Name;
+        _hashes.Clear();
+        _restartTick = Simulation.Tick;
+        _hashes[_restartTick] = Simulation.ComputeStateHash();
+        Log?.Invoke($"{Describe(peer)} chose {chosen.Name}.");
+        SetSpeed(GameSpeed.Pause, player);
+
+        var state = SaveState();
+        foreach (var other in _peers.Where(p => p.Player is not null).ToList())
+        {
+            if (other.Player!.Value >= Simulation.Map.PlayerCount)
+            {
+                Reject(other, $"{chosen.Name} has room for {Simulation.Map.PlayerCount} players.");
+                continue;
+            }
+
+            other.Connection.Send(LevelsMessage());
+            other.Connection.Send(new WelcomeMessage(other.Player.Value, state, Simulation.Tick));
+            other.AwaitingRestart = true;
+            other.ResyncedAt = -1;
+        }
+
+        BroadcastPlayers();
+    }
+
     private void CheckHash(Peer peer, StateHashMessage hash)
     {
+        // A client switched to another level reports the hash of the state it was sent first; until then its hashes are
+        // of the level it left.
+        if (peer.AwaitingRestart)
+        {
+            if (hash.Tick != _restartTick)
+            {
+                return;
+            }
+
+            peer.AwaitingRestart = false;
+        }
+
         // Hashes the client sent before it took the state of a resync are of the state it left behind.
         if (hash.Tick <= peer.ResyncedAt || !_hashes.TryGetValue(hash.Tick, out var expected) || expected == hash.Hash)
         {
@@ -318,7 +417,15 @@ public sealed class LockstepServer : IDisposable
 
         public string? Name { get; set; }
 
+        /// <summary>Whether the client was switched to another level and has not yet reported the hash of its start.</summary>
+        public bool AwaitingRestart { get; set; }
+
         /// <summary>The server's tick when this client was last sent a resync, or -1.</summary>
         public long ResyncedAt { get; set; } = -1;
     }
 }
+
+/// <summary>A level the server offers the host: its name, and how to start a game of it.</summary>
+/// <param name="Name">The level's name, as players see it.</param>
+/// <param name="Start">Starts the level's simulation; may throw <see cref="IOException"/> or <see cref="InvalidDataException"/>.</param>
+public sealed record LobbyLevel(string Name, Func<Simulation> Start);

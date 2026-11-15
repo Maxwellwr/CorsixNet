@@ -26,6 +26,11 @@ strings:
       caption: 'Chat'
       none: 'Zatím nikdo nic neřekl.'
       start: 'Stiskněte Enter a pište'
+    lobby:
+      caption: 'Úrovně'
+      confirm: 'Všichni začnou %1% od začátku. Pokračovat?'
+      host_only: 'Úroveň vybírá jen hráč 1.'
+      none: 'Server nenabízí žádné jiné úrovně.'
     hospital_number: 'Nemocnice %1%'
     main_menu:
       caption: 'Hlavní nabídka'

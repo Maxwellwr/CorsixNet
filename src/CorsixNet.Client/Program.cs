@@ -116,7 +116,14 @@ else
             }
 
             var level = levels[0];
-            var server = new LockstepServer(level.Load().StartSimulation(seed: 1)) { Log = Console.WriteLine };
+            // The host may switch everyone to any level this client knows (F3).
+            var server = new LockstepServer(
+                level.Load().StartSimulation(seed: 1),
+                level.Name,
+                [.. levels.Select(offered => new LobbyLevel(offered.Name, () => offered.Load().StartSimulation(seed: 1)))])
+            {
+                Log = Console.WriteLine,
+            };
 
             // --speed sets the game's speed for everyone; --speed pause waits for the players, whom any of them starts.
             server.SetSpeed(options.Speed);

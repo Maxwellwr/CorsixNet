@@ -80,3 +80,20 @@ public sealed record PlayersMessage(IReadOnlyList<PlayerInfo> Players) : Message
 
     public override int GetHashCode() => Players.Count;
 }
+
+/// <summary>
+/// Server → client: the levels the host may switch the game to, and the one being played. Sent before the welcome and
+/// to everyone after a change.
+/// </summary>
+/// <param name="Levels">The names of the levels offered; empty when the server offers no choice.</param>
+/// <param name="Current">The name of the level being played.</param>
+public sealed record LevelsMessage(IReadOnlyList<string> Levels, string Current) : Message
+{
+    public bool Equals(LevelsMessage? other) =>
+        other is not null && Current == other.Current && Levels.SequenceEqual(other.Levels);
+
+    public override int GetHashCode() => HashCode.Combine(Current, Levels.Count);
+}
+
+/// <summary>Client → server: the host (player 1) wants everyone to play another of the offered levels from its start.</summary>
+public sealed record ChooseLevelRequestMessage(string Level) : Message;

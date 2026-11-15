@@ -97,6 +97,11 @@ strings:
       caption: 'Chat'
       none: 'Nog niemand heeft iets gezegd.'
       start: 'Druk op Enter om te praten'
+    lobby:
+      caption: 'Levels'
+      confirm: 'Iedereen begint %1% opnieuw. Doorgaan?'
+      host_only: 'Alleen speler 1 kiest het level.'
+      none: 'De server biedt geen andere levels aan.'
     hospital_number: 'Ziekenhuis %1%'
     main_menu:
       caption: 'Hoofdmenu'

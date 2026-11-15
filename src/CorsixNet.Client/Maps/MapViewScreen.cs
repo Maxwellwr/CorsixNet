@@ -614,8 +614,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         UpdateChat(keys.IsKeyDown(Keys.Enter) && !_previousKeys.IsKeyDown(Keys.Enter));
 
-        // The level list (F3): a click on a level starts it; a click elsewhere, F3 or Esc closes the list.
-        if (_levels.Count > 0 && Pressed(Keys.F3) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
+        // In a network game F3 shows the server's levels, which the host chooses from, instead of the local list.
+        if (_session is NetworkSession lobby && Pressed(Keys.F3) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
+        {
+            ToggleLobby(lobby);
+        }
+        else if (_levels.Count > 0 && Pressed(Keys.F3) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
         {
             _levelList = !_levelList;
             _roomList = false;
@@ -3511,6 +3515,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             case "newgame":
                 _windows.Open(new NewGameWindow(AvailableDifficulties(_install), _config.PlayerName, (difficulty, tutorial) => StartCampaign(difficulty, tutorial), SavePlayerName));
                 break;
+            case "levels" when _session is NetworkSession lobby:
+                ToggleLobby(lobby);
+                break;
             case "levels" when _levels.Count > 0:
                 _levelList = true;
                 break;
@@ -3686,6 +3693,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _config = _config with { PlayAnnouncements = !_config.PlayAnnouncements };
         SaveConfig();
+    }
+
+    /// <summary>Opens or closes the network game's level list.</summary>
+    private void ToggleLobby(NetworkSession network)
+    {
+        if (_windows.Windows.OfType<LobbyWindow>().FirstOrDefault() is { } open)
+        {
+            _windows.Close(open);
+            return;
+        }
+
+        _windows.Open(new LobbyWindow(() => network.Levels, () => network.Level, () => network.IsHost, network.ChooseLevel));
     }
 
     /// <summary><c>GameUI:makeDebugRat</c>: a rat out of a hole in view, the view being the map's pixels shown.</summary>

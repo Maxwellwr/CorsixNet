@@ -82,6 +82,18 @@ internal sealed class NetworkSession : IGameSession
     /// <summary>How many chat lines have arrived in all.</summary>
     public int ChatCount => _client.ChatCount;
 
+    /// <summary>The levels the server offers the host.</summary>
+    public IReadOnlyList<string> Levels => _client.Levels;
+
+    /// <summary>The level being played, as the server says.</summary>
+    public string? Level => _client.Level;
+
+    /// <summary>Whether this player is the host, who chooses the level.</summary>
+    public bool IsHost => _client.IsHost;
+
+    /// <summary>As the host, switches everyone to another level.</summary>
+    public void ChooseLevel(string level) => _client.ChooseLevel(level);
+
     /// <summary>Says a line to every player.</summary>
     public void Say(string text) => _client.Say(text);
 

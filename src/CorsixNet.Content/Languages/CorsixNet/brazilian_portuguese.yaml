@@ -78,6 +78,11 @@ strings:
       caption: 'Bate-papo'
       none: 'Ninguém disse nada ainda.'
       start: 'Pressione Enter para falar'
+    lobby:
+      caption: 'Fases'
+      confirm: 'Todos começarão %1% do início. Continuar?'
+      host_only: 'Só o jogador 1 escolhe a fase.'
+      none: 'O servidor não oferece outras fases.'
     hospital_number: 'Hospital %1%'
     main_menu:
       caption: 'Menu principal'

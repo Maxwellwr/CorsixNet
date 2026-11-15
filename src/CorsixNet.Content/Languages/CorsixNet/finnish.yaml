@@ -247,6 +247,11 @@ strings:
       caption: 'Keskustelu'
       none: 'Kukaan ei ole vielä sanonut mitään.'
       start: 'Paina Enteriä puhuaksesi'
+    lobby:
+      caption: 'Tasot'
+      confirm: 'Kaikki aloittavat tason %1% alusta. Jatketaanko?'
+      host_only: 'Vain pelaaja 1 valitsee tason.'
+      none: 'Palvelin ei tarjoa muita tasoja.'
     hospital_number: 'Sairaala %1%'
     main_menu:
       caption: 'Päävalikko'

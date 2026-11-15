@@ -275,6 +275,11 @@ strings:
       caption: 'Chat'
       none: 'Ingen har sagt noget endnu.'
       start: 'Tryk Enter for at skrive'
+    lobby:
+      caption: 'Baner'
+      confirm: 'Alle starter %1% forfra. Fortsæt?'
+      host_only: 'Kun spiller 1 vælger banen.'
+      none: 'Serveren tilbyder ingen andre baner.'
     hospital_number: 'Hospital %1%'
     main_menu:
       caption: 'Hovedmenu'
