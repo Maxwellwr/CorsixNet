@@ -94,7 +94,13 @@ internal sealed class ProgressReportScreen
         foreach (var entry in simulation.Rules.EndConditions.ProgressReport(simulation, hospital))
         {
             var (sheetName, sprite) = Icon(entry.Goal.Criterion);
-            var icons = sheetName == "REP02V" ? sheet : graphics.Sheet(sheetName, Palette);
+            // panel_sprites_table: Data/MPointer and QData/Font04V are plain sheets in the main palette.
+            var icons = sheetName switch
+            {
+                "REP02V" => sheet,
+                "MPOINTER" => graphics.Sheet(sheetName, OriginalGraphics.MainPalette, "DATA", complex: false),
+                _ => graphics.Sheet(sheetName, OriginalGraphics.MainPalette, complex: false),
+            };
             icons?.Draw(batch, sprite, origin.X + x, origin.Y + 240, Color.White);
             var now = EndConditions.Measure(simulation, hospital, entry.Goal.Criterion) ?? 0;
             var height = BarHeight(entry, now);
