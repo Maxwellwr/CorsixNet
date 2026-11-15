@@ -175,6 +175,14 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
                     _config.AudioMusic.Length > 0
                         ? Switch(Label("play_own_music", "Play Own Music"), _config.PlayOwnMusic, on => _config with { PlayOwnMusic = on }, Tip("play_own_music_button"))
                         : new(Label("play_own_music", "Play Own Music"), UiText.Get("options_window.option_off", "Off"), _ => { }, Tip("play_own_music_no_folder_set")),
+
+                    // folder_settings.lua's music folder: its browse button opens UIDirectoryBrowser.
+                    new(UiText.Get("folders_window.music_label", "Music"),
+                        _config.AudioMusic.Length > 0 ? FolderName(_config.AudioMusic) : UiText.Get("tooltip.folders_window.not_specified", "No folder location specified yet!"),
+                        _ => BrowseForMusic(),
+                        _config.AudioMusic.Length > 0
+                            ? UiText.Format("tooltip.folders_window.browse_music", "Browse for another location for your Music directory ( Current location: %1% ) ", _config.AudioMusic)
+                            : UiText.Get("tooltip.folders_window.browse", "Browse for folder location")),
                 ];
                 if (midiPorts?.Invoke() is { Count: > 0 } ports)
                 {
@@ -220,6 +228,58 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
     {
         _config = changed;
         apply(changed);
+    }
+
+    /// <summary>A folder's own name, or the whole path for a drive.</summary>
+    private static string FolderName(string path) => Path.GetFileName(Path.TrimEndingDirectorySeparator(path)) is { Length: > 0 } name ? name : path;
+
+    /// <summary>
+    /// <c>UIFolder:buttonBrowseForAudio_music</c>: a folder with music in it becomes the music folder and the player's own
+    /// music plays; another is refused with the reason, and the music folder is cleared.
+    /// </summary>
+    private void BrowseForMusic() => _host?.Open(new DirectoryBrowserWindow(
+        UiText.Get("folders_window.music_location", "Select the directory you want to use for your Music. Upon submission, your music will start playing. To switch back to the Theme Hospital original soundtrack later, you can do so from Sound Settings."),
+        ChooseMusic));
+
+    /// <summary>The callback of <see cref="BrowseForMusic"/>, with <c>App:verifyPlayerMusicDir</c>'s check.</summary>
+    internal void ChooseMusic(string path)
+    {
+        if (MusicFolderProblem(path) is { } problem)
+        {
+            // UIInformation: "//" starts a new paragraph.
+            _host?.Open(new InformationWindow([.. problem.Split("//").Select(part => part.Trim()).Where(part => part.Length > 0)]));
+            Apply(_config with { AudioMusic = string.Empty, PlayOwnMusic = false });
+            return;
+        }
+
+        Apply(_config with { AudioMusic = path, PlayOwnMusic = true });
+    }
+
+    /// <summary>
+    /// <c>App:verifyPlayerMusicDir</c>: null for a folder with at least one file the music plays (recorded or MIDI), else
+    /// why it will not do (<c>errors.custom_music_bad_path</c>, <c>errors.custom_music_no_tracks</c>).
+    /// </summary>
+    public static string? MusicFolderProblem(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return UiText.Format("errors.custom_music_bad_path", "Custom Music directory chosen is not a valid directory. Please check the directory and try again.// %s", path);
+        }
+
+        string[] files;
+        try
+        {
+            files = Directory.GetFiles(path);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return UiText.Format("errors.custom_music_bad_path", "Custom Music directory chosen is not a valid directory. Please check the directory and try again.// %s", path);
+        }
+
+        var playable = Audio.PcmSources.Extensions.Concat(Audio.BackgroundMusic.InstructionalExtensions).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return files.Any(file => playable.Contains(Path.GetExtension(file).TrimStart('.')))
+            ? null
+            : UiText.Format("errors.custom_music_no_tracks", "Custom Music directory chosen contains no playable music files. Please check the directory and try again.// %s", path);
     }
 
     private GameConfig NextSize(int step)

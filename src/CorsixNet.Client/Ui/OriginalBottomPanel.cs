@@ -502,6 +502,20 @@ internal static class AuxSprites
         return table is null || data is null ? null : SpriteSheet.Parse(table, data, complex: true);
     }
 
+    /// <summary>
+    /// The tree control's sprites (<c>loadSpriteTable("Bitmap", "tree_ctrl", true, gfx:getPalette("tree_ctrl.pal"))</c>:
+    /// 1 a level's line, 2 a leaf, 3 a closed folder, 4 an open one) with their palette of six bits a component; null if missing.
+    /// </summary>
+    public static (SpriteSheet Sheet, Palette Palette)? LoadTree()
+    {
+        var table = Read("tree_ctrl.tab");
+        var data = Read("tree_ctrl.dat");
+        var palette = Read("tree_ctrl.pal");
+        return table is null || data is null || palette is null
+            ? null
+            : (SpriteSheet.Parse(table, data, complex: true), Palette.Parse(palette, eightBit: false, transparentLastEntry: false));
+    }
+
     /// <summary>One of CorsixTH's palettes of 8-bit colours (<c>_loadPalette</c> with transparency and 8 bits), or null if missing.</summary>
     public static Palette? ReadPalette(string name) => Read(name) is { } data ? Palette.Parse(data, eightBit: true) : null;
 

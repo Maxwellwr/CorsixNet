@@ -19,14 +19,22 @@ internal sealed class ResizableLook : IDisposable
     private const int BorderSize = 40;
 
     private readonly SpriteAtlas? _borders;
+    private readonly SpriteAtlas? _tree;
     private readonly Texture2D _pixel;
 
     public ResizableLook(GraphicsDevice device, Formats.Palette palette)
     {
         _borders = AuxSprites.Load() is { } sheet ? new SpriteAtlas(device, sheet, palette) : null;
+        _tree = AuxSprites.LoadTree() is var (treeSheet, treePalette) ? new SpriteAtlas(device, treeSheet, treePalette) : null;
         _pixel = new Texture2D(device, 1, 1);
         _pixel.SetData([Color.White]);
     }
+
+    /// <summary>Draws one of the tree control's sprites (<see cref="AuxSprites.LoadTree"/>) with its top left at x, y.</summary>
+    public void DrawTreeIcon(SpriteBatch batch, int sprite, int x, int y) => _tree?.Draw(batch, sprite, x, y, Color.White);
+
+    /// <summary><c>canvas:drawRect</c>: a rectangle of one colour.</summary>
+    public void Fill(SpriteBatch batch, Rectangle area, Color colour) => batch.Draw(_pixel, area, colour);
 
     /// <summary>Whether CorsixTH's border sprites could be read.</summary>
     public bool IsAvailable => _borders is not null;
@@ -140,5 +148,10 @@ internal sealed class ResizableLook : IDisposable
     public static Color Shade(Color colour, int by) =>
         new(Math.Clamp(colour.R + by, 0, 255), Math.Clamp(colour.G + by, 0, 255), Math.Clamp(colour.B + by, 0, 255));
 
-    public void Dispose() => _pixel.Dispose();
+    public void Dispose()
+    {
+        _pixel.Dispose();
+        _borders?.Dispose();
+        _tree?.Dispose();
+    }
 }

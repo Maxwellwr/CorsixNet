@@ -284,7 +284,9 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
   on Linux and macOS too, as CorsixTH's default is FluidSynth's; without a SoundFont, Windows falls back to its MIDI
   mapper. The player's own music plays too (`play_own_music`, `audio_music`: OGG, MP3, WAV and MIDI files titled by a
   names list, `ThemeHospitalInstall.OwnMusicTracks`, `WaveformPlayer`, `StandardMidiFile`); SDL_mixer's other formats
-  (FLAC, Opus, tracker modules) are not played, and the folder is set in `config.yaml` only (no folder dialog).
+  (FLAC, Opus, tracker modules) are not played. The music folder is chosen from the sound dialog's Music row in
+  CorsixTH's folder browser (`DirectoryBrowserWindow`, `DirectoryTree`: `directory_browser.lua`, `tree_ctrl.lua`;
+  `buttonBrowseForAudio_music` with `App:verifyPlayerMusicDir`'s check), as well as in `config.yaml`.
 
 ## 10. Network
 
@@ -324,7 +326,8 @@ to the client that diverged, `ResyncMessage`.)
   window (`OptionsWindow`).
 - The rest of the config file (`config_finder.lua`): announcements, music, movies, `right_mouse_scrolling` (the
   right and middle buttons both drag), the options dialog's game rules, `config.path.txt`; game
-  data folder selection (`resizables/folder_settings.lua`, `directory_browser.lua`). `config.txt` with the language,
+  the folders window (`resizables/folder_settings.lua`) with the game data, saves and screenshots folders (the folder
+  browser itself, `directory_browser.lua`, is done and chooses the music folder). `config.txt` with the language,
   window, screen shake, autosave frequency, game folder, player name, sound effects and scrolling
   (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`), `capture_mouse`
   (the cursor kept in the window while it has focus, `MouseCapture`, SDL_SetWindowGrab) and `screenshots` is done
