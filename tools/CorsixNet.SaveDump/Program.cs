@@ -59,6 +59,8 @@ static void Summary(OriginalSaveGame save)
         Console.WriteLine($"  staff {hospital.Staff}: {hospital.Doctors} doctors, {hospital.Nurses} nurses, {hospital.Handymen} handymen, {hospital.Receptionists} receptionists");
     }
 
+    var plots = Enumerable.Range(1, OriginalSaveGame.MaxPlots - 1).Where(p => save.PlotOwner(p) == 1).ToList();
+    Console.WriteLine($"Plots bought: {string.Join(", ", plots)}");
     Console.WriteLine($"Entities in use: {save.Entities.Count} of {OriginalSaveGame.EntityCount}");
     foreach (var group in save.Entities.GroupBy(e => e.Kind).OrderBy(g => g.Key))
     {

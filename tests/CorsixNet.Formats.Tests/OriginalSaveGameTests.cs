@@ -78,6 +78,7 @@ public class OriginalSaveGameTests
     [InlineData(13 + (((5 * 128) + 7) * 8) + 2, "tile (7,5) byte 2")]
     [InlineData(131085 + (9 * 175) + 14, "entity 9 +14")]
     [InlineData(0x60194 + (17 * 35) + 2, "room 17 +2")]
+    [InlineData(0x6661C + 2, "plot 2")]
     [InlineData(399030, "day")]
     [InlineData(399031, "month")]
     [InlineData(399968 + 4697 + 53, "hospital 1 +53")]
@@ -107,6 +108,20 @@ public class OriginalSaveGameTests
         Assert.Equal((83, 80), parsed.Origin);
         Assert.Equal((83, 81), parsed.Door);
         Assert.Equal((82, 81), parsed.Outside);
+    }
+
+    [Fact]
+    public void ReadsPlotOwners()
+    {
+        var data = new byte[OriginalSaveGame.Length];
+        data[OriginalSaveGame.PlotOffset] = 16;
+        data[OriginalSaveGame.PlotOffset + 1] = 1;
+
+        var save = OriginalSaveGame.Parse(data);
+
+        Assert.Equal(16, save.PlotOwner(0));
+        Assert.Equal(1, save.PlotOwner(1));
+        Assert.Equal(0, save.PlotOwner(2));
     }
 
     [Fact]

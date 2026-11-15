@@ -13,7 +13,7 @@ namespace CorsixNet.Formats;
 /// <param name="WestWall">West wall block code, or 0.</param>
 /// <param name="Flags">Byte 5; in level files these are the passable/buildable flags.</param>
 /// <param name="Extra">Byte 6: high nibble shadow, low nibble litter.</param>
-/// <param name="Owner">Byte 7: owning hospital as a bit (2^player), 0 for the local player.</param>
+/// <param name="Owner">Byte 7: bit 16 set on tiles outside the hospital, cleared when their parcel is bought (as in level files).</param>
 public readonly record struct OriginalSaveTile(
     ushort Entity,
     byte Floor,
@@ -193,6 +193,12 @@ public sealed class OriginalSaveGame
     /// <summary>Number of room records read; the real limit is not known, but no data follows this many.</summary>
     public const int RoomCount = 100;
 
+    /// <summary>Offset of the plot owner table: one byte per land parcel of the level map.</summary>
+    public const int PlotOffset = 0x6661C;
+
+    /// <summary>Number of plot bytes read; levels use far fewer parcels.</summary>
+    public const int MaxPlots = 32;
+
     /// <summary>Offset of the day of the month (1-based); the month follows.</summary>
     public const int DateOffset = 399030;
 
@@ -232,6 +238,18 @@ public sealed class OriginalSaveGame
 
     /// <summary>Month of the game, starting at 0.</summary>
     public int Month => Data.Span[DateOffset + 1];
+
+    /// <summary>
+    /// Owner of a land parcel (numbered as in the level's <c>LEVEL.L*</c> map): 0 for sale, 1 bought by the
+    /// player, 16 for parcel 0 (outside the hospital). Tiles of bought parcels lose bit 16 of
+    /// <see cref="OriginalSaveTile.Owner"/>.
+    /// </summary>
+    public byte PlotOwner(int parcel)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(parcel);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(parcel, MaxPlots);
+        return Data.Span[PlotOffset + parcel];
+    }
 
     /// <summary>The map tile at a position.</summary>
     public OriginalSaveTile this[int x, int y] => _tiles[(y * MapSize) + x];
@@ -318,6 +336,11 @@ public sealed class OriginalSaveGame
         if (offset >= RoomOffset && offset < RoomOffset + (RoomCount * RoomLength))
         {
             return $"room {(offset - RoomOffset) / RoomLength} +{(offset - RoomOffset) % RoomLength}";
+        }
+
+        if (offset >= PlotOffset && offset < PlotOffset + MaxPlots)
+        {
+            return $"plot {offset - PlotOffset}";
         }
 
         if (offset is DateOffset)
