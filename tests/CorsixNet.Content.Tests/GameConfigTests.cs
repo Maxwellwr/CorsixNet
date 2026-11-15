@@ -43,6 +43,9 @@ public sealed class GameConfigTests : IDisposable
             machine_menu_button: false
             play_music: false
             music_volume: 0.75
+            movies: false
+            play_intro: false
+            play_demo: false
             """);
 
         AssertReadSettings(config);
@@ -65,6 +68,9 @@ public sealed class GameConfigTests : IDisposable
         Assert.False(config.MachineMenuButton);
         Assert.False(config.PlayMusic);
         Assert.Equal(0.75m, config.MusicVolume);
+        Assert.False(config.Movies);
+        Assert.False(config.PlayIntro);
+        Assert.False(config.PlayDemo);
         Assert.False(config.PlaySounds);
         Assert.Equal(0.25m, config.SoundVolume);
         Assert.Equal(new(3, 6.5, 120, 0.5, true), config.ScrollSettings());

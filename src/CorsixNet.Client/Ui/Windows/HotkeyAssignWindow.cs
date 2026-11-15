@@ -147,6 +147,8 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         "ingame_quickSave" => "Quick Save",
         "ingame_quickLoad" => "Quick Load",
         "global_screenshot" => "Screenshot",
+        "global_stop_movie" or "global_stop_movie_alt" => "Stop Movie",
+        "global_pause_movie" => "Pause Movie",
         "ingame_pause" => "Pause",
         "ingame_gamespeed_slowest" => "Slowest",
         "ingame_gamespeed_slower" => "Slower",
