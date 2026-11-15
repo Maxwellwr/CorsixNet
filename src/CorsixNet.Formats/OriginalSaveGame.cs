@@ -57,6 +57,27 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// 2 handyman, 3 receptionist.
     /// </summary>
     public byte Type => Raw.Span[14];
+
+    /// <summary>Staff only: role bits, 1 receptionist, 2 handyman, 4 nurse, 8 junior, 16 doctor, 128 consultant; 32 and 64 are specialities.</summary>
+    public byte StaffFlags => Raw.Span[124];
+
+    /// <summary>Staff only: skill from 0 to 1000.</summary>
+    public int Skill => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[126..]);
+
+    /// <summary>Staff only: monthly salary.</summary>
+    public int Salary => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[108..]);
+
+    /// <summary>Staff only: first letter of the name (the initial).</summary>
+    public char Initial => (char)Raw.Span[132];
+
+    /// <summary>Staff only: first part of the surname, an index into string section 8 of <c>LANG-*.DAT</c>.</summary>
+    public byte NameStart => Raw.Span[133];
+
+    /// <summary>Staff only: end of the surname, an index into string section 9.</summary>
+    public byte NameEnd => Raw.Span[134];
+
+    /// <summary>Staff only: the two description phrases, indices into string section 45 (misc) and then 46 or 47 (good or bad).</summary>
+    public (byte Misc, byte Character) Description => (Raw.Span[138], Raw.Span[139]);
 }
 
 /// <summary>Per-player hospital data of an original save (4697 bytes each).</summary>

@@ -69,9 +69,13 @@ static void Summary(OriginalSaveGame save)
     if (staff.Count > 0)
     {
         Console.WriteLine("Staff (tile 0,0 = for hire):");
+        var strings = LoadStrings();
         foreach (var member in staff)
         {
-            Console.WriteLine($"  #{member.Slot,-4} {StaffName(member.Type),-12} ({member.TileX},{member.TileY})");
+            var name = strings is null
+                ? $"{member.Initial}. #{member.NameStart}/{member.NameEnd}"
+                : $"{member.Initial}. {strings.Get(8, member.NameStart)}{strings.Get(9, member.NameEnd)}";
+            Console.WriteLine($"  #{member.Slot,-4} {StaffName(member.Type),-12} {name,-16} {Roles(member.StaffFlags),-24} skill {member.Skill / 10.0,5:0.0}%  ${member.Salary,-4} ({member.TileX},{member.TileY})");
         }
     }
 
@@ -143,6 +147,39 @@ static string Numbers(ReadOnlySpan<byte> x, ReadOnlySpan<byte> y, int offset, in
     >= 3 and <= 4 when offset + 4 <= x.Length => $"  (int32 {BitConverter.ToInt32(x.Slice(offset, 4))} -> {BitConverter.ToInt32(y.Slice(offset, 4))})",
     _ => string.Empty,
 };
+
+// Surnames are pieces of string sections 8 and 9 of the game's LANG-0.DAT; without the game only their numbers are shown.
+static StringTable? LoadStrings()
+{
+    var install = ThemeHospitalInstall.Locate();
+    return install?.FileExists("DATA", "LANG-0.DAT") == true ? StringTable.Parse(install.ReadDataFile("DATA", "LANG-0.DAT")) : null;
+}
+
+static string Roles(byte flags)
+{
+    var roles = new List<string>();
+    if ((flags & 8) != 0)
+    {
+        roles.Add("junior");
+    }
+
+    if ((flags & 128) != 0)
+    {
+        roles.Add("consultant");
+    }
+
+    if ((flags & 32) != 0)
+    {
+        roles.Add("spec32");
+    }
+
+    if ((flags & 64) != 0)
+    {
+        roles.Add("spec64");
+    }
+
+    return string.Join(' ', roles);
+}
 
 static string KindName(byte kind) => kind switch
 {

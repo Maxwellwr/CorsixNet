@@ -85,6 +85,32 @@ public class OriginalSaveGameTests
     }
 
     [Fact]
+    public void ReadsStaffFields()
+    {
+        var data = new byte[OriginalSaveGame.Length];
+        var entity = OriginalSaveGame.EntityOffset + (109 * OriginalSaveGame.EntityLength);
+        data[entity + 12] = 4;
+        data[entity + 14] = 1;
+        data[entity + 124] = 16;
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(entity + 126), 565);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(entity + 108), 161);
+        data[entity + 132] = (byte)'T';
+        data[entity + 133] = 16;
+        data[entity + 134] = 15;
+        data[entity + 138] = 23;
+        data[entity + 139] = 13;
+
+        var staff = Assert.Single(OriginalSaveGame.Parse(data).Entities);
+
+        Assert.Equal(16, staff.StaffFlags);
+        Assert.Equal(565, staff.Skill);
+        Assert.Equal(161, staff.Salary);
+        Assert.Equal('T', staff.Initial);
+        Assert.Equal((16, 15), (staff.NameStart, staff.NameEnd));
+        Assert.Equal(((byte)23, (byte)13), staff.Description);
+    }
+
+    [Fact]
     public void RejectsWrongSize()
     {
         Assert.Throws<InvalidDataException>(() => OriginalSaveGame.Parse(new byte[OriginalSaveGame.Length - 1]));
