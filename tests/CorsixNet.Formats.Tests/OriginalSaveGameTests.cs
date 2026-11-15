@@ -189,6 +189,20 @@ public class OriginalSaveGameTests
     }
 
     [Fact]
+    public void ReadsPatientHealthHistory()
+    {
+        var data = new byte[OriginalSaveGame.Length];
+        var entity = OriginalSaveGame.EntityOffset + (189 * OriginalSaveGame.EntityLength);
+        data[entity + 12] = 2;
+        byte[] history = [13, 13, 13, 13, 13, 13, 26, 21, 16, 11];
+        history.CopyTo(data, entity + 158);
+
+        var patient = Assert.Single(OriginalSaveGame.Parse(data).Entities);
+
+        Assert.Equal(history, patient.HealthHistory.ToArray());
+    }
+
+    [Fact]
     public void RejectsWrongSize()
     {
         Assert.Throws<InvalidDataException>(() => OriginalSaveGame.Parse(new byte[OriginalSaveGame.Length - 1]));

@@ -285,7 +285,7 @@ static string RoomName(byte type) => type switch
 
 static string KindName(byte kind) => kind switch
 {
-    2 => "patients?",
+    2 => "patients",
     4 => "staff",
     6 => "objects",
     8 => "doors",

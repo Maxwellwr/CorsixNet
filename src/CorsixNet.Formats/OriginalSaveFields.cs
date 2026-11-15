@@ -64,6 +64,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Entity, 133, 1, "name start", true),
         new(OriginalSaveArea.Entity, 134, 1, "name end", true),
         new(OriginalSaveArea.Entity, 138, 2, "description", true),
+        new(OriginalSaveArea.Entity, 158, 10, "patient health history", true),
 
         new(OriginalSaveArea.Room, 0, 1, "type", true),
         new(OriginalSaveArea.Room, 1, 1, "width", true),

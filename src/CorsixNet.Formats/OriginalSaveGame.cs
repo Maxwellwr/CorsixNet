@@ -51,7 +51,7 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
 
     /// <summary>
     /// Byte 12, the kind of entity. Seen so far: 6 objects, 8 doors (with <see cref="Type"/> 3 or a swing door
-    /// type), 4 staff and staff for hire, 2 patients (likely), 20 not yet known.
+    /// type), 4 staff and staff for hire, 2 patients, 20 not yet known.
     /// </summary>
     public byte Kind => Raw.Span[12];
 
@@ -66,6 +66,11 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// (a bench facing south-east on screen has 1).
     /// </summary>
     public byte Direction => Raw.Span[17];
+
+    /// <summary>
+    /// Patients only: the health history drawn in the patient window's graph, oldest first, higher is healthier.
+    /// </summary>
+    public ReadOnlySpan<byte> HealthHistory => Raw.Span.Slice(158, 10);
 
     /// <summary>
     /// Staff only: role bits, 1 receptionist, 2 handyman, 4 nurse, 8 junior, 16 doctor, 32 surgeon,
