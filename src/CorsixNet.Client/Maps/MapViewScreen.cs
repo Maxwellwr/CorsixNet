@@ -341,6 +341,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Whether a movie with sound paused the music, to go on with it afterwards (<c>holding_bg_music</c>).</summary>
     private bool _holdingMusic;
 
+    /// <summary>CorsixTH's picture behind the main menu, loaded while the menu shows.</summary>
+    private MenuBackground? _menuBackground;
+
     /// <summary>The last answer to the player's poaching already told, and the staff employed elsewhere at the last look.</summary>
     private PoachAnswer? _lastPoachSeen;
 
@@ -957,14 +960,32 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
         DrawDatePanel(batch, viewport);
         DrawRoomList(batch);
+
+        // UI:setMenuBackground and UI:draw: the main menu stands on CorsixTH's picture, not on the game.
+        var inMainMenu = _mainMenu is not null && _windows.Windows.Contains(_mainMenu);
+        if (inMainMenu)
+        {
+            _menuBackground ??= MenuBackground.Load(_device, viewport.Height);
+            _menuBackground?.Draw(batch, new Rectangle(0, 0, viewport.Width, viewport.Height));
+        }
+        else if (_menuBackground is not null)
+        {
+            _menuBackground.Dispose();
+            _menuBackground = null;
+        }
+
         if (IsWindowHostReady)
         {
             var pointer = InputScript.Mouse();
-            DrawBottomPanel(batch, viewport, new Point(pointer.X, pointer.Y));
-            DrawAdviser(batch, viewport);
+            if (!inMainMenu || _menuBackground is null)
+            {
+                DrawBottomPanel(batch, viewport, new Point(pointer.X, pointer.Y));
+                DrawAdviser(batch, viewport);
+            }
+
             DrawSubtitles(batch);
             _windows.Draw(batch, _text, _pixel, new Point(pointer.X, pointer.Y));
-            if (OriginalMenuBar.IsAvailable(this))
+            if (OriginalMenuBar.IsAvailable(this) && (!inMainMenu || _menuBackground is null))
             {
                 _menuBar.Draw(batch, this, MenuBarMenus(), viewport.Width, DateTime.Now);
             }
@@ -1109,6 +1130,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _sounds.Dispose();
         _music.Dispose();
         _movie.Dispose();
+        _menuBackground?.Dispose();
     }
 
     /// <summary>Where on the map view the middle of a tile is, for sounds heard there.</summary>
@@ -3157,10 +3179,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ToggleFax();
         }
 
-        var watch = WatchWindow.IsRunning(Simulation!, _session.Player);
+        // The watch belongs to a game; behind the main menu there is none to show it for (CorsixTH has no world there).
+        var watch = WatchWindow.IsRunning(Simulation!, _session.Player) && _mainMenu is null;
         if (watch && !_watchRan)
         {
             _windows.Open(new WatchWindow());
+        }
+        else if (!watch && _mainMenu is not null)
+        {
+            foreach (var open in _windows.Windows.OfType<WatchWindow>().ToList())
+            {
+                _windows.Close(open);
+            }
         }
 
         _watchRan = watch;
