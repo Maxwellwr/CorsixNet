@@ -195,6 +195,48 @@ public sealed class MapEditorTests : IDisposable
     }
 
     [Fact]
+    public void Deleting_walls_under_one_door_half_takes_the_other_half_too()
+    {
+        var editor = MapEditor.Blank();
+        editor.PlaceEntranceDoor(new TilePosition(10, 10), west: false);
+
+        editor.DeleteWalls([new TilePosition(9, 10)]);
+
+        Assert.Empty(editor.Objects);
+    }
+
+    [Fact]
+    public void A_door_is_copied_only_whole()
+    {
+        var editor = MapEditor.Blank();
+        editor.PlaceEntranceDoor(new TilePosition(10, 10), west: false);
+
+        Assert.Empty(editor.Copy(new TilePosition(10, 10), new TilePosition(11, 11)).Objects);
+        Assert.Empty(editor.Copy(new TilePosition(8, 10), new TilePosition(9, 10)).Objects);
+        Assert.Equal(
+            new[] { (new TilePosition(0, 0), MapEditor.EntranceLeftDoor), (new TilePosition(1, 0), MapEditor.EntranceRightDoor) },
+            editor.Copy(new TilePosition(9, 10), new TilePosition(10, 10)).Objects.Select(o => (o.Tile, o.ObjectType)).OrderBy(o => o.Tile.X).ToArray());
+    }
+
+    [Fact]
+    public void Pasting_leaves_no_door_half_behind()
+    {
+        var editor = MapEditor.Blank();
+        editor.PlaceEntranceDoor(new TilePosition(10, 10), west: false);
+        var clip = editor.Copy(new TilePosition(9, 10), new TilePosition(10, 10));
+        editor.PlaceEntranceDoor(new TilePosition(31, 20), west: false);
+
+        // The pasted tile 30,20 holds the old door's left half: its right half at 31,20 goes too.
+        editor.Paste(clip, new TilePosition(29, 20), new TilePosition(30, 20));
+        // A target one tile wide cuts the door in two: neither half goes down.
+        editor.Paste(clip, new TilePosition(40, 20), new TilePosition(40, 20));
+
+        Assert.Equal(
+            new[] { new TilePosition(9, 10), new TilePosition(10, 10), new TilePosition(29, 20), new TilePosition(30, 20) },
+            editor.Objects.Select(o => o.Tile).OrderBy(t => t.X).ToArray());
+    }
+
+    [Fact]
     public void ThePlayerCountChangesAndKeepsTheCameras()
     {
         var editor = MapEditor.Blank();

@@ -166,31 +166,17 @@ public sealed class MapEditor
     public void PlaceEntranceDoor(TilePosition tile, bool west)
     {
         var left = west ? new TilePosition(tile.X, tile.Y - 1) : new TilePosition(tile.X - 1, tile.Y);
-        foreach (var position in new[] { tile, left })
-        {
-            if (!_objects.TryGetValue(position, out var placed) || placed.ObjectType is not (EntranceLeftDoor or EntranceRightDoor))
-            {
-                continue;
-            }
-
-            var placedWest = (placed.Direction & 1) != 0;
-            var (dx, dy) = placedWest ? (0, 1) : (1, 0);
-            var other = placed.ObjectType == EntranceRightDoor
-                ? new TilePosition(position.X - dx, position.Y - dy)
-                : new TilePosition(position.X + dx, position.Y + dy);
-            _objects.Remove(position);
-            if (_objects.TryGetValue(other, out var half) && half.ObjectType is EntranceLeftDoor or EntranceRightDoor && half.ObjectType != placed.ObjectType)
-            {
-                _objects.Remove(other);
-            }
-        }
-
+        RemoveObjectAt(tile);
+        RemoveObjectAt(left);
         var direction = west ? (byte)1 : (byte)0;
         PlaceObject(new MapObjectPlacement(tile, EntranceRightDoor, direction));
         PlaceObject(new MapObjectPlacement(left, EntranceLeftDoor, direction));
     }
 
-    /// <summary><c>deleteWallsAtArea</c>: the tiles lose their walls and their objects; the floor stays.</summary>
+    /// <summary>
+    /// <c>deleteWallsAtArea</c>: the tiles lose their walls and their objects, an entrance door both its halves (as
+    /// <c>checkObjectSpace</c> removes it); the floor stays.
+    /// </summary>
     public void DeleteWalls(IEnumerable<TilePosition> tiles)
     {
         foreach (var position in tiles)
@@ -198,9 +184,45 @@ public sealed class MapEditor
             ref var tile = ref Map[position.X, position.Y];
             tile.NorthWall = 0;
             tile.WestWall = 0;
-            _objects.Remove(position);
+            RemoveObjectAt(position);
         }
     }
+
+    /// <summary>Removes the object on a tile; an entrance door's half takes its other half with it.</summary>
+    private void RemoveObjectAt(TilePosition position)
+    {
+        if (!_objects.Remove(position, out var placed))
+        {
+            return;
+        }
+
+        if (OtherHalf(placed) is { } other && _objects.TryGetValue(other, out var half) && IsOtherHalf(placed, half))
+        {
+            _objects.Remove(other);
+        }
+    }
+
+    /// <summary>
+    /// Where an entrance door's other half stands: the left door west of the right one in a north wall, north of it in a
+    /// west wall; null for any other object.
+    /// </summary>
+    private static TilePosition? OtherHalf(MapObjectPlacement placed)
+    {
+        if (placed.ObjectType is not (EntranceLeftDoor or EntranceRightDoor))
+        {
+            return null;
+        }
+
+        var (dx, dy) = (placed.Direction & 1) != 0 ? (0, 1) : (1, 0);
+        return placed.ObjectType == EntranceRightDoor
+            ? new TilePosition(placed.Tile.X - dx, placed.Tile.Y - dy)
+            : new TilePosition(placed.Tile.X + dx, placed.Tile.Y + dy);
+    }
+
+    /// <summary>Whether <paramref name="half"/> is the other half of the door <paramref name="placed"/> is one half of.</summary>
+    private static bool IsOtherHalf(MapObjectPlacement placed, MapObjectPlacement half) =>
+        half.ObjectType is EntranceLeftDoor or EntranceRightDoor && half.ObjectType != placed.ObjectType && half.Direction == placed.Direction
+        && OtherHalf(half) == placed.Tile;
 
     /// <summary><c>setParcelAtArea</c>: the tiles go into a parcel (0 for none).</summary>
     public void SetParcel(IEnumerable<TilePosition> tiles, int parcel)
@@ -229,6 +251,7 @@ public sealed class MapEditor
     {
         var minX = Math.Min(corner.X, other.X);
         var minY = Math.Min(corner.Y, other.Y);
+        var (maxX, maxY) = (Math.Max(corner.X, other.X), Math.Max(corner.Y, other.Y));
         var tiles = new List<MapClipTile>();
         var objects = new List<MapObjectPlacement>();
         foreach (var position in Area(corner, other))
@@ -236,7 +259,11 @@ public sealed class MapEditor
             var tile = Map[position.X, position.Y];
             var at = new TilePosition(position.X - minX, position.Y - minY);
             tiles.Add(new MapClipTile(at.X, at.Y, tile.Floor, tile.NorthWall, tile.WestWall, tile.Has(TileFlags.Buildable), tile.Has(TileFlags.Passable), tile.Has(TileFlags.Hospital)));
-            if (_objects.TryGetValue(position, out var placement))
+            // findObjects: an entrance door is copied whole or not at all.
+            if (_objects.TryGetValue(position, out var placement)
+                && (OtherHalf(placement) is not { } partner
+                    || (partner.X >= minX && partner.X <= maxX && partner.Y >= minY && partner.Y <= maxY
+                        && _objects.TryGetValue(partner, out var half) && IsOtherHalf(placement, half))))
             {
                 objects.Add(placement with { Tile = at });
             }
@@ -269,16 +296,18 @@ public sealed class MapEditor
                         tile.Set(TileFlags.Buildable, copied.Buildable);
                         tile.Set(TileFlags.Passable, copied.Passable);
                         tile.Set(TileFlags.Hospital, copied.Hospital);
-                        _objects.Remove(new TilePosition(x, y));
+                        RemoveObjectAt(new TilePosition(x, y));
                     }
                 }
 
                 foreach (var placement in clip.Objects)
                 {
                     var (x, y) = (baseX + placement.Tile.X, baseY + placement.Tile.Y);
-                    if (x <= maxX && y <= maxY)
+                    var pasted = placement with { Tile = new TilePosition(x, y) };
+                    // An entrance door goes down whole or not at all: no half cut off at the target's edge.
+                    if (x <= maxX && y <= maxY && (OtherHalf(pasted) is not { } partner || (partner.X <= maxX && partner.Y <= maxY)))
                     {
-                        PlaceObject(placement with { Tile = new TilePosition(x, y) });
+                        PlaceObject(pasted);
                     }
                 }
             }
