@@ -4056,7 +4056,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The options, with the hotkey assignment dialog (<c>UIOptions:buttonHotkey</c>), which goes back to them.</summary>
     private OptionsWindow NewOptionsWindow() =>
-        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage);
+        new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage, OpenSettingsDialog);
+
+    /// <summary>UIOptions's buttons: a settings dialog, whose Back opens the options again.</summary>
+    private void OpenSettingsDialog(SettingsDialogKind kind) =>
+        _windows.Open(new SettingsDialog(kind, _config, ApplyConfig, () => _windows.Open(NewOptionsWindow()), FontChoices, _music.HasMusic ? () => _windows.Open(new JukeboxWindow(_music.Playlist.Count)) : null));
 
     /// <summary>
     /// The system's fonts with every letter of the language's translation, for the options window's font choice, empty

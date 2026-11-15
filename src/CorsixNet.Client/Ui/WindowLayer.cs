@@ -145,6 +145,11 @@ internal sealed class WindowLayer
         var wanted = prefix ? text[..^1] : text;
         for (var i = _open.Count - 1; i >= 0; i--)
         {
+            if (_open[i].Layout is { Fullscreen: true } full && _host is { } host && _open[i].Window.FindFullscreenButton(host, text, nth) is { } local)
+            {
+                return full.Bounds.Location + local;
+            }
+
             var matches = (_open[i].Layout?.Cells ?? [])
                 .Where(cell => cell.Cell.OnClick is not null && (prefix
                     ? cell.Cell.Text.StartsWith(wanted, StringComparison.OrdinalIgnoreCase)

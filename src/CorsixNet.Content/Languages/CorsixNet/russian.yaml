@@ -16,6 +16,9 @@ strings:
     panel_recallPosKeys: Клавиши возврата к положению
   customise_window:
     enable_insurance_blue_banknote: Синие банкноты страховых
+  options_window:
+    graphics: Графика
+    accessibility: Доступность
   tooltip:
     accessibility_window:
       enable_announcer_subtitles: Если вы хотите видеть субтитры объявлений в вашей больнице, включите эту опцию.
