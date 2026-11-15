@@ -142,8 +142,8 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   text window. Fullscreen dialogs now draw themselves where `UiWindow.IsFullscreen` says so (`OriginalGraphics`).
 - Casebook: drawn as the original's (`CasebookScreen` over DrugN01V: the list with diagnoses first, the figures, the
   charge as a percentage for a moment after a change, the cure's kind and whether it can be cured, research, repeat
-  buttons with Shift and Ctrl, the wheel, clicks on the list, tooltips). Missing: the staff part of the cure
-  requirements' tooltip (only rooms are named).
+  buttons with Shift and Ctrl, the wheel, clicks on the list, tooltips, the cure requirements' rooms to research and
+  build and staff to hire).
 - Reputation: changes from the year-end award and staff kicked out;
   the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
   price, prices far from what patients expect, and the price rise above 500 are done.
