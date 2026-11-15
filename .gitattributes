@@ -11,3 +11,5 @@
 *.rnc binary
 *.wav binary
 *.WAV binary
+*.dat binary
+*.tab binary

@@ -416,6 +416,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
         _buildTool.AverageContents = _config.EnableAverageContents;
+        OriginalBottomPanel.MachineMenuButton = _config.MachineMenuButton;
         _buildTool.AbandonRequested = () => _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
         {
             _session?.Submit(new AbandonRebuildCommand());
@@ -4200,6 +4201,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _config = config;
         _buildTool.AverageContents = config.EnableAverageContents;
+        OriginalBottomPanel.MachineMenuButton = config.MachineMenuButton;
         _adviser.IsEnabled = !config.AdviserDisabled;
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
@@ -4985,6 +4987,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             "charts" => new GraphWindow(),
             "policy" => new PolicyWindow(),
             "fax" => new FaxWindow(),
+            "machines" => new MachineMenuWindow(),
             _ => null,
         };
         if (key is "bank" or "bankstats")
@@ -5014,6 +5017,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         "charts" => _windows.Windows.Any(w => w is GraphWindow),
         "policy" => _windows.Windows.Any(w => w is PolicyWindow),
         "fax" => _windows.Windows.Any(w => w is FaxWindow),
+        "machines" => _windows.Windows.Any(w => w is MachineMenuWindow),
         "rooms" => _roomList || _buildTool.IsActive || _windows.Windows.Any(w => w is BuildRoomWindow),
         "corridor" => _furnishTool.IsActive || _windows.Windows.Any(w => w is FurnishCorridorWindow),
         "edit" => _pickingRoomToEdit,

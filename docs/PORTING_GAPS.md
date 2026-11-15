@@ -64,7 +64,9 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   partial: a room without staff calls the free member of staff with the best `getPriorityForRoom` score (path,
   waiting patients, emergencies, fatigue, specialist rooms first), unless another waiting room scores better for them;
   with `staff_allowed_to_move`, staff idle in a room nobody waits for are called to a room with patients waiting.
-  There is no call queue object or dispatching of handymen and vaccinations (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
+  Vaccinations go to the nearest free nurse within 5 tiles (`Epidemics`), and handymen take their tasks as CorsixTH's
+  `hospital.lua` gives them (its repair and watering calls never verify a member of staff). There is no call queue
+  object: rooms call every tick instead (`calls_dispatcher.lua`, `humanoid_actions/answer_call.lua`, `call_checkpoint.lua`).
 - Going to the staff room and resting there (the raise requests, the policy's automatic raise and quitting are in
   `StaffEmployment`, the request dialog in `StaffRiseWindow`). Happiness is
   done for warmth, pay, nearby objects, a room's windows and space and the highest salary (`Feelings`), fatigue
@@ -171,8 +173,8 @@ fonts, faces) and the details listed.
 
 - Bottom panel: drawn as the original's (`Ui/OriginalBottomPanel`: Panel02V buttons with the hover row, balance,
   date, reputation meter, fax door, dynamic info and pause text, fax icons by kind). The fax icons slide out of the door,
-  the emergency's siren turns and a right click dismisses a fax with one choice (`FaxDrawer`). The dynamic info's lines and its diagnosis and tiredness bars are drawn (`DynamicInfoLines`). Missing: CorsixTH's
-  machine menu button (aux_ui sprites); Machines and the adviser's messages are on their hotkeys only.
+  the emergency's siren turns and a right click dismisses a fax with one choice (`FaxDrawer`). The dynamic info's lines and its diagnosis and tiredness bars are drawn (`DynamicInfoLines`), and so is CorsixTH's
+  machine menu button with its aux_ui sprites (`machine_menu_button`, `AuxSprites`); the adviser's messages are on their hotkey only.
 - Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock); CorsixTH's music, warmth colour and wage options, its debug items and submenus are not in it. Esc still opens the menu window too.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the

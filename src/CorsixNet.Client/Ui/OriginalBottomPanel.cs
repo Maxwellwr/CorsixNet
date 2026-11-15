@@ -1,5 +1,6 @@
 // The bottom panel as the original draws it, ported from CorsixTH CorsixTH/Lua/dialogs/bottom_panel.lua (drawPanels,
-// draw, drawReputationMeter, drawDynamicInfo, showAdditionalButtons) and dialogs/message.lua (the fax icons).
+// draw, drawReputationMeter, drawDynamicInfo, showAdditionalButtons, machineMenuButtonExists) and dialogs/message.lua (the
+// fax icons). The machine menu button's sprites are CorsixTH's own (CorsixTH/Bitmap/aux_ui.dat, sprites 22 and 23).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Globalization;
@@ -36,11 +37,20 @@ internal sealed record BottomPanelState(
 /// The original's bottom panel, 640 by 48 pixels at the bottom middle of the screen: the bank button, the balance and
 /// reputation meter, the date, the fax door, the build, corridor, edit and hire buttons, and the dynamic info bar that
 /// gives way to the buttons of the fullscreen dialogs while the cursor is over the panel. Waiting faxes stand on its
-/// left as icons. Clicks give the buttons' keys to the screen.
+/// left as icons. Clicks give the buttons' keys to the screen. With CorsixTH's machine menu button
+/// (<c>machine_menu_button</c>, on a screen wider than 676 pixels) it is 676 wide, the button after the staff
+/// management one and the other hover buttons 38 pixels further right.
 /// </summary>
 internal sealed class OriginalBottomPanel : IDisposable
 {
     public const int Width = 640;
+
+    /// <summary>The panel's width with the machine menu button (<c>UIBottomPanel:drawPanels</c>).</summary>
+    public const int WideWidth = 676;
+
+    /// <summary>How far the hover buttons after the machine menu button move right to make room for it.</summary>
+    public const int MachineButtonOffset = 38;
+
     public const int Height = 48;
 
     /// <summary>A fax icon's size, and how far above the panel they stand (UIMessage's 30 by 28, stop_y -24).</summary>
@@ -60,6 +70,7 @@ internal sealed class OriginalBottomPanel : IDisposable
         new("edit", "Edit room", 8, 285, new Rectangle(1, 6, 35, 36), 9, Hover: false, "Edit rooms/items", null, "ingame_panel_editRoom"),
         new("hire", "Hire", 10, 322, new Rectangle(1, 6, 35, 36), 11, Hover: false, "Hire staff", "hire", "ingame_panel_hireStaff"),
         new("staff", "Staff", 15, 364, new Rectangle(6, 6, 35, 36), 16, Hover: true, "Staff management", null, "ingame_panel_staffManage"),
+        new("machines", "Machines", 0, 407, new Rectangle(2, 6, 36, 36), 0, Hover: true, "Machine menu", null, "ingame_panel_machineMenu"),
         new("town", "Town", 17, 407, new Rectangle(1, 6, 35, 36), 18, Hover: true, "Town map", null, "ingame_panel_townMap"),
         new("casebook", "Casebook", 19, 445, new Rectangle(1, 6, 35, 36), 20, Hover: true, "Drug casebook", null, "ingame_panel_casebook"),
         new("research", "Research", 21, 483, new Rectangle(1, 6, 35, 36), 22, Hover: true, "Research", null, "ingame_panel_research"),
@@ -69,6 +80,9 @@ internal sealed class OriginalBottomPanel : IDisposable
     ];
 
     private readonly SpriteAtlas _sprites;
+
+    /// <summary>CorsixTH's aux_ui sprites, for the machine menu button; null if they could not be read.</summary>
+    private readonly SpriteAtlas? _auxSprites;
     private readonly TextRenderer _moneyFont;
     private readonly TextRenderer _dateFont;
     private readonly TextRenderer _whiteFont;
@@ -84,12 +98,46 @@ internal sealed class OriginalBottomPanel : IDisposable
         _dateFont = Font(device, install, "FONT16V", palette);
         _whiteFont = Font(device, install, "FONT01V", palette);
         _pauseFont = Font(device, install, "FONT124V", palette);
+        _auxSprites = AuxSprites.Load() is { } aux ? new SpriteAtlas(device, aux, palette) : null;
         _pixel = new Texture2D(device, 1, 1);
         _pixel.SetData([Color.White]);
     }
 
+    /// <summary>Whether the panel has the machine menu button (CorsixTH's <c>machine_menu_button</c>, on by default).</summary>
+    public static bool MachineMenuButton { get; set; } = true;
+
+    /// <summary><c>UIBottomPanel:machineMenuButtonExists</c>: the setting is on and the screen is wider than 676 pixels.</summary>
+    public static bool HasMachineButton(Viewport viewport) => MachineMenuButton && viewport.Width > WideWidth;
+
+    /// <summary>The panel's width: 676 with the machine menu button, else 640.</summary>
+    public static int PanelWidth(Viewport viewport) => HasMachineButton(viewport) ? WideWidth : Width;
+
     /// <summary>Where the panel is: centred at the bottom of the screen (<c>setDefaultPosition(0.5, -0.1)</c>).</summary>
-    public static Rectangle Bounds(Viewport viewport) => new((viewport.Width - Width) / 2, viewport.Height - Height, Width, Height);
+    public static Rectangle Bounds(Viewport viewport)
+    {
+        var width = PanelWidth(viewport);
+        return new((viewport.Width - width) / 2, viewport.Height - Height, width, Height);
+    }
+
+    /// <summary>The buttons the panel has, each with where it goes from the panel's left.</summary>
+    private static IEnumerable<(PanelButton Button, int X)> PlacedButtons(Viewport viewport)
+    {
+        var wide = HasMachineButton(viewport);
+        foreach (var button in Buttons)
+        {
+            if (button.Key == "machines")
+            {
+                if (wide)
+                {
+                    yield return (button, button.X);
+                }
+
+                continue;
+            }
+
+            yield return (button, button.X + (wide && button.Hover && button.Key != "staff" ? MachineButtonOffset : 0));
+        }
+    }
 
     /// <summary>
     /// The fax icon of a fax's kind (UIMessage's types): emergency 43, epidemic 45, strike 47, personality 49,
@@ -144,7 +192,7 @@ internal sealed class OriginalBottomPanel : IDisposable
         var bounds = Bounds(viewport);
         var over = bounds.Contains(at) || FaxAt(viewport, at, faxes) is not null;
         var hovering = bounds.Contains(at);
-        var button = ButtonAt(bounds, at, hovering);
+        var button = ButtonAt(viewport, at, hovering);
         if (mouse.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released)
         {
             _pressed = button?.Key ?? FaxKey(viewport, at, faxes);
@@ -182,7 +230,7 @@ internal sealed class OriginalBottomPanel : IDisposable
     public static string? TooltipAt(Viewport viewport, Point mouse, Func<string, string?> hotkeyText)
     {
         var bounds = Bounds(viewport);
-        if (ButtonAt(bounds, mouse, bounds.Contains(mouse)) is not { } button)
+        if (ButtonAt(viewport, mouse, bounds.Contains(mouse)) is not { } button)
         {
             return null;
         }
@@ -193,6 +241,7 @@ internal sealed class OriginalBottomPanel : IDisposable
             "corridor" => "tooltip.toolbar.objects",
             "staff" => "tooltip.toolbar.staff_list",
             "town" => "tooltip.toolbar.town_map",
+            "machines" => "tooltip.toolbar.machine_menu",
             var other => "tooltip.toolbar." + other,
         };
         var template = UiText.Get(name, button.Tooltip + " (%s)");
@@ -205,8 +254,8 @@ internal sealed class OriginalBottomPanel : IDisposable
     public static Point? FindButton(Viewport viewport, string label)
     {
         var bounds = Bounds(viewport);
-        return Buttons.FirstOrDefault(button => string.Equals(button.Label, label, StringComparison.OrdinalIgnoreCase)) is { } found
-            ? new Point(bounds.X + found.X + found.Hit.Center.X, bounds.Y + found.Hit.Center.Y)
+        return PlacedButtons(viewport).FirstOrDefault(placed => string.Equals(placed.Button.Label, label, StringComparison.OrdinalIgnoreCase)) is { Button: { } found } hit
+            ? new Point(bounds.X + hit.X + found.Hit.Center.X, bounds.Y + found.Hit.Center.Y)
             : null;
     }
 
@@ -219,14 +268,15 @@ internal sealed class OriginalBottomPanel : IDisposable
         // drawPanels: the background pieces, the buttons and the dynamic info bar.
         _sprites.Draw(batch, 3, x + 40, y, Color.White);
         _sprites.Draw(batch, 12, x + 364, y, Color.White);
-        for (var dx = 377; dx <= 630; dx += 10)
+        var wide = HasMachineButton(viewport);
+        for (var dx = 377; dx <= (wide ? 660 : 630); dx += 10)
         {
             _sprites.Draw(batch, 13, x + dx, y, Color.White);
         }
 
-        _sprites.Draw(batch, 14, x + 627, y, Color.White);
-        var under = ButtonAt(bounds, mouse, hovering);
-        foreach (var button in Buttons)
+        _sprites.Draw(batch, 14, x + (wide ? 665 : 627), y, Color.White);
+        var under = ButtonAt(viewport, mouse, hovering);
+        foreach (var (button, bx) in PlacedButtons(viewport))
         {
             if (button.Hover && !hovering)
             {
@@ -236,8 +286,16 @@ internal sealed class OriginalBottomPanel : IDisposable
             var down = (_pressed == button.Key && under?.Key == button.Key && buttons.LeftButton == ButtonState.Pressed)
                 || state.IsOn(button.Key)
                 || (button.Lit is { } lit && state.IsLit(lit));
+            if (button.Key == "machines")
+            {
+                // The machine menu button's custom_draw: panel sprite 0, then aux_ui's idle (22) or pressed (23) sprite.
+                _sprites.Draw(batch, button.Sprite, x + bx, y, Color.White);
+                _auxSprites?.Draw(batch, down ? 23 : 22, x + bx, y, Color.White);
+                continue;
+            }
+
             // A pressed button's panel shows its other sprite (Window:makeButtonOnPanel's sprite_index_active).
-            _sprites.Draw(batch, down ? button.Pressed : button.Sprite, x + button.X, y, Color.White);
+            _sprites.Draw(batch, down ? button.Pressed : button.Sprite, x + bx, y, Color.White);
         }
 
         foreach (var (digit, dx) in BalanceDigits(state.Balance))
@@ -250,7 +308,7 @@ internal sealed class OriginalBottomPanel : IDisposable
 
         if (!hovering)
         {
-            DrawDynamicInfo(batch, x + 364, y, state);
+            DrawDynamicInfo(batch, x + 364, y, PanelWidth(viewport), state);
         }
 
         // The fax door, shut while no fax waits.
@@ -330,12 +388,12 @@ internal sealed class OriginalBottomPanel : IDisposable
     /// drawDynamicInfo: while paused the pause text in the middle, unless something is under the cursor; else the info's
     /// lines, ten pixels apart.
     /// </summary>
-    private void DrawDynamicInfo(SpriteBatch batch, int x, int y, BottomPanelState state)
+    private void DrawDynamicInfo(SpriteBatch batch, int x, int y, int width, BottomPanelState state)
     {
         if (state.Pause is { } pause && state.Info is null)
         {
-            var width = _pauseFont.Measure(pause).Width;
-            _pauseFont.Draw(batch, pause, new Vector2(x + 10 + ((255 - width) / 2), y + 14), tint: _pauseFont.IsTrueTypeFor(pause) ? new Color(35, 138, 173) : null);
+            var pauseWidth = _pauseFont.Measure(pause).Width;
+            _pauseFont.Draw(batch, pause, new Vector2(x + 10 + ((255 - pauseWidth) / 2), y + 14), tint: _pauseFont.IsTrueTypeFor(pause) ? new Color(35, 138, 173) : null);
             return;
         }
 
@@ -347,7 +405,7 @@ internal sealed class OriginalBottomPanel : IDisposable
         // drawDynamicInfo: a line every 10 pixels; on the last, the bar 100 wide at the right of the info area (white
         // frame, black, orange for the share done) with white dividers.
         var lines = info.Lines.Take(3).ToList();
-        var right = x + (Width - 364);
+        var right = x + (width - 364);
         for (var i = 1; i <= lines.Count; i++)
         {
             foreach (var line in Maps.MapViewScreen.WrapToWidth(lines[i - 1], 240, text => _whiteFont.Measure(text).Width).Take(1))
@@ -372,16 +430,17 @@ internal sealed class OriginalBottomPanel : IDisposable
     /// <summary>The orange part of the progress bar: 98 pixels for the whole.</summary>
     public static int ProgressWidth(decimal progress) => (int)Math.Floor(98 * Math.Clamp(progress, 0m, 1m));
 
-    private static PanelButton? ButtonAt(Rectangle bounds, Point at, bool hovering)
+    private static PanelButton? ButtonAt(Viewport viewport, Point at, bool hovering)
     {
-        foreach (var button in Buttons)
+        var bounds = Bounds(viewport);
+        foreach (var (button, x) in PlacedButtons(viewport))
         {
             if (button.Hover && !hovering)
             {
                 continue;
             }
 
-            var hit = new Rectangle(bounds.X + button.X + button.Hit.X, bounds.Y + button.Hit.Y, button.Hit.Width, button.Hit.Height);
+            var hit = new Rectangle(bounds.X + x + button.Hit.X, bounds.Y + button.Hit.Y, button.Hit.Width, button.Hit.Height);
             if (hit.Contains(at))
             {
                 return button;
@@ -430,6 +489,31 @@ internal sealed class OriginalBottomPanel : IDisposable
     /// the hotkey action that opens it too.
     /// </summary>
     private sealed record PanelButton(string Key, string Label, int Sprite, int X, Rectangle Hit, int Pressed, bool Hover, string Tooltip, string? Lit, string Hotkey);
+}
+
+/// <summary>CorsixTH's own interface sprites (<c>CorsixTH/Bitmap/aux_ui.tab</c> and <c>.dat</c>), carried in the client.</summary>
+internal static class AuxSprites
+{
+    /// <summary>The sheet, drawn with the game's palette as CorsixTH does (<c>loadSpriteTable("Bitmap", "aux_ui", true)</c>); null if missing.</summary>
+    public static SpriteSheet? Load()
+    {
+        var table = Read("aux_ui.tab");
+        var data = Read("aux_ui.dat");
+        return table is null || data is null ? null : SpriteSheet.Parse(table, data, complex: true);
+    }
+
+    private static byte[]? Read(string name)
+    {
+        using var stream = typeof(AuxSprites).Assembly.GetManifestResourceStream("CorsixNet.Client.Assets." + name);
+        if (stream is null)
+        {
+            return null;
+        }
+
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
+    }
 }
 
 /// <summary>
