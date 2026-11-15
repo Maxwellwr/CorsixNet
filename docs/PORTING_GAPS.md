@@ -96,8 +96,10 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
 - (Done: carrying staff: the grab cursor, the member of staff drawn under it, tinted where they may not go, `pickup.wav`
   and `plac_st2.wav`, a right click letting them go. One picked up while using an object with a patient (the pharmacy
   nurse, a doctor at the trolley or a machine) stops there (`MultiObjectUse.Abort`, `StaffEmployment.Detach`), and the
-  patient waits for the next or gets off as when staff leave.) The operating theatre's surgeons, working the table
-  together, cannot be picked up until the operation is over.
+  patient waits for the next or gets off as when staff leave. A surgeon picked up during an operation finishes it
+  first, then goes where they were put down, as CorsixTH's pickup action waits behind the operation's must-happen
+  table actions (`Staff:setPickup`, `operating_theatre.lua`; `DoctorBehaviour.PendingMove`, kept in saves).) CorsixTH
+  cuts the first surgeon's prolonged table use short when he is the one picked up; here the operation runs its length.
 
 ## 4. Patients, diseases, epidemics, VIPs, emergencies, disasters
 

@@ -1010,6 +1010,17 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
     }
 
     /// <summary>The operation is over (<c>operatring_theatre_table_after_use</c>): the surgeon meanders, ready again.</summary>
+    /// <summary>
+    /// Where a surgeon picked up in the middle of an operation is to be put down once it is over (CorsixTH's pickup action
+    /// waiting behind the operation's must-happen actions, <c>Staff:setPickup</c>), or null.
+    /// </summary>
+    public TilePosition? PendingMove { get; private set; }
+
+    /// <summary>The surgeon is picked up in the middle of the operation: they finish it first, then go to <paramref name="tile"/>.</summary>
+    internal void DeferMove(TilePosition tile) => PendingMove = tile;
+
+    internal void ClearPendingMove() => PendingMove = null;
+
     internal void OnOperated()
     {
         if (Phase is DoctorPhase.OtAtTable or DoctorPhase.OtOperating)
@@ -1347,6 +1358,11 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         }
 
         writer.WriteBool(_restAfterChange);
+        writer.WriteBool(PendingMove is not null);
+        if (PendingMove is { } pending)
+        {
+            writer.WriteTile(pending);
+        }
     }
 
     internal static DoctorBehaviour ReadState(SimReader reader)
@@ -1396,6 +1412,11 @@ public sealed class DoctorBehaviour : HumanoidBehaviour, IRoomStaff
         if (reader.Version is 0 or >= 89)
         {
             doctor._restAfterChange = reader.ReadBool();
+        }
+
+        if ((reader.Version is 0 or >= 99) && reader.ReadBool())
+        {
+            doctor.PendingMove = reader.ReadTile();
         }
 
         return doctor;
