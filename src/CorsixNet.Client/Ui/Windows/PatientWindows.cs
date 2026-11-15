@@ -21,6 +21,57 @@ internal sealed class PatientWindow(int patientId) : UiWindow
 {
     private bool _confirmHome;
 
+    /// <summary>The hospital the referral button sends the patient to (the network game's Patient Redirection Panel).</summary>
+    private int _referTo = -1;
+
+    /// <summary>Whether the window shows the referral button under the original's panel: a game of several hospitals.</summary>
+    private bool _referrals;
+
+    private const int ReferHeight = 26;
+
+    private readonly ResizablePanels _referPanels = new();
+
+    /// <summary>The next other hospital after <paramref name="from"/>, going round; -1 with none.</summary>
+    private static int NextHospital(IWindowHost host, int from, int step)
+    {
+        var count = host.Simulation.Hospitals.Count;
+        for (var i = 1; i <= count; i++)
+        {
+            var next = (((from < 0 ? host.Player : from) + (step * i)) % count + count) % count;
+            if (next != host.Player)
+            {
+                return next;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>The referral button, CorsixTH style, under the original's panel: left sends, right picks another hospital.</summary>
+    private List<DialogPanel> ReferPanels(IWindowHost host, Humanoid humanoid)
+    {
+        if (_referTo < 0 || _referTo >= host.Simulation.Hospitals.Count || _referTo == host.Player)
+        {
+            _referTo = NextHospital(host, -1, 1);
+        }
+
+        var label = UiText.Format("corsixnet.referral.refer", "Refer to %1%", ProgressReportScreen.HospitalName(host, _referTo));
+        return
+        [
+            DialogPanel.Button(new Rectangle(0, PatientScreen.Size.Y + 2, PatientScreen.Size.X, ReferHeight - 4), label, step =>
+            {
+                if (step < 0)
+                {
+                    _referTo = NextHospital(host, _referTo, 1);
+                }
+                else
+                {
+                    host.Submit(new ReferPatientCommand(humanoid.Id, _referTo));
+                }
+            }, UiText.Get("corsixnet.referral.tooltip", "Send the patient to another player's hospital; right click picks another hospital")),
+        ];
+    }
+
     public int PatientId { get; } = patientId;
 
     private PatientScreen? _screen;
@@ -28,9 +79,13 @@ internal sealed class PatientWindow(int patientId) : UiWindow
     private PatientScreen Screen => _screen ??= new PatientScreen(PatientId);
 
     /// <summary>The original's look (<see cref="PatientScreen"/>) where its graphics are there; else the table below.</summary>
-    public override bool IsFullscreen(IWindowHost host) => Patient(host) is not null && PatientScreen.IsAvailable(host);
+    public override bool IsFullscreen(IWindowHost host)
+    {
+        _referrals = host.Simulation.Hospitals.Count > 1 && ResizablePanels.IsAvailable(host);
+        return Patient(host) is not null && PatientScreen.IsAvailable(host);
+    }
 
-    public override Point FullscreenSize => PatientScreen.Size;
+    public override Point FullscreenSize => _referrals ? new Point(PatientScreen.Size.X, PatientScreen.Size.Y + ReferHeight) : PatientScreen.Size;
 
     /// <summary>UIPatient:setDefaultPosition(-20, 30).</summary>
     public override Vector2? FullscreenPosition => new(-20, 30);
@@ -40,6 +95,17 @@ internal sealed class PatientWindow(int patientId) : UiWindow
         if (Patient(host) is { Behaviour: PatientBehaviour patient } humanoid)
         {
             Screen.Draw(batch, host, origin, mouse, humanoid, patient);
+            if (_referrals)
+            {
+                var look = host.Graphics!.Resizable!;
+                var font = ResizablePanels.Font(host);
+                foreach (var panel in ReferPanels(host, humanoid))
+                {
+                    var area = new Rectangle(origin + panel.Area.Location, panel.Area.Size);
+                    var held = mouse.LeftButton == ButtonState.Pressed && area.Contains(mouse.X, mouse.Y);
+                    look.DrawBevel(batch, area, panel.Colour, held, panel.Label, font);
+                }
+            }
         }
     }
 
@@ -47,12 +113,20 @@ internal sealed class PatientWindow(int patientId) : UiWindow
     {
         if (Patient(host) is { Behaviour: PatientBehaviour patient } humanoid)
         {
+            if (_referrals && local.Y >= PatientScreen.Size.Y)
+            {
+                _referPanels.Mouse(host, ReferPanels(host, humanoid), local, mouse, previous);
+                return;
+            }
+
             Screen.Mouse(host, this, local, mouse, previous, humanoid, patient);
         }
     }
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) =>
-        Patient(host) is { Behaviour: PatientBehaviour patient } ? Screen.Tooltip(host, local, patient) : null;
+        Patient(host) is { Behaviour: PatientBehaviour patient } humanoid
+            ? (_referrals && local.Y >= PatientScreen.Size.Y ? ResizablePanels.Tooltip(ReferPanels(host, humanoid), local) : Screen.Tooltip(host, local, patient))
+            : null;
 
     /// <summary>ingame_patient_gohome (H): sends the patient home, as the button does.</summary>
     public override bool TakesKey(string action) => action == "ingame_patient_gohome";
@@ -118,6 +192,13 @@ internal sealed class PatientWindow(int patientId) : UiWindow
             WindowCell.Button(UiText.Get("corsixnet.patient.vaccinate", "Vaccinate"), () => host.Submit(new VaccinateCommand(humanoid.Id)), coverUp && patient.IsInfected && !patient.IsVaccinated && !patient.IsMarkedForVaccination).WithTooltip(UiText.Get("corsixnet.patient.vaccinate_tooltip", "Have a nurse vaccinate this patient during the epidemic")),
             WindowCell.Button(UiText.Get("corsixnet.staff.show", "Show"), () => host.CenterOn(humanoid.Tile)).WithTooltip(OriginalTooltips.Get(host, 95, "Show the patient in the hospital")),
             WindowCell.Button(UiText.Get("corsixnet.queue.caption", "Queue"), () => host.Open(new QueueWindow(patient.TargetId)), QueueWindow.QueueOf(simulation, patient.TargetId) is not null).WithTooltip(OriginalTooltips.Get(host, 97, "Show the queue the patient is in")));
+        if (simulation.Hospitals.Count > 1)
+        {
+            // The network game's Patient Redirection Panel: a button for each other hospital.
+            yield return WindowRow.Of([.. Enumerable.Range(0, simulation.Hospitals.Count).Where(other => other != host.Player).Select(other =>
+                WindowCell.Button(UiText.Format("corsixnet.referral.refer", "Refer to %1%", ProgressReportScreen.HospitalName(host, other)), () => host.Submit(new ReferPatientCommand(humanoid.Id, other)))
+                    .WithTooltip(UiText.Get("corsixnet.referral.tooltip", "Send the patient to another player's hospital; right click picks another hospital")))]);
+        }
     }
 
     private static string History(Simulation simulation, IWindowHost host, TreatmentHistoryEntry entry) => entry.Kind switch

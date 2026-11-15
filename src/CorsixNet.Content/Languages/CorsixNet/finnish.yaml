@@ -243,6 +243,9 @@ strings:
   transactions:
     remove_room: 'Rakennus: tuhoutuneen huoneen poisto'
   corsixnet:
+    referral:
+      refer: 'Lähetä: %1%'
+      tooltip: 'Lähettää potilaan toisen pelaajan sairaalaan; oikea painike valitsee toisen sairaalan'
     poach:
       asked: 'Kysyt, haluaisiko %1% mieluummin työskennellä sinulle'
       listened: '%1% on tyytymätön ja pyytää sairaalaltaan paljon lisää rahaa'

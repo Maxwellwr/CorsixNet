@@ -93,6 +93,9 @@ strings:
       machine_menu: 'Machinemenu (%s)'
       status: 'Toestand (%s)'
   corsixnet:
+    referral:
+      refer: 'Doorverwijzen naar %1%'
+      tooltip: 'Stuurt de patiënt naar het ziekenhuis van een andere speler; rechtsklik kiest een ander ziekenhuis'
     poach:
       asked: 'Je vraagt %1% of die liever voor jou werkt'
       listened: '%1% is ontevreden en vraagt het ziekenhuis om veel meer geld'

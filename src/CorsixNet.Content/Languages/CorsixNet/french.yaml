@@ -39,6 +39,9 @@ strings:
         patient_happiness: Le bonheur moyen de vos patients ne doit pas descendre sous %d%. Il est de %d%
         staff_happiness: Le bonheur moyen de votre personnel ne doit pas descendre sous %d%. Il est de %d%
   corsixnet:
+    referral:
+      refer: 'Envoyer à %1%'
+      tooltip: 'Envoie le patient à l’hôpital d’un autre joueur ; clic droit pour choisir un autre hôpital'
     poach:
       asked: 'Vous demandez à %1% s’il préférerait travailler pour vous'
       listened: '%1% est mécontent et réclame beaucoup plus à son hôpital'

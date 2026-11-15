@@ -171,6 +171,9 @@ strings:
   transactions:
     remove_room: 'Bygging: fjern ödelagt rom'
   corsixnet:
+    referral:
+      refer: 'Henvis til %1%'
+      tooltip: 'Sender pasienten til en annen spillers sykehus; høyreklikk velger et annet sykehus'
     poach:
       asked: 'Du spør %1% om de heller vil jobbe for deg'
       listened: '%1% er misfornøyd og ber sykehuset sitt om mye mer penger'

@@ -74,6 +74,9 @@ strings:
     toolbar:
       machine_menu: 'Menu de máquinas (%s)'
   corsixnet:
+    referral:
+      refer: 'Enviar para %1%'
+      tooltip: 'Envia o paciente ao hospital de outro jogador; o botão direito escolhe outro hospital'
     poach:
       asked: 'Você pergunta a %1% se prefere trabalhar para você'
       listened: '%1% está infeliz e pede muito mais dinheiro ao seu hospital'

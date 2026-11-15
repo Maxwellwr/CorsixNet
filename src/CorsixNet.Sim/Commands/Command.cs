@@ -64,6 +64,7 @@ public enum CommandKind : ushort
     MakeDebugRat = 49,
     BidForParcel = 50,
     PoachStaff = 51,
+    ReferPatient = 52,
 }
 
 /// <summary>
@@ -139,6 +140,7 @@ public abstract record Command
             CommandKind.MakeDebugRat => new MakeDebugRatCommand(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
             CommandKind.BidForParcel => new BidForParcelCommand(reader.ReadInt32()),
             CommandKind.PoachStaff => new PoachStaffCommand(reader.ReadInt32()),
+            CommandKind.ReferPatient => new ReferPatientCommand(reader.ReadInt32(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -723,6 +725,29 @@ public sealed record PoachStaffCommand(int StaffId) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(StaffId);
+}
+
+/// <summary>
+/// Refers a patient of the issuing player's hospital to another player's (the network game's Patient Redirection Panel,
+/// <see cref="People.PatientBehaviour.Refer"/>).
+/// </summary>
+public sealed record ReferPatientCommand(int PatientId, int Hospital) : Command
+{
+    public override CommandKind Kind => CommandKind.ReferPatient;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (simulation.FindEntity(PatientId) is Entities.Humanoid { Behaviour: People.PatientBehaviour patient, IsDespawning: false } humanoid && humanoid.HospitalPlayer == player)
+        {
+            patient.Refer(simulation, humanoid, Hospital);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(PatientId);
+        writer.WriteInt32(Hospital);
+    }
 }
 
 /// <summary>Bids for the parcel up for auction (<see cref="LandAuction"/>): the next bid, if the player may and can pay it.</summary>
