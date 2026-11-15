@@ -62,16 +62,23 @@ public sealed class SettingsWindowTests : IDisposable
 
         host.Click(window, "Type a name for a new save");
         Assert.True(window.IsCapturing);
-        foreach (var key in new[] { new Hotkey("m", Shift: true), new("y"), new("space"), new("x"), new("backspace"), new("2"), new("-", Shift: true), new("a") })
+        foreach (var character in "My x")
         {
-            window.Capture(key);
+            window.Type(character);
         }
 
-        Assert.Equal("My 2_a", window.TypedName);
+        window.Capture(new Hotkey("backspace"));
+        foreach (var character in "2_а/б")
+        {
+            window.Type(character);
+        }
+
+        // Letters of any alphabet are typed; characters a file name cannot have are not.
+        Assert.Equal("My 2_аб", window.TypedName);
         window.Capture(new Hotkey("return"));
         Assert.False(window.IsCapturing);
         _ = host.Lines(window);
-        Assert.Equal([Path.Combine(_folder, "My 2_a.sav")], saved);
+        Assert.Equal([Path.Combine(_folder, "My 2_аб.sav")], saved);
     }
     [Fact]
     public void OverwritingAsksFirst()
