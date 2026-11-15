@@ -511,7 +511,7 @@ internal sealed class FaxWindow : UiWindow
             var roomMissing = !simulation.Entities.OfType<Room>().Any(room => room.RoomType == roomType && room.IsActive && RoomVisits.Owner(simulation, room) == host.Player);
             var staff = RoomStaff(roomType);
             var staffAvailable = staff is not { } kind || StaffOfCategory(simulation, host.Player, kind.Kind) > 0;
-            var roomName = simulation.Content.FindRoom(roomType)?.Name ?? roomType;
+            var roomName = UiText.RoomLongName(host, roomType);
             var staffName = staff is { } needed ? StaffTitle(host, needed.Kind) : string.Empty;
             if (roomMissing)
             {
@@ -553,7 +553,7 @@ internal sealed class FaxWindow : UiWindow
         {
             if (needs.Rooms.Count == 1)
             {
-                var room = host.Simulation.Content.FindRoom(needs.Rooms[0])?.Name ?? needs.Rooms[0];
+                var room = UiText.RoomLongName(host, needs.Rooms[0]);
                 var staff = RoomStaff(needs.Rooms[0]);
                 missing = staff is { } kind && needs.Staff.Any(s => s.Kind == kind.Kind)
                     ? S(47, "If you build a %s and employ a %s you can cure it.", room, StaffTitle(host, kind.Kind))

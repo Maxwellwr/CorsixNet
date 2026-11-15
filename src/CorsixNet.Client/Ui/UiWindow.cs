@@ -102,6 +102,13 @@ internal static class UiText
     public static string RoomName(GameContent content, string roomId) =>
         content.FindRoom(roomId) is { } room ? Room(room) : Get("rooms_short." + RoomKey(roomId), roomId);
 
+    /// <summary>
+    /// A room's long name (CorsixTH's <c>rooms_long</c>, each room's <c>room.long_name</c>), as the faxes name the room to
+    /// build (World:getRoomNameAndRequiredStaffName); the content's English name without the game's texts.
+    /// </summary>
+    public static string RoomLongName(IWindowHost host, string roomId) =>
+        host.Texts?.Named("rooms_long." + RoomKey(roomId)) ?? host.Simulation.Content.FindRoom(roomId)?.Name ?? roomId;
+
     /// <summary>An object's name (CorsixTH's <c>object</c> strings, which each object's <c>object.name</c> names).</summary>
     public static string Object(ObjectDefinition definition) => Get("object." + ObjectKey(definition.Id), definition.Name);
 
