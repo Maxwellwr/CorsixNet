@@ -151,6 +151,7 @@ strings:
     options:
       sound_effects: '音效'
       adviser: '顧問'
+      music: '音樂'
       announcements: '廣播'
       room_information: '房間介紹'
       edge_scrolling: '畫面邊緣捲動'

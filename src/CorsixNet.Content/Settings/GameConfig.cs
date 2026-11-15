@@ -141,6 +141,12 @@ public sealed record GameConfig
     /// <summary>The announcer's volume, from 0 to 1 (<c>announcement_volume</c>).</summary>
     public decimal AnnouncementVolume { get; init; } = 0.5m;
 
+    /// <summary>Whether the background music plays (<c>play_music</c>).</summary>
+    public bool PlayMusic { get; init; } = true;
+
+    /// <summary>The background music's volume, from 0 to 1 (<c>music_volume</c>).</summary>
+    public decimal MusicVolume { get; init; } = 0.5m;
+
     /// <summary>Whether the mouse at the screen's edge does not scroll the map (<c>prevent_edge_scrolling</c>).</summary>
     public bool PreventEdgeScrolling { get; init; }
 
@@ -250,6 +256,8 @@ public sealed record GameConfig
             PlayAnnouncements = Bool("play_announcements", defaults.PlayAnnouncements),
             EnableAnnouncerSubtitles = Bool("enable_announcer_subtitles", defaults.EnableAnnouncerSubtitles),
             AnnouncementVolume = Number("announcement_volume", defaults.AnnouncementVolume),
+            PlayMusic = Bool("play_music", defaults.PlayMusic),
+            MusicVolume = Number("music_volume", defaults.MusicVolume),
             PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
             ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
             ZoomSpeed = Number("zoom_speed", defaults.ZoomSpeed),
@@ -466,6 +474,15 @@ public sealed record GameConfig
         text.Append(CultureInfo.InvariantCulture, $"play_announcements: {Yaml(PlayAnnouncements)}\n");
         text.Append(CultureInfo.InvariantCulture, $"announcement_volume: {Number(AnnouncementVolume)}\n");
         text.Append(CultureInfo.InvariantCulture, $"enable_announcer_subtitles: {Yaml(EnableAnnouncerSubtitles)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Background music: By default enabled and set at level 0.5
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"play_music: {Yaml(PlayMusic)}\n");
+        text.Append(CultureInfo.InvariantCulture, $"music_volume: {Number(MusicVolume)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------

@@ -66,6 +66,25 @@ public class XmiTests
     }
 
     [Fact]
+    public void GivesThePlayersEventsWithNoteEndsInTimeOrder()
+    {
+        var events = Xmi.Events(Build([0xC0, 0x05, 0x0A, 0x90, 0x3C, 0x64, 0x78, 0xFF, 0x2F, 0x00]));
+
+        Assert.Equal(
+            [
+                new XmiEvent(0, 0xC0, 0x05, []),
+                new XmiEvent(1_000, 0x90, 0x3C, [0x64]),
+                new XmiEvent(1_000, 0xFF, 0x2F, []),
+                new XmiEvent(13_000, 0x90, 0x3C, [0x00]),
+            ],
+            events,
+            (a, b) => a.Time == b.Time && a.Type == b.Type && a.Data == b.Data && a.Buffer.SequenceEqual(b.Buffer));
+
+        // 120 XMI ticks (12,000 in the player's units) are a second.
+        Assert.Equal(1_000_000, Xmi.ToMicroseconds(12_000));
+    }
+
+    [Fact]
     public void ConvertsTheRealMusic()
     {
         var install = RealGameData.Require();

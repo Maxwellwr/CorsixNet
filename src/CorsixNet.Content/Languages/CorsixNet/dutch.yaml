@@ -150,6 +150,7 @@ strings:
     options:
       sound_effects: 'Geluidseffecten'
       adviser: 'Adviseur'
+      music: 'Muziek'
       announcements: 'Omroepberichten'
       room_information: 'Kamerinformatie'
       edge_scrolling: 'Scrollen aan de rand'

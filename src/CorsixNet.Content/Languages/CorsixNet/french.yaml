@@ -96,6 +96,7 @@ strings:
     options:
       sound_effects: Effets sonores
       adviser: Conseiller
+      music: Musique
       announcements: Annonces
       room_information: Informations des salles
       edge_scrolling: Défilement au bord de l'écran

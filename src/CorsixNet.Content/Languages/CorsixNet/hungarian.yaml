@@ -316,6 +316,7 @@ strings:
     options:
       sound_effects: 'Hanghatások'
       adviser: 'Tanácsadó'
+      music: 'Zene'
       announcements: 'Bemondások'
       room_information: 'Szobainformációk'
       edge_scrolling: 'Görgetés a képernyő szélén'

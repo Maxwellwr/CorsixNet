@@ -326,6 +326,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
     private SoundEffects _sounds;
 
+    /// <summary>The background music (<c>Audio</c>'s playlist), started with the game (<c>App:init</c>'s playRandomBackgroundTrack).</summary>
+    private readonly BackgroundMusic _music;
+
     /// <summary>Scrolling and zooming the view as CorsixTH does, with the player's speeds.</summary>
     private MapScrolling _scrolling;
 
@@ -413,6 +416,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         UiText.Current = _texts;
         ApplyLanguageFont();
         _sounds = SoundEffects.Load(install, _config, VoiceOf(_config));
+        _music = new BackgroundMusic(install.MusicTracks(), WinMmMidiOutput.Open() is { } midi ? new MidiPlayer(midi) : null, path => Rnc.DecompressIfNeeded(File.ReadAllBytes(path)), new Random())
+        {
+            PlayMusic = _config.PlayMusic,
+        };
+        _music.SetVolume(_config.MusicVolume);
+        _music.PlayRandom();
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
         _buildTool.AverageContents = _config.EnableAverageContents;
@@ -513,6 +522,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     public void Update(GameTime gameTime, bool hasFocus)
     {
+        _music.Update();
         if (!hasFocus)
         {
             // No input, but the game goes on.
@@ -1052,6 +1062,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _cellOutline.Dispose();
         _pixel.Dispose();
         _sounds.Dispose();
+        _music.Dispose();
     }
 
     /// <summary>Where on the map view the middle of a tile is, for sounds heard there.</summary>
@@ -3167,6 +3178,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ToggleAnnouncements();
         }
 
+        if (HotkeyInput.Pressed(_hotkeys["ingame_toggleMusic"], keys, pressed))
+        {
+            ToggleMusic();
+        }
+
         (string Action, Func<UiWindow> Window)[] dialogs =
         [
             ("ingame_panel_hireStaff", () => new HireWindow()),
@@ -3446,6 +3462,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Do("corsixnet.menu.levels", "Levels", "levels"),
                 new(Item("menu_options.sound", "SOUND"), ToggleSounds, () => _config.PlaySounds),
                 new(Item("menu_options.announcements", "ANNOUNCEMENTS"), ToggleAnnouncements, () => _config.PlayAnnouncements),
+                .. (_music.HasMusic ? [new MenuBarItem(Item("menu_options.music", "MUSIC"), ToggleMusic, () => _config.PlayMusic)] : Array.Empty<MenuBarItem>()),
                 new(Item("menu_options.adviser_disabled", "ADVISER"), ToggleAdviser, () => !_config.AdviserDisabled),
                 new(Item("menu_debug.transparent_walls", "TRANSPARENT WALLS"), () => _wallsTransparentToggled = !_wallsTransparentToggled, () => _wallsTransparentToggled),
                 Speed("menu_options_game_speed.pause", "PAUSE", GameSpeed.Pause),
@@ -3696,6 +3713,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void ToggleAnnouncements()
     {
         _config = _config with { PlayAnnouncements = !_config.PlayAnnouncements };
+        SaveConfig();
+    }
+
+    /// <summary><c>UI:togglePlayMusic</c>: the background music on (a random track) or off, kept in the settings.</summary>
+    private void ToggleMusic()
+    {
+        _config = _config with { PlayMusic = _music.TogglePlayMusic() };
         SaveConfig();
     }
 
@@ -4209,6 +4233,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
         _sounds = SoundEffects.Load(_install, config, VoiceOf(config));
+        _music.SetVolume(config.MusicVolume);
+        if (config.PlayMusic != _music.PlayMusic)
+        {
+            // UIAudio's music switch: on plays a random track, off stops the music.
+            _music.TogglePlayMusic();
+        }
         if (!string.Equals(config.UnicodeFont, _unicodeFonts.Configured, StringComparison.Ordinal))
         {
             _text.UseTrueType(null);
