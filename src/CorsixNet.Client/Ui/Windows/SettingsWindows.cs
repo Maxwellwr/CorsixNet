@@ -12,7 +12,7 @@ namespace CorsixNet.Client.Ui.Windows;
 /// <c>load_game.lua</c>), from the menu (Esc): the saved games in the saves folder, newest first,
 /// with the quick save and the autosaves; saving to a new file or over one, and loading one.
 /// </summary>
-internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<string, bool> save, Func<string, bool> load) : UiWindow, IKeyCaptureWindow
+internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<string, bool> save, Func<string, bool> load) : UiWindow, ITextInputWindow
 {
     /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
     public override bool UsesResizableLook => true;
@@ -29,8 +29,8 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
     public bool IsCapturing => _typing;
 
     /// <summary>
-    /// The new savegame box: letters (capitals with Shift), digits, spaces, - and _ are typed; Backspace takes the last
-    /// one away; Return saves under the name, asking first if a save of that name exists; Escape stops typing.
+    /// The new savegame box's keys: Backspace takes the last character away; Return saves under the name, asking first
+    /// if a save of that name exists; Escape stops typing. The characters come as text (<see cref="Type"/>).
     /// </summary>
     public void Capture(Hotkey key)
     {
@@ -46,27 +46,124 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
                 _typing = false;
                 _pendingSave = _name.Trim().Length > 0 ? _name.Trim() + Extension : null;
                 return;
-            case "space":
-                Type(' ');
-                return;
-            case "-":
-                Type(key.Shift ? '_' : '-');
-                return;
-        }
-
-        if (key.Key.Length == 1 && char.IsAsciiLetterOrDigit(key.Key[0]))
-        {
-            Type(key.Shift && char.IsAsciiLetter(key.Key[0]) ? char.ToUpperInvariant(key.Key[0]) : key.Key[0]);
         }
     }
 
-    private void Type(char character)
+    /// <summary>
+    /// A character typed in the new savegame box, as the keyboard layout gives it: letters of any alphabet (Cyrillic
+    /// too), digits, spaces and the punctuation a file name may have.
+    /// </summary>
+    public void Type(char character)
     {
-        if (_name.Length < MaxNameLength)
+        if (_typing && _name.Length < MaxNameLength && (char.IsLetterOrDigit(character) || character is ' ' or '-' or '_' or '.' or '(' or ')' or '+')
+            && Array.IndexOf(Path.GetInvalidFileNameChars(), character) < 0)
         {
             _name += character;
         }
     }
+
+    private readonly FileBrowserScreen _browser = new();
+
+    private string? _selected;
+
+    /// <summary>CorsixTH's file browser (<see cref="FileBrowserScreen"/>) where its sprites are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => ResizablePanels.IsAvailable(host);
+
+    public override Point FullscreenSize => FileBrowserScreen.Size;
+
+    public override Vector2? FullscreenPosition => new(0.5f, 0.25f);
+
+    private List<DialogPanel> BrowserPanels(IWindowHost host)
+    {
+        var title = saving
+            ? UiText.Format("save_game_window.caption", "Save Game (%1%)", Extension)
+            : UiText.Format("load_game_window.caption", "Load Game (%1%)", Extension);
+        var ok = saving ? UiText.Get("save_game_window.save_button", "Save") : UiText.Get("load_game_window.load_button", "Load");
+        return _browser.Panels(title, saving, _name, _typing, ok, () => host.Close(this), () => Confirm(host), () => _typing = !_typing);
+    }
+
+    /// <summary>
+    /// OK (<c>confirmName</c> when saving, else the selected save): saving under the typed name, which must not be empty
+    /// (<c>missing_filename</c>), or the save picked.
+    /// </summary>
+    private void Confirm(IWindowHost host)
+    {
+        if (saving && _name.Trim().Length > 0)
+        {
+            _typing = false;
+            TrySave(host, Path.Combine(store.Directory, _name.Trim() + Extension));
+        }
+        else if (_selected is { } path)
+        {
+            Choose(host, path);
+        }
+        else if (saving)
+        {
+            host.Open(new InformationWindow([UiText.Get("save_game_window.missing_filename", "Please enter the name of the new save or select the save to overwrite.")]));
+        }
+    }
+
+    /// <summary><c>choiceMade</c>: saving over the save picked (asking first), or loading it.</summary>
+    private void Choose(IWindowHost host, string path)
+    {
+        if (saving)
+        {
+            TrySave(host, path);
+        }
+        else if (load(path))
+        {
+            host.Close(this);
+        }
+    }
+
+    /// <summary><c>trySave</c>: an existing save is overwritten after <c>confirmation.overwrite_save</c>.</summary>
+    private void TrySave(IWindowHost host, string path)
+    {
+        if (File.Exists(path))
+        {
+            host.Open(new ConfirmWindow(UiText.Get("confirmation.overwrite_save", "A game has already been saved there. Are you sure you want to overwrite it?"), () =>
+            {
+                if (save(path))
+                {
+                    host.Close(this);
+                }
+            }));
+        }
+        else if (save(path))
+        {
+            host.Close(this);
+        }
+    }
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) =>
+        _browser.Draw(batch, host, origin, mouse, BrowserPanels(host), _browser.Sorted([.. Games()]), saving, _selected);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous)
+    {
+        var games = _browser.Sorted([.. Games()]);
+        if (saving && _browser.RowAt(local, games.Count, saving) is { } hovered && !_typing)
+        {
+            // setValueChangeCallback: the save under the mouse names the new savegame box.
+            _name = Path.GetFileNameWithoutExtension(games[hovered].Path);
+        }
+
+        if (_browser.Mouse(host, local, mouse, previous, BrowserPanels(host), games.Count, saving) is { } row)
+        {
+            host.PlaySound(WindowLayer.DefaultButtonSound);
+            _selected = games[row].Path;
+            Choose(host, games[row].Path);
+        }
+
+        if (saving && _pendingSave is { } typed)
+        {
+            _pendingSave = null;
+            TrySave(host, Path.Combine(store.Directory, typed));
+        }
+    }
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => ResizablePanels.Tooltip(BrowserPanels(host), local);
+
+    public override Point? FindFullscreenButton(IWindowHost host, string text, int nth) => ResizablePanels.FindButton(BrowserPanels(host), text, nth);
 
     /// <summary>The file name Return asked to save under, done on the window's next look.</summary>
     private string? _pendingSave;
