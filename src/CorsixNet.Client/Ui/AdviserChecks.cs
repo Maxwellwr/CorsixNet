@@ -495,7 +495,8 @@ internal sealed class AdviserChecks(Adviser adviser, Random random)
 
         switch (date.Day)
         {
-            case 1:
+            case 1 when !simulation.Rules.FreeBuild:
+                // PlayerHospital:_adviseMoney: nothing to say about money in free build mode.
                 AdviseMoney(hospital, date, Give);
                 break;
             case 12 when _sittingRatios.Any(ratio => ratio is not null):

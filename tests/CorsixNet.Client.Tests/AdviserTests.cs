@@ -389,6 +389,27 @@ public class AdviserTests
         Assert.Contains(AdviserChecks.PlaceRadiators.Fallback, host.Adviser.History);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LowCashIsAdvisedOnTheFirstOfTheMonthButNotInFreeBuild(bool freeBuild)
+    {
+        var rules = new LevelRules(1_000, [], []);
+        var host = new WindowTestHost(freeBuild ? rules.WithFreeBuild() : rules);
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        host.Simulation.Hospitals[0].Open();
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.SkipToLastHour(new GameDate(1, 6, 1, 0));
+        host.Simulation.Step();
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(1, host.Simulation.Date.Day);
+
+        // PlayerHospital:_adviseMoney with $1,000; in free build mode the balance is 0 and nothing is said about it.
+        string[] money = [AdviserChecks.MoneyLow.Fallback, AdviserChecks.MoneyVeryLowTakeLoan.Fallback, AdviserChecks.CashLowConsiderLoan.Fallback];
+        Assert.Equal(!freeBuild, host.Adviser.History.Append(host.Adviser.Current).Any(money.Contains));
+    }
+
     [Fact]
     public void StaffPutIntoTheWrongRoomAreToldWhoWorksThere()
     {
