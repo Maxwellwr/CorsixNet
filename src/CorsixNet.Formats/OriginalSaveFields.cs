@@ -80,7 +80,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Hospital, 65, 4, "max loan?", false),
         new(OriginalSaveArea.Hospital, 221, 4, "research points?", false),
         new(OriginalSaveArea.Hospital, 225, 188, "expertise research?", false),
-        new(OriginalSaveArea.Hospital, 433, 10, "research distribution?", false),
+        new(OriginalSaveArea.Hospital, 433, 10, "research distribution", true),
         new(OriginalSaveArea.Hospital, 443, 4, "value", true),
         new(OriginalSaveArea.Hospital, 459, 2, "population share?", false),
         new(OriginalSaveArea.Hospital, 477, 12, "emergency?", false),
@@ -90,13 +90,30 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Hospital, 497, 2, "size", true),
         new(OriginalSaveArea.Hospital, 507, 1, "vip score?", false),
         new(OriginalSaveArea.Hospital, 515, 18, "epidemic/disaster?", false),
-        new(OriginalSaveArea.Hospital, 535, 9, "policy?", false),
-        new(OriginalSaveArea.Hospital, 3121, 9, "reputation?", false),
+        new(OriginalSaveArea.Hospital, 535, 9, "policy", true),
+        new(OriginalSaveArea.Hospital, 3198, 4, "reputation", true),
         new(OriginalSaveArea.Hospital, 3228, 10, "staff counts", true),
+        .. DiseaseFields(),
         new(OriginalSaveArea.Hospital, 3242, 129, "litter/rats?", false),
         new(OriginalSaveArea.Hospital, 4600, 6, "ai timers?", false),
         new(OriginalSaveArea.Hospital, 4677, 1, "ai index?", false),
     ];
+
+    private static IEnumerable<OriginalSaveField> DiseaseFields()
+    {
+        (int Offset, int Length, string Name)[] fields =
+        [
+            (12, 4, "charge"), (16, 4, "charge percent"), (20, 4, "money earned"), (28, 1, "known"),
+            (30, 2, "recoveries"), (32, 2, "fatalities"), (36, 2, "turned away"),
+        ];
+        for (var disease = 0; disease < OriginalSaveHospital.DiseaseCount; disease++)
+        {
+            foreach (var (offset, length, name) in fields)
+            {
+                yield return new(OriginalSaveArea.Hospital, OriginalSaveHospital.DiseaseOffset + (disease * OriginalSaveHospital.DiseaseLength) + offset, length, $"disease {disease} {name}", true);
+            }
+        }
+    }
 
     /// <summary>The field covering a byte of an area, or null.</summary>
     public static OriginalSaveField? Find(OriginalSaveArea area, int offset) =>

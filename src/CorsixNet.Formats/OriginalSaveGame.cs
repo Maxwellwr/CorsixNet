@@ -156,7 +156,77 @@ public sealed record OriginalSaveHospital(
     int Doctors,
     int Handymen,
     int Receptionists,
-    ReadOnlyMemory<byte> Raw);
+    ReadOnlyMemory<byte> Raw)
+{
+    /// <summary>Offset of the disease (expertise) table in the block.</summary>
+    public const int DiseaseOffset = 544;
+
+    /// <summary>Size of one disease record.</summary>
+    public const int DiseaseLength = 38;
+
+    /// <summary>Number of disease records, indexed like <c>#expertise[n]</c> in the <c>.SAM</c> files (1 general practice).</summary>
+    public const int DiseaseCount = 47;
+
+    /// <summary>Reputation as shown in the casebook.</summary>
+    public int Reputation => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[3198..]);
+
+    /// <summary>Policy: stop diagnosis at this share of the normal procedure, in tenths of a percent (1000 = 100%).</summary>
+    public int StopProcedure => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[535..]);
+
+    /// <summary>Policy: guess at cure above this diagnosis certainty, in percent.</summary>
+    public int GuessCurePercent => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[537..]);
+
+    /// <summary>Policy: send patients home below this diagnosis certainty, in percent.</summary>
+    public int SendHomePercent => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[539..]);
+
+    /// <summary>Policy: send staff to the staff room at this tiredness, in tenths of a percent.</summary>
+    public int StaffRestLevel => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[541..]);
+
+    /// <summary>Policy: whether staff may leave their rooms.</summary>
+    public bool StaffLeaveRooms => Raw.Span[543] != 0;
+
+    /// <summary>
+    /// Research distribution in percent: cure equipment, diagnosis equipment, drugs, improvements,
+    /// specialisation; -1 when a category is finished.
+    /// </summary>
+    public IReadOnlyList<int> ResearchDistribution =>
+        [.. Enumerable.Range(0, 5).Select(i => (int)BinaryPrimitives.ReadInt16LittleEndian(Raw.Span[(433 + (2 * i))..]))];
+
+    /// <summary>The disease (expertise) record with an index.</summary>
+    public OriginalSaveDisease Disease(int index)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, DiseaseCount);
+        return new OriginalSaveDisease(index, Raw.Slice(DiseaseOffset + (index * DiseaseLength), DiseaseLength));
+    }
+}
+
+/// <summary>One 38-byte disease (expertise) record of a hospital: casebook figures and treatment price.</summary>
+/// <param name="Index">Index as in <c>#expertise[n]</c> of the <c>.SAM</c> files.</param>
+/// <param name="Raw">The stored bytes.</param>
+public sealed record OriginalSaveDisease(int Index, ReadOnlyMemory<byte> Raw)
+{
+    /// <summary>Treatment charge.</summary>
+    public int Charge => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[12..]);
+
+    /// <summary>Charge relative to the standard price, in hundredths of a percent (10000 = 100%).</summary>
+    public int ChargePercent => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[16..]);
+
+    /// <summary>Money earned from it.</summary>
+    public int MoneyEarned => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[20..]);
+
+    /// <summary>Whether it is known (shown in the casebook).</summary>
+    public bool Known => Raw.Span[28] != 0;
+
+    /// <summary>Patients cured.</summary>
+    public int Recoveries => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[30..]);
+
+    /// <summary>Patients who died of it.</summary>
+    public int Fatalities => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[32..]);
+
+    /// <summary>Patients turned away.</summary>
+    public int TurnedAway => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[36..]);
+}
 
 /// <summary>
 /// A save of the original Theme Hospital (<c>SAVE/&lt;name&gt;.H&lt;n&gt;</c>): a fixed-size, uncompressed

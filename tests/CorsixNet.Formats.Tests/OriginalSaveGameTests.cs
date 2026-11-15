@@ -125,6 +125,43 @@ public class OriginalSaveGameTests
     }
 
     [Fact]
+    public void ReadsPolicyResearchReputationAndDiseases()
+    {
+        var data = new byte[OriginalSaveGame.Length];
+        var hospital = OriginalSaveGame.HospitalOffset;
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(hospital + 535), 1000);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(hospital + 537), 79);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(hospital + 539), 70);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(hospital + 541), 600);
+        data[hospital + 543] = 1;
+        short[] distribution = [-1, -1, 20, 0, 20];
+        for (var i = 0; i < distribution.Length; i++)
+        {
+            BinaryPrimitives.WriteInt16LittleEndian(data.AsSpan(hospital + 433 + (2 * i)), distribution[i]);
+        }
+
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(hospital + 3198), 844);
+        var gp = hospital + 544 + 38;
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 12), 168);
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 16), 10000);
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 20), 9180);
+        data[gp + 28] = 1;
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(gp + 30), 3);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(gp + 32), 2);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(gp + 36), 1);
+
+        var parsed = OriginalSaveGame.Parse(data).Hospitals[0];
+
+        Assert.Equal((1000, 79, 70, 600, true), (parsed.StopProcedure, parsed.GuessCurePercent, parsed.SendHomePercent, parsed.StaffRestLevel, parsed.StaffLeaveRooms));
+        Assert.Equal([-1, -1, 20, 0, 20], parsed.ResearchDistribution);
+        Assert.Equal(844, parsed.Reputation);
+        var disease = parsed.Disease(1);
+        Assert.Equal((168, 10000, 9180, true), (disease.Charge, disease.ChargePercent, disease.MoneyEarned, disease.Known));
+        Assert.Equal((3, 2, 1), (disease.Recoveries, disease.Fatalities, disease.TurnedAway));
+        Assert.False(parsed.Disease(2).Known);
+    }
+
+    [Fact]
     public void ReadsStaffFields()
     {
         var data = new byte[OriginalSaveGame.Length];
