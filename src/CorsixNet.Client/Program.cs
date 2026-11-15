@@ -85,6 +85,8 @@ else
         levels.InsertRange(0, levelPaths.Select(path => new LevelSource(Path.GetFileName(path), () => LevelMapLoader.LoadFile(path, install))));
     }
 
+    // A network game's host is offered the levels in their own order, not starting from the one played first.
+    var lobbyLevels = levels;
     if (options.MapPath is not null)
     {
         var fullPath = Path.GetFullPath(options.MapPath);
@@ -101,6 +103,7 @@ else
             return 1;
         }
 
+        lobbyLevels = [.. levels];
         levels = [.. levels[index..], .. levels[..index]];
     }
 
@@ -120,7 +123,7 @@ else
             var server = new LockstepServer(
                 level.Load().StartSimulation(seed: 1),
                 level.Name,
-                [.. levels.Select(offered => new LobbyLevel(offered.Name, () => offered.Load().StartSimulation(seed: 1)))])
+                [.. lobbyLevels.Select(offered => new LobbyLevel(offered.Name, () => offered.Load().StartSimulation(seed: 1)))])
             {
                 Log = Console.WriteLine,
             };

@@ -10,12 +10,18 @@ namespace CorsixNet.Net.Tests;
 /// <summary>The levels a server offers, and the host switching everyone to another.</summary>
 public sealed class LobbyTests : IDisposable
 {
-    private readonly LockstepServer _server = new(
-        NewSimulation(10, players: 2),
-        "Two",
-        [new LobbyLevel("Two", () => NewSimulation(10, players: 2)), new LobbyLevel("Big", () => NewSimulation(14, players: 2)), new LobbyLevel("Solo", () => NewSimulation(8, players: 1)), new LobbyLevel("Broken", () => throw new InvalidDataException("bad file"))]);
+    private readonly List<string> _log = [];
+    private readonly LockstepServer _server;
 
     private readonly List<LockstepClient> _clients = [];
+
+    public LobbyTests() => _server = new(
+        NewSimulation(10, players: 2),
+        "Two",
+        [new LobbyLevel("Two", () => NewSimulation(10, players: 2)), new LobbyLevel("Big", () => NewSimulation(14, players: 2)), new LobbyLevel("Solo", () => NewSimulation(8, players: 1)), new LobbyLevel("Broken", () => throw new InvalidDataException("bad file"))])
+    {
+        Log = _log.Add,
+    };
 
     public void Dispose()
     {
@@ -101,6 +107,9 @@ public sealed class LobbyTests : IDisposable
 
         a.ChooseLevel("Solo");
         Exchange();
+
+        // Dropped once, when rejected: not a second time as a player who left (that disposed a TCP connection twice).
+        Assert.DoesNotContain(_log, line => line.Contains("left", StringComparison.Ordinal));
 
         Assert.Equal(8, a.Simulation!.Map.Width);
         Assert.Equal(1, _server.JoinedCount);
