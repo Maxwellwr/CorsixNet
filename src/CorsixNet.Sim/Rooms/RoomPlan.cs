@@ -80,6 +80,9 @@ public enum RoomPlanProblem
     WindowOnDoor,
     NoWindows,
     TooManyWindows,
+
+    /// <summary>The room would cut parts of the hospital off from each other (<c>room_forbidden_non_reachable_parts</c>).</summary>
+    BlocksOffParts,
 }
 
 /// <summary>
@@ -160,6 +163,11 @@ public static class RoomBuilder
         var problem = CheckArea(map, definition, plan.Area, player);
         if (problem == RoomPlanProblem.None)
         {
+            problem = CheckReachability(map, plan.Area);
+        }
+
+        if (problem == RoomPlanProblem.None)
+        {
             problem = CheckDoor(map, content, plan.Area, plan.Door, definition?.SwingDoors ?? false);
         }
 
@@ -192,6 +200,91 @@ public static class RoomBuilder
         }
 
         return RoomPlanProblem.None;
+    }
+
+    /// <summary>
+    /// <c>UIEditRoom:checkReachability</c> (with CorsixTH's default <c>blocking_off_areas</c>): with the area's tiles made
+    /// impassable, each passable tile round it that leads into it must still be reachable from the one before, going
+    /// round the area's north, east, south and west sides; otherwise the room would cut part of the hospital off.
+    /// The map is left as it was.
+    /// </summary>
+    public static RoomPlanProblem CheckReachability(LevelMap map, TileRect area)
+    {
+        var saved = new List<(int X, int Y, bool Passable)>();
+        for (var y = area.Y; y < area.Bottom; y++)
+        {
+            for (var x = area.X; x < area.Right; x++)
+            {
+                if (map.Contains(x, y))
+                {
+                    saved.Add((x, y, map[x, y].Has(TileFlags.Passable)));
+                    map[x, y].Set(TileFlags.Passable, false);
+                }
+            }
+        }
+
+        try
+        {
+            var pathfinder = new Pathfinding.Pathfinder();
+            TilePosition? previous = null;
+            bool Reachable(int x, int y, TileFlags towardsRoom)
+            {
+                if (!map.Contains(x, y) || !map[x, y].Has(TileFlags.Passable) || !map[x, y].Has(towardsRoom))
+                {
+                    return true;
+                }
+
+                var here = new TilePosition(x, y);
+                if (previous is { } before && pathfinder.FindDistance(map, before, here) is null)
+                {
+                    return false;
+                }
+
+                previous = here;
+                return true;
+            }
+
+            for (var x = area.X; x < area.Right; x++)
+            {
+                if (!Reachable(x, area.Y - 1, TileFlags.CanTravelSouth))
+                {
+                    return RoomPlanProblem.BlocksOffParts;
+                }
+            }
+
+            for (var y = area.Y; y < area.Bottom; y++)
+            {
+                if (!Reachable(area.Right, y, TileFlags.CanTravelWest))
+                {
+                    return RoomPlanProblem.BlocksOffParts;
+                }
+            }
+
+            for (var x = area.Right - 1; x >= area.X; x--)
+            {
+                if (!Reachable(x, area.Bottom, TileFlags.CanTravelNorth))
+                {
+                    return RoomPlanProblem.BlocksOffParts;
+                }
+            }
+
+            for (var y = area.Bottom - 1; y >= area.Y; y--)
+            {
+                if (!Reachable(area.X - 1, y, TileFlags.CanTravelEast))
+                {
+                    return RoomPlanProblem.BlocksOffParts;
+                }
+            }
+
+            return RoomPlanProblem.None;
+        }
+        finally
+        {
+            foreach (var (x, y, passable) in saved)
+            {
+                map[x, y].Set(TileFlags.Passable, passable);
+            }
+        }
     }
 
     /// <summary>Checks a door for an area that passed <see cref="CheckArea"/>.</summary>
