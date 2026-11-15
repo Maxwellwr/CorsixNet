@@ -502,6 +502,9 @@ internal static class AuxSprites
         return table is null || data is null ? null : SpriteSheet.Parse(table, data, complex: true);
     }
 
+    /// <summary>One of CorsixTH's palettes of 8-bit colours (<c>_loadPalette</c> with transparency and 8 bits), or null if missing.</summary>
+    public static Palette? ReadPalette(string name) => Read(name) is { } data ? Palette.Parse(data, eightBit: true) : null;
+
     private static byte[]? Read(string name)
     {
         using var stream = typeof(AuxSprites).Assembly.GetManifestResourceStream("CorsixNet.Client.Assets." + name);

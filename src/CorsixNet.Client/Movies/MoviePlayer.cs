@@ -33,6 +33,8 @@ internal sealed class MoviePlayer : IDisposable
     private bool _waitForOver;
     private int _shown = -1;
     private readonly Queue<SmackerFrame> _ahead = new();
+    private Texture2D? _overlay;
+    private TimeSpan _overlayFrom;
 
     public MoviePlayer(GraphicsDevice device) => _device = device;
 
@@ -163,8 +165,25 @@ internal sealed class MoviePlayer : IDisposable
         batch.Draw(pixel, screen, Color.Black);
         if (_shown >= 0)
         {
-            batch.Draw(_texture, Fit(_movie.Width, _movie.DisplayHeight, screen), Color.White);
+            var area = Fit(_movie.Width, _movie.DisplayHeight, screen);
+            batch.Draw(_texture, area, Color.White);
+            if (_overlay is not null && Position >= _overlayFrom)
+            {
+                // refresh_overlay: drawn over the movie, scaled with it.
+                batch.Draw(_overlay, area, Color.White);
+            }
         }
+    }
+
+    /// <summary>
+    /// <c>refresh_overlay</c>: a picture laid over the movie from <paramref name="from"/> on, stretched over it as the movie
+    /// is; the player owns it from now and disposes of it with the movie.
+    /// </summary>
+    public void SetOverlay(Texture2D overlay, TimeSpan from)
+    {
+        _overlay?.Dispose();
+        _overlay = overlay;
+        _overlayFrom = from;
     }
 
     /// <summary>
@@ -257,6 +276,8 @@ internal sealed class MoviePlayer : IDisposable
         _sound?.Stop();
         _sound?.Dispose();
         _sound = null;
+        _overlay?.Dispose();
+        _overlay = null;
         _texture?.Dispose();
         _texture = null;
         _colours = null;
