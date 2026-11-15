@@ -186,6 +186,15 @@ public sealed record GameConfig
     /// <summary>Whether the cursor is kept inside the game's window while it has focus (<c>capture_mouse</c>).</summary>
     public bool CaptureMouse { get; init; } = true;
 
+    /// <summary>The folder games are saved to (<c>savegames</c>); empty for the default Saves folder.</summary>
+    public string Savegames { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Whether the right button drags the map as well as the middle one (<c>right_mouse_scrolling</c>). CorsixTH has it
+    /// off; CorsixNet keeps it on to begin with, as it always let the right button drag.
+    /// </summary>
+    public bool RightMouseScrolling { get; init; } = true;
+
     /// <summary>The folder screenshots are saved to (<c>screenshots</c>); empty for "Screenshots" beside this file.</summary>
     public string Screenshots { get; init; } = string.Empty;
 
@@ -204,8 +213,27 @@ public sealed record GameConfig
     /// <summary>The player's name in network games; empty for the default.</summary>
     public string PlayerName { get; init; } = string.Empty;
 
+    /// <summary>The file beside the game that may say where the settings are (CorsixTH's <c>config.path.txt</c>).</summary>
+    public const string PathFileName = "config.path.txt";
+
     /// <summary>
-    /// The settings file: <see cref="PathVariable"/> if set; otherwise CorsixTH's <c>find_config</c> with this game's
+    /// What a <see cref="PathFileName"/> says: a path ending in a settings file's name (<c>.yaml</c>, <c>.yml</c> or, as
+    /// CorsixTH has it, <c>.txt</c>) is the file; any other is the folder it is in; null when empty.
+    /// </summary>
+    public static string? FromPathFile(string contents)
+    {
+        var path = contents.Trim();
+        if (path.Length == 0)
+        {
+            return null;
+        }
+
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        return extension is ".yaml" or ".yml" or ".txt" ? path : Path.Combine(path, FileName);
+    }
+
+    /// <summary>
+    /// The settings file: <see cref="PathVariable"/> if set; else what a <see cref="PathFileName"/> beside the game says; otherwise CorsixTH's <c>find_config</c> with this game's
     /// folder name: <c>%AppData%\CorsixNet</c> on Windows, else <c>$XDG_CONFIG_HOME/CorsixNet</c> or
     /// <c>~/.config/CorsixNet</c>.
     /// </summary>
@@ -214,6 +242,13 @@ public sealed record GameConfig
         if (Environment.GetEnvironmentVariable(PathVariable) is { Length: > 0 } given)
         {
             return given;
+        }
+
+        // config_finder.lua: a config.path.txt beside the game names the settings' folder, or the file itself.
+        var pathFile = Path.Combine(AppContext.BaseDirectory, PathFileName);
+        if (File.Exists(pathFile) && FromPathFile(File.ReadAllText(pathFile)) is { } named)
+        {
+            return named;
         }
 
         string folder;
@@ -311,6 +346,8 @@ public sealed record GameConfig
             CaptureMouse = Bool("capture_mouse", defaults.CaptureMouse),
             CheckForUpdates = Bool("check_for_updates", defaults.CheckForUpdates),
             Screenshots = Text("screenshots", defaults.Screenshots),
+            Savegames = Text("savegames", defaults.Savegames),
+            RightMouseScrolling = Bool("right_mouse_scrolling", defaults.RightMouseScrolling),
             ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
             ZoomSpeed = Number("zoom_speed", defaults.ZoomSpeed),
             ScrollSpeed = Number("scroll_speed", defaults.ScrollSpeed),
@@ -641,6 +678,24 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"screenshots: {Quote(Screenshots)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Savegames. By default, the "Saves" folder is used for saved games. Point this
+            # to another folder to keep them there instead.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"savegames: {Quote(Savegames)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Right Mouse Scrolling: whether the right mouse button drags the map as well as
+            # the middle one (CorsixTH has it off; on here, as the game always had it).
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"right_mouse_scrolling: {Yaml(RightMouseScrolling)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------

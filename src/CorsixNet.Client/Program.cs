@@ -154,7 +154,7 @@ else
     {
         if (options.ContinueGame)
         {
-            loadPath = new SaveGameStore(SaveGameStore.DefaultDirectory()).MostRecentAutosave();
+            loadPath = new SaveGameStore(MapViewScreen.SavesDirectory(config)).MostRecentAutosave();
         }
 
         // As CorsixTH, the main menu comes first unless the command line says what to play.

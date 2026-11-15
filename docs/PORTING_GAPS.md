@@ -347,14 +347,15 @@ to the client that diverged, `ResyncMessage`.)
   capture, adviser on/off, ... (`resizables/options.lua`, `graphics_settings.lua`, `customise.lua`). Of `customise.lua`'s
   switches, removing destroyed rooms, the average contents and the insurance's blue banknote are in the options
   window (`OptionsWindow`).
-- The rest of the config file (`config_finder.lua`): announcements, music, movies, `right_mouse_scrolling` (the
-  right and middle buttons both drag), the options dialog's game rules, `config.path.txt`; game
-  the folders window (`resizables/folder_settings.lua`) with the game data, saves and screenshots folders (the folder
-  browser itself, `directory_browser.lua`, is done and chooses the music folder). `config.txt` with the language,
-  window, screen shake, autosave frequency, game folder, player name, sound effects and scrolling
-  (`prevent_edge_scrolling`, `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`), `capture_mouse`
-  (the cursor kept in the window while it has focus, `MouseCapture`, SDL_SetWindowGrab) and `screenshots` is done
-  (`GameConfig`).
+- (Done: the config file (`config_finder.lua`, `GameConfig`): the language, window, screen shake, autosave frequency,
+  game folder, player name, sound effects, announcements, music, movies, scrolling (`prevent_edge_scrolling`,
+  `scrolling_momentum`, `zoom_speed`, `scroll_speed`, `shift_scroll_speed`, `right_mouse_scrolling`), `capture_mouse`
+  (`MouseCapture`, SDL_SetWindowGrab), `screenshots`, `savegames` and `check_for_updates`; `config.path.txt` beside the
+  game naming the settings' folder or file; the folders window (`resizables/folder_settings.lua`, `FolderSettingsWindow`,
+  from the options' Folders button) with the game data (the game starts again, as `App:restart`), saves, screenshots and
+  music folders in CorsixTH's folder browser.) `right_mouse_scrolling` is on to begin with here, as the right button
+  always dragged the map in this game; CorsixTH has it off. The folders window has no font row: the font is chosen in
+  the graphics dialog from the fonts found on the system.
 - Hotkeys file (`hotkeys.txt`): read, and written with the defaults when missing, for the dialogs (F1–F9, Shift+F3,
   Ctrl+H, Y, C, F11), pause, speed up, quick save/load, the adviser toggle, the speeds, scrolling, zoom, remembered
   views and the room list (`Hotkeys`, `HotkeyInput`), and changed in the hotkey assignment dialog from the options
@@ -362,8 +363,13 @@ to the client that diverged, `ResyncMessage`.)
   The sound and announcements toggles (Alt+S, Alt+A, also in the menu bar's options) are done.
   The screenshot key (Ctrl+S, `global_screenshot`, into the `screenshots` folder, else Screenshots beside the settings) is done.
   Alt+Enter switches fullscreen and keeps it in the settings (`global_fullscreen_toggle`, `UI:fullscreenHotkey`).
-  CorsixTH's other actions (music toggle, logs, furnish corridor, edit room) are not read; the sell picked up item key
-  (`ingame_sellPickedUpItem`) is. The rotate object key (`ingame_rotateobject`, space) turns the object being
+  The sell picked up item key (`ingame_sellPickedUpItem`), the console (`global_showLuaConsole`, F12), releasing the
+  mouse until the next click (`global_releaseMouse`, Ctrl+F10), starting again (`global_resetApp`, Shift+F10) and the
+  casebook's second key (`ingame_panel_casebook_alt02`, Shift+C) are read too. CorsixTH's other letter keys (furnish
+  corridor G, edit room V, the town map's T, research R, the casebook's C, the save and load menus Shift+S and Shift+L,
+  restart and quit level Shift+R and Shift+Q, the info toggle I, confirm E and cancel Q) are this game's stand-in and
+  WASD keys, so they are left out; the logs (`ingame_poopLog`, `ingame_poopStrings`) and the debug script have nothing
+  to act on. The rotate object key (`ingame_rotateobject`, space) turns the object being
   placed, as a right click does; outside placing, space still pauses.
 - (Done: the update check (`App:checkForUpdates`, `resizables/update.lua`): once a launch, in the background, the
   project's newest GitHub release (Maxwellwr/CorsixNet) against this build's version, as CorsixTH compares them (a
