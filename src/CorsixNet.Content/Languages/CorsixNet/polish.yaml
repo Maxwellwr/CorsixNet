@@ -196,6 +196,12 @@ strings:
   transactions:
     remove_room: 'Budowa: usunięcie zniszczonego pomieszczenia'
   corsixnet:
+    console:
+      caption: "Konsola debugowania"
+      unknown: "Nieznane polecenie: %1%. Wpisz help, aby zobaczyć listę."
+      commands: "Polecenia:"
+      done: "Gotowe."
+      execute_tooltip: "Wykonaj wpisane polecenie"
     referral:
       refer: 'Skieruj do: %1%'
       tooltip: 'Wysyła pacjenta do szpitala innego gracza; prawy przycisk wybiera inny szpital'

@@ -25,6 +25,12 @@ strings:
         months_played: 'Debes ganar antes del final de %s de %d. Ahora es %s de %d'
         years_played: 'Debes llegar al año %d. Ahora es el año %d'
   corsixnet:
+    console:
+      caption: "Consola de depuración"
+      unknown: "Orden desconocida: %1%. Escribe help para ver la lista."
+      commands: "Órdenes:"
+      done: "Hecho."
+      execute_tooltip: "Ejecutar la orden escrita"
     referral:
       refer: 'Derivar a %1%'
       tooltip: 'Envía al paciente al hospital de otro jugador; el botón derecho elige otro hospital'

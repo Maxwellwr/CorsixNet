@@ -166,6 +166,12 @@ strings:
     severance: '退職金'
     wages: '給料'
   corsixnet:
+    console:
+      caption: "デバッグコンソール"
+      unknown: "不明なコマンド：%1%。一覧はhelpと入力。"
+      commands: "コマンド："
+      done: "完了。"
+      execute_tooltip: "入力したコマンドを実行"
     referral:
       refer: '%1%へ紹介'
       tooltip: '患者を他のプレイヤーの病院へ送ります。右クリックで別の病院を選びます'

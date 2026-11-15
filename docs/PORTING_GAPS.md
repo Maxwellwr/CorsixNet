@@ -374,8 +374,12 @@ to the client that diverged, `ResyncMessage`.)
   cheats window with the adviser's line, the four toggle codes switch their cheat with its announcement, and a wrong code
   buzzes; 24328 also puts the cheats menu on the menu bar until the game is left (`app.cheats_menu_unlocked`,
   `UIMenuBar:unlockCheats`). F11 opens the cheats always, where CorsixTH needs its `debug` setting.
-- Lua console equivalent / debug console (`resizables/lua_console.lua`), debug patient spawning
-  (Partial: debug keys H, Ctrl+1-4).
+- (Done: a debug console in place of the Lua console (`resizables/lua_console.lua`: UILuaConsole's green window, the
+  black box, Execute and Close; F12, `global_showLuaConsole`, and the debug menu's LUA CONSOLE): it runs short commands
+  instead of Lua, sent as commands so every player of a network game sees them: money, patient, vip, emergency,
+  epidemic, earthquake, reputation, research, repair, endmonth, endyear, win, lose (the cheats, with a count where it
+  makes sense, capped), rat (the debug rat), help and clear (`DebugConsoleWindow`). The debug keys H and Ctrl+1-4 stay.)
+  No scripting: running arbitrary code is not offered.
 - AnimView (separate tool in the CorsixTH repo); partly covered by the sprite viewer.
 
 ## 13. Rendering

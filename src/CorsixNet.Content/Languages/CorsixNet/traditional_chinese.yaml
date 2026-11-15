@@ -94,6 +94,12 @@ strings:
     toolbar:
       machine_menu: '機器選單 (%s)'
   corsixnet:
+    console:
+      caption: "除錯主控台"
+      unknown: "未知命令：%1%。輸入help查看列表。"
+      commands: "命令："
+      done: "完成。"
+      execute_tooltip: "執行輸入的命令"
     referral:
       refer: '轉診到%1%'
       tooltip: '把病人送到另一位玩家的醫院；右鍵選擇其他醫院'

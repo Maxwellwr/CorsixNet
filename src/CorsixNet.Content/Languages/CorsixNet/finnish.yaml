@@ -243,6 +243,12 @@ strings:
   transactions:
     remove_room: 'Rakennus: tuhoutuneen huoneen poisto'
   corsixnet:
+    console:
+      caption: "Vianetsintäkonsoli"
+      unknown: "Tuntematon komento: %1%. Kirjoita help nähdäksesi luettelon."
+      commands: "Komennot:"
+      done: "Valmis."
+      execute_tooltip: "Suorita kirjoitettu komento"
     referral:
       refer: 'Lähetä: %1%'
       tooltip: 'Lähettää potilaan toisen pelaajan sairaalaan; oikea painike valitsee toisen sairaalan'

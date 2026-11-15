@@ -259,6 +259,12 @@ strings:
   transactions:
     remove_room: 'Építés: lerombolt szoba eltávolítása'
   corsixnet:
+    console:
+      caption: "Hibakereső konzol"
+      unknown: "Ismeretlen parancs: %1%. Írd be: help a listához."
+      commands: "Parancsok:"
+      done: "Kész."
+      execute_tooltip: "A beírt parancs futtatása"
     referral:
       refer: 'Beutalás ide: %1%'
       tooltip: 'A beteget egy másik játékos kórházába küldi; jobb gombbal másik kórház választható'

@@ -74,6 +74,7 @@ public sealed class Hotkeys
     public static readonly IReadOnlyList<(string Name, Hotkey Key)> Defaults =
     [
         ("ingame_showCheatWindow", new("f11")),
+        ("global_showLuaConsole", new("f12")),
         ("ingame_pause", new("p")),
         ("ingame_gamespeed_slowest", new("1")),
         ("ingame_gamespeed_slower", new("2")),

@@ -192,6 +192,12 @@ strings:
   transactions:
     remove_room: 'Bygge: ta bort förstört rum'
   corsixnet:
+    console:
+      caption: "Felsökningskonsol"
+      unknown: "Okänt kommando: %1%. Skriv help för listan."
+      commands: "Kommandon:"
+      done: "Klart."
+      execute_tooltip: "Kör det skrivna kommandot"
     referral:
       refer: 'Remittera till %1%'
       tooltip: 'Skickar patienten till en annan spelares sjukhus; högerklick väljer ett annat sjukhus'
