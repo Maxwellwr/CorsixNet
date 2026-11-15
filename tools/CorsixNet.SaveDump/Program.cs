@@ -101,7 +101,7 @@ static void Entities(OriginalSaveGame save, byte? kind)
             _ => $"type {entity.Type}",
         };
         var bytes = Convert.ToHexString(entity.Raw.Span[..48]).ToLowerInvariant();
-        Console.WriteLine($"#{entity.Slot,-4} kind {entity.Kind,2} {name,-22} ({entity.X / 256.0,6:0.00},{entity.Y / 256.0,6:0.00}) frame {entity.Frame,5}  {bytes}");
+        Console.WriteLine($"#{entity.Slot,-4} kind {entity.Kind,2} {name,-22} ({entity.X / 256.0,6:0.00},{entity.Y / 256.0,6:0.00}) frame {entity.Frame,5} dir {entity.Direction}  {bytes}");
     }
 }
 

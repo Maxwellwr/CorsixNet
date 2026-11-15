@@ -59,6 +59,12 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     public byte Type => Raw.Span[14];
 
     /// <summary>
+    /// Objects only: direction the object faces, encoded as <see cref="MapFileTile.ObjectDirection"/> in level files
+    /// (a bench facing south-east on screen has 1).
+    /// </summary>
+    public byte Direction => Raw.Span[17];
+
+    /// <summary>
     /// Staff only: role bits, 1 receptionist, 2 handyman, 4 nurse, 8 junior, 16 doctor, 32 surgeon,
     /// 64 psychiatrist, 128 consultant, 256 researcher.
     /// </summary>

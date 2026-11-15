@@ -29,6 +29,7 @@ public class OriginalSaveGameTests
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(entity + 8), 0x019A);
         data[entity + 12] = 6;
         data[entity + 14] = 11;
+        data[entity + 17] = 2;
 
         var hospital = OriginalSaveGame.HospitalOffset + OriginalSaveGame.HospitalLength;
         Encoding.ASCII.GetBytes("MAXWELL").CopyTo(data, hospital);
@@ -56,6 +57,7 @@ public class OriginalSaveGameTests
         Assert.Equal(0x019A, parsed.Frame);
         Assert.Equal(6, parsed.Kind);
         Assert.Equal(11, parsed.Type);
+        Assert.Equal(2, parsed.Direction);
 
         Assert.Equal(OriginalSaveGame.MaxPlayers, save.Hospitals.Count);
         Assert.Equal(0, save.Hospitals[0].Kind);
