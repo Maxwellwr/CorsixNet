@@ -11,8 +11,15 @@ using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client.Ui;
 
-/// <summary>One item of a menu: its text, what it does, and for a check item whether it is ticked now.</summary>
-internal sealed record MenuBarItem(string Title, Action Act, Func<bool>? Checked = null);
+/// <summary>
+/// One item of a menu: its text, what it does, for a check item whether it is ticked now, and for an item that opens a
+/// submenu (<c>appendMenu</c>) that menu's items.
+/// </summary>
+internal sealed record MenuBarItem(string Title, Action Act, Func<bool>? Checked = null, IReadOnlyList<MenuBarItem>? Submenu = null)
+{
+    /// <summary>An item opening a submenu, which does nothing itself.</summary>
+    public static MenuBarItem Menu(string title, IReadOnlyList<MenuBarItem> items) => new(title, () => { }, null, items);
+}
 
 /// <summary>One menu of the bar: its title and items.</summary>
 internal sealed record MenuBarMenu(string Title, IReadOnlyList<MenuBarItem> Items);
@@ -36,6 +43,10 @@ internal sealed class OriginalMenuBar
 
     private int? _open;
     private int _hovered = -1;
+
+    /// <summary>The item of the open menu whose submenu shows, and the submenu's item under the mouse.</summary>
+    private int? _sub;
+    private int _subHovered = -1;
     private long _hideAt;
 
     public bool IsVisible { get; private set; }
@@ -66,6 +77,12 @@ internal sealed class OriginalMenuBar
     public static Rectangle MenuArea(Rectangle title, MenuBarMenu menu, Func<string, int> measure) =>
         new(title.X, title.Y + Height - 2, Math.Max(20, menu.Items.Select(item => measure(item.Title) + TextIndent + 10).DefaultIfEmpty(0).Max()), Math.Max(20, 6 + (menu.Items.Count * ItemHeight)));
 
+    /// <summary>
+    /// A submenu's place (<c>UIMenuBar:onMouseMove</c>): 10 pixels in from its menu's right edge, level with its item.
+    /// </summary>
+    public static Rectangle SubmenuArea(Rectangle menu, int item, IReadOnlyList<MenuBarItem> items, Func<string, int> measure) =>
+        new(menu.Right - 10, menu.Y + (item * ItemHeight), Math.Max(20, items.Select(i => measure(i.Title) + TextIndent + 10).DefaultIfEmpty(0).Max()), Math.Max(20, 6 + (items.Count * ItemHeight)));
+
     /// <summary>UIMenu:hitTest: the item under the point, from 0, or -1.</summary>
     public static int ItemAt(Rectangle area, int count, Point at)
     {
@@ -88,8 +105,11 @@ internal sealed class OriginalMenuBar
         var at = new Point(mouse.X, mouse.Y);
         var titles = TitleAreas(menus, measure);
         var menuArea = _open is { } open ? MenuArea(titles[open], menus[open], measure) : Rectangle.Empty;
+        var subItems = _open is { } withSub && _sub is { } subIndex && subIndex < menus[withSub].Items.Count ? menus[withSub].Items[subIndex].Submenu : null;
+        var subArea = subItems is not null ? SubmenuArea(menuArea, _sub!.Value, subItems, measure) : Rectangle.Empty;
         var nearTop = at.Y < Height + Padding;
-        var overMenu = _open is not null && Inflate(menuArea, Padding).Contains(at);
+        var overSub = subItems is not null && Inflate(subArea, Padding).Contains(at);
+        var overMenu = (_open is not null && Inflate(menuArea, Padding).Contains(at)) || overSub;
         if (nearTop || overMenu)
         {
             IsVisible = true;
@@ -107,13 +127,21 @@ internal sealed class OriginalMenuBar
         }
 
         var titleIndex = at.Y < Height ? titles.FindIndex(area => area.X <= at.X && at.X < area.Right) : -1;
-        var hovered = _open is { } shown ? ItemAt(menuArea, menus[shown].Items.Count, at) : -1;
-        if (hovered >= 0 && hovered != _hovered)
+        var subHovered = subItems is not null ? ItemAt(subArea, subItems.Count, at) : -1;
+        var hovered = _open is { } shown && subHovered < 0 ? ItemAt(menuArea, menus[shown].Items.Count, at) : -1;
+        if ((hovered >= 0 && hovered != _hovered) || (subHovered >= 0 && subHovered != _subHovered))
         {
             host.PlaySound("HLight5.wav");
         }
 
+        if (hovered >= 0)
+        {
+            // An item with a submenu opens it beside the menu; another item closes the one open.
+            _sub = menus[_open!.Value].Items[hovered].Submenu is not null ? hovered : null;
+        }
+
         _hovered = hovered;
+        _subHovered = subHovered;
         var pressed = mouse.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released;
         var released = mouse.LeftButton == ButtonState.Released && previous.LeftButton == ButtonState.Pressed;
         if (pressed)
@@ -133,18 +161,33 @@ internal sealed class OriginalMenuBar
             // Dragging along the bar opens each menu in turn.
             _open = titleIndex;
         }
-        else if (released && _open is { } chosen && hovered >= 0)
+        else if (released && subItems is not null && subHovered >= 0)
+        {
+            var item = subItems[subHovered];
+            _open = null;
+            _sub = null;
+            _hovered = -1;
+            _subHovered = -1;
+            item.Act();
+        }
+        else if (released && _open is { } chosen && hovered >= 0 && menus[chosen].Items[hovered].Submenu is null)
         {
             var item = menus[chosen].Items[hovered];
             _open = null;
+            _sub = null;
             _hovered = -1;
             item.Act();
+        }
+
+        if (_open is null)
+        {
+            _sub = null;
         }
 
         return nearTop || overMenu;
     }
 
-    public void Draw(SpriteBatch batch, IWindowHost host, IReadOnlyList<MenuBarMenu> menus, int screenWidth, DateTime clock)
+    public void Draw(SpriteBatch batch, IWindowHost host, IReadOnlyList<MenuBarMenu> menus, int screenWidth, DateTime clock, bool twentyFourHours = true)
     {
         if (!IsVisible)
         {
@@ -178,16 +221,27 @@ internal sealed class OriginalMenuBar
             white.Draw(batch, menus[i].Title, new Vector2(titles[i].X + ((titles[i].Width - Measure(menus[i].Title)) / 2), titles[i].Y + ((Height - white.LineHeight) / 2)));
         }
 
-        var time = clock.ToString("HH:mm", CultureInfo.InvariantCulture);
-        white.Draw(batch, time, new Vector2(screenWidth - 45, 1 + ((Height - white.LineHeight) / 2)));
+        // The clock: 24 hours, or with AM and PM (twentyfour_hour_clock).
+        var time = clock.ToString(twentyFourHours ? "HH:mm" : "hh:mm tt", CultureInfo.InvariantCulture);
+        white.Draw(batch, time, new Vector2(screenWidth - (twentyFourHours ? 45 : 65), 1 + ((Height - white.LineHeight) / 2)));
         if (_open is not { } open)
         {
             return;
         }
 
-        // drawMenu: the menu's panels (calculateMenuSize's render list), its right edge, and the items.
+        // drawMenu: the menu's panels (calculateMenuSize's render list), its right edge, and the items; then the submenu.
         var menu = menus[open];
         var area = MenuArea(titles[open], menu, Measure);
+        DrawMenu(batch, sheet, white, blue, area, menu.Items, _hovered);
+        if (_sub is { } sub && sub < menu.Items.Count && menu.Items[sub].Submenu is { } items)
+        {
+            DrawMenu(batch, sheet, white, blue, SubmenuArea(area, sub, items, Measure), items, _subHovered);
+        }
+    }
+
+    private static void DrawMenu(SpriteBatch batch, Rendering.SpriteAtlas sheet, Rendering.TextRenderer white, Rendering.TextRenderer blue, Rectangle area, IReadOnlyList<MenuBarItem> items, int hovered)
+    {
+        void Panel(int sprite, int x, int y) => sheet.Draw(batch, sprite, x, y, Color.White);
         Panel(1, area.X, area.Y);
         for (var x = 10; x <= area.Width - 10; x += 10)
         {
@@ -216,13 +270,20 @@ internal sealed class OriginalMenuBar
         }
 
         Panel(9, area.Right - 10, area.Y + area.Height - 6);
-        for (var i = 0; i < menu.Items.Count; i++)
+        for (var i = 0; i < items.Count; i++)
         {
-            (i == _hovered ? blue : white).Draw(batch, menu.Items[i].Title, new Vector2(area.X + TextIndent, area.Y + 4 + (i * ItemHeight)));
-            if (menu.Items[i].Checked?.Invoke() == true)
+            var font = i == hovered ? blue : white;
+            var y = area.Y + 4 + (i * ItemHeight);
+            font.Draw(batch, items[i].Title, new Vector2(area.X + TextIndent, y));
+            if (items[i].Submenu is not null)
+            {
+                // An item opening a submenu: a "+" at its right (in white: the blue font has no "+").
+                white.Draw(batch, "+", new Vector2(area.Right - 10, y));
+            }
+            else if (items[i].Checked?.Invoke() == true)
             {
                 // A ticked check item: PullDV's tick (10) at the start of its line.
-                Panel(10, area.X, area.Y + 4 + (i * ItemHeight));
+                Panel(10, area.X, y);
             }
         }
     }

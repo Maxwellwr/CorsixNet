@@ -28,3 +28,26 @@ public class MenuBackgroundTests
         }
     }
 }
+
+/// <summary>The menu bar's submenus and the warmth colours (CorsixTH's menu.lua and th_lua_ui.cpp).</summary>
+public class MenuBarSubmenuTests
+{
+    [Fact]
+    public void ASubmenuOpensTenPixelsInFromItsMenusRightLevelWithItsItem()
+    {
+        var area = OriginalMenuBar.SubmenuArea(new Rectangle(100, 14, 150, 90), 2, [new MenuBarItem("A", () => { }), new MenuBarItem("BB", () => { })], text => text.Length * 10);
+        Assert.Equal(new Rectangle(240, 42, 44, 34), area);
+    }
+
+    [Fact]
+    public void TheThreeWarmthThemesColourTheHeat()
+    {
+        // 25 °C and above is the hottest, 4 °C and below the coldest.
+        Assert.Equal(new Color(255, 0, 70), Maps.MapViewScreen.TemperatureColor(40000, 1));
+        Assert.Equal(new Color(0, 0, 70), Maps.MapViewScreen.TemperatureColor(0, 1));
+        Assert.Equal(new Color(255, 0, 70), Maps.MapViewScreen.TemperatureColor(40000, 2));
+        Assert.Equal(new Color(0, 0, 200), Maps.MapViewScreen.TemperatureColor(0, 2));
+        Assert.Equal(new Color(235, 104, 53), Maps.MapViewScreen.TemperatureColor(40000, 3));
+        Assert.Equal(new Color(100, 80, 0), Maps.MapViewScreen.TemperatureColor(0, 3));
+    }
+}
