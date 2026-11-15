@@ -18,6 +18,9 @@ const string Usage = """
       --seed N       Seed for the simulation's random numbers (default 1)
       --speed NAME   Speed the game starts at: Pause (waits until a player starts it), Slowest, Slower,
                      Normal (default), MaxSpeed, AndThenSomeMore or Insane
+
+    Player 1 may switch everyone to the level served or another original level of the game (F3 in the
+    client); it starts paused.
     """;
 
 string? gamePath = null;
@@ -78,6 +81,7 @@ for (var i = 0; i < args.Length; i++)
 
 LoadedLevelMap loaded;
 string levelName;
+ThemeHospitalInstall? lobbyInstall;
 try
 {
     if (mapPath is not null)
@@ -86,6 +90,7 @@ try
         var settings = gamePath is null ? ThemeHospitalInstall.Locate()
             : ThemeHospitalInstall.TryOpen(gamePath, out var found, out _) ? found : null;
         loaded = LevelMapLoader.LoadFile(mapPath, settings);
+        lobbyInstall = settings;
         if (freeBuild)
         {
             loaded = loaded.WithFreeBuild();
@@ -114,6 +119,7 @@ try
 
         loaded = LevelMapLoader.LoadOriginal(install, level, difficulty);
         levelName = level;
+        lobbyInstall = install;
     }
 }
 catch (Exception e) when (e is IOException or InvalidDataException)
@@ -122,7 +128,24 @@ catch (Exception e) when (e is IOException or InvalidDataException)
     return 1;
 }
 
-var server = new LockstepServer(loaded.StartSimulation(seed)) { Log = line => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {line}") };
+// The host (player 1) may switch everyone to the level served or to any original level of the game at hand.
+var offered = new List<LobbyLevel> { new(levelName, () => loaded.StartSimulation(seed)) };
+if (lobbyInstall?.FindDirectory("LEVELS") is { } levelsFolder)
+{
+    foreach (var name in Directory.EnumerateFiles(levelsFolder, "LEVEL.L*").Select(Path.GetFileName).OfType<string>()
+        .Select(name => name.ToUpperInvariant())
+        .OrderBy(name => int.TryParse(name.AsSpan(7), NumberStyles.None, CultureInfo.InvariantCulture, out var n) ? n : int.MaxValue)
+        .ThenBy(name => name, StringComparer.Ordinal))
+    {
+        if (!string.Equals(name, levelName, StringComparison.OrdinalIgnoreCase))
+        {
+            var install = lobbyInstall;
+            offered.Add(new LobbyLevel(name, () => LevelMapLoader.LoadOriginal(install, name, difficulty).StartSimulation(seed)));
+        }
+    }
+}
+
+var server = new LockstepServer(loaded.StartSimulation(seed), levelName, offered) { Log = line => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {line}") };
 server.SetSpeed(speed);
 using var runner = new ServerRunner(server, new TcpConnectionListener(publicHost ? IPAddress.Any : IPAddress.Loopback, port));
 Console.WriteLine($"Serving {levelName} ({loaded.Map.PlayerCount} players) on port {runner.Port}{(publicHost ? "" : " (this machine only; add --public for others)")}. Press Ctrl+C to stop.");

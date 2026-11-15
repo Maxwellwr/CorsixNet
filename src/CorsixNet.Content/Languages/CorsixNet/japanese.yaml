@@ -170,6 +170,11 @@ strings:
       caption: 'チャット'
       none: 'まだ誰も発言していません。'
       start: 'Enterキーで発言'
+    lobby:
+      caption: 'レベル'
+      confirm: '全員が%1%を最初から始めます。よろしいですか？'
+      host_only: 'レベルを選べるのはプレイヤー1だけです。'
+      none: 'サーバーは他のレベルを提供していません。'
     hospital_number: '病院 %1%'
     main_menu:
       caption: 'メインメニュー'

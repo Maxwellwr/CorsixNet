@@ -12,7 +12,7 @@ namespace CorsixNet.Net.Protocol;
 public static class MessageCodec
 {
     /// <summary>Bumped whenever messages or the simulation state format change incompatibly.</summary>
-    public const int ProtocolVersion = 3;
+    public const int ProtocolVersion = 4;
 
     /// <summary>Largest encoded message accepted; a full state for a 128x128 map is far smaller.</summary>
     public const int MaxMessageSize = 16 * 1024 * 1024;
@@ -24,6 +24,9 @@ public static class MessageCodec
 
     /// <summary>The byte a <see cref="SpeedRequestMessage"/> without a speed (go back to the previous one) carries.</summary>
     private const byte PreviousSpeed = 0xFF;
+
+    /// <summary>More levels than a lobby offers.</summary>
+    private const int MaxLevels = 1024;
 
     private enum MessageType : byte
     {
@@ -41,6 +44,8 @@ public static class MessageCodec
         ChatRequest = 12,
         Chat = 13,
         Players = 14,
+        Levels = 15,
+        ChooseLevelRequest = 16,
     }
 
     public static byte[] Encode(Message message)
@@ -116,6 +121,20 @@ public static class MessageCodec
                 }
 
                 break;
+            case LevelsMessage levels:
+                writer.WriteByte((byte)MessageType.Levels);
+                writer.WriteInt32(levels.Levels.Count);
+                foreach (var level in levels.Levels)
+                {
+                    WriteString(writer, level);
+                }
+
+                WriteString(writer, levels.Current);
+                break;
+            case ChooseLevelRequestMessage request:
+                writer.WriteByte((byte)MessageType.ChooseLevelRequest);
+                WriteString(writer, request.Level);
+                break;
             case SpeedRequestMessage request:
                 writer.WriteByte((byte)MessageType.SpeedRequest);
                 writer.WriteByte(request.Speed is { } wanted ? (byte)wanted : PreviousSpeed);
@@ -152,6 +171,8 @@ public static class MessageCodec
             MessageType.ChatRequest => new ChatRequestMessage(ReadString(reader)),
             MessageType.Chat => new ChatMessage(reader.ReadInt32(), ReadString(reader), ReadString(reader)),
             MessageType.Players => ReadPlayers(reader),
+            MessageType.Levels => ReadLevels(reader),
+            MessageType.ChooseLevelRequest => new ChooseLevelRequestMessage(ReadString(reader)),
             MessageType.SpeedRequest => ReadSpeedRequest(reader),
             MessageType.Speed => new SpeedMessage(ToSpeed(reader.ReadByte()), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown message type {(byte)type}."),
@@ -198,6 +219,18 @@ public static class MessageCodec
         }
 
         return new PlayersMessage(players);
+    }
+
+    private static LevelsMessage ReadLevels(SimReader reader)
+    {
+        var count = reader.ReadCount(MaxLevels);
+        var levels = new List<string>(count);
+        for (var i = 0; i < count; i++)
+        {
+            levels.Add(ReadString(reader));
+        }
+
+        return new LevelsMessage(levels, ReadString(reader));
     }
 
     private static ResyncMessage ReadResync(SimReader reader)

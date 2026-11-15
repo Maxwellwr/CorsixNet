@@ -43,6 +43,11 @@ strings:
       caption: 'Discussion'
       none: 'Personne n''a encore rien dit.'
       start: 'Appuyez sur Entrée pour parler'
+    lobby:
+      caption: 'Niveaux'
+      confirm: 'Tout le monde recommence %1% depuis le début. Continuer ?'
+      host_only: 'Seul le joueur 1 choisit le niveau.'
+      none: 'Le serveur ne propose aucun autre niveau.'
     hospital_number: Hôpital %1%
     main_menu:
       caption: Menu principal

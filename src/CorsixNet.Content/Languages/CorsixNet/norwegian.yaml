@@ -175,6 +175,11 @@ strings:
       caption: 'Chat'
       none: 'Ingen har sagt noe ennå.'
       start: 'Trykk Enter for å skrive'
+    lobby:
+      caption: 'Brett'
+      confirm: 'Alle starter %1% på nytt. Fortsette?'
+      host_only: 'Bare spiller 1 velger brettet.'
+      none: 'Serveren tilbyr ingen andre brett.'
     hospital_number: 'Sykehus %1%'
     main_menu:
       caption: 'Hovedmeny'

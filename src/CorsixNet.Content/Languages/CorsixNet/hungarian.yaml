@@ -263,6 +263,11 @@ strings:
       caption: 'Csevegés'
       none: 'Még senki nem mondott semmit.'
       start: 'Nyomj Entert az íráshoz'
+    lobby:
+      caption: 'Pályák'
+      confirm: 'Mindenki elölről kezdi: %1%. Folytatod?'
+      host_only: 'Csak az 1. játékos választ pályát.'
+      none: 'A szerver nem kínál más pályát.'
     hospital_number: '%1%. kórház'
     main_menu:
       caption: 'Főmenü'

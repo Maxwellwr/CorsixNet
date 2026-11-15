@@ -98,6 +98,11 @@ strings:
       caption: '聊天'
       none: '還沒有人說話。'
       start: '按 Enter 鍵發言'
+    lobby:
+      caption: '關卡'
+      confirm: '所有人將從頭開始 %1%。繼續嗎？'
+      host_only: '只有玩家 1 可以選擇關卡。'
+      none: '伺服器沒有提供其他關卡。'
     hospital_number: '醫院 %1%'
     main_menu:
       caption: '主選單'

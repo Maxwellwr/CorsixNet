@@ -98,6 +98,11 @@ strings:
       caption: '聊天'
       none: '还没有人说话。'
       start: '按回车键发言'
+    lobby:
+      caption: '关卡'
+      confirm: '所有人将从头开始 %1%。继续吗？'
+      host_only: '只有玩家 1 可以选择关卡。'
+      none: '服务器没有提供其他关卡。'
     hospital_number: '医院 %1%'
     main_menu:
       caption: '主菜单'

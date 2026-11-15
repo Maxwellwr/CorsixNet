@@ -90,6 +90,11 @@ strings:
       caption: 'Chat'
       none: 'Nessuno ha ancora detto niente.'
       start: 'Premi Invio per parlare'
+    lobby:
+      caption: 'Livelli'
+      confirm: 'Tutti ricominceranno %1% dall''inizio. Procedere?'
+      host_only: 'Solo il giocatore 1 sceglie il livello.'
+      none: 'Il server non offre altri livelli.'
     hospital_number: 'Ospedale %1%'
     main_menu:
       caption: 'Menu principale'

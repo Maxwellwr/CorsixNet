@@ -200,6 +200,11 @@ strings:
       caption: 'Czat'
       none: 'Nikt jeszcze nic nie powiedział.'
       start: 'Naciśnij Enter, aby pisać'
+    lobby:
+      caption: 'Poziomy'
+      confirm: 'Wszyscy zaczną %1% od początku. Kontynuować?'
+      host_only: 'Poziom wybiera tylko gracz 1.'
+      none: 'Serwer nie oferuje innych poziomów.'
     hospital_number: 'Szpital %1%'
     main_menu:
       caption: 'Menu główne'

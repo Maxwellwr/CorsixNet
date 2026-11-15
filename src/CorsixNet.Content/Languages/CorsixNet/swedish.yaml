@@ -196,6 +196,11 @@ strings:
       caption: 'Chatt'
       none: 'Ingen har sagt något än.'
       start: 'Tryck Enter för att skriva'
+    lobby:
+      caption: 'Banor'
+      confirm: 'Alla börjar om %1% från början. Fortsätta?'
+      host_only: 'Bara spelare 1 väljer bana.'
+      none: 'Servern erbjuder inga andra banor.'
     hospital_number: 'Sjukhus %1%'
     main_menu:
       caption: 'Huvudmeny'
