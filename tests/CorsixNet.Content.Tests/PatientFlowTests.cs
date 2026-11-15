@@ -582,7 +582,7 @@ public class PatientFlowTests
     }
 
     /// <summary>General diagnosis south-west of the GP's office, with a second doctor.</summary>
-    private static void BuildGeneralDiagnosis(Simulation simulation)
+    internal static void BuildGeneralDiagnosis(Simulation simulation)
     {
         Run(simulation, new BuildRoomCommand(new RoomPlan("general_diag", GeneralDiagArea, new DoorPlacement(new(5, GeneralDiagArea.Y), EdgeOrientation.North))));
         var room = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "general_diag");
@@ -657,7 +657,7 @@ public class PatientFlowTests
     /// Level one's rules without its three computer opponents: they would take three patients in four
     /// (CorsixTH's round robin in <c>World:chooseHospitalForPatient</c>), and these tests watch the rooms at work.
     /// </summary>
-    private static LevelRules LevelOne(CorsixNet.Formats.ThemeHospitalInstall install) =>
+    internal static LevelRules LevelOne(CorsixNet.Formats.ThemeHospitalInstall install) =>
         LevelRulesLoader.LoadOriginal(install, "LEVEL.L1", BaseGameContent.Create()).WithoutCompetitors();
 
     internal static void Run(Simulation simulation, Command command)

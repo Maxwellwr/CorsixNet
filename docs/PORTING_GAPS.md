@@ -59,8 +59,9 @@ objects from the level file.
 refreshed monthly, `HireStaffCommand` with placement check, monthly wages; receptionist at a desk,
 doctor in GP and general diagnosis, nurse in the pharmacy.
 
-- Hire window: the original's panel (names, descriptions and portraits are done, `StaffTexts`, `StaffFaces`); picking up and placing staff
-  (two steps, cancel puts candidate back) (`dialogs/hire_staff.lua`, `place_staff.lua`, `staff_profile.lua`).
+- (Done: hire window: the original's panel with names, descriptions and portraits (`StaffTexts`, `StaffFaces`); hiring in
+  two steps, the candidate on the cursor and placed with a click, a right click giving them back to the list (they
+  leave the pool only once placed, `HireStaffCommand`; `dialogs/hire_staff.lua`, `place_staff.lua`).)
 - Staff management screen: done in the original's look (`StaffManagementScreen`: tabs, pages, ordering by a heading,
   bonus, pay rise, sack, the view, the arrow keys). A raise request comes as a "strike" icon on the bottom panel
   that opens `StaffRiseWindow` (`staff_rise.lua`: Req12V, grant or refuse, Esc does not close it, the game pauses).
@@ -68,8 +69,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   staff management and the casebook, Enter in the confirmation, information, hire and buy objects windows, H (`ingame_patient_gohome`) in the patient
   window. The place objects rotate key is done (`ingame_rotateobject`), and so is its sell key (`ingame_sellPickedUpItem`,
   Delete: `UIPlaceObjects:sell` sells a picked up corridor object, or ends buying them; not in a room being edited).
-- Staff window: its pick up button, sending home (`dialogs/staff_dialog.lua`). Moving a member of staff is done as a
-  command (`MoveStaffCommand`, `StaffMoving`; M and M again in the client).
+- (Done: staff window (`StaffScreen`, `dialogs/staff_dialog.lua`) with its sack button (asking first, `FireStaffCommand`)
+  and pick up button; moving a member of staff (`MoveStaffCommand`, `StaffMoving`; also M and M again).)
 - Calls dispatcher: rooms, machines, litter and plants request staff by priority and distance;
   partial: a room without staff calls the free member of staff with the best `getPriorityForRoom` score (path,
   waiting patients, emergencies, fatigue, specialist rooms first), unless another waiting room scores better for them;
@@ -91,8 +92,11 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   and queue (`ReceptionDesks`; `objects/reception_desk.lua`, `seek_reception.lua`).)
 - Patients waiting look at the watch, yawn and tap a foot with 30, 20 and 10 days left, and those with sleeping illness yawn one day in ten (`PatientSpotAction`; `humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`). In CorsixTH these are patients' animations only.
   Staff speed (juniors, consultants, tiredness, the no-rest cheat) is done (`Tiredness.UpdateSpeed`).
-- Picking staff up with the hand cursor (the grab cursor, the staff drawn under it, `pickup.wav`); the move itself is
-  done (`MoveStaffCommand`), but not while the member of staff is treating a patient with an object.
+- (Done: carrying staff: the grab cursor, the member of staff drawn under it, tinted where they may not go, `pickup.wav`
+  and `plac_st2.wav`, a right click letting them go. One picked up while using an object with a patient (the pharmacy
+  nurse, a doctor at the trolley or a machine) stops there (`MultiObjectUse.Abort`, `StaffEmployment.Detach`), and the
+  patient waits for the next or gets off as when staff leave.) The operating theatre's surgeons, working the table
+  together, cannot be picked up until the operation is over.
 
 ## 4. Patients, diseases, epidemics, VIPs, emergencies, disasters
 

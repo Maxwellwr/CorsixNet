@@ -30,9 +30,11 @@ public static class StaffMoving
             return StaffHireProblem.NoSuchStaff;
         }
 
-        // CorsixTH lets the room deal with a member of staff leaving in the middle of a treatment; here they cannot be
-        // picked up then, as a fired one finishes first.
-        if (StaffEmployment.IsBusyWithPatient(simulation, staff))
+        // CorsixTH lets the room deal with a member of staff leaving in the middle of a treatment: here one using an
+        // object with a patient stops (StaffEmployment.Detach) and the patient waits for the next. Only the operating
+        // theatre's two surgeons, working the table together, finish first.
+        if (StaffEmployment.IsBusyWithPatient(simulation, staff) && staff.Behaviour is DoctorBehaviour surgeon
+            && simulation.FindEntity(surgeon.RoomId) is Room { RoomType: RoomVisits.OperatingTheatreRoom })
         {
             return StaffHireProblem.BusyWithPatient;
         }

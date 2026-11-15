@@ -3378,6 +3378,27 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     private void LeaveQueue(Simulation simulation, Humanoid humanoid) => CurrentQueue(simulation)?.Remove(simulation, humanoid.Id);
 
     /// <summary>
+    /// The member of staff using the room's object with the patient is picked up (<c>Room:onHumanoidLeave</c> for the
+    /// staff): the shared use stops where it was, and the patient waits at the object again for whoever the room calls
+    /// next. Nothing counts as done.
+    /// </summary>
+    internal void AbortTrolleyUse(Simulation simulation, Humanoid humanoid, Humanoid staff)
+    {
+        if (TrolleyUse is not { } use)
+        {
+            return;
+        }
+
+        use.Abort(simulation, use.UseWithId == humanoid.Id ? staff : humanoid);
+        TrolleyUse = null;
+        IsExamined = false;
+        if (Phase == PatientPhase.OnTrolley)
+        {
+            Phase = PatientPhase.AtTrolley;
+        }
+    }
+
+    /// <summary>
     /// <c>queue:rerouteAllPatients</c> when the reception desk the patient heads for or queues at is picked up: they
     /// look for a desk again.
     /// </summary>

@@ -363,9 +363,17 @@ internal static class StaffEmployment
         switch (humanoid.Behaviour)
         {
             case DoctorBehaviour doctor:
+                if (simulation.FindEntity(doctor.RoomId) is Room examining
+                    && simulation.FindEntity(examining.PatientId) is Humanoid { Behaviour: PatientBehaviour { TrolleyUse: { } } patient } examined)
+                {
+                    // Picked up while using the room's object with the patient: the use stops, the patient waits again.
+                    patient.AbortTrolleyUse(simulation, examined, humanoid);
+                }
+
                 LeaveRoom(simulation, humanoid, doctor.RoomId, doctor.Use?.OldTile);
                 break;
             case NurseBehaviour nurse:
+                nurse.AbortTreatment(simulation, humanoid);
                 LeaveRoom(simulation, humanoid, nurse.RoomId, null);
                 break;
             case ReceptionistBehaviour receptionist when simulation.FindEntity(receptionist.DeskId) is RoomObject { Desk: { } state } desk:
