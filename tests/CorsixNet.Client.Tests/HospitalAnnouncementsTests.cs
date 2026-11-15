@@ -51,4 +51,24 @@ public class HospitalAnnouncementsTests
         announcements.Update(simulation, 0);
         Assert.Empty(announcements.TakeAnnouncements());
     }
+
+    [Fact]
+    public void TheHospitalOpensWithAFanfare()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var hospital = simulation.Hospitals[0];
+        var announcements = new HospitalAnnouncements(new Random(1));
+        if (hospital.IsOpen)
+        {
+            // Opened from the start (a free build level): nothing to hear.
+            Assert.Empty(announcements.Update(simulation, 0));
+            return;
+        }
+
+        Assert.Empty(announcements.Update(simulation, 0));
+        hospital.Open();
+        Assert.Equal(["fanfare.wav"], announcements.Update(simulation, 0));
+        Assert.Empty(announcements.Update(simulation, 0));
+    }
 }

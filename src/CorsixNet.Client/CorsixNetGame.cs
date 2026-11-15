@@ -75,6 +75,7 @@ internal sealed class CorsixNetGame : Game
                 try
                 {
                     SaveScreenshot(screenshot);
+                    _screen.ScreenshotSaved();
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
