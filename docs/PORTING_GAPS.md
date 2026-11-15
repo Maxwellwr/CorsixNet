@@ -173,7 +173,7 @@ fonts, faces) and the details listed.
   date, reputation meter, fax door, dynamic info and pause text, fax icons by kind). The fax icons slide out of the door,
   the emergency's siren turns and a right click dismisses a fax with one choice (`FaxDrawer`). The dynamic info's lines and its diagnosis and tiredness bars are drawn (`DynamicInfoLines`). Missing: CorsixTH's
   machine menu button (aux_ui sprites); Machines and the adviser's messages are on their hotkeys only.
-- Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock); CorsixTH's sound, music, warmth colour and wage options, its debug items and submenus are not in it. Esc still opens the menu window too.
+- Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock); CorsixTH's music, warmth colour and wage options, its debug items and submenus are not in it. Esc still opens the menu window too.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
   edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
@@ -283,7 +283,8 @@ join.
   Ctrl+H, Y, C, F11), pause, speed up, quick save/load, the adviser toggle, the speeds, scrolling, zoom, remembered
   views and the room list (`Hotkeys`, `HotkeyInput`), and changed in the hotkey assignment dialog from the options
   (`HotkeyAssignWindow`). Still on fixed keys: Esc and this game's stand-in keys;
-  CorsixTH's other actions (sound, music, announcements toggles, screenshots, logs, furnish corridor, edit room,
+  The sound and announcements toggles (Alt+S, Alt+A, also in the menu bar's options) are done.
+  CorsixTH's other actions (music toggle, screenshots, logs, furnish corridor, edit room,
   sell the picked up item) are not read. The rotate object key (`ingame_rotateobject`, space) turns the object being
   placed, as a right click does; outside placing, space still pauses.
 - Update check (`resizables/update.lua`).

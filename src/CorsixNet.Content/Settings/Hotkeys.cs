@@ -106,6 +106,8 @@ public sealed class Hotkeys
         ("ingame_openFirstMessage", new("c")),
         ("ingame_setTransparent", new("x")),
         ("ingame_toggleTransparent", new("x", Shift: true)),
+        ("ingame_toggleAnnouncements", new("a", Alt: true)),
+        ("ingame_toggleSounds", new("s", Alt: true)),
         ("ingame_toggleAdvisor", new("a", Shift: true)),
         ("ingame_rotateobject", new("space")),
         ("ingame_patient_gohome", new("h")),

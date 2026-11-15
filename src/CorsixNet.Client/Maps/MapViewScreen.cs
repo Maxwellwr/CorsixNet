@@ -690,8 +690,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         // CorsixTH's GameUI scrolling: the arrow keys (and WASD) and the screen's edges scroll, faster with Shift and the
         // longer they do; the right or middle button drags; the wheel zooms with momentum, towards the cursor.
-        var keyX = (ScrollKeyHeld("ingame_scroll_right", keys) || keys.IsKeyDown(Keys.D) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_left", keys) || keys.IsKeyDown(Keys.A) ? 1 : 0);
-        var keyY = (ScrollKeyHeld("ingame_scroll_down", keys) || keys.IsKeyDown(Keys.S) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_up", keys) || keys.IsKeyDown(Keys.W) ? 1 : 0);
+        // WASD only without Alt or Ctrl, which make them other keys (Alt+A, Alt+S: the announcements and sounds).
+        var wasd = !keys.IsKeyDown(Keys.LeftAlt) && !keys.IsKeyDown(Keys.RightAlt) && !keys.IsKeyDown(Keys.LeftControl) && !keys.IsKeyDown(Keys.RightControl);
+        var keyX = (ScrollKeyHeld("ingame_scroll_right", keys) || (wasd && keys.IsKeyDown(Keys.D)) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_left", keys) || (wasd && keys.IsKeyDown(Keys.A)) ? 1 : 0);
+        var keyY = (ScrollKeyHeld("ingame_scroll_down", keys) || (wasd && keys.IsKeyDown(Keys.S)) ? 1 : 0) - (ScrollKeyHeld("ingame_scroll_up", keys) || (wasd && keys.IsKeyDown(Keys.W)) ? 1 : 0);
         var shiftHeld = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         // In the map editor the right button copies an area (UIMapEditor); the middle one still drags the view.
         var rightPans = _editorTool is null;
@@ -3103,6 +3105,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ToggleAdviser();
         }
 
+        if (HotkeyInput.Pressed(_hotkeys["ingame_toggleSounds"], keys, pressed))
+        {
+            ToggleSounds();
+        }
+
+        if (HotkeyInput.Pressed(_hotkeys["ingame_toggleAnnouncements"], keys, pressed))
+        {
+            ToggleAnnouncements();
+        }
+
         (string Action, Func<UiWindow> Window)[] dialogs =
         [
             ("ingame_panel_hireStaff", () => new HireWindow()),
@@ -3335,6 +3347,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             new(Item("menu.options", "OPTIONS"), [
                 Do("corsixnet.menu.settings", "Settings", "options"),
                 Do("corsixnet.menu.levels", "Levels", "levels"),
+                new(Item("menu_options.sound", "SOUND"), ToggleSounds, () => _config.PlaySounds),
+                new(Item("menu_options.announcements", "ANNOUNCEMENTS"), ToggleAnnouncements, () => _config.PlayAnnouncements),
                 new(Item("menu_options.adviser_disabled", "ADVISER"), ToggleAdviser, () => !_config.AdviserDisabled),
                 new(Item("menu_debug.transparent_walls", "TRANSPARENT WALLS"), () => _wallsTransparentToggled = !_wallsTransparentToggled, () => _wallsTransparentToggled),
                 Speed("menu_options_game_speed.pause", "PAUSE", GameSpeed.Pause),
@@ -3482,6 +3496,40 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <c>GameUI:toggleAdviser</c> (Shift+A by default): the adviser falls silent or speaks again, and the setting is
     /// saved.
     /// </summary>
+    /// <summary><c>UI:togglePlaySounds</c>: sound effects on or off, kept in the settings.</summary>
+    private void ToggleSounds()
+    {
+        _config = _config with { PlaySounds = !_config.PlaySounds };
+        _sounds.Dispose();
+        _sounds = SoundEffects.Load(_install, _config);
+        SaveConfig();
+    }
+
+    /// <summary><c>UI:togglePlayAnnouncements</c>: the announcer on or off, kept in the settings.</summary>
+    private void ToggleAnnouncements()
+    {
+        _config = _config with { PlayAnnouncements = !_config.PlayAnnouncements };
+        SaveConfig();
+    }
+
+    /// <summary>Writes the settings to <c>config.yaml</c>, saying so when it cannot.</summary>
+    private void SaveConfig()
+    {
+        if (_configPath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _config.Save(_configPath);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            ShowNotice(UiText.Format("corsixnet.status.cannot_save_settings", "Cannot save the settings: %1%", e.Message));
+        }
+    }
+
     private void ToggleAdviser()
     {
         _config = _config with { AdviserDisabled = !_config.AdviserDisabled };
