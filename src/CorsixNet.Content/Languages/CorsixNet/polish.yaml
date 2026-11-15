@@ -253,6 +253,7 @@ strings:
     options:
       sound_effects: 'Efekty dźwiękowe'
       adviser: 'Doradca'
+      announcements: 'Komunikaty'
       room_information: 'Opisy pomieszczeń'
       edge_scrolling: 'Przewijanie przy krawędzi'
       screen: 'Ekran'

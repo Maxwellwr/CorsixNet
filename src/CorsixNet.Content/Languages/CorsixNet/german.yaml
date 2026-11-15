@@ -163,6 +163,7 @@ strings:
     options:
       sound_effects: Soundeffekte
       adviser: Berater
+      announcements: Durchsagen
       room_information: Rauminformationen
       edge_scrolling: Scrollen am Bildschirmrand
       screen: Bildschirm

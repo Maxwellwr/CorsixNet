@@ -79,6 +79,7 @@ strings:
     options:
       sound_effects: 'Zvukové efekty'
       adviser: 'Rádce'
+      announcements: 'Hlášení'
       room_information: 'Popisy místností'
       edge_scrolling: 'Posun u okraje obrazovky'
       screen: 'Obrazovka'

@@ -82,6 +82,7 @@ strings:
     options:
       sound_effects: 'Efectos de sonido'
       adviser: 'Consejero'
+      announcements: 'Anuncios'
       room_information: 'Información de las salas'
       edge_scrolling: 'Desplazamiento en el borde'
       screen: 'Pantalla'

@@ -131,6 +131,7 @@ strings:
     options:
       sound_effects: 'Efeitos sonoros'
       adviser: 'Conselheiro'
+      announcements: 'Anúncios'
       room_information: 'Informaçöes das salas'
       edge_scrolling: 'Rolagem na borda da tela'
       screen: 'Tela'
