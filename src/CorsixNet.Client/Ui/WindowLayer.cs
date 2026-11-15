@@ -119,9 +119,18 @@ internal sealed class WindowLayer
         return hit?.Layout!.Cells.FirstOrDefault(cell => cell.Area.Contains(mouse)).Cell?.Tooltip;
     }
 
-    /// <summary>The cursor the front fullscreen dialog under the mouse sets there, or null.</summary>
+    /// <summary>
+    /// The cursor the front fullscreen dialog under the mouse sets there, or null; a dialog dragging something out of
+    /// itself (<see cref="UiWindow.CapturesMouse"/>) sets it wherever the mouse is.
+    /// </summary>
     public GameCursor? CursorAt(Point mouse)
     {
+        if (_host is { } captorHost
+            && _open.LastOrDefault(open => open.Layout is { Fullscreen: true } && open.Window.CapturesMouse) is { Layout: { } capturing } captor)
+        {
+            return captor.Window.FullscreenCursor(captorHost, mouse - capturing.Bounds.Location);
+        }
+
         var hit = _open.LastOrDefault(open => open.Layout is { } layout && layout.Bounds.Contains(mouse));
         return hit?.Layout is { Fullscreen: true } full && _host is { } host ? hit.Window.FullscreenCursor(host, mouse - full.Bounds.Location) : null;
     }

@@ -165,6 +165,14 @@ internal sealed class QueueWindow(int ownerId) : UiWindow
     public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => Screen.Mouse(host, this, local, mouse, previous);
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) => QueueScreen.Tooltip(host, local);
+
+    /// <summary>
+    /// <c>UIQueue:onMouseMove</c>: while a patient is dragged, the default cursor over the dialog's 605 by 120 pixels and
+    /// the queue's drag cursor outside them.
+    /// </summary>
+    public override GameCursor? FullscreenCursor(IWindowHost host, Point local) =>
+        _screen is { IsDragging: true } && !(local.X > 0 && local.X < 605 && local.Y > 0 && local.Y < 120) ? GameCursor.QueueDrag : null;
+
     public override bool IsSameAs(UiWindow other) => other is QueueWindow window && window.OwnerId == OwnerId;
 
     public override bool IsDone(IWindowHost host) => QueueOf(host.Simulation, OwnerId) is null;
