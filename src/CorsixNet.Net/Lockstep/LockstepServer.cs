@@ -43,7 +43,11 @@ public sealed class LockstepServer : IDisposable
     public LockstepServer(Simulation simulation)
     {
         Simulation = simulation;
+        ContentHash = ContentFingerprint.Compute(simulation.Content);
     }
+
+    /// <summary>The fingerprint of the simulation's content, which a joining client's must match.</summary>
+    public ulong ContentHash { get; }
 
     /// <summary>The authoritative simulation. Only the server's thread may touch it.</summary>
     public Simulation Simulation { get; }
@@ -189,6 +193,12 @@ public sealed class LockstepServer : IDisposable
         if (hello.ProtocolVersion != MessageCodec.ProtocolVersion)
         {
             Reject(peer, $"Protocol version {hello.ProtocolVersion} does not match the server's {MessageCodec.ProtocolVersion}.");
+            return;
+        }
+
+        if (hello.ContentHash != ContentHash)
+        {
+            Reject(peer, $"The game content ({hello.ContentHash:X16}) does not match the server's ({ContentHash:X16}): both need the same version of CorsixNet.");
             return;
         }
 

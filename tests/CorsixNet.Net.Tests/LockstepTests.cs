@@ -4,6 +4,7 @@ using CorsixNet.Net.Protocol;
 using CorsixNet.Net.Transport;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
+using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 
@@ -127,12 +128,28 @@ public sealed class LockstepTests : IDisposable
     {
         var (serverEnd, clientEnd) = InMemoryConnection.CreatePair();
         _server.AddConnection(serverEnd);
-        clientEnd.Send(new HelloMessage(MessageCodec.ProtocolVersion + 1, "Future"));
+        clientEnd.Send(new HelloMessage(MessageCodec.ProtocolVersion + 1, "Future", _server.ContentHash));
 
         _server.ProcessMessages();
 
         Assert.True(clientEnd.TryReceive(out var reply));
         Assert.Contains("Protocol version", Assert.IsType<RejectMessage>(reply).Reason);
+    }
+
+    [Fact]
+    public void RejectsClientsWithOtherContent()
+    {
+        var (serverEnd, clientEnd) = InMemoryConnection.CreatePair();
+        _server.AddConnection(serverEnd);
+        var other = new GameContent([new RoomDefinition("gp", "GP's office", 4, 1, new WallSet(1, 2, 3, 4))], []);
+        using var client = new LockstepClient(clientEnd, "Other", other);
+
+        Exchange();
+        client.ProcessMessages();
+
+        Assert.False(client.IsJoined);
+        Assert.Contains("game content", client.Problem);
+        Assert.Equal(0, _server.JoinedCount);
     }
 
     [Fact]

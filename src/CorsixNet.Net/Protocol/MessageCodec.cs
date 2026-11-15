@@ -12,7 +12,7 @@ namespace CorsixNet.Net.Protocol;
 public static class MessageCodec
 {
     /// <summary>Bumped whenever messages or the simulation state format change incompatibly.</summary>
-    public const int ProtocolVersion = 2;
+    public const int ProtocolVersion = 3;
 
     /// <summary>Largest encoded message accepted; a full state for a 128x128 map is far smaller.</summary>
     public const int MaxMessageSize = 16 * 1024 * 1024;
@@ -47,6 +47,7 @@ public static class MessageCodec
                 writer.WriteByte((byte)MessageType.Hello);
                 writer.WriteInt32(hello.ProtocolVersion);
                 WriteString(writer, hello.PlayerName);
+                writer.WriteUInt64(hello.ContentHash);
                 break;
             case WelcomeMessage welcome:
                 writer.WriteByte((byte)MessageType.Welcome);
@@ -113,7 +114,7 @@ public static class MessageCodec
         var type = (MessageType)reader.ReadByte();
         Message message = type switch
         {
-            MessageType.Hello => new HelloMessage(reader.ReadInt32(), ReadString(reader)),
+            MessageType.Hello => ReadHello(reader, stream),
             MessageType.Welcome => ReadWelcome(reader),
             MessageType.Reject => new RejectMessage(ReadString(reader)),
             MessageType.CommandRequest => new CommandRequestMessage(Command.Read(reader)),
@@ -145,6 +146,17 @@ public static class MessageCodec
     {
         var speed = (GameSpeed)value;
         return Enum.IsDefined(speed) ? speed : throw new InvalidDataException($"Unknown game speed {value}.");
+    }
+
+    /// <summary>
+    /// A hello from a client older than version 3 has no content hash; it reads as 0, so that the server can tell the
+    /// client why it may not join rather than drop it.
+    /// </summary>
+    private static HelloMessage ReadHello(SimReader reader, MemoryStream stream)
+    {
+        var version = reader.ReadInt32();
+        var name = ReadString(reader);
+        return new HelloMessage(version, name, stream.Position < stream.Length ? reader.ReadUInt64() : 0);
     }
 
     private static ResyncMessage ReadResync(SimReader reader)
