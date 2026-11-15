@@ -155,7 +155,7 @@ static StringTable? LoadStrings()
     return install?.FileExists("DATA", "LANG-0.DAT") == true ? StringTable.Parse(install.ReadDataFile("DATA", "LANG-0.DAT")) : null;
 }
 
-static string Roles(byte flags)
+static string Roles(int flags)
 {
     var roles = new List<string>();
     if ((flags & 8) != 0)
@@ -170,12 +170,17 @@ static string Roles(byte flags)
 
     if ((flags & 32) != 0)
     {
-        roles.Add("spec32");
+        roles.Add("surgeon");
     }
 
     if ((flags & 64) != 0)
     {
-        roles.Add("spec64");
+        roles.Add("psychiatrist");
+    }
+
+    if ((flags & 256) != 0)
+    {
+        roles.Add("researcher");
     }
 
     return string.Join(' ', roles);
@@ -195,7 +200,7 @@ static string StaffName(byte type) => type switch
     1 => "doctor",
     2 => "handyman",
     3 => "receptionist",
-    4 => "doctor (4)?",
+    4 => "doctor (op)",
     _ => $"staff {type}",
 };
 

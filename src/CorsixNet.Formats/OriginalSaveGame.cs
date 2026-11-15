@@ -53,13 +53,16 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     public byte Kind => Raw.Span[12];
 
     /// <summary>
-    /// Byte 14: for objects the object type ("thob", as in level files); for staff 0 nurse, 1 doctor,
+    /// Byte 14: for objects the object type ("thob", as in level files); for staff 0 nurse, 1 doctor, 4 doctor dressed for surgery,
     /// 2 handyman, 3 receptionist.
     /// </summary>
     public byte Type => Raw.Span[14];
 
-    /// <summary>Staff only: role bits, 1 receptionist, 2 handyman, 4 nurse, 8 junior, 16 doctor, 128 consultant; 32 and 64 are specialities.</summary>
-    public byte StaffFlags => Raw.Span[124];
+    /// <summary>
+    /// Staff only: role bits, 1 receptionist, 2 handyman, 4 nurse, 8 junior, 16 doctor, 32 surgeon,
+    /// 64 psychiatrist, 128 consultant, 256 researcher.
+    /// </summary>
+    public int StaffFlags => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[124..]);
 
     /// <summary>Staff only: skill from 0 to 1000.</summary>
     public int Skill => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[126..]);

@@ -91,7 +91,8 @@ public class OriginalSaveGameTests
         var entity = OriginalSaveGame.EntityOffset + (109 * OriginalSaveGame.EntityLength);
         data[entity + 12] = 4;
         data[entity + 14] = 1;
-        data[entity + 124] = 16;
+        data[entity + 124] = 16 + 32;
+        data[entity + 125] = 1;
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(entity + 126), 565);
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(entity + 108), 161);
         data[entity + 132] = (byte)'T';
@@ -102,7 +103,7 @@ public class OriginalSaveGameTests
 
         var staff = Assert.Single(OriginalSaveGame.Parse(data).Entities);
 
-        Assert.Equal(16, staff.StaffFlags);
+        Assert.Equal(16 + 32 + 256, staff.StaffFlags);
         Assert.Equal(565, staff.Skill);
         Assert.Equal(161, staff.Salary);
         Assert.Equal('T', staff.Initial);
