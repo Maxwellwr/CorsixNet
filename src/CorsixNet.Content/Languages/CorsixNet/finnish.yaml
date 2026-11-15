@@ -300,6 +300,7 @@ strings:
     options:
       sound_effects: 'Äänitehosteet'
       adviser: 'Neuvonantaja'
+      announcements: 'Kuulutukset'
       room_information: 'Huoneiden tiedot'
       edge_scrolling: 'Reunavieritys'
       screen: 'Näyttö'

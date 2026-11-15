@@ -328,6 +328,7 @@ strings:
     options:
       sound_effects: 'Lydeffekter'
       adviser: 'Rådgiver'
+      announcements: 'Meddelelser'
       room_information: 'Rumoplysninger'
       edge_scrolling: 'Rulning ved skærmkanten'
       screen: 'Skærm'

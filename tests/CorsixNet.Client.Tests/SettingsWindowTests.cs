@@ -112,6 +112,17 @@ public sealed class SettingsWindowTests : IDisposable
     }
 
     [Fact]
+    public void TheOptionsHaveTheAnnouncersSwitchVolumeAndSubtitles()
+    {
+        var host = new WindowTestHost();
+        var window = new OptionsWindow(new GameConfig(), _ => { });
+        var cells = window.Rows(host).SelectMany(row => row.Cells).ToList();
+        Assert.Contains(cells, cell => cell.Text == "Announcements");
+        Assert.Contains(cells, cell => cell.Text == "Announcement volume");
+        Assert.Contains(cells, cell => cell.Text == "Announcer subtitles" && cell.Tooltip is { Length: > 0 });
+    }
+
+    [Fact]
     public void TheOptionsHaveCustomisesSwitches()
     {
         var host = new WindowTestHost();
@@ -139,9 +150,9 @@ public sealed class SettingsWindowTests : IDisposable
         var window = new OptionsWindow(new GameConfig { Language = "fr" }, config => applied = config, ["English", "Français", "Deutsch"]);
 
         // "fr" is not a name on the list, so the first step goes to its first language, then on round the list.
-        host.Click(window, "+", skip: 4);
+        host.Click(window, "+", skip: 5);
         Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "English");
-        host.Click(window, "-", skip: 4);
+        host.Click(window, "-", skip: 5);
         host.Click(window, "Apply");
 
         Assert.Equal("Deutsch", applied?.Language);
@@ -159,7 +170,7 @@ public sealed class SettingsWindowTests : IDisposable
         var window = new OptionsWindow(current, config => applied = config, ["English", "Français"], preview: shown.Add);
 
         host.Click(window, "Off");
-        host.Click(window, "+", skip: 4);
+        host.Click(window, "+", skip: 5);
         var tried = Assert.Single(shown);
         Assert.Equal("Français", tried.Language);
         Assert.True(tried.PlaySounds); // only the language is tried out, not the rest of the draft
@@ -179,7 +190,7 @@ public sealed class SettingsWindowTests : IDisposable
         GameConfig? applied = null;
         var window = new OptionsWindow(new GameConfig { Language = "English" }, config => applied = config, ["English", "Français"], preview: shown.Add);
 
-        host.Click(window, "+", skip: 4);
+        host.Click(window, "+", skip: 5);
         host.Click(window, "Apply");
         window.Closed();
 
@@ -199,13 +210,13 @@ public sealed class SettingsWindowTests : IDisposable
             fonts: _ => new LanguageFontChoices(LanguageFontChoices.GameFont, [("Arial", @"C:\Fonts\arial.ttf")]));
 
         Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Game font");
-        host.Click(window, "+", skip: 4);
+        host.Click(window, "+", skip: 5);
         Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Arial");
         host.Click(window, "Apply");
         Assert.Equal(@"C:\Fonts\arial.ttf", applied?.LanguageFont(["Spanish"]));
 
         var again = new OptionsWindow(applied!, config => applied = config, ["Spanish"], fonts: _ => new LanguageFontChoices(LanguageFontChoices.GameFont, [("Arial", @"C:\Fonts\arial.ttf")]));
-        host.Click(again, "+", skip: 4);
+        host.Click(again, "+", skip: 5);
         Assert.Contains(again.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Game font");
         host.Click(again, "Apply");
         Assert.Null(applied?.LanguageFont(["Spanish"]));

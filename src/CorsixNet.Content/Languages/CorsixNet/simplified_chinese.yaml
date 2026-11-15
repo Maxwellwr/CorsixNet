@@ -151,6 +151,7 @@ strings:
     options:
       sound_effects: '音效'
       adviser: '顾问'
+      announcements: '广播'
       room_information: '房间介绍'
       edge_scrolling: '屏幕边缘滚动'
       screen: '屏幕'

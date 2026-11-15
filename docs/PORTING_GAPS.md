@@ -256,8 +256,8 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
   vomiting, the grim reaper's swipe and more) play where the frame is drawn (`FrameSounds`, 2026-11-13). Still:
   sound effects the simulation causes (2026-11-14: rooms calling for staff, the epidemic's start and end, cheats, the
   background ispot sounds, the cheer and boo, vaccin.wav and staff's leave sounds play, `HospitalAnnouncements`; the entrance doors and earthquakes, `WorldSounds`): footsteps, patients' coughs and other idle sounds;
-  the interface's hover sounds (buttons play selectx.wav and the close box no4.wav, `WindowLayer`, 2026-11-14); adviser voice; the settings window's
-  switches for the announcer and its volume (config.txt's keys are read).
+  the interface's hover sounds (buttons play selectx.wav and the close box no4.wav, `WindowLayer`, 2026-11-14); adviser voice. (Done: the options window's
+  announcements switch, their volume and the subtitles, `OptionsWindow`.)
 - Music playback and the jukebox (`dialogs/jukebox.lua`), MP3 replacement music, volumes (`resizables/sound_setting.lua`).
 
 ## 10. Network

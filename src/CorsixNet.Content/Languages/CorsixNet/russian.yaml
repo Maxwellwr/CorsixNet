@@ -8,12 +8,19 @@ strings:
     rand017: Беспокойных пациентов просят вести себя как можно тише.
   accessibility_window:
     enable_screen_shake: Тряска экрана
+    enable_announcer_subtitles: Субтитры объявлений
     scroll_speed: Скорость прокрутки
     shift_scroll_speed: Скорость прокрутки с Shift
   hotkey_window:
     panel_storePosKeys: Клавиши запоминания положения
     panel_recallPosKeys: Клавиши возврата к положению
+  customise_window:
+    enable_insurance_blue_banknote: Синие банкноты страховых
   tooltip:
+    accessibility_window:
+      enable_announcer_subtitles: Если вы хотите видеть субтитры объявлений в вашей больнице, включите эту опцию.
+    customise_window:
+      enable_insurance_blue_banknote: Платежи пациентов через страховую компанию показываются синей летящей банкнотой. Если вам больше нравится оригинал, где все платежи зелёные, выключите эту опцию.
     status:
       over:
         months_played: Нужно продержаться до конца месяца %s %d года. Сейчас %s %d года
@@ -79,6 +86,7 @@ strings:
     options:
       sound_effects: Звуковые эффекты
       adviser: Советник
+      announcements: Объявления
       room_information: Описание кабинетов
       edge_scrolling: Прокрутка у края экрана
       screen: Экран

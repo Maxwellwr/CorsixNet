@@ -130,6 +130,7 @@ strings:
     options:
       sound_effects: 'Звукові ефекти'
       adviser: 'Порадник'
+      announcements: 'Оголошення'
       room_information: 'Опис кабінетів'
       edge_scrolling: 'Прокрутка біля краю екрана'
       screen: 'Екран'
