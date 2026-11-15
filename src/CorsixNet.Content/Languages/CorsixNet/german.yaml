@@ -106,6 +106,12 @@ strings:
         patient_happiness: Die Zufriedenheit Ihrer Patienten sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
         staff_happiness: Die Zufriedenheit Ihres Personals sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
   corsixnet:
+    auction:
+      caption: 'Grundstücksauktion'
+      lot: 'Grundstück %1%: Gebot $%2% von %3%'
+      hammer: 'Der Hammer fällt in %1% Stunden'
+      bid: '$%1% bieten'
+      sold: 'Grundstück %1% an %2% für $%3% verkauft'
     chat:
       caption: 'Chat'
       none: 'Bisher hat niemand etwas gesagt.'

@@ -94,6 +94,12 @@ strings:
     toolbar:
       machine_menu: '机器菜单 (%s)'
   corsixnet:
+    auction:
+      caption: '土地拍卖'
+      lot: '地块%1%：%3%出价$%2%'
+      hammer: '%1%小时后落槌'
+      bid: '出价$%1%'
+      sold: '地块%1%以$%3%卖给%2%'
     chat:
       caption: '聊天'
       none: '还没有人说话。'

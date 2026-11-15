@@ -28,7 +28,7 @@ namespace CorsixNet.Sim;
 public sealed class Simulation
 {
     /// <summary>Version of the serialized format written by <see cref="Save"/>.</summary>
-    private const int FormatVersion = 95;
+    private const int FormatVersion = 96;
 
     /// <summary>
     /// The oldest version still read: 57 lacks what handymen are doing (version 58) and 58 whether rooms are paid for or
@@ -145,6 +145,12 @@ public sealed class Simulation
     /// <summary>When patients arrive. Part of the saved state.</summary>
     public PatientArrivals Arrivals { get; private set; } = null!;
 
+    /// <summary>The land auction under way in a game of several hospitals, if any (<see cref="LandAuction"/>). Part of the saved state.</summary>
+    public LandAuction? Auction { get; internal set; }
+
+    /// <summary>How the last land auction ended, if one has. Part of the saved state.</summary>
+    public AuctionResult? LastAuction { get; internal set; }
+
     /// <summary>Each player's hospital, by player (0-based).</summary>
     public IReadOnlyList<Hospital> Hospitals => _hospitals;
 
@@ -235,6 +241,8 @@ public sealed class Simulation
             _pending.RemoveAt(0);
             scheduled.Command.Execute(this, scheduled.Player);
         }
+
+        LandAuction.Tick(this);
 
         // CorsixTH's World:onTick ticks the earthquake, then handles the end of a day before the hour that starts the next one.
         if (Earthquakes.Tick(Rules.Earthquakes, Random))
@@ -532,6 +540,11 @@ public sealed class Simulation
         simulation.Temperatures = TileTemperatures.Read(reader, map.Width, map.Height);
         simulation.Earthquakes = Earthquakes.Read(reader);
         simulation.Arrivals = PatientArrivals.Read(reader);
+        if (reader.Version is 0 or >= 96)
+        {
+            simulation.Auction = reader.ReadBool() ? LandAuction.Read(reader) : null;
+            simulation.LastAuction = reader.ReadBool() ? AuctionResult.Read(reader) : null;
+        }
 
         foreach (var pool in simulation._availableStaff)
         {
@@ -642,6 +655,10 @@ public sealed class Simulation
         Temperatures.Write(writer);
         Earthquakes.Write(writer);
         Arrivals.Write(writer);
+        writer.WriteBool(Auction is not null);
+        Auction?.Write(writer);
+        writer.WriteBool(LastAuction is not null);
+        LastAuction?.Write(writer);
 
         foreach (var pool in _availableStaff)
         {
@@ -718,6 +735,13 @@ public sealed class Simulation
     {
         if (player < 0 || player >= _hospitals.Length || !IsParcelPurchasable(parcel, player))
         {
+            return;
+        }
+
+        if (_hospitals.Length > 1)
+        {
+            // The network game: the plot goes to auction among the hospitals.
+            LandAuction.Start(this, parcel, player);
             return;
         }
 

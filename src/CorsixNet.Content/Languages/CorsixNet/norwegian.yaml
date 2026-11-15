@@ -171,6 +171,12 @@ strings:
   transactions:
     remove_room: 'Bygging: fjern ödelagt rom'
   corsixnet:
+    auction:
+      caption: 'Tomteauksjon'
+      lot: 'Tomt %1%: bud på $%2% fra %3%'
+      hammer: 'Hammeren faller om %1% timer'
+      bid: 'By $%1%'
+      sold: 'Tomt %1% solgt til %2% for $%3%'
     chat:
       caption: 'Chat'
       none: 'Ingen har sagt noe ennå.'

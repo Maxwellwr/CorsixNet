@@ -243,6 +243,12 @@ strings:
   transactions:
     remove_room: 'Rakennus: tuhoutuneen huoneen poisto'
   corsixnet:
+    auction:
+      caption: 'Tonttihuutokauppa'
+      lot: 'Tontti %1%: tarjous $%2%, %3%'
+      hammer: 'Vasara lyö %1% tunnin päästä'
+      bid: 'Tarjoa $%1%'
+      sold: 'Tontti %1% myyty: %2%, $%3%'
     chat:
       caption: 'Keskustelu'
       none: 'Kukaan ei ole vielä sanonut mitään.'

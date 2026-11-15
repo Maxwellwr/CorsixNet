@@ -166,6 +166,12 @@ strings:
     severance: '退職金'
     wages: '給料'
   corsixnet:
+    auction:
+      caption: '土地の競売'
+      lot: '区画%1%: %3%が$%2%で入札'
+      hammer: 'あと%1%時間で落札'
+      bid: '$%1%で入札'
+      sold: '区画%1%は%2%が$%3%で落札'
     chat:
       caption: 'チャット'
       none: 'まだ誰も発言していません。'
