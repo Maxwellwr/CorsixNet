@@ -198,12 +198,14 @@ public class OriginalSaveGameTests
         history.CopyTo(data, entity + 158);
         data[entity + 81] = 68;
         data[entity + 134] = 42;
+        data[entity + 83] = 31;
 
         var patient = Assert.Single(OriginalSaveGame.Parse(data).Entities);
 
         Assert.Equal(history, patient.HealthHistory.ToArray());
         Assert.Equal(68, patient.Happiness);
         Assert.Equal(42, patient.Thirst);
+        Assert.Equal(31, patient.Warmth);
     }
 
     [Fact]

@@ -79,6 +79,9 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// <summary>Patients only: the thirst bar from 0 (very thirsty) to 100 (not thirsty).</summary>
     public byte Thirst => Raw.Span[134];
 
+    /// <summary>Patients only: the warmth bar from 0 (cold; the bar keeps a small stub) to 100.</summary>
+    public byte Warmth => Raw.Span[83];
+
     /// <summary>
     /// Staff only: role bits, 1 receptionist, 2 handyman, 4 nurse, 8 junior, 16 doctor, 32 surgeon,
     /// 64 psychiatrist, 128 consultant, 256 researcher.
