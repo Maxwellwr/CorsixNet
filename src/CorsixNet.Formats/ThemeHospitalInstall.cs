@@ -2,6 +2,15 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace CorsixNet.Formats;
 
+/// <summary>The game's movie files; null or missing where the installation has none.</summary>
+/// <param name="Intro">The opening movie.</param>
+/// <param name="Demo">The demo of play, shown when the main menu is left alone.</param>
+/// <param name="WinGame">The movie for winning the last level.</param>
+/// <param name="WinLevel">The movie for winning a level.</param>
+/// <param name="Lose">The movies for losing a level, by number from 1.</param>
+/// <param name="Advance">The campaign's movies going on to a level, by the level's number.</param>
+public sealed record MovieFiles(string? Intro, string? Demo, string? WinGame, string? WinLevel, IReadOnlyDictionary<int, string> Lose, IReadOnlyDictionary<int, string> Advance);
+
 /// <summary>A piece of the game's background music: its <c>.XMI</c> file and title.</summary>
 public sealed record MusicTrack(string Path, string Title);
 
@@ -290,6 +299,60 @@ public sealed class ThemeHospitalInstall
 
         tracks.AddRange(files.Select(pair => new MusicTrack(pair.Value, pair.Key)));
         return tracks;
+    }
+
+    /// <summary>
+    /// The game's movies (CorsixTH's <c>MoviePlayer:init</c>): in <c>ANIMS</c> the losing movies <c>LOSEn</c>, the
+    /// campaign's advance movies <c>AREAnV</c>, <c>WINGAME</c> and <c>WINLEVEL</c>; in <c>INTRO</c> the intro
+    /// (<c>INTRO.SM4</c>) and the demo (<c>ATTRACT.SMK</c>).
+    /// </summary>
+    public MovieFiles Movies()
+    {
+        var lose = new SortedDictionary<int, string>();
+        var advance = new SortedDictionary<int, string>();
+        string? winGame = null, winLevel = null, intro = null, demo = null;
+        if (FindDirectory("ANIMS") is { } anims)
+        {
+            foreach (var file in Directory.EnumerateFiles(anims).Order(StringComparer.Ordinal))
+            {
+                var name = Path.GetFileNameWithoutExtension(file).ToUpperInvariant();
+                if (name.StartsWith("LOSE", StringComparison.Ordinal) && int.TryParse(name[4..], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var loseNumber))
+                {
+                    lose[loseNumber] = file;
+                }
+                else if (name.StartsWith("AREA", StringComparison.Ordinal) && name.EndsWith('V')
+                    && int.TryParse(name[4..^1], System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var level))
+                {
+                    advance[level] = file;
+                }
+                else if (name == "WINGAME")
+                {
+                    winGame = file;
+                }
+                else if (name == "WINLEVEL")
+                {
+                    winLevel = file;
+                }
+            }
+        }
+
+        if (FindDirectory("INTRO") is { } introFolder)
+        {
+            foreach (var file in Directory.EnumerateFiles(introFolder).Order(StringComparer.Ordinal))
+            {
+                var name = Path.GetFileName(file).ToUpperInvariant();
+                if (name == "INTRO.SM4")
+                {
+                    intro = file;
+                }
+                else if (name == "ATTRACT.SMK")
+                {
+                    demo = file;
+                }
+            }
+        }
+
+        return new MovieFiles(intro, demo, winGame, winLevel, lose, advance);
     }
 
     /// <summary>The language numbers of the installed string files, in order.</summary>
