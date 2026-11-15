@@ -146,6 +146,34 @@ public sealed record OriginalSaveRoom(int Index, ReadOnlyMemory<byte> Raw)
     }
 }
 
+/// <summary>The series drawn on the charts screen, in storage order.</summary>
+public enum OriginalSaveChart
+{
+    /// <summary>Wages paid per month.</summary>
+    Wages,
+
+    /// <summary>Money in per month.</summary>
+    MoneyIn,
+
+    /// <summary>Money out per month.</summary>
+    MoneyOut,
+
+    /// <summary>Bank balance at the end of each month.</summary>
+    Balance,
+
+    /// <summary>Visitors so far.</summary>
+    Visitors,
+
+    /// <summary>Deaths so far.</summary>
+    Deaths,
+
+    /// <summary>Cures so far.</summary>
+    Cures,
+
+    /// <summary>Reputation.</summary>
+    Reputation,
+}
+
 /// <summary>One line of the bank statement (8 bytes).</summary>
 /// <param name="Amount">Money in (positive) or out (negative).</param>
 /// <param name="Kind">
@@ -304,6 +332,12 @@ public sealed class OriginalSaveGame
     /// <summary>Number of plot bytes read; levels use far fewer parcels.</summary>
     public const int MaxPlots = 32;
 
+    /// <summary>
+    /// Offset of the chart history: for each <see cref="OriginalSaveChart"/> series three copies of 12 int32 values
+    /// (presumably the chart's three time scales), oldest first.
+    /// </summary>
+    public const int ChartOffset = 0x61087;
+
     /// <summary>Offset of the bank statement: a ring of <see cref="StatementCount"/> lines of 8 bytes.</summary>
     public const int StatementOffset = 0x6151F;
 
@@ -360,6 +394,19 @@ public sealed class OriginalSaveGame
         ArgumentOutOfRangeException.ThrowIfNegative(parcel);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(parcel, MaxPlots);
         return Data.Span[PlotOffset + parcel];
+    }
+
+    /// <summary>The 12 most recent values of a chart series, oldest first, from the first of its three copies.</summary>
+    public IReadOnlyList<int> Chart(OriginalSaveChart series)
+    {
+        var start = ChartOffset + ((int)series * 3 * 12 * 4);
+        var values = new int[12];
+        for (var i = 0; i < values.Length; i++)
+        {
+            values[i] = BinaryPrimitives.ReadInt32LittleEndian(Data.Span[(start + (i * 4))..]);
+        }
+
+        return values;
     }
 
     /// <summary>

@@ -162,6 +162,21 @@ public class OriginalSaveGameTests
     }
 
     [Fact]
+    public void ReadsChartHistory()
+    {
+        var data = new byte[OriginalSaveGame.Length];
+        var balance = OriginalSaveGame.ChartOffset + (3 * 3 * 12 * 4);
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(balance), -5189);
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(balance + (11 * 4)), 293);
+
+        var chart = OriginalSaveGame.Parse(data).Chart(OriginalSaveChart.Balance);
+
+        Assert.Equal(12, chart.Count);
+        Assert.Equal(-5189, chart[0]);
+        Assert.Equal(293, chart[11]);
+    }
+
+    [Fact]
     public void ReadsBankStatement()
     {
         var data = new byte[OriginalSaveGame.Length];
@@ -264,6 +279,9 @@ public class OriginalSaveGameTests
             Assert.Equal(1, local.Kind);
             Assert.NotEmpty(local.Name);
             Assert.Equal(local.Staff, local.Nurses + local.Doctors + local.Handymen + local.Receptionists);
+
+            // The chart history is recorded month by month, so it never runs ahead of today's totals.
+            Assert.True(save.Chart(OriginalSaveChart.Cures).Max() <= local.PeopleCured);
 
             // Rooms lie on the map with their door on their edge and the outside tile next to it.
             foreach (var room in save.Rooms.Where(r => r.Width > 1))

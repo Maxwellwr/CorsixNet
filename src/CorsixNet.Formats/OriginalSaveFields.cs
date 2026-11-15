@@ -39,6 +39,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.File, 2, 1, "level", true),
         new(OriginalSaveArea.File, 3, 10, "difficulty", true),
         new(OriginalSaveArea.File, OriginalSaveGame.PlotOffset, OriginalSaveGame.MaxPlots, "plot owners", true),
+        new(OriginalSaveArea.File, OriginalSaveGame.ChartOffset, 8 * 3 * 12 * 4, "chart history", true),
         new(OriginalSaveArea.File, OriginalSaveGame.StatementOffset, OriginalSaveGame.StatementCount * 8, "bank statement", true),
         new(OriginalSaveArea.File, OriginalSaveGame.DateOffset, 1, "day", true),
         new(OriginalSaveArea.File, OriginalSaveGame.DateOffset + 1, 1, "month", true),
