@@ -85,6 +85,26 @@ public class WindowTests
         Assert.Equal(["selectx.wav"], host.Sounds);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ATitleBarDragMovesTheWindowUnlessWindowsAreLocked(bool locked)
+    {
+        var host = new WindowTestHost();
+        var layer = new WindowLayer(text => text.Length * 6, 10) { Origin = new Point(8, 48), LockWindows = locked };
+        layer.Open(new TestWindow(() => { }));
+        static MouseState At(int x, int y, bool down) => new(x, y, 0, down ? ButtonState.Pressed : ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
+        layer.Update(host, At(0, 0, false), At(0, 0, false), Screen);
+        var before = layer.FindButton("Click", 1);
+
+        // Window:beginDrag on the title bar, then the mouse moves 40 right and 30 down and lets go.
+        layer.Update(host, At(30, 54, true), At(30, 54, false), Screen);
+        layer.Update(host, At(70, 84, true), At(30, 54, true), Screen);
+        layer.Update(host, At(70, 84, false), At(70, 84, true), Screen);
+
+        Assert.Equal(locked ? before : before + new Point(40, 30), layer.FindButton("Click", 1));
+    }
+
     [Fact]
     public void ThePolicyWindowMovesSlidersAndSwitches()
     {

@@ -180,6 +180,12 @@ public sealed record GameConfig
     /// <summary>Whether the mouse at the screen's edge does not scroll the map (<c>prevent_edge_scrolling</c>).</summary>
     public bool PreventEdgeScrolling { get; init; }
 
+    /// <summary>Whether the cursor is kept inside the game's window while it has focus (<c>capture_mouse</c>).</summary>
+    public bool CaptureMouse { get; init; } = true;
+
+    /// <summary>The folder screenshots are saved to (<c>screenshots</c>); empty for "Screenshots" beside this file.</summary>
+    public string Screenshots { get; init; } = string.Empty;
+
     /// <summary>How much of a zoom carries on each tick, from 0 to 1 (<c>scrolling_momentum</c>).</summary>
     public decimal ScrollingMomentum { get; init; } = 0.8m;
 
@@ -299,6 +305,8 @@ public sealed record GameConfig
             PlayDemo = Bool("play_demo", defaults.PlayDemo),
             MusicVolume = Number("music_volume", defaults.MusicVolume),
             PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
+            CaptureMouse = Bool("capture_mouse", defaults.CaptureMouse),
+            Screenshots = Text("screenshots", defaults.Screenshots),
             ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
             ZoomSpeed = Number("zoom_speed", defaults.ZoomSpeed),
             ScrollSpeed = Number("scroll_speed", defaults.ScrollSpeed),
@@ -601,6 +609,24 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"prevent_edge_scrolling: {Yaml(PreventEdgeScrolling)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Capture mouse: By default enabled (capture_mouse = true).
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"capture_mouse: {Yaml(CaptureMouse)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Screenshots. By default, the "Screenshots" folder alongside this config file
+            # is used for saving screenshots. Should this not be suitable, point this to a
+            # folder which is more suitable.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"screenshots: {Quote(Screenshots)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------

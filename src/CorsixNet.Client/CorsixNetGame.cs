@@ -40,6 +40,7 @@ internal sealed class CorsixNetGame : Game
 
     protected override void UnloadContent()
     {
+        MouseCapture.Set(Window.Handle, false);
         _screen?.Dispose();
         _batch?.Dispose();
     }
@@ -57,6 +58,10 @@ internal sealed class CorsixNetGame : Game
         }
 
         IsMouseVisible = _screen?.DrawsCursor != true;
+
+        // App:setCaptureMouse: the cursor stays in the window while it has focus; let go without it, so that the
+        // player can use other windows (CorsixTH frees it on quitting).
+        MouseCapture.Set(Window.Handle, IsActive && script is null && _screen?.CapturesMouse == true);
 
         if (_screen?.ExitRequested == true || script?.QuitRequested == true)
         {

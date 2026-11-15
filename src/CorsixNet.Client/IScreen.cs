@@ -18,6 +18,9 @@ internal interface IScreen : IDisposable
     /// <summary>Whether the screen draws its own mouse cursor, so the system's is hidden.</summary>
     bool DrawsCursor => false;
 
+    /// <summary>Whether the cursor is to be kept inside the window while it has focus (<c>App:setCaptureMouse</c>).</summary>
+    bool CapturesMouse => false;
+
     /// <summary>The file a screenshot of the frame just drawn should be saved to, once asked for (<c>UI:makeScreenshot</c>), else null.</summary>
     string? TakeScreenshotRequest() => null;
 

@@ -28,6 +28,9 @@ internal sealed class WindowLayer
     private readonly Func<string, int> _measure;
     private readonly Func<int> _textHeight;
     private OpenWindow? _dragging;
+
+    /// <summary>Whether windows stay where they are (the options menu's lock windows, <c>runtime_config.lock_windows</c>).</summary>
+    public bool LockWindows { get; set; }
     private Point _dragOffset;
 
     /// <param name="measure">The width of a text in pixels.</param>
@@ -272,6 +275,12 @@ internal sealed class WindowLayer
 
         if (layout.TitleBar.Contains(point))
         {
+            // Window:beginDrag: no dragging while the windows are locked.
+            if (LockWindows)
+            {
+                return true;
+            }
+
             _dragging = hit;
             _dragOffset = point - hit.Position;
             return true;
