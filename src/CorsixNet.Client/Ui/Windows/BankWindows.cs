@@ -13,13 +13,20 @@ namespace CorsixNet.Client.Ui.Windows;
 /// interest rate, the hospital's value and what the insurance companies owe; borrowing and paying back 5,000 at a time,
 /// or as much as allowed (the buttons with Ctrl).
 /// </summary>
-internal sealed class BankManagerWindow : UiWindow
+/// <param name="statement">Whether the original's look opens on the statement page (F2).</param>
+internal sealed class BankManagerWindow(bool statement = false) : UiWindow
 {
     public override string Title => UiText.Get("corsixnet.bank.bank_manager_caption", "Bank manager");
 
     public override string? Hotkey => "F1";
 
-    private readonly BankManagerScreen _screen = new();
+    private readonly BankManagerScreen _screen = new(statement);
+
+    /// <summary>The original's look: whether it shows the statement page.</summary>
+    public bool IsShowingStatement => _screen.IsShowingStatement;
+
+    /// <summary>The original's look: shows the statement page or the main one.</summary>
+    public void ShowStatement(bool show) => _screen.ShowStatement(show);
 
     /// <summary>The original's look (<see cref="BankManagerScreen"/>) where its graphics are there; else the table below.</summary>
     public override bool IsFullscreen(IWindowHost host) => BankManagerScreen.IsAvailable(host);

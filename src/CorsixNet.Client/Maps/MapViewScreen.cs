@@ -3141,8 +3141,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         [
             ("ingame_panel_hireStaff", () => new HireWindow()),
             ("ingame_panel_staffManage", () => new StaffManagementWindow()),
-            ("ingame_panel_bankManager", () => new BankManagerWindow()),
-            ("ingame_panel_bankStats", () => new BankStatementWindow()),
             ("ingame_panel_townMap", () => new TownMapWindow()),
             ("ingame_panel_casebook", () => new CasebookWindow()),
             ("ingame_panel_research", () => new ResearchWindow()),
@@ -3160,6 +3158,53 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Toggle(window());
                 _sounds.Play("selectx.wav");
             }
+        }
+
+        foreach (var (action, statement) in new[] { ("ingame_panel_bankManager", false), ("ingame_panel_bankStats", true) })
+        {
+            if (HotkeyInput.Pressed(_hotkeys[action], keys, pressed))
+            {
+                ToggleBank(statement);
+                _sounds.Play("selectx.wav");
+            }
+        }
+    }
+
+    /// <summary>
+    /// UIBottomPanel:dialogBankCommon: F1 and F2 open the bank manager on its main page or its statement; with it open,
+    /// the other key turns to that page and the same key closes it. Without the original's graphics they are two text
+    /// windows.
+    /// </summary>
+    private void ToggleBank(bool statement)
+    {
+        if (!BankManagerScreen.IsAvailable(this))
+        {
+            _windows.Toggle(statement ? new BankStatementWindow() : new BankManagerWindow());
+        }
+        else if (_windows.Windows.OfType<BankManagerWindow>().FirstOrDefault() is { } open && open.IsShowingStatement == statement)
+        {
+            _windows.Close(open);
+        }
+        else
+        {
+            OpenBank(statement);
+        }
+    }
+
+    /// <summary>The menu's bank manager and statement (dialogBankManager(true), dialogBankStats(true)): opens it on that page.</summary>
+    private void OpenBank(bool statement)
+    {
+        if (!BankManagerScreen.IsAvailable(this))
+        {
+            _windows.Open(statement ? new BankStatementWindow() : new BankManagerWindow());
+        }
+        else if (_windows.Windows.OfType<BankManagerWindow>().FirstOrDefault() is { } open)
+        {
+            open.ShowStatement(statement);
+        }
+        else
+        {
+            _windows.Open(new BankManagerWindow(statement));
         }
     }
 
@@ -3381,8 +3426,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Speed("menu_options_game_speed.and_then_some_more", "AND THEN SOME MORE", GameSpeed.AndThenSomeMore),
                 Speed("corsixnet.menu.insane_speed", "Insane", GameSpeed.Insane)]),
             new(Item("menu.charts", "CHARTS"), [
-                Open("menu_charts.bank_manager", "BANK MANAGER", () => new BankManagerWindow()),
-                Open("menu_charts.statement", "STATEMENT", () => new BankStatementWindow()),
+                new(Item("menu_charts.bank_manager", "BANK MANAGER"), () => OpenBank(statement: false)),
+                new(Item("menu_charts.statement", "STATEMENT"), () => OpenBank(statement: true)),
                 Open("menu_charts.staff_listing", "STAFF LISTING", () => new StaffManagementWindow()),
                 Open("menu_charts.town_map", "TOWN MAP", () => new TownMapWindow()),
                 Open("menu_charts.casebook", "CASEBOOK", () => new CasebookWindow()),
@@ -4867,8 +4912,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         UiWindow? dialog = key switch
         {
-            "bank" => new BankManagerWindow(),
-            "bankstats" => new BankStatementWindow(),
             "hire" => new HireWindow(),
             "staff" => new StaffManagementWindow(),
             "town" => new TownMapWindow(),
@@ -4880,7 +4923,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             "fax" => new FaxWindow(),
             _ => null,
         };
-        if (dialog is null)
+        if (key is "bank" or "bankstats")
+        {
+            ToggleBank(key == "bankstats");
+        }
+        else if (dialog is null)
         {
             BottomPanelAction(key);
         }
