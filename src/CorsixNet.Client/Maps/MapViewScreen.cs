@@ -1724,6 +1724,29 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
+    /// <summary>Watching a replay, [ winds it back a month and ] on a month; with Shift, a year.</summary>
+    private void UpdateReplaySeek(KeyboardState keys, Func<Keys, bool> pressed)
+    {
+        if (_session is not ReplaySession replay)
+        {
+            return;
+        }
+
+        var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
+        var step = (shift ? 12 : 1) * ReplaySeekMonth;
+        if (pressed(Keys.OemOpenBrackets))
+        {
+            replay.Seek(replay.Simulation.Tick - step);
+        }
+        else if (pressed(Keys.OemCloseBrackets))
+        {
+            replay.Seek(replay.Simulation.Tick + step);
+        }
+    }
+
+    /// <summary>The ticks a replay seek moves by: thirty game days.</summary>
+    private const long ReplaySeekMonth = 30 * GameDate.HoursPerDay;
+
     private void UpdateSimulation(GameTime gameTime, MouseState mouse, KeyboardState keys, Func<Keys, bool> pressed)
     {
         AdvanceSession(gameTime);
@@ -1739,6 +1762,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         UpdateSpeed(keys, pressed);
+        UpdateReplaySeek(keys, pressed);
 
         if (pressed(Keys.R))
         {
