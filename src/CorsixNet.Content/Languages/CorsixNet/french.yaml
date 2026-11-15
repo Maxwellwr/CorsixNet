@@ -39,6 +39,12 @@ strings:
         patient_happiness: Le bonheur moyen de vos patients ne doit pas descendre sous %d%. Il est de %d%
         staff_happiness: Le bonheur moyen de votre personnel ne doit pas descendre sous %d%. Il est de %d%
   corsixnet:
+    auction:
+      caption: 'Vente aux enchères'
+      lot: 'Parcelle %1% : enchère de $%2% par %3%'
+      hammer: 'Adjugé dans %1% heures'
+      bid: 'Enchérir $%1%'
+      sold: 'Parcelle %1% vendue à %2% pour $%3%'
     chat:
       caption: 'Discussion'
       none: 'Personne n''a encore rien dit.'

@@ -196,6 +196,12 @@ strings:
   transactions:
     remove_room: 'Budowa: usunięcie zniszczonego pomieszczenia'
   corsixnet:
+    auction:
+      caption: 'Licytacja działki'
+      lot: 'Działka %1%: oferta $%2% od %3%'
+      hammer: 'Młotek opadnie za %1% godz.'
+      bid: 'Licytuj $%1%'
+      sold: 'Działka %1% sprzedana: %2% za $%3%'
     chat:
       caption: 'Czat'
       none: 'Nikt jeszcze nic nie powiedział.'

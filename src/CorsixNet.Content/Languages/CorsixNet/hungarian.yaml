@@ -259,6 +259,12 @@ strings:
   transactions:
     remove_room: 'Építés: lerombolt szoba eltávolítása'
   corsixnet:
+    auction:
+      caption: 'Telekárverés'
+      lot: '%1%. telek: $%2% ajánlat, %3%'
+      hammer: '%1% óra múlva lecsap a kalapács'
+      bid: 'Licit: $%1%'
+      sold: 'A(z) %1%. telek %2% tulajdona lett $%3%-ért'
     chat:
       caption: 'Csevegés'
       none: 'Még senki nem mondott semmit.'

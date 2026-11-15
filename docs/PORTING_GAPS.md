@@ -253,10 +253,11 @@ has: the build tool's door and window clicks, placing and turning objects, hirin
 staff, buying a parcel, shooting a rat, sending a patient home (positional).
 
 - The animations' own sounds (VFRA's frame sounds with CorsixTH's replacements: machines, doors, objects, getting up,
-  vomiting, the grim reaper's swipe and more) play where the frame is drawn (`FrameSounds`, 2026-11-13). Still:
-  sound effects the simulation causes (2026-11-14: rooms calling for staff, the epidemic's start and end, cheats, the
-  background ispot sounds, the cheer and boo, vaccin.wav and staff's leave sounds play, `HospitalAnnouncements`; the entrance doors and earthquakes, `WorldSounds`): footsteps, patients' coughs and other idle sounds;
-  the interface's hover sounds (buttons play selectx.wav and the close box no4.wav, `WindowLayer`, 2026-11-14); adviser voice. (Done: the options window's
+  vomiting, the grim reaper's swipe and more) play where the frame is drawn (`FrameSounds`, 2026-11-13). Sound effects the simulation causes play
+  (rooms calling for staff, the epidemic's start and end, cheats, the background ispot sounds, the cheer and boo,
+  vaccin.wav, staff's leave sounds, the opening fanfare, `HospitalAnnouncements`; the entrance doors and earthquakes,
+  `WorldSounds`), and so do the interface's (hover sounds, fax_in.wav, SNAPSHOT.WAV). CorsixTH has no footsteps,
+  coughs or adviser voice beyond the animations' frame sounds. (Done: the options window's
   announcements switch, their volume and the subtitles, `OptionsWindow`.)
 - Music playback is done on Windows: the XMI songs go to the MIDI mapper as CorsixTH's MIDI player sends them
   (`MidiPlayer`, `WinMmMidiOutput`, `Src/midi_player.cpp`), a random track first and then the next enabled one
@@ -271,8 +272,10 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
 in-process host (`--host`) and headless server.
 
 CorsixTH has no network game, so there is nothing to port here; the original's network game is the
-model. Missing relative to the plan in `ARCHITECTURE.md`: land auctions, player-owned plots of other
-players on screen. (Done: choosing the level: the server offers levels (the client's when hosting, the game's original
+model. Missing relative to the original's network game: litter bombs, poaching staff, referrals, mini missions and
+emergencies and VIPs taken by whoever accepts first. (Done: land auctions, `LandAuction`, `BidForParcelCommand`,
+`AuctionWindow`: with several hospitals a wish to buy a plot starts the bidding for everyone and the highest bid when
+the hammer falls two days after the last takes it; the plots' owners on the town map; choosing the level: the server offers levels (the client's when hosting, the game's original
 ones on the server) and player 1 switches everyone to one with F3, which starts paused (`LobbyLevel`, `LevelsMessage`,
 `LobbyWindow`); waiting for the players in a game started paused (`--speed
 pause` with `--host` or on the server), the players' list (`PlayersMessage`) on the status line; the chat, `ChatWindow`, Return in a network game; the content check on join, `ContentFingerprint`; the game speed and pause, set by any

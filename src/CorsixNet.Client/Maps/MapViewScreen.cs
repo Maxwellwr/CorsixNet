@@ -341,6 +341,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Whether a movie with sound paused the music, to go on with it afterwards (<c>holding_bg_music</c>).</summary>
     private bool _holdingMusic;
 
+    /// <summary>The last auction's result already told, and whether the auctions have been watched since the game began.</summary>
+    private AuctionResult? _lastAuctionSeen;
+
+    private bool _auctionWatched;
+
     /// <summary>How long the main menu has been left alone, for the demo movie (<c>App.idle_tick</c>), in milliseconds.</summary>
     private double _idleMilliseconds;
 
@@ -3163,6 +3168,24 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _watchRan = watch;
+
+        // The network game's land auction: everyone goes to the bidding screen; when the hammer falls, who got the plot.
+        if (Simulation!.Auction is not null && !_windows.Windows.Any(w => w is AuctionWindow))
+        {
+            _windows.Open(new AuctionWindow());
+        }
+
+        if (Simulation.LastAuction is { } sold && !ReferenceEquals(sold, _lastAuctionSeen))
+        {
+            if (_lastAuctionSeen is not null || _auctionWatched)
+            {
+                ShowNotice(UiText.Format("corsixnet.auction.sold", "Plot %1% sold to %2% for $%3%", sold.Parcel, ProgressReportScreen.HospitalName(this, sold.Winner), sold.Bid));
+            }
+
+            _lastAuctionSeen = sold;
+        }
+
+        _auctionWatched = true;
 
         // The annual report at the year end, the winning letter or losing fax at the level's end.
         var hospital = Simulation!.Hospitals[_session.Player];

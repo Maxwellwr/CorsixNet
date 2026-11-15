@@ -86,6 +86,12 @@ strings:
     toolbar:
       machine_menu: 'Menu macchine (%s)'
   corsixnet:
+    auction:
+      caption: 'Asta del terreno'
+      lot: 'Lotto %1%: offerta di $%2% da %3%'
+      hammer: 'Il martelletto cade tra %1% ore'
+      bid: 'Offri $%1%'
+      sold: 'Lotto %1% venduto a %2% per $%3%'
     chat:
       caption: 'Chat'
       none: 'Nessuno ha ancora detto niente.'

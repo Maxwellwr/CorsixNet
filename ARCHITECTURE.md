@@ -511,6 +511,9 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
 - **Land** (`Simulation.PurchaseParcel`, from `hospital.lua` and `th_map.cpp`). A parcel nobody owns may be
   bought when it touches the outside or the buyer's land by passable tiles of the map as the level began; it
   costs its tiles at `gbv.LandCostPerTile` and adds that to the hospital's value (`PurchaseParcelCommand`).
+  With several hospitals the plot goes to auction instead (`LandAuction`, after the original's network game): the
+  wish to buy is the first bid at the price, other players who could buy it bid a tenth of the price more (at least
+  500, `BidForParcelCommand`), and two days after the last bid the highest bidder buys it if they still can pay.
 - **Heating** (`Hospital`, from `hospital.lua` and `town_map.lua`). The radiators' heat is set in tenths from 1 to
   10 (`SetRadiatorHeatCommand`, 5 at the start). Each day runs up heat × 10 × radiators × 7.5 over the month, paid
   at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (300 easy, 150 hard) comes a chance

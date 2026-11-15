@@ -93,6 +93,12 @@ strings:
       machine_menu: 'Machinemenu (%s)'
       status: 'Toestand (%s)'
   corsixnet:
+    auction:
+      caption: 'Grondveiling'
+      lot: 'Perceel %1%: bod van $%2% door %3%'
+      hammer: 'De hamer valt over %1% uur'
+      bid: 'Bied $%1%'
+      sold: 'Perceel %1% verkocht aan %2% voor $%3%'
     chat:
       caption: 'Chat'
       none: 'Nog niemand heeft iets gezegd.'

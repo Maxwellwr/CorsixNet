@@ -25,6 +25,12 @@ strings:
         months_played: 'Debes ganar antes del final de %s de %d. Ahora es %s de %d'
         years_played: 'Debes llegar al año %d. Ahora es el año %d'
   corsixnet:
+    auction:
+      caption: 'Subasta de terreno'
+      lot: 'Parcela %1%: puja de $%2% de %3%'
+      hammer: 'El martillo cae en %1% horas'
+      bid: 'Pujar $%1%'
+      sold: 'Parcela %1% vendida a %2% por $%3%'
     chat:
       caption: 'Chat'
       none: 'Nadie ha dicho nada todavía.'

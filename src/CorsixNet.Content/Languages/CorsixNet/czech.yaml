@@ -22,6 +22,12 @@ strings:
         months_played: 'Musíte vyhrát do konce měsíce %s %d. Nyní je %s %d'
         years_played: 'Musíte vydržet do roku %d. Nyní je rok %d'
   corsixnet:
+    auction:
+      caption: 'Dražba pozemku'
+      lot: 'Pozemek %1%: nabídka $%2% od %3%'
+      hammer: 'Kladívko padne za %1% hodin'
+      bid: 'Přihodit $%1%'
+      sold: 'Pozemek %1% prodán: %2% za $%3%'
     chat:
       caption: 'Chat'
       none: 'Zatím nikdo nic neřekl.'

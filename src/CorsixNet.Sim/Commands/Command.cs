@@ -62,6 +62,7 @@ public enum CommandKind : ushort
     CloseReport = 47,
     SendPatientToReception = 48,
     MakeDebugRat = 49,
+    BidForParcel = 50,
 }
 
 /// <summary>
@@ -135,6 +136,7 @@ public abstract record Command
             CommandKind.CloseReport => new CloseReportCommand((FaxReport)reader.ReadByte()),
             CommandKind.SendPatientToReception => new SendPatientToReceptionCommand(reader.ReadInt32()),
             CommandKind.MakeDebugRat => new MakeDebugRatCommand(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
+            CommandKind.BidForParcel => new BidForParcelCommand(reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -698,6 +700,16 @@ public sealed record PurchaseParcelCommand(int Parcel) : Command
     public override CommandKind Kind => CommandKind.PurchaseParcel;
 
     public override void Execute(Simulation simulation, int player) => simulation.PurchaseParcel(Parcel, player);
+
+    protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Parcel);
+}
+
+/// <summary>Bids for the parcel up for auction (<see cref="LandAuction"/>): the next bid, if the player may and can pay it.</summary>
+public sealed record BidForParcelCommand(int Parcel) : Command
+{
+    public override CommandKind Kind => CommandKind.BidForParcel;
+
+    public override void Execute(Simulation simulation, int player) => LandAuction.PlaceBid(simulation, Parcel, player);
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(Parcel);
 }

@@ -321,6 +321,12 @@ strings:
     severance: 'Indemnizaçäo'
     wages: 'Salários'
   corsixnet:
+    auction:
+      caption: 'Leilão de terreno'
+      lot: 'Lote %1%: licitação de $%2% de %3%'
+      hammer: 'O martelo cai dentro de %1% horas'
+      bid: 'Licitar $%1%'
+      sold: 'Lote %1% vendido a %2% por $%3%'
     chat:
       caption: 'Conversa'
       none: 'Ainda ninguém disse nada.'
