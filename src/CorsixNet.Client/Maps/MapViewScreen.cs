@@ -331,7 +331,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private SoundEffects _sounds;
 
     /// <summary>The background music (<c>Audio</c>'s playlist), started with the game (<c>App:init</c>'s playRandomBackgroundTrack).</summary>
-    private readonly BackgroundMusic _music;
+    private BackgroundMusic _music;
 
     /// <summary>The movie player (<c>App.moviePlayer</c>) and the game's movies.</summary>
     private readonly MoviePlayer _movie;
@@ -436,22 +436,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         UiText.Current = _texts;
         ApplyLanguageFont();
         _sounds = SoundEffects.Load(install, _config, VoiceOf(_config));
-        _music = new BackgroundMusic(install.MusicTracks(), NewMidiPlayer(_config), path => Rnc.DecompressIfNeeded(File.ReadAllBytes(path)), new Random())
-        {
-            PlayMusic = _config.PlayMusic,
-        };
-        _music.SetVolume(_config.MusicVolume);
-        try
-        {
-            if (File.Exists(DisabledTracksPath))
-            {
-                _music.ReadDisabledTracks(File.ReadAllLines(DisabledTracksPath));
-            }
-        }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-        {
-            // readPlaylistPreferences fails silently.
-        }
+        _music = CreateMusic(_config);
 
         _movie = new MoviePlayer(device);
         _movieFiles = install.Movies();
@@ -4059,6 +4044,35 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage, OpenSettingsDialog);
 
     /// <summary>
+    /// <c>Audio:init</c>: the playlist, the game's XMI music or with <c>play_own_music</c> the player's own in
+    /// <c>audio_music</c> (recorded or MIDI files), the tracks left out read back (<c>readPlaylistPreferences</c>).
+    /// </summary>
+    private BackgroundMusic CreateMusic(GameConfig config)
+    {
+        var tracks = config.PlayOwnMusic && config.AudioMusic.Length > 0
+            ? ThemeHospitalInstall.OwnMusicTracks(config.AudioMusic, PcmSources.Extensions, BackgroundMusic.InstructionalExtensions)
+            : _install.MusicTracks();
+        var music = new BackgroundMusic(tracks, NewMidiPlayer(config), path => Rnc.DecompressIfNeeded(File.ReadAllBytes(path)), new Random(), new WaveformPlayer())
+        {
+            PlayMusic = config.PlayMusic,
+        };
+        music.SetVolume(config.MusicVolume);
+        try
+        {
+            if (File.Exists(DisabledTracksPath))
+            {
+                music.ReadDisabledTracks(File.ReadAllLines(DisabledTracksPath));
+            }
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            // readPlaylistPreferences fails silently.
+        }
+
+        return music;
+    }
+
+    /// <summary>
     /// <c>Audio:initMidiPlayer</c>: the MIDI player on the output the settings name (<c>midi_api</c>, <c>midi_port</c>),
     /// or null when there is none.
     /// </summary>
@@ -4523,8 +4537,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void ApplyConfig(GameConfig config)
     {
         var midiChanged = config.MidiApi != _config.MidiApi || config.MidiPort != _config.MidiPort || config.Soundfont != _config.Soundfont;
+        var playlistChanged = config.PlayOwnMusic != _config.PlayOwnMusic || config.AudioMusic != _config.AudioMusic;
         _config = config;
-        if (midiChanged)
+        if (playlistChanged)
+        {
+            // The sound dialog's own music switch: a new playlist, its first track at random if music plays.
+            _music.Dispose();
+            _music = CreateMusic(config);
+            _music.PlayRandom();
+        }
+        else if (midiChanged)
         {
             _music.SetPlayer(NewMidiPlayer(config), config.MusicVolume);
         }

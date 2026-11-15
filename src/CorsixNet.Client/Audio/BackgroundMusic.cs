@@ -29,14 +29,22 @@ internal sealed class PlaylistEntry(MusicTrack track)
 /// <param name="tracks">The playlist, in the list file's order.</param>
 /// <param name="player">The MIDI player, or null when the system has no MIDI output (then nothing plays).</param>
 /// <param name="read">Reads a track's file (RNC compressed or not).</param>
-internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlayer? player, Func<string, byte[]> read, Random random) : IDisposable
+/// <param name="recorded">Plays the player's own recorded music (OGG, WAV, MP3), or null for none.</param>
+internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlayer? player, Func<string, byte[]> read, Random random, WaveformPlayer? recorded = null) : IDisposable
 {
     private MidiPlayer? _player = player;
 
     public IReadOnlyList<PlaylistEntry> Playlist { get; } = [.. tracks.Select(track => new PlaylistEntry(track))];
 
-    /// <summary>Whether there is music to play (<c>has_bg_music</c>): tracks and a MIDI output.</summary>
-    public bool HasMusic => _player is not null && Playlist.Count > 0;
+    /// <summary>The instructional formats played on the MIDI player: the game's XMI and standard MIDI files.</summary>
+    public static readonly string[] InstructionalExtensions = ["XMI", "MID", "MIDI", "KAR"];
+
+    /// <summary>Whether there is music to play (<c>has_bg_music</c>): tracks, and something to play them on.</summary>
+    public bool HasMusic => Playlist.Any(entry => CanPlay(entry.Track));
+
+    private static bool IsRecorded(MusicTrack track) => PcmSources.Extensions.Contains(Path.GetExtension(track.Path).TrimStart('.').ToUpperInvariant());
+
+    private bool CanPlay(MusicTrack track) => IsRecorded(track) ? recorded is not null : _player is not null;
 
     /// <summary>The track playing or paused (<c>background_music</c>), or null when stopped.</summary>
     public int? Current { get; private set; }
@@ -74,20 +82,34 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     /// </summary>
     public void Play(int index)
     {
-        if (_player is null || index < 0 || index >= Playlist.Count || !PlayMusic)
+        if (index < 0 || index >= Playlist.Count || !PlayMusic || !CanPlay(Playlist[index].Track))
         {
             return;
         }
 
-        if (IsPaused)
-        {
-            _player.Resume();
-            IsPaused = false;
-        }
-
+        var track = Playlist[index].Track;
+        Stop();
         try
         {
-            _player.PlayXmi(read(Playlist[index].Track.Path));
+            if (IsRecorded(track))
+            {
+                if (!recorded!.Play(track.Path))
+                {
+                    // loadMusicAsync's failure: the file is left out of the playlist.
+                    Playlist[index].Enabled = false;
+                    return;
+                }
+            }
+            else if (Path.GetExtension(track.Path).ToUpperInvariant() is ".MID" or ".MIDI" or ".KAR")
+            {
+                _player!.PlayMidiFile(read(track.Path));
+            }
+            else
+            {
+                // The game's own music, XMI converted as CorsixTH's MIDI player does.
+                _player!.PlayXmi(read(track.Path));
+            }
+
             Current = index;
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
@@ -97,22 +119,36 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
         }
     }
 
+    /// <summary>Whether the track playing is recorded music rather than MIDI.</summary>
+    private bool PlayingRecorded => Current is { } index && IsRecorded(Playlist[index].Track);
+
     /// <summary><c>pauseBackgroundTrack</c>: pauses the track, or goes on with it; whether it is paused now.</summary>
     public bool TogglePause()
     {
-        if (_player is null || Current is null)
+        if (Current is null)
         {
             return false;
         }
 
         IsPaused = !IsPaused;
-        if (IsPaused)
+        if (PlayingRecorded)
         {
-            _player.Pause();
+            if (IsPaused)
+            {
+                recorded?.Pause();
+            }
+            else
+            {
+                recorded?.Resume();
+            }
+        }
+        else if (IsPaused)
+        {
+            _player?.Pause();
         }
         else
         {
-            _player.Resume();
+            _player?.Resume();
         }
 
         return IsPaused;
@@ -121,13 +157,29 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     /// <summary><c>stopBackgroundTrack</c>: stops the music for now, leaving <c>play_music</c> as it is.</summary>
     public void Stop()
     {
+        if (IsPaused && !PlayingRecorded)
+        {
+            // Resume first, as stopBackgroundTrack does, so that the player is not left waiting.
+            _player?.Resume();
+        }
+
         IsPaused = false;
-        _player?.Stop();
+        if (Current is not null)
+        {
+            _player?.Stop();
+            recorded?.Stop();
+        }
+
         Current = null;
     }
 
     /// <summary><c>setBackgroundVolume</c>.</summary>
-    public void SetVolume(decimal volume) => _player?.SetVolume((double)Math.Clamp(volume, 0m, 1m));
+    public void SetVolume(decimal volume)
+    {
+        var level = (double)Math.Clamp(volume, 0m, 1m);
+        _player?.SetVolume(level);
+        recorded?.SetVolume(level);
+    }
 
     /// <summary>
     /// <c>UI:togglePlayMusic</c>: with nothing playing, music is allowed and a random track starts; otherwise it is
@@ -152,13 +204,18 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     /// <summary><c>onMusicOver</c>: once a track has ended, the next one plays.</summary>
     public void Update()
     {
-        if (_player is not null && _player.TakeMusicOver() && Current is not null)
+        var over = (_player?.TakeMusicOver() ?? false) | (recorded?.TakeMusicOver() ?? false);
+        if (over && Current is not null)
         {
             PlayNext();
         }
     }
 
-    public void Dispose() => _player?.Dispose();
+    public void Dispose()
+    {
+        _player?.Dispose();
+        recorded?.Dispose();
+    }
 
     /// <summary>
     /// <c>Audio:initMidiPlayer</c> after the MIDI API or port changes: the new player takes over at the volume set, and

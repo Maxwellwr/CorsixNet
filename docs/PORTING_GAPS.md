@@ -267,7 +267,9 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
   `midi_port`, the sound dialog, `WinMmMidiOutput.Ports`). With the default API the music plays on a software
   synthesiser with a SoundFont (`SoftSynthMidiOutput`, MeltySynth; `soundfont`, `SoundFonts.Find` after `App:findSoundFont`),
   on Linux and macOS too, as CorsixTH's default is FluidSynth's; without a SoundFont, Windows falls back to its MIDI
-  mapper. Still: the player's own MP3 music (`play_own_music`).
+  mapper. The player's own music plays too (`play_own_music`, `audio_music`: OGG, MP3, WAV and MIDI files titled by a
+  names list, `ThemeHospitalInstall.OwnMusicTracks`, `WaveformPlayer`, `StandardMidiFile`); SDL_mixer's other formats
+  (FLAC, Opus, tracker modules) are not played, and the folder is set in `config.yaml` only (no folder dialog).
 
 ## 10. Network
 

@@ -170,6 +170,11 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
                     Volume(Label("sound_volume", "Sound Volume"), _config.PlaySounds, _config.SoundVolume, (on, volume) => _config with { PlaySounds = on, SoundVolume = volume }, Tip("sound_volume")),
                     Volume(Label("announcement_volume", "Announcement Volume"), _config.PlayAnnouncements, _config.AnnouncementVolume, (on, volume) => _config with { PlayAnnouncements = on, AnnouncementVolume = volume }, Tip("announcement_volume")),
                     Volume(Label("music_volume", "Music Volume"), _config.PlayMusic, _config.MusicVolume, (on, volume) => _config with { PlayMusic = on, MusicVolume = volume }, Tip("music_volume")),
+
+                    // play_own_music: only with a music folder set (play_own_music_no_folder_set otherwise).
+                    _config.AudioMusic.Length > 0
+                        ? Switch(Label("play_own_music", "Play Own Music"), _config.PlayOwnMusic, on => _config with { PlayOwnMusic = on }, Tip("play_own_music_button"))
+                        : new(Label("play_own_music", "Play Own Music"), UiText.Get("options_window.option_off", "Off"), _ => { }, Tip("play_own_music_no_folder_set")),
                 ];
                 if (midiPorts?.Invoke() is { Count: > 0 } ports)
                 {

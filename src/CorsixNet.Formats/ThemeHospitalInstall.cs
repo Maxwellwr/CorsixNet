@@ -302,6 +302,60 @@ public sealed class ThemeHospitalInstall
     }
 
     /// <summary>
+    /// The player's own music in <paramref name="folder"/> (CorsixTH's <c>Audio:init</c> with <c>play_own_music</c>):
+    /// files of the recorded or instructional kinds given, one track for each name, a recorded file winning over an
+    /// instructional one of the same name; titled and ordered by a list file (<c>MIDI*.TXT</c> or <c>NAMES*.TXT</c>,
+    /// file names and titles on alternate lines) when there is one, those it leaves out after them by title, else all by
+    /// title. Extensions are upper case without the dot.
+    /// </summary>
+    public static IReadOnlyList<MusicTrack> OwnMusicTracks(string folder, IReadOnlyCollection<string> recorded, IReadOnlyCollection<string> instructional)
+    {
+        if (!Directory.Exists(folder))
+        {
+            return [];
+        }
+
+        var files = new Dictionary<string, (string Path, bool Recorded)>(StringComparer.OrdinalIgnoreCase);
+        string? list = null;
+        foreach (var file in Directory.EnumerateFiles(folder).Order(StringComparer.Ordinal))
+        {
+            var name = Path.GetFileNameWithoutExtension(file);
+            var extension = Path.GetExtension(file).TrimStart('.').ToUpperInvariant();
+            var isRecorded = recorded.Contains(extension);
+            if (isRecorded || instructional.Contains(extension))
+            {
+                // A recorded file can take an instructional one's place, never the other way round.
+                if (isRecorded || !files.TryGetValue(name, out var known) || !known.Recorded)
+                {
+                    files[name] = (file, isRecorded);
+                }
+            }
+            else if (extension == "TXT" && (name.StartsWith("MIDI", StringComparison.OrdinalIgnoreCase) || name.StartsWith("NAMES", StringComparison.OrdinalIgnoreCase)))
+            {
+                list = file;
+            }
+        }
+
+        var tracks = new List<MusicTrack>();
+        if (list is not null)
+        {
+            var lines = System.Text.Encoding.Latin1.GetString(File.ReadAllBytes(list)).Split(['\r', '\n', '\x1A'], StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i + 1 < lines.Length; i += 2)
+            {
+                var dot = lines[i].LastIndexOf('.');
+                var key = dot < 0 ? lines[i] : lines[i][..dot];
+                if (files.Remove(key, out var found))
+                {
+                    tracks.Add(new MusicTrack(found.Path, lines[i + 1]));
+                }
+            }
+        }
+
+        tracks.AddRange(files.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => new MusicTrack(pair.Value.Path, pair.Key)));
+        return tracks;
+    }
+
+    /// <summary>
     /// The game's movies (CorsixTH's <c>MoviePlayer:init</c>): in <c>ANIMS</c> the losing movies <c>LOSEn</c>, the
     /// campaign's advance movies <c>AREAnV</c>, <c>WINGAME</c> and <c>WINLEVEL</c>; in <c>INTRO</c> the intro
     /// (<c>INTRO.SM4</c>) and the demo (<c>ATTRACT.SMK</c>).
