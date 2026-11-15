@@ -21,6 +21,7 @@
     <EmbeddedResource Include="Assets/aux_ui.tab" LogicalName="CorsixNet.Client.Assets.aux_ui.tab" />
     <EmbeddedResource Include="Assets/aux_ui.dat" LogicalName="CorsixNet.Client.Assets.aux_ui.dat" />
     <EmbeddedResource Include="Assets/lose.pl8" LogicalName="CorsixNet.Client.Assets.lose.pl8" />
+    <EmbeddedResource Include="Assets/tree_ctrl.*" LogicalName="CorsixNet.Client.Assets.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets/mainmenu*.dat.gz" LogicalName="CorsixNet.Client.Assets.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets/mainmenu*.pal" LogicalName="CorsixNet.Client.Assets.%(Filename)%(Extension)" />
   </ItemGroup>
