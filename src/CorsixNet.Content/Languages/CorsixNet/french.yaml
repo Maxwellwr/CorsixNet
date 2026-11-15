@@ -39,6 +39,12 @@ strings:
         patient_happiness: Le bonheur moyen de vos patients ne doit pas descendre sous %d%. Il est de %d%
         staff_happiness: Le bonheur moyen de votre personnel ne doit pas descendre sous %d%. Il est de %d%
   corsixnet:
+    console:
+      caption: "Console de débogage"
+      unknown: "Commande inconnue : %1%. Tapez help pour la liste."
+      commands: "Commandes :"
+      done: "Fait."
+      execute_tooltip: "Exécuter la commande tapée"
     referral:
       refer: 'Envoyer à %1%'
       tooltip: 'Envoie le patient à l’hôpital d’un autre joueur ; clic droit pour choisir un autre hôpital'

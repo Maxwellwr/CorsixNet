@@ -86,6 +86,12 @@ strings:
     toolbar:
       machine_menu: 'Menu macchine (%s)'
   corsixnet:
+    console:
+      caption: "Console di debug"
+      unknown: "Comando sconosciuto: %1%. Scrivi help per la lista."
+      commands: "Comandi:"
+      done: "Fatto."
+      execute_tooltip: "Esegui il comando scritto"
     referral:
       refer: 'Invia a %1%'
       tooltip: 'Manda il paziente all’ospedale di un altro giocatore; il tasto destro sceglie un altro ospedale'

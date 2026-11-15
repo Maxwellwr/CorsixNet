@@ -171,6 +171,12 @@ strings:
   transactions:
     remove_room: 'Bygging: fjern ödelagt rom'
   corsixnet:
+    console:
+      caption: "Feilsökingskonsoll"
+      unknown: "Ukjent kommando: %1%. Skriv help for listen."
+      commands: "Kommandoer:"
+      done: "Ferdig."
+      execute_tooltip: "Kjör den skrevne kommandoen"
     referral:
       refer: 'Henvis til %1%'
       tooltip: 'Sender pasienten til en annen spillers sykehus; høyreklikk velger et annet sykehus'

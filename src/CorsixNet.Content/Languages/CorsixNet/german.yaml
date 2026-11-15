@@ -106,6 +106,12 @@ strings:
         patient_happiness: Die Zufriedenheit Ihrer Patienten sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
         staff_happiness: Die Zufriedenheit Ihres Personals sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
   corsixnet:
+    console:
+      caption: "Debug-Konsole"
+      unknown: "Unbekannter Befehl: %1%. Gib help für die Liste ein."
+      commands: "Befehle:"
+      done: "Erledigt."
+      execute_tooltip: "Den eingegebenen Befehl ausführen"
     referral:
       refer: 'Überweisen an %1%'
       tooltip: 'Überweist den Patienten in das Krankenhaus eines anderen Spielers; Rechtsklick wählt ein anderes'

@@ -22,6 +22,12 @@ strings:
         months_played: 'Musíte vyhrát do konce měsíce %s %d. Nyní je %s %d'
         years_played: 'Musíte vydržet do roku %d. Nyní je rok %d'
   corsixnet:
+    console:
+      caption: "Ladicí konzole"
+      unknown: "Neznámý příkaz: %1%. Napište help pro seznam."
+      commands: "Příkazy:"
+      done: "Hotovo."
+      execute_tooltip: "Spustit napsaný příkaz"
     referral:
       refer: 'Poslat do: %1%'
       tooltip: 'Pošle pacienta do nemocnice jiného hráče; pravé tlačítko vybere jinou nemocnici'

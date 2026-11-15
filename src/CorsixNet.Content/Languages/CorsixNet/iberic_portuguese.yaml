@@ -321,6 +321,12 @@ strings:
     severance: 'Indemnizaçäo'
     wages: 'Salários'
   corsixnet:
+    console:
+      caption: "Consola de depuraçäo"
+      unknown: "Comando desconhecido: %1%. Escreva help para ver a lista."
+      commands: "Comandos:"
+      done: "Feito."
+      execute_tooltip: "Executar o comando escrito"
     referral:
       refer: 'Encaminhar para %1%'
       tooltip: 'Envia o paciente para o hospital de outro jogador; o botão direito escolhe outro hospital'

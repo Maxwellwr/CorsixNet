@@ -93,6 +93,12 @@ strings:
       machine_menu: 'Machinemenu (%s)'
       status: 'Toestand (%s)'
   corsixnet:
+    console:
+      caption: "Debugconsole"
+      unknown: "Onbekende opdracht: %1%. Typ help voor de lijst."
+      commands: "Opdrachten:"
+      done: "Klaar."
+      execute_tooltip: "De getypte opdracht uitvoeren"
     referral:
       refer: 'Doorverwijzen naar %1%'
       tooltip: 'Stuurt de patiënt naar het ziekenhuis van een andere speler; rechtsklik kiest een ander ziekenhuis'

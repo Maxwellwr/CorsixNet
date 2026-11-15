@@ -3352,6 +3352,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             ("ingame_panel_machineMenu", () => new MachineMenuWindow()),
             ("ingame_panel_adviserHistory", () => new AdviserHistoryWindow()),
             ("ingame_showCheatWindow", () => new CheatsWindow()),
+            ("global_showLuaConsole", () => new DebugConsoleWindow(MenuAction)),
         ];
         foreach (var (action, window) in dialogs)
         {
@@ -3694,7 +3695,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                     new(Item("menu_debug_overlay.parcel", "PARCEL"), () => _overlay = MapOverlay.Parcels, () => _overlay == MapOverlay.Parcels)]),
                 Do("corsixnet.menu.save_replay", "Save replay", "savereplay"),
                 Do("corsixnet.menu.watch_replay", "Watch replay", "replays"),
-                Do("menu_debug.make_debug_rat", "MAKE DEBUG RAT", "debugrat")]),
+                Do("menu_debug.make_debug_rat", "MAKE DEBUG RAT", "debugrat"),
+                Open("menu_debug.lua_console", "LUA CONSOLE", () => new DebugConsoleWindow(MenuAction))]),
         ];
         if (_cheatsMenuUnlocked)
         {
