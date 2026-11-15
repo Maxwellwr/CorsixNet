@@ -50,6 +50,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Tile, 6, 1, "shadow/litter", false),
         new(OriginalSaveArea.Tile, 7, 1, "owner", true),
 
+        new(OriginalSaveArea.Entity, 0, 2, "next on tile", true),
         new(OriginalSaveArea.Entity, 4, 2, "x", true),
         new(OriginalSaveArea.Entity, 6, 2, "y", true),
         new(OriginalSaveArea.Entity, 8, 2, "frame", true),

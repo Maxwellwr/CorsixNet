@@ -201,7 +201,14 @@ public class OriginalSaveGameTests
                 {
                     if (save[x, y].Entity is var slot and not 0)
                     {
-                        Assert.Equal((x, y), (bySlot[slot].TileX, bySlot[slot].TileY));
+                        for (var entity = bySlot[slot]; ; entity = bySlot[entity.NextOnTile])
+                        {
+                            Assert.Equal((x, y), (entity.TileX, entity.TileY));
+                            if (entity.NextOnTile == 0)
+                            {
+                                break;
+                            }
+                        }
                     }
                 }
             }

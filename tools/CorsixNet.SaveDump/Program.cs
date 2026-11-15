@@ -112,7 +112,7 @@ static void Entities(OriginalSaveGame save, byte? kind)
         var name = entity.Kind switch
         {
             4 => StaffName(entity.Type),
-            6 => ObjectName(entity.Type),
+            6 or 8 => ObjectName(entity.Type),
             _ => $"type {entity.Type}",
         };
         var bytes = Convert.ToHexString(entity.Raw.Span[..48]).ToLowerInvariant();
@@ -282,6 +282,7 @@ static string KindName(byte kind) => kind switch
     2 => "patients?",
     4 => "staff",
     6 => "objects",
+    8 => "doors",
     _ => "unknown",
 };
 

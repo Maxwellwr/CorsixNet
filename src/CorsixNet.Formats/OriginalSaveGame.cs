@@ -31,6 +31,9 @@ public readonly record struct OriginalSaveTile(
 /// <param name="Raw">The 175 stored bytes.</param>
 public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
 {
+    /// <summary>Slot of the next entity on the same tile, or 0; the tile's <see cref="OriginalSaveTile.Entity"/> is the first.</summary>
+    public int NextOnTile => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span);
+
     /// <summary>Position along x in 1/256 tile (8.8 fixed point).</summary>
     public int X => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[4..]);
 
@@ -47,8 +50,8 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     public int Frame => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[8..]);
 
     /// <summary>
-    /// Byte 12, the kind of entity. Seen so far: 6 objects, 4 staff and staff for hire, 2 patients (likely),
-    /// 8 and 20 not yet known.
+    /// Byte 12, the kind of entity. Seen so far: 6 objects, 8 doors (with <see cref="Type"/> 3 or a swing door
+    /// type), 4 staff and staff for hire, 2 patients (likely), 20 not yet known.
     /// </summary>
     public byte Kind => Raw.Span[12];
 
