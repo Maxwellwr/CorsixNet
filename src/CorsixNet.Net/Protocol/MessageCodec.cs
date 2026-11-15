@@ -19,6 +19,9 @@ public static class MessageCodec
 
     private const int MaxStringBytes = 1024;
 
+    /// <summary>More players than any map has.</summary>
+    private const int MaxPlayers = 64;
+
     /// <summary>The byte a <see cref="SpeedRequestMessage"/> without a speed (go back to the previous one) carries.</summary>
     private const byte PreviousSpeed = 0xFF;
 
@@ -37,6 +40,7 @@ public static class MessageCodec
         Resync = 11,
         ChatRequest = 12,
         Chat = 13,
+        Players = 14,
     }
 
     public static byte[] Encode(Message message)
@@ -102,6 +106,16 @@ public static class MessageCodec
                 WriteString(writer, chat.Name);
                 WriteString(writer, chat.Text);
                 break;
+            case PlayersMessage players:
+                writer.WriteByte((byte)MessageType.Players);
+                writer.WriteInt32(players.Players.Count);
+                foreach (var player in players.Players)
+                {
+                    writer.WriteInt32(player.Player);
+                    WriteString(writer, player.Name);
+                }
+
+                break;
             case SpeedRequestMessage request:
                 writer.WriteByte((byte)MessageType.SpeedRequest);
                 writer.WriteByte(request.Speed is { } wanted ? (byte)wanted : PreviousSpeed);
@@ -137,6 +151,7 @@ public static class MessageCodec
             MessageType.Resync => ReadResync(reader),
             MessageType.ChatRequest => new ChatRequestMessage(ReadString(reader)),
             MessageType.Chat => new ChatMessage(reader.ReadInt32(), ReadString(reader), ReadString(reader)),
+            MessageType.Players => ReadPlayers(reader),
             MessageType.SpeedRequest => ReadSpeedRequest(reader),
             MessageType.Speed => new SpeedMessage(ToSpeed(reader.ReadByte()), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown message type {(byte)type}."),
@@ -171,6 +186,18 @@ public static class MessageCodec
         var version = reader.ReadInt32();
         var name = ReadString(reader);
         return new HelloMessage(version, name, stream.Position < stream.Length ? reader.ReadUInt64() : 0);
+    }
+
+    private static PlayersMessage ReadPlayers(SimReader reader)
+    {
+        var count = reader.ReadCount(MaxPlayers);
+        var players = new List<PlayerInfo>(count);
+        for (var i = 0; i < count; i++)
+        {
+            players.Add(new PlayerInfo(reader.ReadInt32(), ReadString(reader)));
+        }
+
+        return new PlayersMessage(players);
     }
 
     private static ResyncMessage ReadResync(SimReader reader)

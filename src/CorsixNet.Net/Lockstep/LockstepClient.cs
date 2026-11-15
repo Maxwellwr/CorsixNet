@@ -53,6 +53,9 @@ public sealed class LockstepClient : IDisposable
     /// <summary>The most recent desync reported by the server, if any.</summary>
     public DesyncMessage? LastDesync { get; private set; }
 
+    /// <summary>The players in the game, by number, as the server last said.</summary>
+    public IReadOnlyList<PlayerInfo> Players { get; private set; } = [];
+
     /// <summary>The most chat lines kept.</summary>
     public const int ChatHistory = 50;
 
@@ -89,6 +92,9 @@ public sealed class LockstepClient : IDisposable
                     break;
                 case AdvanceMessage advance when Simulation is not null:
                     AllowedTick = Math.Max(AllowedTick, advance.AllowedTick);
+                    break;
+                case PlayersMessage players:
+                    Players = players.Players;
                     break;
                 case ChatMessage chat:
                     _chat.Add(chat);

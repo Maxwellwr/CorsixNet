@@ -117,6 +117,9 @@ else
 
             var level = levels[0];
             var server = new LockstepServer(level.Load().StartSimulation(seed: 1)) { Log = Console.WriteLine };
+
+            // --speed sets the game's speed for everyone; --speed pause waits for the players, whom any of them starts.
+            server.SetSpeed(options.Speed);
             var listener = new TcpConnectionListener(options.PublicHost ? IPAddress.Any : IPAddress.Loopback, port);
             var runner = new ServerRunner(server, listener);
             Console.WriteLine($"Hosting {level.Name} on port {runner.Port}{(options.PublicHost ? " for all network interfaces" : " (this machine only; add --public for others)")}.");

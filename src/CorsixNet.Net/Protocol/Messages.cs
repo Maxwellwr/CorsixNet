@@ -69,3 +69,14 @@ public sealed record ChatRequestMessage(string Text) : Message;
 /// <param name="Name">The player's name.</param>
 /// <param name="Text">What they said.</param>
 public sealed record ChatMessage(int Player, string Name, string Text) : Message;
+
+/// <summary>A player in the game: their number (0-based) and name.</summary>
+public sealed record PlayerInfo(int Player, string Name);
+
+/// <summary>Server → client: the players in the game now, by number. Sent to everyone when someone joins or leaves.</summary>
+public sealed record PlayersMessage(IReadOnlyList<PlayerInfo> Players) : Message
+{
+    public bool Equals(PlayersMessage? other) => other is not null && Players.SequenceEqual(other.Players);
+
+    public override int GetHashCode() => Players.Count;
+}

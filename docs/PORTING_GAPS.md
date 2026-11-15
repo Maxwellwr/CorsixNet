@@ -263,7 +263,8 @@ in-process host (`--host`) and headless server.
 
 CorsixTH has no network game, so there is nothing to port here; the original's network game is the
 model. Missing relative to the plan in `ARCHITECTURE.md`: land auctions, player-owned plots of other
-players on screen, lobby. (Done: the chat, `ChatWindow`, Return in a network game; the content check on join, `ContentFingerprint`; the game speed and pause, set by any
+players on screen, a lobby to choose the level in. (Done: waiting for the players in a game started paused (`--speed
+pause` with `--host` or on the server), the players' list (`PlayersMessage`) on the status line; the chat, `ChatWindow`, Return in a network game; the content check on join, `ContentFingerprint`; the game speed and pause, set by any
 player for everyone on the server's clock, `LockstepServer.SetSpeed`; desync recovery, the server's state sent again
 to the client that diverged, `ResyncMessage`.)
 

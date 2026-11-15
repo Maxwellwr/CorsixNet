@@ -222,6 +222,7 @@ public sealed class LockstepServer : IDisposable
         peer.Connection.Send(new WelcomeMessage(peer.Player.Value, SaveState(), Simulation.Tick));
         peer.Connection.Send(new SpeedMessage(_clock.Speed, -1));
         Log?.Invoke($"{Describe(peer)} joined at tick {Simulation.Tick}.");
+        BroadcastPlayers();
     }
 
     /// <summary>Passes a player's line on to everyone, the player too: trimmed, cut to length, without control characters.</summary>
@@ -289,6 +290,19 @@ public sealed class LockstepServer : IDisposable
     {
         peer.Connection.Dispose();
         _peers.Remove(peer);
+        if (peer.Player is not null)
+        {
+            BroadcastPlayers();
+        }
+    }
+
+    /// <summary>Tells everyone who is in the game now.</summary>
+    private void BroadcastPlayers()
+    {
+        Broadcast(new PlayersMessage([.. _peers
+            .Where(p => p.Player is not null)
+            .OrderBy(p => p.Player)
+            .Select(p => new PlayerInfo(p.Player!.Value, p.Name ?? string.Empty))]));
     }
 
     private static string Describe(Peer peer)
