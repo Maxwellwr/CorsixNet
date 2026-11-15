@@ -93,6 +93,11 @@ strings:
       machine_menu: 'Machinemenu (%s)'
       status: 'Toestand (%s)'
   corsixnet:
+    poach:
+      asked: 'Je vraagt %1% of die liever voor jou werkt'
+      listened: '%1% is ontevreden en vraagt het ziekenhuis om veel meer geld'
+      refused: '%1% is tevreden waar die is'
+      joined: '%1% heeft het ziekenhuis verlaten en werkt nu bij jou'
     auction:
       caption: 'Grondveiling'
       lot: 'Perceel %1%: bod van $%2% door %3%'

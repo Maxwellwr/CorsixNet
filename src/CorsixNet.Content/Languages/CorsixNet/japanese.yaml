@@ -166,6 +166,11 @@ strings:
     severance: '退職金'
     wages: '給料'
   corsixnet:
+    poach:
+      asked: '%1%に自分の病院で働かないか尋ねました'
+      listened: '%1%は不満で、病院に大幅な昇給を求めています'
+      refused: '%1%は今の職場に満足しています'
+      joined: '%1%は病院を辞め、あなたの病院に移りました'
     auction:
       caption: '土地の競売'
       lot: '区画%1%: %3%が$%2%で入札'

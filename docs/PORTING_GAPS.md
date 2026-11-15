@@ -277,8 +277,10 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
 in-process host (`--host`) and headless server.
 
 CorsixTH has no network game, so there is nothing to port here; the original's network game is the
-model. Missing relative to the original's network game: litter bombs, poaching staff, referrals, mini missions and
-emergencies and VIPs taken by whoever accepts first. (Done: land auctions, `LandAuction`, `BidForParcelCommand`,
+model. Missing relative to the original's network game: litter bombs, referrals, mini missions and emergencies and
+VIPs taken by whoever accepts first. (Done: poaching staff, `PoachStaffCommand`, `StaffEmployment.Poach`: a click on
+another hospital's member of staff asks them; an unhappy one demands double their wage of their employer and, if it is
+not met, joins the poacher; land auctions, `LandAuction`, `BidForParcelCommand`,
 `AuctionWindow`: with several hospitals a wish to buy a plot starts the bidding for everyone and the highest bid when
 the hammer falls two days after the last takes it; the plots' owners on the town map; choosing the level: the server offers levels (the client's when hosting, the game's original
 ones on the server) and player 1 switches everyone to one with F3, which starts paused (`LobbyLevel`, `LevelsMessage`,

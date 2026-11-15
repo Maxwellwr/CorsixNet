@@ -22,6 +22,11 @@ strings:
         months_played: 'Musíte vyhrát do konce měsíce %s %d. Nyní je %s %d'
         years_played: 'Musíte vydržet do roku %d. Nyní je rok %d'
   corsixnet:
+    poach:
+      asked: 'Ptáte se, zda by %1% raději nepracoval(a) pro vás'
+      listened: '%1% je nespokojen(a) a žádá svou nemocnici o mnohem více peněz'
+      refused: '%1% je spokojen(a) tam, kde je'
+      joined: '%1% opustil(a) svou nemocnici a přešel(a) k vám'
     auction:
       caption: 'Dražba pozemku'
       lot: 'Pozemek %1%: nabídka $%2% od %3%'

@@ -196,6 +196,11 @@ strings:
   transactions:
     remove_room: 'Budowa: usunięcie zniszczonego pomieszczenia'
   corsixnet:
+    poach:
+      asked: 'Pytasz, czy %1% wolałby pracować dla ciebie'
+      listened: '%1% jest niezadowolony i żąda od szpitala dużo więcej pieniędzy'
+      refused: '%1% jest zadowolony tam, gdzie jest'
+      joined: '%1% opuścił swój szpital i dołączył do twojego'
     auction:
       caption: 'Licytacja działki'
       lot: 'Działka %1%: oferta $%2% od %3%'

@@ -271,6 +271,11 @@ strings:
   transactions:
     remove_room: 'Byggeri: fjern ödelagt rum'
   corsixnet:
+    poach:
+      asked: 'Du spørger %1%, om de hellere vil arbejde for dig'
+      listened: '%1% er utilfreds og beder sit hospital om mange flere penge'
+      refused: '%1% er glad for at være, hvor de er'
+      joined: '%1% har forladt sit hospital og er kommet til dit'
     auction:
       caption: 'Grundauktion'
       lot: 'Grund %1%: bud på $%2% fra %3%'

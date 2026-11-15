@@ -39,6 +39,11 @@ strings:
         patient_happiness: Le bonheur moyen de vos patients ne doit pas descendre sous %d%. Il est de %d%
         staff_happiness: Le bonheur moyen de votre personnel ne doit pas descendre sous %d%. Il est de %d%
   corsixnet:
+    poach:
+      asked: 'Vous demandez à %1% s’il préférerait travailler pour vous'
+      listened: '%1% est mécontent et réclame beaucoup plus à son hôpital'
+      refused: '%1% est heureux là où il est'
+      joined: '%1% a quitté son hôpital et rejoint le vôtre'
     auction:
       caption: 'Vente aux enchères'
       lot: 'Parcelle %1% : enchère de $%2% par %3%'

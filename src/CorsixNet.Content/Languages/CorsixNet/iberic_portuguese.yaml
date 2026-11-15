@@ -321,6 +321,11 @@ strings:
     severance: 'Indemnizaçäo'
     wages: 'Salários'
   corsixnet:
+    poach:
+      asked: 'Pergunta a %1% se prefere trabalhar para si'
+      listened: '%1% está descontente e pede muito mais dinheiro ao seu hospital'
+      refused: '%1% está feliz onde está'
+      joined: '%1% deixou o seu hospital e juntou-se ao seu'
     auction:
       caption: 'Leilão de terreno'
       lot: 'Lote %1%: licitação de $%2% de %3%'

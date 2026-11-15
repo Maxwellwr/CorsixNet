@@ -30,6 +30,16 @@ internal static class StaffEmployment
     /// <summary>One hour of a member of staff (<c>Staff:tick</c>, the checks after <c>Entity.tick</c>).</summary>
     internal static void Tick(Simulation simulation, Humanoid humanoid)
     {
+        if (humanoid.IsLeavingForPoacher)
+        {
+            if (!IsBusyWithPatient(simulation, humanoid))
+            {
+                JoinPoacher(simulation, humanoid);
+            }
+
+            return;
+        }
+
         Tiredness.CheckIfNeedRest(simulation, humanoid);
         if (CheckIfWaitedTooLongForRaise(simulation, humanoid))
         {
@@ -84,11 +94,96 @@ internal static class StaffEmployment
         {
             IncreaseWage(simulation, humanoid, humanoid.RaiseRequest);
             humanoid.QuittingIn = -1;
+            humanoid.PoachedBy = -1;
+        }
+        else if (humanoid.PoachedBy >= 0)
+        {
+            // The poached member of staff's demand not met: they resign and join the poacher's hospital.
+            humanoid.IsLeavingForPoacher = true;
         }
         else
         {
             Fire(simulation, humanoid);
         }
+    }
+
+    /// <summary>
+    /// How unhappy a member of staff must be to listen to another hospital (the network game's poaching): below half.
+    /// </summary>
+    internal const decimal UnhappyForPoaching = 0.5m;
+
+    /// <summary>
+    /// The network game's poaching (the original's NETPLAY.TXT, "Poaching Staff"): another player asks a member of staff
+    /// whether they would rather work for them. An unhappy one makes an outrageous pay demand of their employer, double
+    /// their wage, which waits for an answer as a raise request does; a happy one says no.
+    /// </summary>
+    /// <returns>Whether the member of staff listened.</returns>
+    internal static bool Poach(Simulation simulation, Humanoid humanoid, int player)
+    {
+        if (humanoid.Profile is not { } profile || humanoid.IsFired || humanoid.IsDespawning || humanoid.Employer < 0
+            || humanoid.Employer == player || player < 0 || player >= simulation.Hospitals.Count
+            || humanoid.RaiseRequest > 0 || humanoid.PoachedBy >= 0 || humanoid.IsLeavingForPoacher)
+        {
+            return false;
+        }
+
+        if (humanoid.Happiness >= UnhappyForPoaching)
+        {
+            return false;
+        }
+
+        humanoid.PoachedBy = player;
+        humanoid.RaiseRequest = Math.Max(profile.Wage, RiseAmount(simulation, profile));
+        humanoid.QuittingIn = QuittingDelay + simulation.Random.NextInclusive(0, QuittingSpread);
+        return true;
+    }
+
+    /// <summary>
+    /// The poached member of staff resigns and joins the poacher automatically: off their job, at their wage, employed
+    /// by the poacher and put in the poacher's hospital, on the first free tile of the poacher's land outside rooms.
+    /// </summary>
+    internal static void JoinPoacher(Simulation simulation, Humanoid humanoid)
+    {
+        var poacher = humanoid.PoachedBy;
+        if (poacher < 0 || poacher >= simulation.Hospitals.Count || humanoid.Profile is not { } profile)
+        {
+            humanoid.IsLeavingForPoacher = false;
+            humanoid.PoachedBy = -1;
+            return;
+        }
+
+        Detach(simulation, humanoid);
+        humanoid.IsLeavingForPoacher = false;
+        humanoid.PoachedBy = -1;
+        humanoid.RaiseRequest = 0;
+        humanoid.RaiseTimer = -1;
+        humanoid.QuittingIn = -1;
+        humanoid.Employer = poacher;
+        humanoid.HospitalPlayer = poacher;
+        humanoid.Behaviour = StaffHiring.NewBehaviour(profile.Class);
+        if (PoacherTile(simulation, poacher) is { } tile)
+        {
+            humanoid.PlaceAt(tile);
+        }
+    }
+
+    /// <summary>The first passable tile of the player's land outside rooms, row by row, or null.</summary>
+    private static Maps.TilePosition? PoacherTile(Simulation simulation, int player)
+    {
+        var map = simulation.Map;
+        for (var y = 0; y < map.Height; y++)
+        {
+            for (var x = 0; x < map.Width; x++)
+            {
+                var tile = map[x, y];
+                if (tile.Parcel != 0 && map.GetParcelOwner(tile.Parcel) == player + 1 && tile.RoomId == 0 && tile.Has(Maps.TileFlags.Passable))
+                {
+                    return new Maps.TilePosition(x, y);
+                }
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -152,8 +247,15 @@ internal static class StaffEmployment
 
         if (simulation.Hospitals[humanoid.Employer].Policies.GrantWageIncrease)
         {
-            IncreaseWage(simulation, humanoid, RiseAmount(simulation, humanoid.Profile!));
+            IncreaseWage(simulation, humanoid, humanoid.PoachedBy >= 0 ? humanoid.RaiseRequest : RiseAmount(simulation, humanoid.Profile!));
+            humanoid.PoachedBy = -1;
             return false;
+        }
+
+        if (humanoid.PoachedBy >= 0)
+        {
+            humanoid.IsLeavingForPoacher = true;
+            return true;
         }
 
         Fire(simulation, humanoid);

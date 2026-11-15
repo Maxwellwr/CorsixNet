@@ -514,6 +514,10 @@ save explicitly. A behaviour runs on every tick in which its humanoid is not wal
   With several hospitals the plot goes to auction instead (`LandAuction`, after the original's network game): the
   wish to buy is the first bid at the price, other players who could buy it bid a tenth of the price more (at least
   500, `BidForParcelCommand`), and two days after the last bid the highest bidder buys it if they still can pay.
+- **Poaching** (`StaffEmployment.Poach`, after the original's network game). Another player's `PoachStaffCommand`
+  makes an unhappy member of staff (happiness below 0.5) demand double their wage of their employer as a raise request
+  (`Humanoid.PoachedBy`); met, they stay; refused or left too long without the grant policy, they join the poacher's
+  hospital at their wage as soon as they are free (`JoinPoacher`). The poacher's hospital keeps the answer (`LastPoach`).
 - **Heating** (`Hospital`, from `hospital.lua` and `town_map.lua`). The radiators' heat is set in tenths from 1 to
   10 (`SetRadiatorHeatCommand`, 5 at the start). Each day runs up heat × 10 × radiators × 7.5 over the month, paid
   at its end after the wages (`TransactionKind.Heating`). Every 200 days or so (300 easy, 150 hard) comes a chance
