@@ -37,7 +37,8 @@ objects from the level file.
   smoking, explosion (room crash), repair by handymen and the machine window's call and replace (`MachineWindow`,
   `CallHandymanCommand`, `ReplaceMachineCommand`) are done (`Machines`, `HandymanBehaviour`).
 - Optional room objects: the "Choose Items" window (counts and prices) and buying them after the furniture step,
-  selling objects. Extra objects placed while furnishing are bought and sold back.
+  selling objects. Extra objects placed while furnishing are bought and sold back. A new room can come with the player's
+  average room's extras (`enable_avg_contents`, `BuildRoomTool.ComputeAverageContents`).
 - (Done: benches, the staff room's sofa, video game and pool table, the training room's projector and lecture chairs,
   the research room's desks, computer and autopsy.)
 - The crash trolley drawn split over two tiles (Partial: drawn from its own tile).

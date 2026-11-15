@@ -415,6 +415,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _sounds = SoundEffects.Load(install, _config, VoiceOf(_config));
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
+        _buildTool.AverageContents = _config.EnableAverageContents;
         _buildTool.AbandonRequested = () => _windows.Open(new ConfirmWindow(Confirmation(5, "Are you sure you want to delete this room?"), () =>
         {
             _session?.Submit(new AbandonRebuildCommand());
@@ -4160,6 +4161,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void ApplyConfig(GameConfig config)
     {
         _config = config;
+        _buildTool.AverageContents = config.EnableAverageContents;
         _adviser.IsEnabled = !config.AdviserDisabled;
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();

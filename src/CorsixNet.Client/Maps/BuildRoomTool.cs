@@ -279,6 +279,61 @@ internal sealed class BuildRoomTool
         _placingExtra = true;
     }
 
+    /// <summary>
+    /// Whether a new room comes with the extra objects the player's rooms of its kind have on average (CorsixTH's
+    /// <c>enable_avg_contents</c>).
+    /// </summary>
+    public bool AverageContents { get; set; }
+
+    /// <summary>
+    /// UIEditRoom:computeAverageContents: how many of each object the player's working rooms of the kind have, on
+    /// average (rounded half up), kept to the objects the room needs or allows, and at least the number it needs.
+    /// </summary>
+    public static Dictionary<string, int> ComputeAverageContents(Simulation simulation, RoomDefinition definition, int player)
+    {
+        var rooms = simulation.Entities.OfType<Room>()
+            .Where(r => r.IsActive && !r.IsCrashed && r.RoomType == definition.Id && RoomBuilder.IsOwnedBy(simulation.Map, r, player))
+            .Select(r => r.Id)
+            .ToHashSet();
+        var totals = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var placed in simulation.Entities.OfType<RoomObject>().Where(o => rooms.Contains(o.RoomId)))
+        {
+            totals[placed.ObjectType] = totals.GetValueOrDefault(placed.ObjectType) + 1;
+        }
+
+        var needed = definition.NeededObjects ?? new Dictionary<string, int>();
+        var average = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (id, total) in totals)
+        {
+            average[id] = needed.ContainsKey(id) || (definition.AdditionalObjects?.Contains(id) ?? false) ? ((2 * total) + rooms.Count) / (2 * rooms.Count) : 0;
+        }
+
+        foreach (var (id, count) in needed)
+        {
+            average[id] = Math.Max(average.GetValueOrDefault(id), count);
+        }
+
+        return average;
+    }
+
+    /// <summary>Queues the average room's objects beyond those the room needs as extras to place (and pay for).</summary>
+    private void AddAverageExtras(Simulation simulation, int player)
+    {
+        var needed = _room!.NeededObjects ?? new Dictionary<string, int>();
+        foreach (var (id, count) in ComputeAverageContents(simulation, _room, player).OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            if (simulation.Content.FindObject(id) is not { Orientations.Count: > 0 } definition)
+            {
+                continue;
+            }
+
+            for (var i = needed.GetValueOrDefault(id); i < count; i++)
+            {
+                _extras.Add(definition);
+            }
+        }
+    }
+
     /// <summary>The object on the cursor, or null.</summary>
     public string? PlacingId => _placing?.Id;
 
@@ -789,6 +844,11 @@ internal sealed class BuildRoomTool
             _editing = room.IsPaid;
             _pending.Clear();
             StopPlacing();
+            if (AverageContents && !_editing && _copyObjects.Count == 0)
+            {
+                AddAverageExtras(simulation, player);
+            }
+
             return null;
         }
 
