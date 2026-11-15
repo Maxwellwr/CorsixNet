@@ -377,7 +377,8 @@ to the client that diverged, `ResyncMessage`.)
   project's newest GitHub release (Maxwellwr/CorsixNet) against this build's version, as CorsixTH compares them (a
   beta or rc is older than the release of its number), never for a development version or a pre-release, and only
   with a download page on github.com; `UpdateWindow` (UIUpdate: the two versions, the release notes, Download opening
-  the page in the browser, Ignore); `check_for_updates` in `config.yaml` and first in the options window.) Builds
+  the page in the browser, Ignore); `check_for_updates` in `config.yaml` and first in the options window.
+  Off until the project's first GitHub release: `UpdateCheck.ReleasesPublished` is false, so no request is made.) Builds
   carry no version number of their own yet, so no release is offered until one is set.
 
 ## 12. Map editor and tools

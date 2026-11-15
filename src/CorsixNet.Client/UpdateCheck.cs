@@ -20,6 +20,12 @@ internal static partial class UpdateCheck
     /// <summary>The newest release of the project (GitHub's API).</summary>
     public const string LatestReleaseUrl = "https://api.github.com/repos/Maxwellwr/CorsixNet/releases/latest";
 
+    /// <summary>
+    /// Whether the project publishes releases on GitHub yet. Until the first one, GitHub answers 404 to every launch's
+    /// request, so the check is not made; set this to true once a release is out.
+    /// </summary>
+    public static readonly bool ReleasesPublished;
+
     /// <summary>Where a download page may be (<c>trusted_prefixes</c>).</summary>
     private static readonly string[] TrustedPrefixes = ["https://github.com/"];
 
