@@ -90,6 +90,38 @@ public class BuildRoomToolTests
     }
 
     [Fact]
+    public void ANewRoomsAverageContentsComeFromThePlayersWorkingRoomsOfItsKind()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var definition = simulation.Content.FindRoom("toilets")!;
+        Room Toilets(int x, int loos, int sinks, bool active)
+        {
+            host.Submit(new BuildRoomCommand(new RoomPlan("toilets", new TileRect(x, 4, 5, 5), new DoorPlacement(new(x + 1, 4), EdgeOrientation.North))));
+            var room = simulation.Entities.OfType<Room>().Single(r => r.Area.X == x);
+            foreach (var (type, count) in new[] { ("loo", loos), ("sink", sinks) })
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    host.Submit(new PlaceObjectCommand(type, FreeSpot(simulation, room, type), Direction.North));
+                }
+            }
+
+            room.IsActive = active;
+            return room;
+        }
+
+        Assert.Equal(new Dictionary<string, int> { ["loo"] = 1, ["sink"] = 1 }, BuildRoomTool.ComputeAverageContents(simulation, definition, 0));
+
+        Toilets(2, loos: 3, sinks: 1, active: true);
+        Toilets(8, loos: 2, sinks: 2, active: true);
+        Toilets(14, loos: 4, sinks: 4, active: false);
+
+        // 2.5 loos and 1.5 sinks a room round up; the unfinished room does not count.
+        Assert.Equal(new Dictionary<string, int> { ["loo"] = 3, ["sink"] = 2 }, BuildRoomTool.ComputeAverageContents(simulation, definition, 0));
+    }
+
+    [Fact]
     public void AnotherToiletOrSinkBoughtFromTheListStaysOnTheCursor()
     {
         var host = new WindowTestHost();
