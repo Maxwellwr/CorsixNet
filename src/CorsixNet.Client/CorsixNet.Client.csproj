@@ -12,6 +12,8 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" />
     <PackageReference Include="MeltySynth" />
     <PackageReference Include="NLayer" />
+    <PackageReference Include="Concentus" />
+    <PackageReference Include="Concentus.Oggfile" />
     <PackageReference Include="FreeTypeSharp" />
     <PackageReference Include="StbTrueTypeSharp" />
     <PackageReference Include="System.CommandLine" />

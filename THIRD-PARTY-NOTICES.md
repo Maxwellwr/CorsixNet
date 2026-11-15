@@ -213,6 +213,14 @@ The player's own MP3 music is decoded with NLayer (https://github.com/naudio/NLa
 and the NLayer contributors) and Ogg Vorbis music with NVorbis (https://github.com/NVorbis/NVorbis, MIT: Copyright (c)
 Andrew Ward), which MonoGame brings.
 
+## Concentus
+
+The player's own Opus music is decoded in managed code with Concentus (https://github.com/lostromb/concentus, a C#
+port of the Opus reference library, under Opus's BSD 3-clause license; its copyright holders include Skype Limited,
+the Xiph.Org Foundation, CSIRO and Microsoft Corporation, as the package's license lists them) and Concentus.Oggfile (https://github.com/lostromb/concentus.oggfile,
+MIT: Copyright (c) Logan Stromberg), which reads the Ogg container. FLAC is decoded by CorsixNet's own `FlacDecoder`,
+written from the format's specification (RFC 9639).
+
 ## FreeType
 
 CorsixNet draws TrueType fonts with FreeType through FreeTypeSharp (MIT, https://github.com/ryancheung/FreeTypeSharp),
