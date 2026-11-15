@@ -61,6 +61,9 @@ internal sealed class BuildRoomTool
     /// <summary>Plays one of the original's interface sounds (CorsixTH's <c>UI:playSound</c>), if set.</summary>
     public Action<string>? PlaySound { get; set; }
 
+    /// <summary>Has the adviser say a line (<c>ui.adviser:say</c>), if set.</summary>
+    public Action<string>? Advise { get; set; }
+
     private readonly List<DoorPlacement> _windows = [];
     private readonly List<Pending> _pending = [];
 
@@ -647,7 +650,15 @@ internal sealed class BuildRoomTool
         }
 
         _problem = _area is { } area ? RoomBuilder.CheckArea(simulation.Map, _room, area, player) : RoomPlanProblem.None;
-        if (input.Confirm && _area is not null && _problem == RoomPlanProblem.None)
+        if (input.Confirm && _area is { } blueprint && _problem == RoomPlanProblem.None
+            && RoomBuilder.CheckReachability(simulation.Map, blueprint) is var reachability && reachability != RoomPlanProblem.None)
+        {
+            // UIEditRoom:_enterDoorPhase: back to the walls with wrong2.wav and the adviser's warning.
+            _problem = reachability;
+            PlaySound?.Invoke("wrong2.wav");
+            Advise?.Invoke(UiText.Get("adviser.research.room_forbidden_non_reachable_parts", "Placing the room in this location would result in parts of the hospital not being reachable."));
+        }
+        else if (input.Confirm && _area is not null && _problem == RoomPlanProblem.None)
         {
             _phase = Phase.Door;
             _door = null;
@@ -1167,6 +1178,7 @@ internal sealed class BuildRoomTool
             RoomPlanProblem.DoorBlocked => UiText.Get("corsixnet.build_tool.door_blocked", "the door would open onto a blocked tile"),
             RoomPlanProblem.NoWindows => UiText.Get("corsixnet.build_tool.no_windows", "this room has no windows"),
             RoomPlanProblem.TooManyWindows => UiText.Get("corsixnet.build_tool.too_many_windows", "too many windows"),
+            RoomPlanProblem.BlocksOffParts => UiText.Get("adviser.research.room_forbidden_non_reachable_parts", "Placing the room in this location would result in parts of the hospital not being reachable."),
             RoomPlanProblem.UnknownRoomType => UiText.Get("corsixnet.build_tool.unknown_room", "unknown room"),
             _ => null,
         };

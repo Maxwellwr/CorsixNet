@@ -461,6 +461,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _movieFiles = install.Movies();
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
+        _buildTool.Advise = line => _adviser.Say(line, Environment.TickCount64);
         _buildTool.AverageContents = _config.EnableAverageContents;
         OriginalBottomPanel.MachineMenuButton = _config.MachineMenuButton;
         _temperatureTheme = _config.WarmthColorsDisplayDefault;
