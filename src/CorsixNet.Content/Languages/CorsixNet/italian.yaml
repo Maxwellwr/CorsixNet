@@ -143,6 +143,7 @@ strings:
     options:
       sound_effects: 'Effetti sonori'
       adviser: 'Consigliere'
+      music: 'Musica'
       announcements: 'Annunci'
       room_information: 'Informazioni sulle stanze'
       edge_scrolling: 'Scorrimento ai bordi'

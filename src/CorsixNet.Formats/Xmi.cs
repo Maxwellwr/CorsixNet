@@ -1,10 +1,20 @@
 // The XMI to MIDI conversion, ported from CorsixTH CorsixTH/Src/xmi2mid.cpp (xmi_to_midi_token_list,
-// transcode_xmi_to_midi) and CorsixTH/Src/xmi2mid.h.
+// transcode_xmi_to_midi) and CorsixTH/Src/xmi2mid.h (midi_token, xmi_microseconds_per_tick).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.Buffers.Binary;
 
 namespace CorsixNet.Formats;
+
+/// <summary>
+/// An event of an XMI song (CorsixTH's <c>midi_token</c>): its time, the status byte, the first data byte (the meta
+/// event's type for a meta event) and the rest.
+/// </summary>
+/// <param name="Time">When it happens, in hundredths of XMI's ticks of 1/120 s.</param>
+/// <param name="Type">The status byte: the event and its channel, or 0xF0/0xF7 for system exclusive, 0xFF for meta.</param>
+/// <param name="Data">The first data byte, or the meta event's type.</param>
+/// <param name="Buffer">The other data bytes.</param>
+public sealed record XmiEvent(long Time, byte Type, byte Data, byte[] Buffer);
 
 /// <summary>
 /// The original's music, extended MIDI (<c>.XMI</c>) as in <c>SOUND/MIDI</c>, converted to a standard MIDI file that
@@ -28,6 +38,19 @@ public static class Xmi
     private const byte Meta = 0xFF;
     private const byte EndOfTrack = 0x2F;
     private const byte SetTempo = 0x51;
+
+    /// <summary>
+    /// <c>xmi_to_midi_token_list</c>: the events of an XMI file in time order, each note followed at its end by a note-on
+    /// of velocity 0, as CorsixTH's MIDI player sends them; times are in <see cref="ToMicroseconds"/>'s units.
+    /// </summary>
+    /// <exception cref="InvalidDataException">There is no <c>EVNT</c> chunk, or the events end too early.</exception>
+    public static IReadOnlyList<XmiEvent> Events(ReadOnlySpan<byte> xmi) => ReadTokens(xmi, out _);
+
+    /// <summary>
+    /// An event's time in microseconds (<c>xmi_microseconds_per_tick</c>: XMI's 120 ticks a second, times multiplied by
+    /// 100, that is 250 / 3 microseconds a tick).
+    /// </summary>
+    public static long ToMicroseconds(long time) => time * 250 / 3;
 
     /// <summary>
     /// <c>transcode_xmi_to_midi</c>: the standard MIDI file of an XMI file, or null when it has no events.
@@ -99,7 +122,7 @@ public static class Xmi
     /// <c>xmi_to_midi_token_list</c>: the events in time order, each note followed at its end by a note-on of velocity 0,
     /// and the first tempo (500,000 when there is none; later tempos are dropped).
     /// </summary>
-    private static List<Token> ReadTokens(ReadOnlySpan<byte> xmi, out uint tempo)
+    private static List<XmiEvent> ReadTokens(ReadOnlySpan<byte> xmi, out uint tempo)
     {
         var start = xmi.IndexOf("EVNT"u8);
         if (start < 0 || start + 8 > xmi.Length)
@@ -109,7 +132,7 @@ public static class Xmi
 
         // The events follow the chunk name and its length.
         var reader = new Reader(xmi, start + 8);
-        var tokens = new List<Token>();
+        var tokens = new List<XmiEvent>();
         long time = 0;
         tempo = DefaultTempo;
         var tempoSet = false;
@@ -132,17 +155,17 @@ public static class Xmi
             switch (type & 0xF0)
             {
                 case 0xC0 or 0xD0:
-                    tokens.Add(new Token(time, type, reader.ReadByte(), []));
+                    tokens.Add(new XmiEvent(time, type, reader.ReadByte(), []));
                     break;
                 case 0x80 or 0xA0 or 0xB0 or 0xE0:
-                    tokens.Add(new Token(time, type, reader.ReadByte(), [reader.ReadByte()]));
+                    tokens.Add(new XmiEvent(time, type, reader.ReadByte(), [reader.ReadByte()]));
                     break;
                 case NoteOn:
                     var note = reader.ReadByte();
-                    tokens.Add(new Token(time, type, note, [reader.ReadByte()]));
+                    tokens.Add(new XmiEvent(time, type, note, [reader.ReadByte()]));
 
                     // MIDI has no note lengths: the note ends with a note-on of velocity 0.
-                    tokens.Add(new Token(time + (reader.ReadVariableLength() * (long)TimeMultiplier), type, note, [0]));
+                    tokens.Add(new XmiEvent(time + (reader.ReadVariableLength() * (long)TimeMultiplier), type, note, [0]));
                     break;
                 default:
                     byte extended = 0;
@@ -168,7 +191,7 @@ public static class Xmi
                     }
 
                     var length = reader.ReadVariableLength();
-                    tokens.Add(new Token(time, type, extended, reader.ReadBytes(length)));
+                    tokens.Add(new XmiEvent(time, type, extended, reader.ReadBytes(length)));
                     break;
             }
         }
@@ -193,8 +216,6 @@ public static class Xmi
             buffer >>= 8;
         }
     }
-
-    private sealed record Token(long Time, byte Type, byte Data, byte[] Buffer);
 
     private ref struct Reader(ReadOnlySpan<byte> data, int position)
     {

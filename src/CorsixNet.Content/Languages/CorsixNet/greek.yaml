@@ -181,6 +181,7 @@ strings:
     options:
       sound_effects: 'Ηχητικά εφέ'
       adviser: 'Σύμβουλος'
+      music: 'Μουσική'
       announcements: 'Ανακοινώσεις'
       room_information: 'Πληροφορίες δωματίων'
       edge_scrolling: 'Κύλιση στην άκρη της οθόνης'

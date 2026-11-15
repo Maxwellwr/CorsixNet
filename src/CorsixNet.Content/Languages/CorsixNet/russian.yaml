@@ -86,6 +86,7 @@ strings:
     options:
       sound_effects: Звуковые эффекты
       adviser: Советник
+      music: Музыка
       announcements: Объявления
       room_information: Описание кабинетов
       edge_scrolling: Прокрутка у края экрана

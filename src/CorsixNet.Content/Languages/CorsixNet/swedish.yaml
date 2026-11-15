@@ -249,6 +249,7 @@ strings:
     options:
       sound_effects: 'Ljudeffekter'
       adviser: 'Medhjälpare'
+      music: 'Musik'
       announcements: 'Utrop'
       room_information: 'Rumsinformation'
       edge_scrolling: 'Kantrullning'

@@ -223,6 +223,7 @@ strings:
     options:
       sound_effects: '効果音'
       adviser: 'アドバイザー'
+      music: '音楽'
       announcements: '館内放送'
       room_information: '部屋の説明'
       edge_scrolling: '画面端でスクロール'

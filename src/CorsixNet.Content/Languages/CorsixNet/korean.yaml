@@ -264,6 +264,7 @@ strings:
     options:
       sound_effects: '효과음'
       adviser: '조언자'
+      music: '음악'
       announcements: '안내 방송'
       room_information: '방 설명'
       edge_scrolling: '화면 가장자리 스크롤'
