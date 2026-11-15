@@ -26,6 +26,9 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     /// <summary>The name that stands for the game's main palette, <c>Data/MPalette.dat</c>.</summary>
     public const string MainPalette = "MPALETTE";
 
+    /// <summary>CorsixTH's palette of the losing movies' headline (<c>Bitmap/lose.pl8</c>, carried in the client).</summary>
+    public const string LosePalette = "LOSE.PL8";
+
     /// <summary>A white pixel, for the dialogs' coloured panels and lines.</summary>
     public Texture2D Pixel
     {
@@ -120,7 +123,9 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
             // MPalette is the game's main palette, which a font loaded without one of its own takes.
             palette = string.Equals(name, MainPalette, StringComparison.OrdinalIgnoreCase)
                 ? Try(() => install.LoadPalette("DATA", "MPALETTE.DAT"))
-                : Try(() => install.LoadPalette("QDATA", name + ".PAL"));
+                : string.Equals(name, LosePalette, StringComparison.OrdinalIgnoreCase)
+                    ? Try(() => AuxSprites.ReadPalette("lose.pl8"))
+                    : Try(() => install.LoadPalette("QDATA", name + ".PAL"));
             _palettes[name] = palette;
         }
 

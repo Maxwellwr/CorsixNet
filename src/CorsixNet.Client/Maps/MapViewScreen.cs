@@ -3903,13 +3903,23 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
-    /// <summary><c>MoviePlayer:playLoseMovie</c>: one of the losing movies at random; it waits for a click.</summary>
+    /// <summary>
+    /// <c>MoviePlayer:playLoseMovie</c>: one of the losing movies at random, waiting for a click, with a newspaper headline
+    /// on its paper near its end (<c>loseMovieOverlay</c>).
+    /// </summary>
     private void PlayLoseMovie()
     {
-        if (_movieFiles.Lose.Count > 0)
+        if (_movieFiles.Lose.Count == 0)
         {
-            var movies = _movieFiles.Lose.Values.ToList();
-            PlayMovie(movies[Random.Shared.Next(movies.Count)], waitForStop: true);
+            return;
+        }
+
+        var (number, path) = _movieFiles.Lose.ElementAt(Random.Shared.Next(_movieFiles.Lose.Count));
+        PlayMovie(path, waitForStop: true);
+        if (_movie.IsPlaying && LoseHeadlines.For(number, _texts) is { Count: > 0 } headlines
+            && LoseHeadlines.Render(_device, ((IWindowHost)this).Graphics, headlines[Random.Shared.Next(headlines.Count)]) is { } overlay)
+        {
+            _movie.SetOverlay(overlay, _movie.Length - LoseHeadlines.Before(number));
         }
     }
 

@@ -22,3 +22,16 @@ public class MoviePlayerTests
         Assert.Equal(new Rectangle(0, 100, 600, 450), MoviePlayer.Fit(640, 480, new Rectangle(0, 0, 600, 650)));
     }
 }
+
+/// <summary>The losing movies' headlines (CorsixTH's loseMovieOverlay).</summary>
+public class LoseHeadlinesTests
+{
+    [Fact]
+    public void EachLosingMovieShowsItsHeadlineSoLongBeforeItsEnd()
+    {
+        Assert.Equal(TimeSpan.FromMilliseconds(1760), LoseHeadlines.Before(1));
+        Assert.Equal(TimeSpan.FromMilliseconds(780), LoseHeadlines.Before(6));
+        Assert.Empty(LoseHeadlines.For(1, null));
+        Assert.Empty(LoseHeadlines.For(7, null));
+    }
+}
