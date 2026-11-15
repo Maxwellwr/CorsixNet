@@ -178,13 +178,16 @@ fonts, faces) and the details listed.
 - Top menu bar: drawn as the original's (`OriginalMenuBar`: appears near the top, PullDV, file, options (adviser, transparent walls and game speed as check items), charts and debug menus, the cheats menu once unlocked, the clock); CorsixTH's music, warmth colour and wage options, its debug items and submenus are not in it. Esc still opens the menu window too.
 - Build room window with room list and prices (B is a list for now), furnish corridor window, room edit panel
   (`dialogs/build_room.lua`, `furnish_corridor.lua`, `edit_room.lua`, `place_objects.lua`); the corridor window and the
-  edit panel are text windows. A finished room is resized or gets its door moved by going back to its blueprint (Esc while
+  edit panel are drawn as the original's (`FurnishCorridorScreen`, `RoomEditScreen`). A finished room is resized or gets its door moved by going back to its blueprint (Esc while
   editing, `ReturnToBlueprintCommand`).
-- The fax (`FaxScreen` over Fax01V: the first fax waiting with its choices, the keypad; the emergency's, epidemic's and
-  patients' texts are still our English stand-ins), the watch (`WatchScreen`, Watch01V; its epidemic button toggles vaccination mode), the build room, room edit (with its buy window), furnish corridor, hire, staff, patient, queue and machine windows are drawn as the original's (the queue's right-click popup sends a patient back to reception or home, `QueuePopupWindow`; `HireScreen` Req11V, `StaffScreen` Req01V,
-  `PatientScreen` Req02V, the view circles' close-up of the map, `IWindowHost.CloseUp`); queue and watch windows are text windows, and so is the machine window (`dialogs/*.lua`).
-- Fullscreen dialogs (`dialogs/fullscreen/*.lua`) other than the bank manager, the casebook, the policy, research, progress report, graphs, town map and annual report screens are text windows (the progress report's one warning a month is picked from the month on the client, not drawn by the simulation) (the policy's wage requests switch stays in its table only); the hall of fame/shame page is a TODO in CorsixTH too.
-- Faxes are a text window opened by a new fax (`fullscreen/fax.lua`); the message icons are not (`dialogs/message.lua`).
+- The fax (`FaxScreen` over Fax01V: the first fax waiting with its choices, the keypad; the emergency's, epidemic's,
+  patients' and reports' texts come from the original's strings (section 44 and `fax.*`), with English only where the
+  game's strings are not loaded), the watch (`WatchScreen`, Watch01V; its epidemic button toggles vaccination mode), the build room, room edit (with its buy window), furnish corridor, hire, staff, patient, queue and machine windows are drawn as the original's (the queue's right-click popup sends a patient back to reception or home, `QueuePopupWindow`; `HireScreen` Req11V, `StaffScreen` Req01V,
+  `PatientScreen` Req02V, the view circles' close-up of the map, `IWindowHost.CloseUp`; `QueueScreen`, `WatchScreen`,
+  `MachineScreen`).
+- Every fullscreen dialog (`dialogs/fullscreen/*.lua`: bank manager, casebook, fax, graphs, policy, progress report,
+  research, staff management, town map, annual report) is drawn as the original's (the progress report's one warning a month is picked from the month on the client, not drawn by the simulation) (the policy's wage requests switch stays in its table only); the hall of fame/shame page is a TODO in CorsixTH too.
+- (Done: the faxes and their message icons on the bottom panel, `FaxScreen`, `FaxDrawer`; `fullscreen/fax.lua`, `dialogs/message.lua`.)
 - Adviser: done, the figure too (`AdviserFigure`: getting up, talking with the balloon, waiting, getting down,
   clicks on him). The announcer's queue is done (`Audio/Announcer`: priorities,
   expiry, the staffed-desk rule, random announcements, `play_announcements`, `announcement_volume`); the queue, history and much
