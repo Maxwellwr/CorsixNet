@@ -351,7 +351,12 @@ to the client that diverged, `ResyncMessage`.)
   CorsixTH's other actions (music toggle, logs, furnish corridor, edit room) are not read; the sell picked up item key
   (`ingame_sellPickedUpItem`) is. The rotate object key (`ingame_rotateobject`, space) turns the object being
   placed, as a right click does; outside placing, space still pauses.
-- Update check (`resizables/update.lua`).
+- (Done: the update check (`App:checkForUpdates`, `resizables/update.lua`): once a launch, in the background, the
+  project's newest GitHub release (Maxwellwr/CorsixNet) against this build's version, as CorsixTH compares them (a
+  beta or rc is older than the release of its number), never for a development version or a pre-release, and only
+  with a download page on github.com; `UpdateWindow` (UIUpdate: the two versions, the release notes, Download opening
+  the page in the browser, Ignore); `check_for_updates` in `config.yaml` and first in the options window.) Builds
+  carry no version number of their own yet, so no release is offered until one is set.
 
 ## 12. Map editor and tools
 

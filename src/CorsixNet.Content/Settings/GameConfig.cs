@@ -180,6 +180,9 @@ public sealed record GameConfig
     /// <summary>Whether the mouse at the screen's edge does not scroll the map (<c>prevent_edge_scrolling</c>).</summary>
     public bool PreventEdgeScrolling { get; init; }
 
+    /// <summary>Whether the game looks for a newer version on launch (<c>check_for_updates</c>).</summary>
+    public bool CheckForUpdates { get; init; } = true;
+
     /// <summary>Whether the cursor is kept inside the game's window while it has focus (<c>capture_mouse</c>).</summary>
     public bool CaptureMouse { get; init; } = true;
 
@@ -306,6 +309,7 @@ public sealed record GameConfig
             MusicVolume = Number("music_volume", defaults.MusicVolume),
             PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
             CaptureMouse = Bool("capture_mouse", defaults.CaptureMouse),
+            CheckForUpdates = Bool("check_for_updates", defaults.CheckForUpdates),
             Screenshots = Text("screenshots", defaults.Screenshots),
             ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
             ZoomSpeed = Number("zoom_speed", defaults.ZoomSpeed),
@@ -617,6 +621,16 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"capture_mouse: {Yaml(CaptureMouse)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Automatically check for updates.
+            # If set to true, the game will automatically check for and alert you to newer
+            # versions on startup.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"check_for_updates: {Yaml(CheckForUpdates)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------

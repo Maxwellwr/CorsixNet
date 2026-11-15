@@ -114,6 +114,7 @@ public sealed class GameConfigTests : IDisposable
             SoundVolume = 0.75m,
             PreventEdgeScrolling = true,
             CaptureMouse = false,
+            CheckForUpdates = false,
             Screenshots = @"D:\Shots",
             ScrollingMomentum = 0.9m,
             ZoomSpeed = 200,

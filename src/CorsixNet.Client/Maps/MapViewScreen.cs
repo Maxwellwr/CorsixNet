@@ -566,6 +566,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     public void Update(GameTime gameTime, bool hasFocus)
     {
         _music.Update();
+        ShowUpdateFound();
         if (_movie.IsPlaying)
         {
             UpdateMovie(hasFocus);
@@ -4429,6 +4430,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _session?.SetSpeed(GameSpeed.Pause);
         _mainMenu = new MainMenuWindow(MainMenuAction, typeof(MapViewScreen).Assembly.GetName().Version?.ToString(3) ?? "?");
+        StartUpdateCheck();
         _windows.Open(_mainMenu);
     }
 
@@ -4442,6 +4444,48 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>The main menu's items (<c>UIMainMenu:button*</c>).</summary>
+    /// <summary>App:checkForUpdates, once a launch, in the background; null when not asked for.</summary>
+    private Task<UpdateInfo?>? _updateCheck;
+
+    /// <summary>
+    /// Starts looking for a newer version on launch (<c>check_for_updates</c>), unless a script plays the game; the
+    /// update window opens once it is found.
+    /// </summary>
+    private void StartUpdateCheck()
+    {
+        if (_config.CheckForUpdates && InputScript.Current is null && _updateCheck is null)
+        {
+            _updateCheck = UpdateCheck.FindAsync(UpdateCheck.CurrentVersion());
+        }
+    }
+
+    private void ShowUpdateFound()
+    {
+        if (_updateCheck is not { IsCompleted: true } check)
+        {
+            return;
+        }
+
+        _updateCheck = Task.FromResult<UpdateInfo?>(null);
+        if (check.IsCompletedSuccessfully && check.Result is { } update && IsWindowHostReady)
+        {
+            _windows.Open(new UpdateWindow(update, OpenWebPage));
+        }
+    }
+
+    /// <summary>Opens a web page in the system's browser (<c>UIUpdate:buttonDownload</c>).</summary>
+    private static void OpenWebPage(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            Console.Error.WriteLine("Could not open " + url + ": " + e.Message);
+        }
+    }
+
     private void MainMenuAction(string action)
     {
         var saves = _saves.Directory;
