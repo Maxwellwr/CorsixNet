@@ -4062,8 +4062,21 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <c>Audio:initMidiPlayer</c>: the MIDI player on the output the settings name (<c>midi_api</c>, <c>midi_port</c>),
     /// or null when there is none.
     /// </summary>
-    private static MidiPlayer? NewMidiPlayer(GameConfig config) =>
-        WinMmMidiOutput.Open(config.MidiPort) is { } output ? new MidiPlayer(output) : null;
+    /// <remarks>
+    /// With the default API the music plays on the software synthesiser when there is a SoundFont
+    /// (<c>App:findSoundFont</c>), as CorsixTH's default is FluidSynth's; without one, on Windows, on its MIDI mapper.
+    /// </remarks>
+    private static MidiPlayer? NewMidiPlayer(GameConfig config)
+    {
+        IMidiOutput? output = null;
+        if (config.MidiApi.Length == 0 && SoundFonts.Find(config.Soundfont, AppContext.BaseDirectory) is { } soundFont)
+        {
+            output = SoftSynthMidiOutput.Open(soundFont);
+        }
+
+        output ??= WinMmMidiOutput.Open(config.MidiPort);
+        return output is null ? null : new MidiPlayer(output);
+    }
 
     /// <summary>UIOptions's buttons: a settings dialog, whose Back opens the options again.</summary>
     private void OpenSettingsDialog(SettingsDialogKind kind) =>
@@ -4509,7 +4522,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The options window's Apply: the new settings are saved to <c>config.yaml</c> and used at once.</summary>
     private void ApplyConfig(GameConfig config)
     {
-        var midiChanged = config.MidiApi != _config.MidiApi || config.MidiPort != _config.MidiPort;
+        var midiChanged = config.MidiApi != _config.MidiApi || config.MidiPort != _config.MidiPort || config.Soundfont != _config.Soundfont;
         _config = config;
         if (midiChanged)
         {

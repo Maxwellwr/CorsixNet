@@ -147,6 +147,9 @@ public sealed record GameConfig
     /// <summary>The MIDI output of that API (<c>midi_port</c>); empty for the system's default.</summary>
     public string MidiPort { get; init; } = string.Empty;
 
+    /// <summary>The SoundFont the default MIDI synthesiser plays the music with (<c>soundfont</c>); empty to look for one.</summary>
+    public string Soundfont { get; init; } = string.Empty;
+
     /// <summary>Whether movies play at all (<c>movies</c>).</summary>
     public bool Movies { get; init; } = true;
 
@@ -275,6 +278,7 @@ public sealed record GameConfig
             Movies = Bool("movies", defaults.Movies),
             MidiApi = Text("midi_api", defaults.MidiApi),
             MidiPort = Text("midi_port", defaults.MidiPort),
+            Soundfont = Text("soundfont", defaults.Soundfont),
             PlayIntro = Bool("play_intro", defaults.PlayIntro),
             PlayDemo = Bool("play_demo", defaults.PlayDemo),
             MusicVolume = Number("music_volume", defaults.MusicVolume),
@@ -512,6 +516,16 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"midi_api: {Quote(MidiApi)}\nmidi_port: {Quote(MidiPort)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # SoundFont: the default MIDI synthesiser plays the music with the
+            # GeneralUser-GS or FluidR3 SoundFont beside the game, or the system's, where
+            # there is one; another SoundFont file (.sf2) can be given here.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"soundfont: {Quote(Soundfont)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------
