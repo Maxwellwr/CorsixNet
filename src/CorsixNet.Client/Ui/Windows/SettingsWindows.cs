@@ -368,6 +368,9 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         };
         List<DialogSetting> settings =
         [
+            // options.lua puts check_for_updates first.
+            new(Text("check_for_updates", "Check for Updates"), _draft.CheckForUpdates ? Text("option_on", "On") : Text("option_off", "Off"),
+                _ => ApplyNow(() => _draft = _draft with { CheckForUpdates = !_draft.CheckForUpdates }), Tip("check_for_updates"), On: _draft.CheckForUpdates),
             new(Text("language", "Game Language"), _draft.Language, step => ApplyNow(() => StepLanguage(step)), Tip("language")),
             new(Text("autosave_frequency", "Autosave Frequency"), autosave, step => ApplyNow(() => _draft = _draft with { AutosaveFrequency = (_draft.AutosaveFrequency + step + 4) % 4 }), Tip("autosave_frequency")),
         ];
@@ -415,6 +418,7 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return Switch(UiText.Get("customise_window.remove_destroyed_rooms", "Remove destroyed rooms"), _draft.RemoveDestroyedRooms, on => _draft = _draft with { RemoveDestroyedRooms = on }, UiText.Get("tooltip.customise_window.remove_destroyed_rooms", "If you would like to be able to remove destroyed rooms for a fee, turn this option on"));
         yield return Switch(UiText.Get("customise_window.enable_avg_contents", "Average Contents"), _draft.EnableAverageContents, on => _draft = _draft with { EnableAverageContents = on }, UiText.Get("tooltip.customise_window.enable_avg_contents", "If you would like the game to remember which extra objects you usually add while building rooms, turn this option on"));
         yield return Switch(UiText.Get("customise_window.enable_insurance_blue_banknote", "Insurance Blue Banknote"), _draft.EnableInsuranceBlueBanknote, on => _draft = _draft with { EnableInsuranceBlueBanknote = on }, UiText.Get("tooltip.customise_window.enable_insurance_blue_banknote", "Patient payments made via an insurance company feature a blue floating banknote animation. If you prefer the original display style, where all payments are in green, you can disable this option"));
+        yield return Switch(UiText.Get("options_window.check_for_updates", "Check for Updates"), _draft.CheckForUpdates, on => _draft = _draft with { CheckForUpdates = on }, UiText.Get("tooltip.options_window.check_for_updates", "Sets whether the game should look for updates on launch."));
         // sound_setting.lua's announcement volume and accessibility.lua's subtitles, with the announcements' own switch.
         yield return Switch(UiText.Get("corsixnet.options.announcements", "Announcements"), _draft.PlayAnnouncements, on => _draft = _draft with { PlayAnnouncements = on });
         yield return Stepper(UiText.Get("audio_window.announcement_volume", "Announcement volume"), Percent(_draft.AnnouncementVolume), () => _draft = _draft with { AnnouncementVolume = Math.Max(0m, _draft.AnnouncementVolume - 0.1m) }, () => _draft = _draft with { AnnouncementVolume = Math.Min(1m, _draft.AnnouncementVolume + 0.1m) });
