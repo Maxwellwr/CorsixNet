@@ -53,6 +53,9 @@ public sealed class LockstepClient : IDisposable
     /// <summary>The most recent desync reported by the server, if any.</summary>
     public DesyncMessage? LastDesync { get; private set; }
 
+    /// <summary>How many times the server replaced this client's state after a desync.</summary>
+    public int Resyncs { get; private set; }
+
     /// <summary>Handles all messages received so far.</summary>
     public void ProcessMessages()
     {
@@ -61,13 +64,14 @@ public sealed class LockstepClient : IDisposable
             switch (message)
             {
                 case WelcomeMessage welcome:
-                    using (var state = new MemoryStream(welcome.State, writable: false))
-                    {
-                        Simulation = Simulation.Load(state, _content);
-                    }
-
+                    Simulation = LoadState(welcome.State);
                     Player = welcome.Player;
                     AllowedTick = welcome.AllowedTick;
+                    break;
+                case ResyncMessage resync when Simulation is not null:
+                    Simulation = LoadState(resync.State);
+                    AllowedTick = resync.AllowedTick;
+                    Resyncs++;
                     break;
                 case ScheduledCommandMessage scheduled when Simulation is not null:
                     Simulation.Schedule(scheduled.Command);
@@ -92,6 +96,12 @@ public sealed class LockstepClient : IDisposable
         {
             Problem = _connection.Error ?? "Disconnected from the server.";
         }
+    }
+
+    private Simulation LoadState(byte[] bytes)
+    {
+        using var state = new MemoryStream(bytes, writable: false);
+        return Simulation.Load(state, _content);
     }
 
     /// <summary>Asks the server to schedule a command for everyone.</summary>

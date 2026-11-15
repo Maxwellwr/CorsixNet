@@ -34,6 +34,7 @@ public static class MessageCodec
         Desync = 8,
         SpeedRequest = 9,
         Speed = 10,
+        Resync = 11,
     }
 
     public static byte[] Encode(Message message)
@@ -82,6 +83,12 @@ public static class MessageCodec
                 writer.WriteUInt64(desync.Expected);
                 writer.WriteUInt64(desync.Actual);
                 break;
+            case ResyncMessage resync:
+                writer.WriteByte((byte)MessageType.Resync);
+                writer.WriteInt64(resync.AllowedTick);
+                writer.WriteInt32(resync.State.Length);
+                writer.WriteBytes(resync.State);
+                break;
             case SpeedRequestMessage request:
                 writer.WriteByte((byte)MessageType.SpeedRequest);
                 writer.WriteByte(request.Speed is { } wanted ? (byte)wanted : PreviousSpeed);
@@ -114,6 +121,7 @@ public static class MessageCodec
             MessageType.Advance => new AdvanceMessage(reader.ReadInt64()),
             MessageType.StateHash => new StateHashMessage(reader.ReadInt64(), reader.ReadUInt64()),
             MessageType.Desync => new DesyncMessage(reader.ReadInt64(), reader.ReadInt32(), reader.ReadUInt64(), reader.ReadUInt64()),
+            MessageType.Resync => ReadResync(reader),
             MessageType.SpeedRequest => ReadSpeedRequest(reader),
             MessageType.Speed => new SpeedMessage(ToSpeed(reader.ReadByte()), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown message type {(byte)type}."),
@@ -137,6 +145,13 @@ public static class MessageCodec
     {
         var speed = (GameSpeed)value;
         return Enum.IsDefined(speed) ? speed : throw new InvalidDataException($"Unknown game speed {value}.");
+    }
+
+    private static ResyncMessage ReadResync(SimReader reader)
+    {
+        var allowedTick = reader.ReadInt64();
+        var state = reader.ReadBytes(reader.ReadCount(MaxMessageSize));
+        return new ResyncMessage(state, allowedTick);
     }
 
     private static WelcomeMessage ReadWelcome(SimReader reader)

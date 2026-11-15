@@ -155,6 +155,33 @@ public sealed class LockstepTests : IDisposable
     }
 
     [Fact]
+    public void DesyncedClientGetsTheServersStateAndStaysInSync()
+    {
+        var a = Connect("Alice");
+        var cheater = Connect("Cheater");
+        Exchange();
+        a.Submit(new SpawnHumanoidCommand(new(1, 1)));
+        Run(ticks: 3);
+
+        cheater.Simulation!.Random.NextUInt32();
+        Run(ticks: LockstepServer.HashInterval);
+        Assert.Single(_server.Desyncs);
+        Assert.Equal(1, cheater.Resyncs);
+        Assert.Equal(0, a.Resyncs);
+
+        // Commands go on reaching the resent state, and no further desync is reported, not even from hashes the
+        // client sent before it took the new state.
+        a.Submit(new SpawnHumanoidCommand(new(5, 5)));
+        cheater.Submit(new WalkToCommand(1, new(8, 8)));
+        Run(ticks: 4 * LockstepServer.HashInterval);
+
+        Assert.Single(_server.Desyncs);
+        Assert.Equal(1, cheater.Resyncs);
+        Assert.Equal(2, cheater.Simulation!.Entities.Count);
+        AssertInSync();
+    }
+
+    [Fact]
     public void ServerDropsClientsThatSendCommandsBeforeJoining()
     {
         var (serverEnd, clientEnd) = InMemoryConnection.CreatePair();

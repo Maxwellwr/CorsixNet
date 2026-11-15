@@ -18,7 +18,8 @@ namespace CorsixNet.Net.Lockstep;
 /// </para>
 /// <para>
 /// Every <see cref="HashInterval"/> ticks the server records the hash of its state. Clients
-/// report theirs for the same ticks; a mismatch is a desync, reported to everyone.
+/// report theirs for the same ticks; a mismatch is a desync, reported to everyone. The client that diverged then gets
+/// the server's state again (<see cref="ResyncMessage"/>), as a joining client does, and goes on from there.
 /// </para>
 /// <para>
 /// The server keeps the game's one clock (<see cref="GameClock"/>): any player may pause the game or change its speed,
@@ -172,8 +173,8 @@ public sealed class LockstepServer : IDisposable
                 var scheduled = Simulation.Schedule(player, request.Command, Simulation.Tick + CommandDelay);
                 Broadcast(new ScheduledCommandMessage(scheduled));
                 break;
-            case StateHashMessage hash when peer.Player is { } player:
-                CheckHash(player, hash);
+            case StateHashMessage hash when peer.Player is not null:
+                CheckHash(peer, hash);
                 break;
             case SpeedRequestMessage request when peer.Player is { } player:
                 SetSpeed(request.Speed, player);
@@ -202,24 +203,34 @@ public sealed class LockstepServer : IDisposable
         peer.Player = free[0];
         peer.Name = hello.PlayerName;
 
-        using var state = new MemoryStream();
-        Simulation.Save(state);
-        peer.Connection.Send(new WelcomeMessage(peer.Player.Value, state.ToArray(), Simulation.Tick));
+        peer.Connection.Send(new WelcomeMessage(peer.Player.Value, SaveState(), Simulation.Tick));
         peer.Connection.Send(new SpeedMessage(_clock.Speed, -1));
         Log?.Invoke($"{Describe(peer)} joined at tick {Simulation.Tick}.");
     }
 
-    private void CheckHash(int player, StateHashMessage hash)
+    private void CheckHash(Peer peer, StateHashMessage hash)
     {
-        if (!_hashes.TryGetValue(hash.Tick, out var expected) || expected == hash.Hash)
+        // Hashes the client sent before it took the state of a resync are of the state it left behind.
+        if (hash.Tick <= peer.ResyncedAt || !_hashes.TryGetValue(hash.Tick, out var expected) || expected == hash.Hash)
         {
             return;
         }
 
+        var player = peer.Player!.Value;
         var desync = new DesyncMessage(hash.Tick, player, expected, hash.Hash);
         _desyncs.Add(desync);
         Log?.Invoke($"Desync: player {player} at tick {hash.Tick} (expected {expected:X16}, got {hash.Hash:X16}).");
         Broadcast(desync);
+        peer.Connection.Send(new ResyncMessage(SaveState(), Simulation.Tick));
+        peer.ResyncedAt = Simulation.Tick;
+        Log?.Invoke($"Sent player {player} the state at tick {Simulation.Tick}.");
+    }
+
+    private byte[] SaveState()
+    {
+        using var state = new MemoryStream();
+        Simulation.Save(state);
+        return state.ToArray();
     }
 
     private void Reject(Peer peer, string reason)
@@ -258,5 +269,8 @@ public sealed class LockstepServer : IDisposable
         public int? Player { get; set; }
 
         public string? Name { get; set; }
+
+        /// <summary>The server's tick when this client was last sent a resync, or -1.</summary>
+        public long ResyncedAt { get; set; } = -1;
     }
 }
