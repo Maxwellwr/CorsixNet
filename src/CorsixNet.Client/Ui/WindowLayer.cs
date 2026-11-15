@@ -119,6 +119,13 @@ internal sealed class WindowLayer
         return hit?.Layout!.Cells.FirstOrDefault(cell => cell.Area.Contains(mouse)).Cell?.Tooltip;
     }
 
+    /// <summary>The cursor the front fullscreen dialog under the mouse sets there, or null.</summary>
+    public GameCursor? CursorAt(Point mouse)
+    {
+        var hit = _open.LastOrDefault(open => open.Layout is { } layout && layout.Bounds.Contains(mouse));
+        return hit?.Layout is { Fullscreen: true } full && _host is { } host ? hit.Window.FullscreenCursor(host, mouse - full.Bounds.Location) : null;
+    }
+
     /// <summary>
     /// The middle of the <paramref name="nth"/> enabled button (from 1) reading <paramref name="text"/>, ignoring case,
     /// in the front window that has one, or null; for <c>--script</c>. A text ending in * matches the start of a label.

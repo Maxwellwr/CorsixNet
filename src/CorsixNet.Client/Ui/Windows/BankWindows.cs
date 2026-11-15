@@ -29,6 +29,8 @@ internal sealed class BankManagerWindow : UiWindow
     public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
 
     public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
+
+    public override GameCursor? FullscreenCursor(IWindowHost host, Point local) => _screen.Cursor(local);
     public override IEnumerable<WindowRow> Rows(IWindowHost host)
     {
         var hospital = host.Simulation.Hospitals[host.Player];
