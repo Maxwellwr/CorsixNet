@@ -200,6 +200,11 @@ voice is not the original game's announcer and is not modelled on her recordings
 CorsixNet reads its language files with YamlDotNet (https://github.com/aaubry/YamlDotNet), used under the MIT
 license: Copyright (c) Antoine Aubry and contributors.
 
+## MeltySynth
+
+CorsixNet plays the music on a software synthesiser by default with MeltySynth (https://github.com/sinshu/meltysynth),
+used under the MIT license: Copyright (c) 2021 Nobuaki Tanaka. No SoundFont is included; the player supplies one.
+
 ## FreeType
 
 CorsixNet draws TrueType fonts with FreeType through FreeTypeSharp (MIT, https://github.com/ryancheung/FreeTypeSharp),

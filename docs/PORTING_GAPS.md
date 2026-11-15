@@ -259,13 +259,15 @@ staff, buying a parcel, shooting a rat, sending a patient home (positional).
   `WorldSounds`), and so do the interface's (hover sounds, fax_in.wav, SNAPSHOT.WAV). CorsixTH has no footsteps,
   coughs or adviser voice beyond the animations' frame sounds. (Done: the options window's
   announcements switch, their volume and the subtitles, `OptionsWindow`.)
-- Music playback is done on Windows: the XMI songs go to the MIDI mapper as CorsixTH's MIDI player sends them
+- Music playback is done: the XMI songs go to the MIDI output as CorsixTH's MIDI player sends them
   (`MidiPlayer`, `WinMmMidiOutput`, `Src/midi_player.cpp`), a random track first and then the next enabled one
   (`BackgroundMusic`, `audio.lua`), with `play_music`, `music_volume`, Alt+M, the menu bar's music item and the options'
   music switch and volume, and the jukebox (`JukeboxWindow`, `dialogs/jukebox.lua`: J or the options menu, play, pause,
   previous, next, stop, loop, tracks left out kept in `disabledtracks.txt`), and the MIDI API and port (`midi_api`,
-  `midi_port`, the sound dialog, `WinMmMidiOutput.Ports`). Still: the player's own MP3 music (`play_own_music`)
-  and music on Linux and macOS (CorsixTH uses SDL_mixer with a SoundFont there).
+  `midi_port`, the sound dialog, `WinMmMidiOutput.Ports`). With the default API the music plays on a software
+  synthesiser with a SoundFont (`SoftSynthMidiOutput`, MeltySynth; `soundfont`, `SoundFonts.Find` after `App:findSoundFont`),
+  on Linux and macOS too, as CorsixTH's default is FluidSynth's; without a SoundFont, Windows falls back to its MIDI
+  mapper. Still: the player's own MP3 music (`play_own_music`).
 
 ## 10. Network
 
