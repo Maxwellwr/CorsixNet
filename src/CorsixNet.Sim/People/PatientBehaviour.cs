@@ -615,6 +615,11 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             return;
         }
 
+        if (IsFedUp && Next != AfterRoom.Die)
+        {
+            LeaveFedUp(simulation, humanoid);
+        }
+
         switch (Phase)
         {
             case PatientPhase.SeekReception:
@@ -710,7 +715,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                 if (IsFedUp && Next != AfterRoom.Die)
                 {
-                    // Fed up while in the room: home now (CorsixTH sends them at once; here once the visit is over).
+                    // Fed up while in the room: out of it, home (goHome("kicked")).
                     IsFedUp = false;
                     GoHome(simulation, humanoid, ReputationChange.Kicked);
                     break;
@@ -2994,6 +2999,34 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     public bool IsFedUp { get; private set; }
 
     /// <summary>
+    /// <c>Patient:goHome("kicked")</c> in a room (patient.lua): <c>room:makeHumanoidLeave(self)</c> sends the fed-up
+    /// patient out at once. Walking to the room's object or standing at it waiting for the staff, they turn for the door
+    /// now; sitting or lying on an object of their own (the GP's chair, the psychiatrist's couch) they get up, the use
+    /// cut short as an interrupted use object action is, and leave once off it. A step done with the staff at a machine,
+    /// undressed behind the screen, in a ward bed or at the toilets is seen through first, as CorsixTH's must-happen
+    /// actions are, so that nobody walks out stripped or leaves a machine running; they leave as soon as it is over.
+    /// </summary>
+    private void LeaveFedUp(Simulation simulation, Humanoid humanoid)
+    {
+        switch (Phase)
+        {
+            case PatientPhase.WalkingToObject:
+            case PatientPhase.StandingAtObject when !IsDealtWith:
+                if (!_kingChange && simulation.FindEntity(TargetId) is Room { RoomType: not RoomVisits.WardRoom })
+                {
+                    LeaveRoom(simulation, humanoid);
+                }
+
+                break;
+            case PatientPhase.UsingObject when !_kingChange && Use is { StopRequested: false } use
+                && simulation.FindEntity(use.ObjectId) is RoomObject { Machine: null }
+                && simulation.FindEntity(TargetId) is Room { RoomType: not RoomVisits.WardRoom }:
+                use.Interrupt();
+                break;
+        }
+    }
+
+    /// <summary>
     /// <c>Patient:_checkIfCureRoom</c>: whether the room the patient is in is one of their disease's treatment rooms.
     /// </summary>
     private bool IsCureRoom(Simulation simulation) =>
@@ -3030,7 +3063,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
     /// <summary>
     /// <c>Patient:_dailyHealthChecks</c>: below 0.01 health goes to 0, and at 0 the patient is set to die. On the way
     /// down, while health is from 0.18 to below 0.22, each day costs a little happiness and one time in 30 the patient is
-    /// fed up and goes home, unless they are in a room.
+    /// fed up and goes home, unless they are in a room that cures them.
     /// </summary>
     /// <returns>False when health was already 0, which ends the patient's day.</returns>
     internal bool OnEndDayHealth(Simulation simulation, Humanoid humanoid)
@@ -3055,7 +3088,7 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
             Feelings.ChangeHappiness(simulation, humanoid, -0.0002m);
 
             // A 1 in 30 chance each of these days (about a third in all) that the patient gives up, unless they are in a
-            // room that cures them (_checkIfCureRoom); one in another room leaves for home once out of it.
+            // room that cures them (_checkIfCureRoom); one in another room leaves it at once (LeaveFedUp) and goes home.
             if (!IsCureRoom(simulation) && simulation.Random.NextInclusive(1, 30) == 1)
             {
                 if (IsInRoom)

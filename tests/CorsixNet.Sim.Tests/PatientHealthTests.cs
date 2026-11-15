@@ -84,7 +84,7 @@ public class PatientHealthTests
             Feelings.OnEndDay(simulation, humanoid);
         }
 
-        // In the GP's office some give up, and stay until their visit is over; in the pharmacy, which cures a cold, none.
+        // In the GP's office some give up; in the pharmacy, which cures a cold, none.
         var fedUp = patients.Where(p => p.Entry.Patient.IsFedUp).ToList();
         Assert.NotEmpty(fedUp);
         Assert.All(fedUp, p => Assert.Same(gp, p.Room));
@@ -95,6 +95,34 @@ public class PatientHealthTests
         quitter.Update(simulation, leaving);
         Assert.Equal(PatientPhase.GoingHome, quitter.Phase);
         Assert.False(quitter.IsFedUp);
+    }
+
+    [Fact]
+    public void FedUpWaitingAtTheObjectTheyLeaveTheRoomAtOnce()
+    {
+        var simulation = NewSimulation();
+        var gp = simulation.AddEntity(id => new Room(id, "gp", new TileRect(4, 4, 2, 2), Enumerable.Repeat(new OriginalTile(0, TileFlags.None), 4).ToList()));
+        var phase = typeof(PatientBehaviour).GetProperty(nameof(PatientBehaviour.Phase))!;
+        var target = typeof(PatientBehaviour).GetProperty(nameof(PatientBehaviour.TargetId))!;
+        var patients = Enumerable.Range(0, 200).Select(_ => AddPatient(simulation, new TilePosition(2, 2), 0.2m)).ToList();
+        foreach (var (humanoid, patient) in patients)
+        {
+            phase.SetValue(patient, PatientPhase.StandingAtObject);
+            target.SetValue(patient, gp.Id);
+            Feelings.OnEndDay(simulation, humanoid);
+        }
+
+        var fedUp = patients.Where(p => p.Patient.IsFedUp).ToList();
+        Assert.NotEmpty(fedUp);
+        foreach (var (humanoid, patient) in patients)
+        {
+            patient.Update(simulation, humanoid);
+        }
+
+        // patient.lua's goHome: room:makeHumanoidLeave at once, not when the visit is over (with no door to walk to, they
+        // are out at once and on their way home); the others wait on.
+        Assert.All(fedUp, p => Assert.Equal(PatientPhase.GoingHome, p.Patient.Phase));
+        Assert.All(patients.Except(fedUp), p => Assert.Equal(PatientPhase.StandingAtObject, p.Patient.Phase));
     }
     [Fact]
     public void AtNoHealthAPatientDiesOnceOutOfTheRoom()

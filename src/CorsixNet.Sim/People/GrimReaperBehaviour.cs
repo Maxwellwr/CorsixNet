@@ -41,8 +41,8 @@ public enum GrimReaperPhase : byte
 /// then he swings his scythe, leaves, and the hole closes.
 /// </summary>
 /// <remarks>
-/// The gates to hell are drawn from this behaviour at <see cref="HoleTile"/> rather than being a placed object, and do
-/// not block the tile. CorsixTH also checks that the hole leaves a way round it; that check is left out.
+/// The gates to hell are drawn from this behaviour at <see cref="HoleTile"/> rather than being a placed object. As in
+/// CorsixTH, the hole blocks its tile while open, and is only opened where it leaves a way round it.
 /// </remarks>
 public sealed class GrimReaperBehaviour : HumanoidBehaviour
 {
