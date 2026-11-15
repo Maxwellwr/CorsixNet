@@ -33,10 +33,22 @@ internal sealed class FurnishCorridorTool
     public bool IsActive => _placing is not null;
 
     /// <summary>
-    /// The corridor object picked up off the floor (a right click, <c>Object:onClick</c>) and on the cursor, or 0 when
-    /// buying: put down it moves there; Esc puts it back (<c>UIPlaceObjects:undo</c>); the sell key sells it.
+    /// The object picked up off the floor (a right click, <c>Object:onClick</c>) while the pick up command is on its way,
+    /// so that it is not drawn where it stood meanwhile; 0 otherwise.
     /// </summary>
     public int MovingId { get; private set; }
+
+    /// <summary>
+    /// Whether the object on the cursor is one the hospital carries (<see cref="Hospital.Carried"/>) rather than one being
+    /// bought: put down, it stands there; Esc puts it back (<c>UIPlaceObjects:undo</c>); the sell key sells it.
+    /// </summary>
+    public bool IsCarrying { get; private set; }
+
+    /// <summary>The tick a put down, put back or sale was sent at, while waiting for it to be done; −1 otherwise.</summary>
+    private long _finishSent = -1;
+
+    /// <summary>How many ticks a put down may take to reach the simulation before it is taken as refused.</summary>
+    private const int FinishTicks = 30;
 
     /// <summary>The object on the cursor, or null.</summary>
     public string? PlacingId => _placing?.Id;
@@ -74,16 +86,25 @@ internal sealed class FurnishCorridorTool
     /// </summary>
     public void StartMove(ObjectDefinition definition, RoomObject placed)
     {
-        _queue.Clear();
-        Start(definition);
-        _orientation = placed.Orientation;
+        StartCarrying(definition, placed.Orientation);
         MovingId = placed.Id;
         PlaySound?.Invoke("pickup.wav");
+    }
+
+    /// <summary>The object the hospital carries comes (back) onto the cursor, as after loading a game saved meanwhile.</summary>
+    public void StartCarrying(ObjectDefinition definition, Direction orientation)
+    {
+        _queue.Clear();
+        Start(definition);
+        _orientation = definition.Orientations.ContainsKey(orientation) ? orientation : _orientation;
+        IsCarrying = true;
     }
 
     public void Start(ObjectDefinition definition)
     {
         MovingId = 0;
+        IsCarrying = false;
+        _finishSent = -1;
         _placing = definition;
         _orientation = Turns.First(definition.Orientations.ContainsKey);
         _ghostTile = null;
@@ -93,6 +114,8 @@ internal sealed class FurnishCorridorTool
     {
         _placing = null;
         MovingId = 0;
+        IsCarrying = false;
+        _finishSent = -1;
         _queue.Clear();
     }
 
@@ -123,19 +146,39 @@ internal sealed class FurnishCorridorTool
             return null;
         }
 
-        if (MovingId != 0 && simulation.FindEntity(MovingId) is not RoomObject)
+        if (IsCarrying)
         {
-            // Gone meanwhile (sold by another command, or a disaster).
-            Stop();
-            return null;
-        }
+            var carried = player >= 0 && player < simulation.Hospitals.Count ? simulation.Hospitals[player].Carried : null;
+            if (carried is not null)
+            {
+                MovingId = 0;
+            }
+            else if (MovingId == 0 || simulation.FindEntity(MovingId) is not RoomObject)
+            {
+                // Put down, put back or sold (or the object went before the pick up reached the simulation).
+                Stop();
+                return null;
+            }
 
-        if (input.Sell && MovingId != 0)
-        {
-            // UIPlaceObjects:sell: the picked up object is sold for its build cost.
-            var sold = new SellCorridorObjectCommand(MovingId);
-            Stop();
-            return sold;
+            if (_finishSent >= 0)
+            {
+                // Waiting for the put down to be done; once its time is past and the object is still carried, it was refused.
+                if (simulation.Tick - _finishSent < FinishTicks)
+                {
+                    _ghostTile = null;
+                    return null;
+                }
+
+                _finishSent = -1;
+            }
+
+            if (input.Sell || input.Back)
+            {
+                // UIPlaceObjects:sell, or undo: the object goes back where it stood.
+                _finishSent = simulation.Tick;
+                _ghostTile = null;
+                return input.Sell ? new SellCarriedObjectCommand() : new PutBackCarriedObjectCommand();
+            }
         }
 
         if (input.Back || input.Sell)
@@ -157,17 +200,17 @@ internal sealed class FurnishCorridorTool
         _problem = _ghostTile is not { } tile ? ObjectPlacementProblem.OutsideMap
             : moving is not null ? CorridorObjects.CheckMove(simulation, moving, tile, _orientation, player)
             : ObjectPlacer.Check(simulation, _placing.Id, tile, _orientation, player);
-        _cannotAfford = moving is null && !RoomPurchases.CanAffordObject(simulation, _placing.Id, player);
-        if (moving is not null && input.LeftPressed && _ghostTile is { } spot && _problem == ObjectPlacementProblem.None)
+        _cannotAfford = !IsCarrying && !RoomPurchases.CanAffordObject(simulation, _placing.Id, player);
+        if (IsCarrying && input.LeftPressed && _ghostTile is { } spot && _problem == ObjectPlacementProblem.None)
         {
-            // Put down: the object moves there, at no cost.
-            var move = new MoveCorridorObjectCommand(moving.Id, spot, _orientation);
-            Stop();
+            // Put down: the object stands there, at no cost.
+            _finishSent = simulation.Tick;
+            _ghostTile = null;
             PlaySound?.Invoke("place_r.wav");
-            return move;
+            return new PutDownCarriedObjectCommand(spot, _orientation);
         }
 
-        if (moving is null && input.LeftPressed && _ghostTile is { } target && _problem == ObjectPlacementProblem.None && !_cannotAfford)
+        if (!IsCarrying && input.LeftPressed && _ghostTile is { } target && _problem == ObjectPlacementProblem.None && !_cannotAfford)
         {
             var command = new PlaceObjectCommand(_placing.Id, target, _orientation);
             if (_queue.TryDequeue(out var next))
@@ -198,7 +241,7 @@ internal sealed class FurnishCorridorTool
             return string.Empty;
         }
 
-        if (MovingId != 0)
+        if (IsCarrying)
         {
             var reason = _problem is ObjectPlacementProblem.None or ObjectPlacementProblem.OutsideMap ? string.Empty : "  " + BuildRoomTool.ExplainPlacement(_problem);
             return UiText.Format("corsixnet.build_tool.move_object", "%1%: click to put it down, right click turns it, Delete sells it%2%   Esc: put it back", UiText.Object(_placing), reason);

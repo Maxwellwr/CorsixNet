@@ -2,6 +2,7 @@ using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Definitions;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Objects;
 using CorsixNet.Sim.Rooms;
 using static CorsixNet.Sim.Definitions.FootprintFlags;
 
@@ -39,6 +40,32 @@ public class SideObjectRoomTests
         Assert.Equal(radiator.Id, simulation.Map[5, 4].ObjectId);
         Assert.False(simulation.Map[5, 4].Has(TileFlags.BuildableNorth));
         Assert.False(simulation.Map[5, 4].Has(TileFlags.CanTravelNorth));
+    }
+
+    [Fact]
+    public void ARadiatorInAFinishedRoomIsPickedUpAndTheRoomsTilesAreAsBefore()
+    {
+        var simulation = NewSimulation();
+        Run(simulation, new PlaceObjectCommand("radiator", new(5, 4), Direction.North));
+        Run(simulation, new MarkBlueprintCommand("cupboard", Plan.Area));
+        Run(simulation, new BuildRoomCommand(Plan));
+        var room = Assert.Single(simulation.Entities.OfType<Room>());
+        Run(simulation, new ConfirmRoomCommand(room.Id));
+        Assert.True(room.IsActive);
+        var radiator = Assert.Single(simulation.Entities.OfType<RoomObject>());
+
+        Run(simulation, new PickUpCorridorObjectCommand(radiator.Id));
+
+        Assert.Empty(simulation.Entities.OfType<RoomObject>());
+        Assert.NotNull(simulation.Hospitals[0].Carried);
+        Assert.Equal(0, simulation.Map[5, 4].ObjectId);
+        Assert.True(simulation.Map[5, 4].Has(TileFlags.BuildableNorth));
+        Assert.True(simulation.Map[5, 4].Has(TileFlags.Passable));
+
+        // The cupboard has no use for radiators: it goes back into the corridor.
+        Assert.Equal(ObjectPlacementProblem.NotAllowedHere, ObjectPlacer.Check(simulation, "radiator", new(5, 4), Direction.North, 0));
+        Run(simulation, new PutDownCarriedObjectCommand(new(2, 8), Direction.North));
+        Assert.Equal(0, Assert.Single(simulation.Entities.OfType<RoomObject>()).RoomId);
     }
 
     private static void Run(Simulation simulation, Command command)

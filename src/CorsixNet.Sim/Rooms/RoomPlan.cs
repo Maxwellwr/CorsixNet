@@ -396,6 +396,10 @@ public static class RoomBuilder
         var area = plan.Area;
         var walls = definition.Walls;
 
+        // The corridor's side objects in the area come off their sides first, so that the room's tiles are kept as the
+        // map has them; they take their sides again once the room is up (AdoptSideObjects).
+        Objects.ObjectPlacer.ReleaseSideObjects(simulation, area);
+
         var original = new OriginalTile[area.Width * area.Height];
         for (var y = area.Y; y < area.Bottom; y++)
         {

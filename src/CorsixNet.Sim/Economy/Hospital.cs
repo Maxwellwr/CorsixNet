@@ -797,6 +797,12 @@ public sealed class Hospital
     /// Pays money out, except in free build mode; what is paid for land, a room or an object adds to the hospital's value (CorsixTH's
     /// <c>spendMoney</c> with <c>changeValue</c>).
     /// </summary>
+    /// <summary>
+    /// The object the player has picked up off the floor and not yet put down (CorsixTH's object made invisible while
+    /// <c>picked_up</c>), or null; nobody uses it meanwhile.
+    /// </summary>
+    public Objects.CarriedObject? Carried { get; internal set; }
+
     /// <summary>Changes the hospital's value without money changing hands, as a crashed room's loss (<c>Room:crashRoom</c>).</summary>
     internal void ChangeValue(long amount) => Value += amount;
 
@@ -1618,6 +1624,16 @@ public sealed class Hospital
             writer.WriteBool(poach.Listened);
             writer.WriteInt64(poach.Tick);
         }
+
+        writer.WriteBool(Carried is not null);
+        if (Carried is { } carried)
+        {
+            writer.WriteString(carried.ObjectType);
+            writer.WriteTile(carried.Tile);
+            writer.WriteByte((byte)carried.Orientation);
+            writer.WriteBool(carried.Plant is not null);
+            carried.Plant?.Write(writer);
+        }
     }
 
     internal static Hospital Read(SimReader reader, int player)
@@ -1797,6 +1813,18 @@ public sealed class Hospital
         if ((reader.Version is 0 or >= 97) && reader.ReadBool())
         {
             hospital.LastPoach = new PoachAnswer(reader.ReadInt32(), reader.ReadBool(), reader.ReadInt64());
+        }
+
+        if ((reader.Version is 0 or >= 98) && reader.ReadBool())
+        {
+            var type = reader.ReadString();
+            var tile = reader.ReadTile();
+            var facing = reader.ReadByte();
+            hospital.Carried = new Objects.CarriedObject(
+                type,
+                tile,
+                facing <= (byte)Direction.West ? (Direction)facing : throw new InvalidDataException($"Unknown direction {facing}."),
+                reader.ReadBool() ? Objects.PlantState.Read(reader) : null);
         }
 
         return hospital;
