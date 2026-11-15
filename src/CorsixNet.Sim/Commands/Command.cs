@@ -71,6 +71,7 @@ public enum CommandKind : ushort
     PutDownCarriedObject = 56,
     PutBackCarriedObject = 57,
     SellCarriedObject = 58,
+    MakeDebugPatient = 59,
 }
 
 /// <summary>
@@ -153,6 +154,7 @@ public abstract record Command
             CommandKind.PutDownCarriedObject => new PutDownCarriedObjectCommand(reader.ReadTile(), (Direction)reader.ReadByte()),
             CommandKind.PutBackCarriedObject => new PutBackCarriedObjectCommand(),
             CommandKind.SellCarriedObject => new SellCarriedObjectCommand(),
+            CommandKind.MakeDebugPatient => new MakeDebugPatientCommand(reader.ReadString(), reader.ReadTile()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -162,7 +164,7 @@ public abstract record Command
     private static CheatKind ReadCheat(SimReader reader)
     {
         var cheat = reader.ReadByte();
-        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ShowInfected ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
+        return cheat is >= (byte)CheatKind.Money and <= (byte)CheatKind.ToggleSalaryRaise ? (CheatKind)cheat : throw new InvalidDataException($"Unknown cheat {cheat}.");
     }
 
     private static Research.ResearchCategory ReadResearchCategory(SimReader reader)
@@ -204,6 +206,37 @@ public sealed record SpawnHumanoidCommand(TilePosition Tile) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteTile(Tile);
+}
+
+/// <summary>
+/// The debug menu's make debug patient (<c>UIMakeDebugPatient:buttonClicked</c>): a patient of the player's hospital with
+/// one of the level's diseases, already diagnosed, at <paramref name="Tile"/>; not counted as a visitor.
+/// </summary>
+public sealed record MakeDebugPatientCommand(string DiseaseId, TilePosition Tile) : Command
+{
+    public override CommandKind Kind => CommandKind.MakeDebugPatient;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player < 0 || player >= simulation.Hospitals.Count
+            || !simulation.Map.Contains(Tile.X, Tile.Y) || !simulation.Map[Tile.X, Tile.Y].Has(TileFlags.Passable)
+            || simulation.Rules.Diseases.AvailableDiseases().FirstOrDefault(d => string.Equals(d.Id, DiseaseId, StringComparison.Ordinal)) is not { } disease)
+        {
+            return;
+        }
+
+        var patient = simulation.AddEntity(id => Humanoid.CreatePatient(id, Tile, simulation.Random, disease.Look, player));
+        var behaviour = new PatientBehaviour { Health = simulation.Random.NextInclusive(80, 100) / 100m };
+        behaviour.SetDisease(disease, PatientCare.ChooseInsuranceCompany(simulation.Random), simulation.Random);
+        patient.Behaviour = behaviour;
+        PatientCare.SetDiagnosed(simulation, patient, behaviour, disease);
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteString(DiseaseId);
+        writer.WriteTile(Tile);
+    }
 }
 
 /// <summary>Debug command: sends a humanoid walking to a tile.</summary>

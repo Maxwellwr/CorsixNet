@@ -227,5 +227,48 @@ public class CheatTests
         simulation.Step();
     }
 
+    [Fact]
+    public void TheDebugMenusSalaryRaiseSwitchIsNotCheating()
+    {
+        var simulation = NewSimulation();
+        var hospital = simulation.Hospitals[0];
+        Assert.False(Cheats.SalaryRaiseDisabled(simulation, hospital));
+
+        Run(simulation, CheatKind.ToggleSalaryRaise);
+        Assert.True(Cheats.SalaryRaiseDisabled(simulation, hospital));
+        Assert.False(hospital.Cheated);
+
+        Run(simulation, CheatKind.ToggleSalaryRaise);
+        Assert.False(Cheats.SalaryRaiseDisabled(simulation, hospital));
+    }
+
+    [Fact]
+    public void ADebugPatientComesDiagnosedWithTheDiseaseChosen()
+    {
+        var simulation = NewSimulation();
+        var disease = simulation.Rules.Diseases.AvailableDiseases().First();
+        var command = new MakeDebugPatientCommand(disease.Id, new TilePosition(1, 1));
+        using (var wire = new MemoryStream())
+        {
+            command.Write(new Serialization.SimWriter(wire));
+            wire.Position = 0;
+            Assert.Equal(command, Command.Read(new Serialization.SimReader(wire)));
+        }
+
+        simulation.Schedule(0, command);
+        simulation.Step();
+
+        var patient = Assert.Single(simulation.Entities.OfType<Humanoid>());
+        var behaviour = Assert.IsType<PatientBehaviour>(patient.Behaviour);
+        Assert.Same(disease, behaviour.Disease);
+        Assert.True(behaviour.IsDiagnosed);
+        Assert.Equal(0, simulation.Hospitals[0].Visitors);
+
+        // A disease the level does not have makes nobody.
+        simulation.Schedule(0, new MakeDebugPatientCommand("no_such_disease", new TilePosition(1, 1)));
+        simulation.Step();
+        Assert.Single(simulation.Entities.OfType<Humanoid>());
+    }
+
     private static Simulation NewSimulation() => new(TestMaps.FromRows("....", "...."), seed: 6, rules: new LevelRules(1000, [], []));
 }
