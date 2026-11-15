@@ -211,7 +211,7 @@ fonts, faces) and the details listed.
 rules, `popn`, disease frequencies and availability, win and lose criteria), switching levels with Page Up/Down.
 Hospitals win and lose by the level's criteria (`endconditions.lua`), and the progress report's content is computed.
 
-- Win and lose screens: the lose movie and CorsixTH's return to the main menu on losing (`world.lua`). The winning letter on the fax (one of the original's letters, the translation's when it has them, with the salary and the next town; on to the next level or stay) is done (`FaxWindow.WinLetterLines`); losing shows the original's message (`information.level_lost`: why, and the limit passed) over the level end window.
+- Win and lose screens: the losing movie's newspaper headline (`loseMovieOverlay`, needing CorsixTH's `lose.pl8`) and CorsixTH's return to the main menu on losing (`world.lua`); the losing movie itself plays. The winning letter on the fax (one of the original's letters, the translation's when it has them, with the salary and the next town; on to the next level or stay) is done (`FaxWindow.WinLetterLines`); losing shows the original's message (`information.level_lost`: why, and the limit passed) over the level end window.
 - Playing a campaign through, the original's (12 levels in order) or a CorsixTH one (the fax offering the next level,
   `world.lua`'s winning letter, `fax.lua`), choosing a custom level or campaign in a menu, briefings shown (`app.lua`,
   `Campaigns/`, `Levels/`). Loading a custom level (`.level` + `.map`, with overlays) and reading a campaign file are
@@ -229,7 +229,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
 - AI hospitals (Partial: `computer[n]` opponents take their turns for patients and count them as
   visitors, as CorsixTH's `AIHospital` does; like CorsixTH's, they build nothing and play no part in
   the league, awards or end conditions; `hospitals/ai_hospital.lua`).
-- Intro and level-end movies (`movie_player.lua`).
+- (Done: the movies (`MoviePlayer`, `movie_player.lua`): the intro (`play_intro`), the demo after thirty seconds on the main menu (`play_demo`), the board's advance movies with the dice for the original campaign and custom campaigns with `movie`, a losing movie, the winning movie after the campaign; `movies` turns them off, a click, Esc or Q stops them and P pauses them.)
 
 ## 8. Saves
 
@@ -335,4 +335,4 @@ mirroring, blueprint drawing, bitmap fonts, palette remaps.
 - (Done: transparent walls, X held or Shift+X toggled; machines' smoke and their crashed look after an explosion, which
   is all CorsixTH draws for one (Machine:explodeMachine); screen shake during earthquakes. CorsixTH's level_map draws
   the map's blocks unanimated, so there are no animated map elements to port.)
-- Video playback (Smacker intro/win/lose movies).
+- (Done: Smacker 2 movies decoded by our own reader, `Smacker.cs`, where CorsixTH uses FFmpeg.)

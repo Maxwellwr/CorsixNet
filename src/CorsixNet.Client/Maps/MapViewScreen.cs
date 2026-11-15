@@ -1,6 +1,7 @@
 using System.Globalization;
 using CorsixNet.Client.Audio;
 using CorsixNet.Client.Input;
+using CorsixNet.Client.Movies;
 using CorsixNet.Client.Rendering;
 using CorsixNet.Client.Sessions;
 using CorsixNet.Client.Ui;
@@ -253,6 +254,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>Whether the list of levels is open (F3), a stand-in for CorsixTH's new game and custom level windows.</summary>
     private bool _levelList;
 
+    /// <summary>Which campaign's board movies the levels played have (the original's, a custom campaign's <c>movie</c>, or none).</summary>
+    private CampaignMovies _campaignMovies;
+
     /// <summary>The level list's rows on screen, from the last time it was drawn, for clicks.</summary>
     private readonly List<(Rectangle Row, int Index)> _levelListRows = [];
 
@@ -328,6 +332,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>The background music (<c>Audio</c>'s playlist), started with the game (<c>App:init</c>'s playRandomBackgroundTrack).</summary>
     private readonly BackgroundMusic _music;
+
+    /// <summary>The movie player (<c>App.moviePlayer</c>) and the game's movies.</summary>
+    private readonly MoviePlayer _movie;
+
+    private readonly MovieFiles _movieFiles;
+
+    /// <summary>Whether a movie with sound paused the music, to go on with it afterwards (<c>holding_bg_music</c>).</summary>
+    private bool _holdingMusic;
+
+    /// <summary>How long the main menu has been left alone, for the demo movie (<c>App.idle_tick</c>), in milliseconds.</summary>
+    private double _idleMilliseconds;
 
     /// <summary>Scrolling and zooming the view as CorsixTH does, with the player's speeds.</summary>
     private MapScrolling _scrolling;
@@ -433,7 +448,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             // readPlaylistPreferences fails silently.
         }
 
-        _music.PlayRandom();
+        _movie = new MoviePlayer(device);
+        _movieFiles = install.Movies();
         _scrolling = new MapScrolling(_config.ScrollSettings());
         _buildTool.PlaySound = name => _sounds.Play(name);
         _buildTool.AverageContents = _config.EnableAverageContents;
@@ -485,6 +501,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             OpenMainMenu();
         }
+
+        // App:init: the intro (play_intro), then the music (callback_after_movie's playRandomBackgroundTrack).
+        if (mainMenu && !mapEditor && _config.PlayIntro)
+        {
+            PlayMovie(_movieFiles.Intro, waitForStop: false, () => _music.PlayRandom());
+        }
+        else
+        {
+            _music.PlayRandom();
+        }
     }
 
     public bool ExitRequested { get; private set; }
@@ -535,6 +561,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     public void Update(GameTime gameTime, bool hasFocus)
     {
         _music.Update();
+        if (_movie.IsPlaying)
+        {
+            UpdateMovie(hasFocus);
+            return;
+        }
+
+        UpdateDemoIdle(gameTime);
         if (!hasFocus)
         {
             // No input, but the game goes on.
@@ -947,7 +980,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         DrawLevelList(batch);
-        if (_cursors is not null)
+        if (_movie.IsPlaying)
+        {
+            // App:drawFrame: a movie playing covers everything.
+            _movie.Draw(batch, _pixel, new Rectangle(0, 0, viewport.Width, viewport.Height));
+        }
+        else if (_cursors is not null)
         {
             var at = InputScript.Mouse();
             _cursors.Draw(batch, CurrentCursor(at), new Point(at.X, at.Y));
@@ -1075,6 +1113,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _pixel.Dispose();
         _sounds.Dispose();
         _music.Dispose();
+        _movie.Dispose();
     }
 
     /// <summary>Where on the map view the middle of a tile is, for sounds heard there.</summary>
@@ -3146,6 +3185,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new LevelEndWindow());
                 if (hospital.Outcome == EndOutcome.Lost)
                 {
+                    // World:loseGame: a losing movie first.
+                    PlayLoseMovie();
+
                     // World:loseGame: the information dialog says the level is lost and why.
                     _windows.Open(new InformationWindow(LevelEndWindow.LostLines(_texts, hospital.LostTo)));
                 }
@@ -3424,7 +3466,35 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
 
         _windows.CloseAll();
+        var moveOn = next && _levelIndex + 1 < _levels.Count;
         SelectLevel(next ? Math.Min(_levelIndex + 1, _levels.Count - 1) : _levelIndex);
+        if (moveOn)
+        {
+            // UIFax's accept_new_level: the board's movie to the next level, the original's by its number, a custom
+            // campaign's from where it ends at the twelfth.
+            switch (_campaignMovies)
+            {
+                case CampaignMovies.Original:
+                    PlayAdvanceMovie(_levelIndex + 1);
+                    break;
+                case CampaignMovies.Custom:
+                    PlayAdvanceMovie(Math.Max(1, 12 - _levels.Count + _levelIndex));
+                    break;
+            }
+        }
+        else if (next && _campaignMovies != CampaignMovies.None)
+        {
+            // return_to_main_menu after the campaign's last level: the winning movie.
+            PlayMovie(_movieFiles.WinGame, waitForStop: false);
+        }
+    }
+
+    /// <summary>Whose board movies a run of levels has.</summary>
+    private enum CampaignMovies
+    {
+        None,
+        Original,
+        Custom,
     }
 
     /// <summary>The menu's items that are not windows.</summary>
@@ -3724,6 +3794,125 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         SaveConfig();
     }
 
+    /// <summary>
+    /// <c>MoviePlayer:playMovie</c>: plays a movie if <c>movies</c> is on and it is there, else goes straight on to
+    /// <paramref name="onDone"/>; a movie with sound pauses the music until it ends.
+    /// </summary>
+    private void PlayMovie(string? path, bool waitForStop, Action? onDone = null, string? sound = null)
+    {
+        if (!_config.Movies || path is null)
+        {
+            onDone?.Invoke();
+            return;
+        }
+
+        void Done()
+        {
+            // destroyMovie: the music goes on where it was, and the movie's sound stops.
+            if (_holdingMusic && _music.IsPaused)
+            {
+                _music.TogglePause();
+            }
+
+            _holdingMusic = false;
+            _previousMouse = InputScript.Mouse();
+            _previousKeys = InputScript.Keyboard();
+            onDone?.Invoke();
+        }
+
+        if (!_movie.Play(path, waitForStop, Done, (float)Math.Clamp(_config.SoundVolume * 2, 0m, 1m)))
+        {
+            return;
+        }
+
+        if ((_movie.HasAudio || sound is not null) && _music.Current is not null && !_music.IsPaused)
+        {
+            _holdingMusic = _music.TogglePause();
+        }
+
+        if (sound is not null)
+        {
+            _sounds.Play(sound);
+        }
+    }
+
+    /// <summary>
+    /// A movie playing takes the input (<c>UI:onMouseDown</c>, the stop and pause keys) and the game waits: a left click,
+    /// Esc or Q stops it, P pauses it.
+    /// </summary>
+    private void UpdateMovie(bool hasFocus)
+    {
+        _movie.Update();
+        var keys = InputScript.Keyboard();
+        var mouse = InputScript.Mouse();
+        if (hasFocus && _movie.IsPlaying)
+        {
+            bool Pressed(Keys key) => keys.IsKeyDown(key) && !_previousKeys.IsKeyDown(key);
+            if ((mouse.LeftButton == ButtonState.Pressed && _previousMouse.LeftButton == ButtonState.Released)
+                || HotkeyInput.Pressed(_hotkeys["global_stop_movie"], keys, Pressed) || HotkeyInput.Pressed(_hotkeys["global_stop_movie_alt"], keys, Pressed))
+            {
+                _movie.Stop();
+            }
+            else if (HotkeyInput.Pressed(_hotkeys["global_pause_movie"], keys, Pressed))
+            {
+                _movie.TogglePause();
+            }
+        }
+
+        if (_movie.IsPlaying)
+        {
+            _previousKeys = keys;
+            _previousMouse = mouse;
+        }
+    }
+
+    /// <summary>
+    /// <c>App:checkIdle</c>: about thirty seconds on the main menu with nothing touched plays the demo movie
+    /// (<c>play_demo</c>).
+    /// </summary>
+    private void UpdateDemoIdle(GameTime gameTime)
+    {
+        var keys = InputScript.Keyboard();
+        var mouse = InputScript.Mouse();
+        var touched = keys.GetPressedKeyCount() > 0 || mouse.X != _previousMouse.X || mouse.Y != _previousMouse.Y
+            || mouse.LeftButton == ButtonState.Pressed || mouse.RightButton == ButtonState.Pressed;
+        if (_mainMenu is null || _windows.Windows.LastOrDefault() != _mainMenu || touched || !_config.PlayDemo)
+        {
+            _idleMilliseconds = 0;
+            return;
+        }
+
+        // 1680 ticks of about 18 ms.
+        _idleMilliseconds += gameTime.ElapsedGameTime.TotalMilliseconds;
+        if (_idleMilliseconds > 1680 * 18)
+        {
+            _idleMilliseconds = 0;
+            PlayMovie(_movieFiles.Demo, waitForStop: false);
+        }
+    }
+
+    /// <summary>
+    /// <c>MoviePlayer:playAdvanceMovie</c>: the campaign board's movie going on to a level, with the dice's sound
+    /// (DICE122M.WAV for the twelfth level, DICEYFIN.WAV for the others); it waits for a click.
+    /// </summary>
+    private void PlayAdvanceMovie(int level)
+    {
+        if (_movieFiles.Advance.TryGetValue(level, out var path))
+        {
+            PlayMovie(path, waitForStop: true, sound: level == 12 ? "DICE122M.WAV" : "DICEYFIN.WAV");
+        }
+    }
+
+    /// <summary><c>MoviePlayer:playLoseMovie</c>: one of the losing movies at random; it waits for a click.</summary>
+    private void PlayLoseMovie()
+    {
+        if (_movieFiles.Lose.Count > 0)
+        {
+            var movies = _movieFiles.Lose.Values.ToList();
+            PlayMovie(movies[Random.Shared.Next(movies.Count)], waitForStop: true);
+        }
+    }
+
     /// <summary><c>disabledtracks.txt</c> beside the settings file: the tracks the jukebox leaves out.</summary>
     private string DisabledTracksPath => Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_configPath ?? GameConfig.FileName)) ?? ".", "disabledtracks.txt");
 
@@ -3921,7 +4110,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         _levels = levels;
         _levelList = false;
+        _campaignMovies = CampaignMovies.Original;
         SelectLevel(0);
+
+        // UINewGame:startGame: the board's movie to the first level.
+        PlayAdvanceMovie(1);
         if (tutorial)
         {
             StartTutorial();
@@ -4076,6 +4269,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary><c>UICustomGame:buttonLoadLevel</c>: the level on its own, with free build if ticked.</summary>
     private void StartCustomLevel(CustomLevelEntry level, bool freeBuild)
     {
+        _campaignMovies = CampaignMovies.None;
         _levels = [new LevelSource(Path.GetFileName(level.Path), () => freeBuild
             ? LevelMapLoader.LoadFile(level.Path, _install).WithFreeBuild()
             : LevelMapLoader.LoadFile(level.Path, _install))];
@@ -4087,9 +4281,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private void StartCustomCampaign(CustomCampaignEntry campaign)
     {
         IReadOnlyList<string> paths;
+        bool movie;
         try
         {
-            paths = LevelMapLoader.LoadCampaign(campaign.Path).LevelPaths;
+            var loaded = LevelMapLoader.LoadCampaign(campaign.Path);
+            paths = loaded.LevelPaths;
+            movie = loaded.Campaign.Movie;
         }
         catch (Exception e) when (e is IOException or InvalidDataException)
         {
@@ -4099,7 +4296,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         _levels = [.. paths.Select(path => new LevelSource(Path.GetFileName(path), () => LevelMapLoader.LoadFile(path, _install)))];
         _levelList = false;
+        _campaignMovies = movie ? CampaignMovies.Custom : CampaignMovies.None;
         SelectLevel(0);
+
+        // App:loadCampaign: the board's movie from where the campaign ends at the twelfth level.
+        if (movie)
+        {
+            PlayAdvanceMovie(Math.Max(1, 12 - _levels.Count));
+        }
     }
 
     /// <summary>

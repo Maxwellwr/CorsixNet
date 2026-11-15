@@ -15,7 +15,7 @@ namespace CorsixNet.Content.Settings;
 /// into one by <c>tools/CorsixNet.LuaConverter</c>.
 /// </summary>
 /// <remarks>
-/// Only the settings CorsixNet acts on are read and written; CorsixTH's others (music, movies, the
+/// Only the settings CorsixNet acts on are read and written; CorsixTH's others (own music, the
 /// options dialog's game rules, ...) are left out until there is something they change.
 /// </remarks>
 public sealed record GameConfig
@@ -141,6 +141,15 @@ public sealed record GameConfig
     /// <summary>The announcer's volume, from 0 to 1 (<c>announcement_volume</c>).</summary>
     public decimal AnnouncementVolume { get; init; } = 0.5m;
 
+    /// <summary>Whether movies play at all (<c>movies</c>).</summary>
+    public bool Movies { get; init; } = true;
+
+    /// <summary>Whether the intro plays when the game starts (<c>play_intro</c>).</summary>
+    public bool PlayIntro { get; init; } = true;
+
+    /// <summary>Whether the demo movie plays when the main menu is left alone (<c>play_demo</c>).</summary>
+    public bool PlayDemo { get; init; } = true;
+
     /// <summary>Whether the background music plays (<c>play_music</c>).</summary>
     public bool PlayMusic { get; init; } = true;
 
@@ -257,6 +266,9 @@ public sealed record GameConfig
             EnableAnnouncerSubtitles = Bool("enable_announcer_subtitles", defaults.EnableAnnouncerSubtitles),
             AnnouncementVolume = Number("announcement_volume", defaults.AnnouncementVolume),
             PlayMusic = Bool("play_music", defaults.PlayMusic),
+            Movies = Bool("movies", defaults.Movies),
+            PlayIntro = Bool("play_intro", defaults.PlayIntro),
+            PlayDemo = Bool("play_demo", defaults.PlayDemo),
             MusicVolume = Number("music_volume", defaults.MusicVolume),
             PreventEdgeScrolling = Bool("prevent_edge_scrolling", defaults.PreventEdgeScrolling),
             ScrollingMomentum = Number("scrolling_momentum", defaults.ScrollingMomentum),
@@ -483,6 +495,28 @@ public sealed record GameConfig
             """);
         text.Append(CultureInfo.InvariantCulture, $"play_music: {Yaml(PlayMusic)}\n");
         text.Append(CultureInfo.InvariantCulture, $"music_volume: {Number(MusicVolume)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Movie global on/off switch.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"movies: {Yaml(Movies)}\n");
+        text.Append("""
+
+            # Intro movie: Enabled by default
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"play_intro: {Yaml(PlayIntro)}\n");
+        text.Append("""
+
+            # Demo movie (played on idle at main menu): Enabled by default
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"play_demo: {Yaml(PlayDemo)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------
