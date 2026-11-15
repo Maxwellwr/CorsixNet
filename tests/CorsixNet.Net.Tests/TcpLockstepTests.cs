@@ -53,6 +53,19 @@ public class TcpLockstepTests
         Assert.Equal(expected, behind.Simulation!.ComputeStateHash());
     }
 
+    [Fact]
+    public async Task A_connection_may_be_disposed_twice()
+    {
+        var cancellation = TestContext.Current.CancellationToken;
+        using var listener = new TcpConnectionListener(IPAddress.Loopback, 0);
+        var connection = await TcpConnection.ConnectAsync("127.0.0.1", listener.Port, cancellation);
+
+        connection.Dispose();
+        connection.Dispose();
+
+        Assert.False(connection.IsConnected);
+    }
+
     /// <summary>Processes messages and steps the given clients until the condition holds.</summary>
     private static async Task PumpUntil(Func<bool> condition, CancellationToken cancellation, LockstepClient first, LockstepClient? second = null, long maxTick = long.MaxValue)
     {

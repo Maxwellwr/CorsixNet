@@ -103,6 +103,12 @@ public sealed class LockstepServer : IDisposable
     {
         foreach (var peer in _peers.ToList())
         {
+            // Another peer's message may have dropped this one (the host choosing a level with fewer places).
+            if (!_peers.Contains(peer))
+            {
+                continue;
+            }
+
             try
             {
                 while (peer.Connection.TryReceive(out var message))

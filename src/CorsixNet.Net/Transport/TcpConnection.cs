@@ -19,6 +19,7 @@ public sealed class TcpConnection : IConnection
     private readonly CancellationTokenSource _cancellation = new();
     private volatile bool _connected = true;
     private volatile string? _error;
+    private int _disposed;
 
     private TcpConnection(TcpClient client)
     {
@@ -80,6 +81,12 @@ public sealed class TcpConnection : IConnection
 
     public void Dispose()
     {
+        // The server may drop a peer twice in one pass: when it rejects it, and then when it sees it is gone.
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+        {
+            return;
+        }
+
         _connected = false;
         _cancellation.Cancel();
         _client.Dispose();
