@@ -277,7 +277,8 @@ to the client that diverged, `ResyncMessage`.)
 - Options dialog: resolution, fullscreen, CorsixTH's own translations (the installed original languages can be
   chosen), audio, scroll speed, edge scrolling, zoom, mouse
   capture, adviser on/off, ... (`resizables/options.lua`, `graphics_settings.lua`, `customise.lua`). Of `customise.lua`'s
-  switches, removing destroyed rooms and the average contents are in the options window (`OptionsWindow`).
+  switches, removing destroyed rooms, the average contents and the insurance's blue banknote are in the options
+  window (`OptionsWindow`).
 - The rest of the config file (`config_finder.lua`): announcements, music, movies, `right_mouse_scrolling` (the
   right and middle buttons both drag), `capture_mouse`, the options dialog's game rules, `config.path.txt`; game
   data folder selection (`resizables/folder_settings.lua`, `directory_browser.lua`). `config.txt` with the language,

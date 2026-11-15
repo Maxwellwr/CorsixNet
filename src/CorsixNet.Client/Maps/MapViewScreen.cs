@@ -2775,7 +2775,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             if (sign.Tile == tile && sign.Player == session.Player)
             {
-                _floatingDollars.Draw(batch, sign, anchorX, anchorY, simulation.Tick);
+                _floatingDollars.Draw(batch, sign, anchorX, anchorY, simulation.Tick, _config.EnableInsuranceBlueBanknote);
             }
         }
     }
