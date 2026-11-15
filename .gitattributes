@@ -16,3 +16,6 @@
 *.pl8 binary
 *.gz binary
 *.pal binary
+*.flac binary
+*.opus binary
+*.raw binary

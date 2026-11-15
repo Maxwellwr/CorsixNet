@@ -1,7 +1,8 @@
 // The player's own recorded music, which CorsixTH plays with SDL_mixer (CorsixTH/Lua/audio.lua: allowed_waveform_formats,
 // playBackgroundTrack's loadMusicAsync and playMusic, pauseBackgroundTrack, stopBackgroundTrack, setBackgroundVolume):
-// Ogg Vorbis through NVorbis (which MonoGame brings), MP3 through NLayer and plain WAV, decoded a little at a time and
-// streamed out through MonoGame.
+// Ogg Vorbis through NVorbis (which MonoGame brings), MP3 through NLayer, Opus through Concentus (BSD) and
+// Concentus.Oggfile (MIT), FLAC through FlacDecoder and plain WAV, decoded a little at a time and streamed out through
+// MonoGame. SDL_mixer's other formats (WavPack, AIFF, the tracker modules) are not played.
 
 using System.Buffers.Binary;
 using Microsoft.Xna.Framework.Audio;
@@ -25,7 +26,7 @@ internal interface IPcmSource : IDisposable
 internal static class PcmSources
 {
     /// <summary>The file extensions of the recorded music played (upper case, no dot).</summary>
-    public static readonly string[] Extensions = ["OGG", "WAV", "WAVE", "MP3"];
+    public static readonly string[] Extensions = ["OGG", "OPUS", "FLAC", "WAV", "WAVE", "MP3"];
 
     /// <summary>Opens a file by its extension; null for a format not played.</summary>
     /// <exception cref="InvalidDataException">The file is broken or of a kind not handled.</exception>
@@ -34,6 +35,8 @@ internal static class PcmSources
         {
             "OGG" => new VorbisSource(stream),
             "MP3" => new Mp3Source(stream),
+            "OPUS" => new OpusSource(stream),
+            "FLAC" => new FlacDecoder(stream),
             "WAV" or "WAVE" => WavSource.Read(stream),
             _ => null,
         };
@@ -49,6 +52,62 @@ internal static class PcmSources
         public int Read(float[] buffer) => _reader.ReadSamples(buffer, 0, buffer.Length);
 
         public void Dispose() => _reader.Dispose();
+    }
+
+    /// <summary>Ogg Opus, decoded to stereo at 48 kHz (Opus's own rate) by Concentus in managed code.</summary>
+    private sealed class OpusSource : IPcmSource
+    {
+        private readonly Stream _stream;
+        private readonly Concentus.Oggfile.OpusOggReadStream _reader;
+        private short[] _packet = [];
+        private int _at;
+
+        public OpusSource(Stream stream)
+        {
+            _stream = stream;
+            Concentus.OpusCodecFactory.AttemptToUseNativeLibrary = false;
+            _reader = new Concentus.Oggfile.OpusOggReadStream(Concentus.OpusCodecFactory.CreateDecoder(SampleRate, Channels), stream);
+        }
+
+        public int SampleRate => 48000;
+
+        public int Channels => 2;
+
+        public int Read(float[] buffer)
+        {
+            var written = 0;
+            while (written < buffer.Length)
+            {
+                if (_at >= _packet.Length)
+                {
+                    if (!_reader.HasNextPacket)
+                    {
+                        break;
+                    }
+
+                    _packet = _reader.DecodeNextPacket() ?? [];
+                    _at = 0;
+                    if (_packet.Length == 0)
+                    {
+                        if (_reader.LastError is { Length: > 0 } error)
+                        {
+                            throw new InvalidDataException(error);
+                        }
+
+                        continue;
+                    }
+                }
+
+                while (written < buffer.Length && _at < _packet.Length)
+                {
+                    buffer[written++] = _packet[_at++] / 32768f;
+                }
+            }
+
+            return written;
+        }
+
+        public void Dispose() => _stream.Dispose();
     }
 
     private sealed class Mp3Source(Stream stream) : IPcmSource

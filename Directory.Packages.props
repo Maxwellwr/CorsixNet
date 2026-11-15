@@ -5,6 +5,8 @@
     <PackageVersion Include="MonoGame.Framework.DesktopGL" Version="3.8.6" />
     <PackageVersion Include="MeltySynth" Version="2.4.1" />
     <PackageVersion Include="NLayer" Version="1.16.0" />
+    <PackageVersion Include="Concentus" Version="2.2.2" />
+    <PackageVersion Include="Concentus.Oggfile" Version="1.0.7" />
     <PackageVersion Include="FreeTypeSharp" Version="3.1.0" />
     <PackageVersion Include="StbTrueTypeSharp" Version="1.26.13" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
