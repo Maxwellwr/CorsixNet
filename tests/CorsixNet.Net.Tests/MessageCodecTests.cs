@@ -49,6 +49,17 @@ public class MessageCodecTests
     }
 
     [Fact]
+    public void RoundTripsResyncState()
+    {
+        var resync = new ResyncMessage([5, 6, 7], 99);
+
+        var decoded = Assert.IsType<ResyncMessage>(MessageCodec.Decode(MessageCodec.Encode(resync)));
+
+        Assert.Equal(99, decoded.AllowedTick);
+        Assert.Equal(resync.State, decoded.State);
+    }
+
+    [Fact]
     public void RejectsUnknownTypeAndTrailingBytes()
     {
         Assert.Throws<InvalidDataException>(() => MessageCodec.Decode([200]));

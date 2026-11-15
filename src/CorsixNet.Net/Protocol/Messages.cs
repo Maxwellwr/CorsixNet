@@ -37,6 +37,14 @@ public sealed record StateHashMessage(long Tick, ulong Hash) : Message;
 public sealed record DesyncMessage(long Tick, int Player, ulong Expected, ulong Actual) : Message;
 
 /// <summary>
+/// Server → client: after a desync, the server's complete state, which replaces the client's, and the tick up to which
+/// the client may run, as in a <see cref="WelcomeMessage"/>.
+/// </summary>
+/// <param name="State">Output of <c>Simulation.Save</c>.</param>
+/// <param name="AllowedTick">The client may step while its simulation's tick is below this.</param>
+public sealed record ResyncMessage(byte[] State, long AllowedTick) : Message;
+
+/// <summary>
 /// Client → server: the player wants the game to run at <paramref name="Speed"/>, or, when it is null, to go back to
 /// the speed before a pause or speed-up (CorsixTH's <c>World:previousSpeed</c>).
 /// </summary>
