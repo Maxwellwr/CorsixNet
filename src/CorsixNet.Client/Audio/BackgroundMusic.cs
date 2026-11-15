@@ -1,6 +1,7 @@
 // The background music's playlist, ported from CorsixTH CorsixTH/Lua/audio.lua (background_playlist,
 // playRandomBackgroundTrack, playNextOrPreviousBackgroundTrack, pauseBackgroundTrack, stopBackgroundTrack,
-// playBackgroundTrack, onMusicOver, setBackgroundVolume) and game_ui.lua (UI:togglePlayMusic).
+// playBackgroundTrack, onMusicOver, setBackgroundVolume, readPlaylistPreferences, updatePlaylistPreferences),
+// game_ui.lua (UI:togglePlayMusic) and dialogs/jukebox.lua (UIJukebox:toggleTrack, loopTrack).
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Formats;
@@ -13,6 +14,12 @@ internal sealed class PlaylistEntry(MusicTrack track)
     public MusicTrack Track { get; } = track;
 
     public bool Enabled { get; set; } = true;
+
+    /// <summary>Whether the jukebox loops this track (<c>loop</c>).</summary>
+    public bool Loop { get; set; }
+
+    /// <summary>Whether looping another track turned this one off (<c>enabled_before_loop</c>).</summary>
+    public bool EnabledBeforeLoop { get; set; }
 }
 
 /// <summary>
@@ -150,6 +157,70 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     }
 
     public void Dispose() => player?.Dispose();
+
+    /// <summary>
+    /// <c>UIJukebox:toggleTrack</c>: a track on or off; turning off the one playing stops it and plays another at random.
+    /// </summary>
+    public void ToggleTrack(int index)
+    {
+        var entry = Playlist[index];
+        entry.Enabled = !entry.Enabled;
+        if (!entry.Enabled && Current == index)
+        {
+            Stop();
+            PlayRandom();
+        }
+    }
+
+    /// <summary>
+    /// <c>UIJukebox:loopTrack</c>: the track playing loops, every other enabled one turned off meanwhile; again, the loop
+    /// ends and those come back on.
+    /// </summary>
+    public void ToggleLoop()
+    {
+        var index = Current ?? 0;
+        if (index >= Playlist.Count)
+        {
+            return;
+        }
+
+        var looping = !Playlist[index].Loop;
+        Playlist[index].Loop = looping;
+        for (var i = 0; i < Playlist.Count; i++)
+        {
+            if (i == index)
+            {
+                continue;
+            }
+
+            if (looping && Playlist[i].Enabled)
+            {
+                Playlist[i].EnabledBeforeLoop = true;
+                ToggleTrack(i);
+            }
+            else if (!looping && Playlist[i].EnabledBeforeLoop)
+            {
+                Playlist[i].EnabledBeforeLoop = false;
+                ToggleTrack(i);
+            }
+        }
+    }
+
+    /// <summary><c>readPlaylistPreferences</c>: the tracks named in the file, one a line, start disabled.</summary>
+    public void ReadDisabledTracks(IEnumerable<string> lines)
+    {
+        var disabled = lines.ToHashSet(StringComparer.Ordinal);
+        foreach (var entry in Playlist)
+        {
+            entry.Enabled = !disabled.Contains(PreferenceName(entry.Track));
+        }
+    }
+
+    /// <summary><c>updatePlaylistPreferences</c>: the disabled tracks' names, for the file.</summary>
+    public IEnumerable<string> DisabledTracks() => Playlist.Where(entry => !entry.Enabled).Select(entry => PreferenceName(entry.Track));
+
+    /// <summary>A track's name in the file: as CorsixTH's <c>filename</c>, Sound, Midi and the file's name joined by the path separator.</summary>
+    private static string PreferenceName(MusicTrack track) => string.Join(Path.DirectorySeparatorChar, "Sound", "Midi", Path.GetFileName(track.Path));
 
     /// <summary><c>playNextOrPreviousBackgroundTrack</c>: the next enabled track after the current one, or before it.</summary>
     private void PlayNextOrPrevious(int direction)

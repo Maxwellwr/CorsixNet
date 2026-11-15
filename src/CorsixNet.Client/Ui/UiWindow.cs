@@ -295,6 +295,19 @@ internal interface IWindowHost
     /// <summary>The fullscreen dialogs' pictures, sprites and fonts, or null without the original's graphics.</summary>
     OriginalGraphics? Graphics => null;
 
+    /// <summary>The background music, for the jukebox; null without one.</summary>
+    Audio.BackgroundMusic? Music => null;
+
+    /// <summary>Music on or off for later too (<c>config.play_music</c>, saved).</summary>
+    void SetPlayMusic(bool on)
+    {
+    }
+
+    /// <summary>Saves which tracks the jukebox leaves out (<c>updatePlaylistPreferences</c>).</summary>
+    void SavePlaylist()
+    {
+    }
+
     /// <summary>The player's name, which their hospital goes by (CorsixTH's <c>player_name</c>).</summary>
     string PlayerName => "Player";
 
