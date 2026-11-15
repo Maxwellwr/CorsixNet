@@ -111,6 +111,7 @@ public sealed class Hotkeys
         ("ingame_toggleAdvisor", new("a", Shift: true)),
         ("ingame_rotateobject", new("space")),
         ("ingame_patient_gohome", new("h")),
+        ("global_fullscreen_toggle", new("return", Alt: true)),
         ("ingame_quickSave", new("s", Shift: true, Alt: true)),
         ("ingame_quickLoad", new("l", Shift: true, Alt: true)),
         ("global_screenshot", new("s", Ctrl: true)),
