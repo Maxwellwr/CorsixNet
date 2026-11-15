@@ -13,8 +13,8 @@ namespace CorsixNet.Client.Maps;
 
 /// <summary>
 /// Draws the banknotes floating up from patients who have just paid: sprite 1 of <c>DATA/Money01V</c> with the amount's
-/// digits (sprites 2 to 11) on it, green, or blue when an insurance company pays (CorsixTH's default
-/// <c>enable_insurance_blue_banknote</c>).
+/// digits (sprites 2 to 11) on it, green, or blue when an insurance company pays and the setting says so (CorsixTH's
+/// <c>enable_insurance_blue_banknote</c>, Graphics:getFloatingBanknoteSpriteTable).
 /// </summary>
 internal sealed class FloatingDollarDrawing : IDisposable
 {
@@ -37,10 +37,13 @@ internal sealed class FloatingDollarDrawing : IDisposable
         _blue.SetScale(scale);
     }
 
-    /// <summary>Draws <paramref name="sign"/> above the tile drawn at (<paramref name="anchorX"/>, <paramref name="anchorY"/>).</summary>
-    public void Draw(SpriteBatch batch, FloatingDollarSign sign, int anchorX, int anchorY, long tick)
+    /// <summary>
+    /// Draws <paramref name="sign"/> above the tile drawn at (<paramref name="anchorX"/>, <paramref name="anchorY"/>), blue
+    /// for an insurance company's payment when <paramref name="insuranceBlue"/>.
+    /// </summary>
+    public void Draw(SpriteBatch batch, FloatingDollarSign sign, int anchorX, int anchorY, long tick, bool insuranceBlue = true)
     {
-        var atlas = sign.Insurance ? _blue : _green;
+        var atlas = sign.Insurance && insuranceBlue ? _blue : _green;
         var x = anchorX + FloatingDollarSign.StartX;
         var y = anchorY + FloatingDollarSign.StartY - (int)Math.Clamp(sign.Age(tick), 0, FloatingDollarSign.Lifetime);
         atlas.Draw(batch, NoteSprite, x, y, Color.White);

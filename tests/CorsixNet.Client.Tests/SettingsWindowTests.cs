@@ -119,13 +119,16 @@ public sealed class SettingsWindowTests : IDisposable
         var window = new OptionsWindow(new GameConfig(), config => applied = config);
         Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Average Contents" && cell.Tooltip is { Length: > 0 });
 
-        // Both are off by default: their On buttons are the only ones to click.
+        // Both are off by default: their On buttons are the only ones to click. The blue banknote is on: its Off is the
+        // eighth to click then, after the five switches above and these two.
         host.Click(window, "On");
         host.Click(window, "On");
+        host.Click(window, "Off", skip: 7);
         host.Click(window, "Apply");
 
         Assert.True(applied!.RemoveDestroyedRooms);
         Assert.True(applied.EnableAverageContents);
+        Assert.False(applied.EnableInsuranceBlueBanknote);
     }
 
     [Fact]

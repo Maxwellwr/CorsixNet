@@ -117,6 +117,12 @@ public sealed record GameConfig
     /// </summary>
     public bool EnableAverageContents { get; init; }
 
+    /// <summary>
+    /// Whether a payment by an insurance company floats up as a blue banknote rather than the original's green
+    /// (CorsixTH's <c>enable_insurance_blue_banknote</c>, on by default).
+    /// </summary>
+    public bool EnableInsuranceBlueBanknote { get; init; } = true;
+
     /// <summary>Whether sound effects are played (<c>play_sounds</c>).</summary>
     public bool PlaySounds { get; init; } = true;
 
@@ -234,6 +240,7 @@ public sealed record GameConfig
             FreeBuildMode = Bool("free_build_mode", defaults.FreeBuildMode),
             RemoveDestroyedRooms = Bool("remove_destroyed_rooms", defaults.RemoveDestroyedRooms),
             EnableAverageContents = Bool("enable_avg_contents", defaults.EnableAverageContents),
+            EnableInsuranceBlueBanknote = Bool("enable_insurance_blue_banknote", defaults.EnableInsuranceBlueBanknote),
             PlaySounds = Bool("play_sounds", defaults.PlaySounds),
             SoundVolume = Number("sound_volume", defaults.SoundVolume),
             PlayAnnouncements = Bool("play_announcements", defaults.PlayAnnouncements),
@@ -366,6 +373,17 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"enable_avg_contents: {Yaml(EnableAverageContents)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # By default patient payments made via an insurance company feature a blue
+            # floating banknote animation, allowing for immediate visual distinction
+            # from payments made directly to the hospital. If you prefer the original
+            # display style, where all payments are in green, you can disable this option.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"enable_insurance_blue_banknote: {Yaml(EnableInsuranceBlueBanknote)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------
