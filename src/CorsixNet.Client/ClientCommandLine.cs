@@ -128,7 +128,7 @@ internal static class ClientCommandLine
 
     private static readonly Option<GameSpeed> SpeedOption = new("--speed")
     {
-        Description = $"Start a local game at a speed: {string.Join(", ", StartSpeeds)}",
+        Description = $"Start a local game, or the game hosted with --host, at a speed: {string.Join(", ", StartSpeeds)} (pause waits for the players)",
         HelpName = "NAME",
         DefaultValueFactory = _ => GameSpeed.Normal,
         CustomParser = result =>

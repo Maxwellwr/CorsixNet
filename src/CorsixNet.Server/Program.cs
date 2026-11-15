@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Net;
+using CorsixNet.Content.Interface;
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Net.Lockstep;
@@ -15,6 +16,8 @@ const string Usage = """
       --port PORT    TCP port (default 7777)
       --public       Accept connections from other machines, not only this one
       --seed N       Seed for the simulation's random numbers (default 1)
+      --speed NAME   Speed the game starts at: Pause (waits until a player starts it), Slowest, Slower,
+                     Normal (default), MaxSpeed, AndThenSomeMore or Insane
     """;
 
 string? gamePath = null;
@@ -25,6 +28,7 @@ var publicHost = false;
 var freeBuild = false;
 ulong seed = 1;
 var difficulty = Difficulty.Medium;
+var speed = GameSpeed.Normal;
 for (var i = 0; i < args.Length; i++)
 {
     switch (args[i])
@@ -45,6 +49,10 @@ for (var i = 0; i < args.Length; i++)
             break;
         case "--seed" when i + 1 < args.Length && ulong.TryParse(args[i + 1], CultureInfo.InvariantCulture, out var s):
             seed = s;
+            i++;
+            break;
+        case "--speed" when i + 1 < args.Length && Enum.TryParse<GameSpeed>(args[i + 1], ignoreCase: true, out var sp) && sp != GameSpeed.SpeedUp:
+            speed = sp;
             i++;
             break;
         case "--public":
@@ -115,6 +123,7 @@ catch (Exception e) when (e is IOException or InvalidDataException)
 }
 
 var server = new LockstepServer(loaded.StartSimulation(seed)) { Log = line => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {line}") };
+server.SetSpeed(speed);
 using var runner = new ServerRunner(server, new TcpConnectionListener(publicHost ? IPAddress.Any : IPAddress.Loopback, port));
 Console.WriteLine($"Serving {levelName} ({loaded.Map.PlayerCount} players) on port {runner.Port}{(publicHost ? "" : " (this machine only; add --public for others)")}. Press Ctrl+C to stop.");
 

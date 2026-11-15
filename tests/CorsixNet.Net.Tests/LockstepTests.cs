@@ -176,6 +176,37 @@ public sealed class LockstepTests : IDisposable
     }
 
     [Fact]
+    public void EveryoneLearnsWhoJoinsAndLeaves()
+    {
+        var a = Connect("Alice");
+        var b = Connect("Bob");
+        Exchange();
+
+        Assert.Equal([new PlayerInfo(0, "Alice"), new PlayerInfo(1, "Bob")], a.Players);
+        Assert.Equal(a.Players, b.Players);
+
+        b.Dispose();
+        Exchange();
+
+        Assert.Equal([new PlayerInfo(0, "Alice")], a.Players);
+    }
+
+    [Fact]
+    public void AGameStartedPausedWaitsUntilAPlayerStartsIt()
+    {
+        _server.SetSpeed(GameSpeed.Pause);
+        var a = Connect("Alice");
+        Exchange();
+        Assert.Equal(0, _server.Run(TimeSpan.FromSeconds(1)));
+
+        a.RequestSpeed(null);
+        Exchange();
+
+        Assert.Equal(GameSpeed.Normal, a.Speed);
+        Assert.True(_server.Run(TimeSpan.FromSeconds(1)) > 0);
+    }
+
+    [Fact]
     public void RejectsClientsWithOtherContent()
     {
         var (serverEnd, clientEnd) = InMemoryConnection.CreatePair();

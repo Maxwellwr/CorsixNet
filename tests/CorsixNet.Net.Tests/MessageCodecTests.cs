@@ -25,6 +25,8 @@ public class MessageCodecTests
         new DesyncMessage(64, 1, 1, 2),
         new ChatRequestMessage("Привет"),
         new ChatMessage(1, "Bob", "Hello"),
+        new PlayersMessage([new PlayerInfo(0, "Alice"), new PlayerInfo(1, "Боб")]),
+        new PlayersMessage([]),
         new SpeedRequestMessage(GameSpeed.Pause),
         new SpeedRequestMessage(GameSpeed.SpeedUp),
         new SpeedRequestMessage(null),
