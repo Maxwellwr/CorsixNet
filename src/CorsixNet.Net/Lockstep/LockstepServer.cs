@@ -29,6 +29,9 @@ namespace CorsixNet.Net.Lockstep;
 /// </remarks>
 public sealed class LockstepServer : IDisposable
 {
+    /// <summary>The longest chat line passed on, in characters; longer ones are cut.</summary>
+    public const int MaxChatLength = 200;
+
     /// <summary>Clients report their state hash after every tick that is a multiple of this.</summary>
     public const int HashInterval = 16;
 
@@ -180,6 +183,9 @@ public sealed class LockstepServer : IDisposable
             case StateHashMessage hash when peer.Player is not null:
                 CheckHash(peer, hash);
                 break;
+            case ChatRequestMessage request when peer.Player is { } player:
+                Chat(peer, player, request.Text);
+                break;
             case SpeedRequestMessage request when peer.Player is { } player:
                 SetSpeed(request.Speed, player);
                 break;
@@ -216,6 +222,24 @@ public sealed class LockstepServer : IDisposable
         peer.Connection.Send(new WelcomeMessage(peer.Player.Value, SaveState(), Simulation.Tick));
         peer.Connection.Send(new SpeedMessage(_clock.Speed, -1));
         Log?.Invoke($"{Describe(peer)} joined at tick {Simulation.Tick}.");
+    }
+
+    /// <summary>Passes a player's line on to everyone, the player too: trimmed, cut to length, without control characters.</summary>
+    private void Chat(Peer peer, int player, string text)
+    {
+        var line = new string([.. text.Where(c => !char.IsControl(c))]).Trim();
+        if (line.Length == 0)
+        {
+            return;
+        }
+
+        if (line.Length > MaxChatLength)
+        {
+            line = line[..MaxChatLength];
+        }
+
+        Log?.Invoke($"{Describe(peer)}: {line}");
+        Broadcast(new ChatMessage(player, peer.Name ?? string.Empty, line));
     }
 
     private void CheckHash(Peer peer, StateHashMessage hash)

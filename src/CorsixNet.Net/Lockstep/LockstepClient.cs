@@ -53,6 +53,17 @@ public sealed class LockstepClient : IDisposable
     /// <summary>The most recent desync reported by the server, if any.</summary>
     public DesyncMessage? LastDesync { get; private set; }
 
+    /// <summary>The most chat lines kept.</summary>
+    public const int ChatHistory = 50;
+
+    private readonly List<ChatMessage> _chat = [];
+
+    /// <summary>What players said, oldest first, up to <see cref="ChatHistory"/> lines.</summary>
+    public IReadOnlyList<ChatMessage> Chat => _chat;
+
+    /// <summary>How many chat lines have arrived in all, including those no longer kept.</summary>
+    public int ChatCount { get; private set; }
+
     /// <summary>How many times the server replaced this client's state after a desync.</summary>
     public int Resyncs { get; private set; }
 
@@ -78,6 +89,15 @@ public sealed class LockstepClient : IDisposable
                     break;
                 case AdvanceMessage advance when Simulation is not null:
                     AllowedTick = Math.Max(AllowedTick, advance.AllowedTick);
+                    break;
+                case ChatMessage chat:
+                    _chat.Add(chat);
+                    if (_chat.Count > ChatHistory)
+                    {
+                        _chat.RemoveAt(0);
+                    }
+
+                    ChatCount++;
                     break;
                 case SpeedMessage speed:
                     Speed = speed.Speed;
@@ -110,6 +130,15 @@ public sealed class LockstepClient : IDisposable
         if (IsJoined)
         {
             _connection.Send(new CommandRequestMessage(command));
+        }
+    }
+
+    /// <summary>Says <paramref name="text"/> to every player; it comes back in <see cref="Chat"/> once the server passes it on.</summary>
+    public void Say(string text)
+    {
+        if (IsJoined && text.Trim().Length > 0)
+        {
+            _connection.Send(new ChatRequestMessage(text.Length > LockstepServer.MaxChatLength ? text[..LockstepServer.MaxChatLength] : text));
         }
     }
 

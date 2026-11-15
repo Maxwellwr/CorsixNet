@@ -22,6 +22,10 @@ strings:
         months_played: 'Musíte vyhrát do konce měsíce %s %d. Nyní je %s %d'
         years_played: 'Musíte vydržet do roku %d. Nyní je rok %d'
   corsixnet:
+    chat:
+      caption: 'Chat'
+      none: 'Zatím nikdo nic neřekl.'
+      start: 'Stiskněte Enter a pište'
     hospital_number: 'Nemocnice %1%'
     main_menu:
       caption: 'Hlavní nabídka'

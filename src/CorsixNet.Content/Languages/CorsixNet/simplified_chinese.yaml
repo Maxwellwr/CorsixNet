@@ -94,6 +94,10 @@ strings:
     toolbar:
       machine_menu: '机器菜单 (%s)'
   corsixnet:
+    chat:
+      caption: '聊天'
+      none: '还没有人说话。'
+      start: '按回车键发言'
     hospital_number: '医院 %1%'
     main_menu:
       caption: '主菜单'

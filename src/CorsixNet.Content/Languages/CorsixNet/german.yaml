@@ -106,6 +106,10 @@ strings:
         patient_happiness: Die Zufriedenheit Ihrer Patienten sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
         staff_happiness: Die Zufriedenheit Ihres Personals sollte nicht unter %d% liegen. Zurzeit liegt sie bei %d%
   corsixnet:
+    chat:
+      caption: 'Chat'
+      none: 'Bisher hat niemand etwas gesagt.'
+      start: 'Eingabetaste zum Schreiben'
     hospital_number: Krankenhaus %1%
     main_menu:
       caption: Hauptmenü

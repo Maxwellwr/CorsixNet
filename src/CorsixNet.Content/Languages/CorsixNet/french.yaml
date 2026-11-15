@@ -39,6 +39,10 @@ strings:
         patient_happiness: Le bonheur moyen de vos patients ne doit pas descendre sous %d%. Il est de %d%
         staff_happiness: Le bonheur moyen de votre personnel ne doit pas descendre sous %d%. Il est de %d%
   corsixnet:
+    chat:
+      caption: 'Discussion'
+      none: 'Personne n''a encore rien dit.'
+      start: 'Appuyez sur Entrée pour parler'
     hospital_number: Hôpital %1%
     main_menu:
       caption: Menu principal

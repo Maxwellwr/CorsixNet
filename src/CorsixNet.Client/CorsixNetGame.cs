@@ -28,6 +28,7 @@ internal sealed class CorsixNetGame : Game
         IsMouseVisible = true;
         Window.AllowUserResizing = true;
         Window.Title = title;
+        Window.TextInput += (_, e) => _screen?.TextInput(e.Character);
     }
 
     protected override void LoadContent()

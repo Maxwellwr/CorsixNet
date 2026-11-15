@@ -23,6 +23,8 @@ public class MessageCodecTests
         new AdvanceMessage(123),
         new StateHashMessage(64, 0xDEADBEEFCAFEF00D),
         new DesyncMessage(64, 1, 1, 2),
+        new ChatRequestMessage("Привет"),
+        new ChatMessage(1, "Bob", "Hello"),
         new SpeedRequestMessage(GameSpeed.Pause),
         new SpeedRequestMessage(GameSpeed.SpeedUp),
         new SpeedRequestMessage(null),

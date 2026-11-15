@@ -196,6 +196,10 @@ strings:
   transactions:
     remove_room: 'Budowa: usunięcie zniszczonego pomieszczenia'
   corsixnet:
+    chat:
+      caption: 'Czat'
+      none: 'Nikt jeszcze nic nie powiedział.'
+      start: 'Naciśnij Enter, aby pisać'
     hospital_number: 'Szpital %1%'
     main_menu:
       caption: 'Menu główne'

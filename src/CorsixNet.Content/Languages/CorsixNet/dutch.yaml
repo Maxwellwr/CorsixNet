@@ -93,6 +93,10 @@ strings:
       machine_menu: 'Machinemenu (%s)'
       status: 'Toestand (%s)'
   corsixnet:
+    chat:
+      caption: 'Chat'
+      none: 'Nog niemand heeft iets gezegd.'
+      start: 'Druk op Enter om te praten'
     hospital_number: 'Ziekenhuis %1%'
     main_menu:
       caption: 'Hoofdmenu'

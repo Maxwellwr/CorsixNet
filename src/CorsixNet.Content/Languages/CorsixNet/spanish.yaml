@@ -25,6 +25,10 @@ strings:
         months_played: 'Debes ganar antes del final de %s de %d. Ahora es %s de %d'
         years_played: 'Debes llegar al año %d. Ahora es el año %d'
   corsixnet:
+    chat:
+      caption: 'Chat'
+      none: 'Nadie ha dicho nada todavía.'
+      start: 'Pulsa Intro para hablar'
     hospital_number: 'Hospital %1%'
     main_menu:
       caption: 'Menú principal'

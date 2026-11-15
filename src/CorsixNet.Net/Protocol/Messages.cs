@@ -60,3 +60,12 @@ public sealed record SpeedRequestMessage(GameSpeed? Speed) : Message;
 /// <param name="Speed">The server's speed.</param>
 /// <param name="Player">The player who changed it, or -1 when no player did (the speed a client joins at).</param>
 public sealed record SpeedMessage(GameSpeed Speed, int Player) : Message;
+
+/// <summary>Client → server: the player says something to everyone.</summary>
+public sealed record ChatRequestMessage(string Text) : Message;
+
+/// <summary>Server → client: a player said something.</summary>
+/// <param name="Player">The player who said it (0-based).</param>
+/// <param name="Name">The player's name.</param>
+/// <param name="Text">What they said.</param>
+public sealed record ChatMessage(int Player, string Name, string Text) : Message;

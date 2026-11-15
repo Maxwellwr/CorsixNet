@@ -321,6 +321,10 @@ strings:
     severance: 'Indemnizaçäo'
     wages: 'Salários'
   corsixnet:
+    chat:
+      caption: 'Conversa'
+      none: 'Ainda ninguém disse nada.'
+      start: 'Prima Enter para falar'
     hospital_number: 'Hospital %1%'
     main_menu:
       caption: 'Menu principal'

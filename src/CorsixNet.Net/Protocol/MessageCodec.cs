@@ -35,6 +35,8 @@ public static class MessageCodec
         SpeedRequest = 9,
         Speed = 10,
         Resync = 11,
+        ChatRequest = 12,
+        Chat = 13,
     }
 
     public static byte[] Encode(Message message)
@@ -90,6 +92,16 @@ public static class MessageCodec
                 writer.WriteInt32(resync.State.Length);
                 writer.WriteBytes(resync.State);
                 break;
+            case ChatRequestMessage request:
+                writer.WriteByte((byte)MessageType.ChatRequest);
+                WriteString(writer, request.Text);
+                break;
+            case ChatMessage chat:
+                writer.WriteByte((byte)MessageType.Chat);
+                writer.WriteInt32(chat.Player);
+                WriteString(writer, chat.Name);
+                WriteString(writer, chat.Text);
+                break;
             case SpeedRequestMessage request:
                 writer.WriteByte((byte)MessageType.SpeedRequest);
                 writer.WriteByte(request.Speed is { } wanted ? (byte)wanted : PreviousSpeed);
@@ -123,6 +135,8 @@ public static class MessageCodec
             MessageType.StateHash => new StateHashMessage(reader.ReadInt64(), reader.ReadUInt64()),
             MessageType.Desync => new DesyncMessage(reader.ReadInt64(), reader.ReadInt32(), reader.ReadUInt64(), reader.ReadUInt64()),
             MessageType.Resync => ReadResync(reader),
+            MessageType.ChatRequest => new ChatRequestMessage(ReadString(reader)),
+            MessageType.Chat => new ChatMessage(reader.ReadInt32(), ReadString(reader), ReadString(reader)),
             MessageType.SpeedRequest => ReadSpeedRequest(reader),
             MessageType.Speed => new SpeedMessage(ToSpeed(reader.ReadByte()), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown message type {(byte)type}."),

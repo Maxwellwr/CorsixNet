@@ -207,6 +207,10 @@ strings:
   transactions:
     remove_room: '건설: 파괴된 방 철거'
   corsixnet:
+    chat:
+      caption: '채팅'
+      none: '아직 아무도 말하지 않았습니다.'
+      start: 'Enter 키를 눌러 말하기'
     hospital_number: '병원 %1%'
     main_menu:
       caption: '주 메뉴'
