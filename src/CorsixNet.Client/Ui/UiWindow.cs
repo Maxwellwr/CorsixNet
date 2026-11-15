@@ -429,6 +429,9 @@ internal abstract class UiWindow
     /// <summary>The fullscreen dialog's tooltip at <paramref name="local"/>, if any.</summary>
     public virtual string? FullscreenTooltip(IWindowHost host, Point local) => null;
 
+    /// <summary>The cursor the fullscreen dialog sets at <paramref name="local"/> (<c>ui:setCursor</c>), or null for the default.</summary>
+    public virtual GameCursor? FullscreenCursor(IWindowHost host, Point local) => null;
+
     /// <summary>
     /// Whether the window, on top in its original look, handles a key action (CorsixTH's <c>addKeyHandler</c> on the
     /// window: <c>ingame_scroll_up</c> and the other scroll actions, <c>global_confirm</c>); the map does not see it then.

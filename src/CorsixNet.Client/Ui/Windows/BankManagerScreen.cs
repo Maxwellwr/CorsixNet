@@ -280,6 +280,10 @@ internal sealed class BankManagerScreen
     }
 
     /// <summary>The statement page: the titles, the last transactions, oldest at the top, and the balance.</summary>
+    /// <summary>UIBankManager:onMouseMove: the pie chart over the statement, the dollar sign over the bank manager.</summary>
+    public GameCursor? Cursor(Point local) =>
+        new Rectangle(0, 0, 640, 480).Contains(local) ? (_statement ? GameCursor.BankSummary : GameCursor.Bank) : null;
+
     private static void DrawStatement(SpriteBatch batch, IWindowHost host, TextRenderer font, Point origin, Hospital hospital)
     {
         void At(string text, int x, int y) => font.Draw(batch, text, new Vector2(origin.X + x, origin.Y + y));

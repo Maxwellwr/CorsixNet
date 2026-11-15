@@ -930,6 +930,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// </summary>
     private GameCursor CurrentCursor(MouseState mouse)
     {
+        if (_cursorOverWindow && _windows.CursorAt(new Point(mouse.X, mouse.Y)) is { } windowCursor)
+        {
+            return windowCursor;
+        }
+
         if (_pickingRoomToEdit)
         {
             return GameCursor.EditRoom;

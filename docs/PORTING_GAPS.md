@@ -137,8 +137,8 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
 rules, wages, patient payments with inflation and insurers, drug cost.
 
 - Bank manager: drawn as the original's (`BankManagerScreen` over Bank01V and Stat01V: the face's animation, loans,
-  insurance with its graph picture, rates, the statement page, tooltips). Missing: the bank and pie chart cursors, real
-  insurance company names (CorsixTH picks three at random, here the first three); F2 still opens the statement as a
+  insurance with its graph picture, rates, the statement page, tooltips, the dollar and pie chart cursors from
+  QData/SPointer). Missing: real insurance company names (CorsixTH picks three at random, here the first three); F2 still opens the statement as a
   text window. Fullscreen dialogs now draw themselves where `UiWindow.IsFullscreen` says so (`OriginalGraphics`).
 - Casebook: drawn as the original's (`CasebookScreen` over DrugN01V: the list with diagnoses first, the figures, the
   charge as a percentage for a moment after a change, the cure's kind and whether it can be cured, research, repeat
@@ -190,7 +190,7 @@ fonts, faces) and the details listed.
 - Information and confirm dialogs are drawn as the original's (`InformationScreen` PulldV, `ConfirmScreen` Req04V); the tip of the day is a text window (`dialogs/information.lua`,
   `confirm_dialog.lua`, `resizables/tip_of_the_day.lua`).
 - Cursors: the original's (DATA/MPointer, `CursorDrawing`) are drawn for the map's hover cases (patient, staff, queue at a
-  door or desk, machine repair, rat, infected patient), editing a room, waiting while it empties, carrying staff and a pressed button; the blueprint's move, resize and arrow cursors are done (`BuildRoomTool.Cursor`); not yet the bank's SPointer ones; people and placed objects are picked by their sprites' pixels (`HumanoidDrawing.HumanoidAt`,
+  door or desk, machine repair, rat, infected patient), editing a room, waiting while it empties, carrying staff and a pressed button; the blueprint's move, resize and arrow cursors are done (`BuildRoomTool.Cursor`), and the bank's SPointer ones (`UiWindow.FullscreenCursor`); people and placed objects are picked by their sprites' pixels (`HumanoidDrawing.HumanoidAt`,
   `ObjectDrawing.ObjectAt`; machines and reception desks use it), doors still by tile. Tooltips for the annual report's
   figures and for objects and people on the map (windows' cells can carry one, `WindowCell.Tooltip`, drawn above the
   cursor; the bottom panel, staff, patient, queue, machine, bank, town map, graphs, research, policy, hire, casebook,
