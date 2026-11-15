@@ -58,6 +58,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Entity, 6, 2, "y", true),
         new(OriginalSaveArea.Entity, 8, 2, "frame", true),
         new(OriginalSaveArea.Entity, 12, 1, "kind", true),
+        new(OriginalSaveArea.Entity, 29, 13, "animation layers", true),
         new(OriginalSaveArea.Entity, 14, 1, "type", true),
         new(OriginalSaveArea.Entity, 17, 1, "direction", true),
         new(OriginalSaveArea.Entity, 108, 2, "salary", true),

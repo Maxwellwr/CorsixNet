@@ -49,8 +49,18 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// <summary>Tile row the entity stands on.</summary>
     public int TileY => Y >> 8;
 
-    /// <summary>Animation frame index.</summary>
+    /// <summary>
+    /// Current animation frame: an index into the frames of <see cref="AnimationSet"/> (<c>VFRA</c>). A bench facing
+    /// north shows frame 154, the first frame of animation 112, which CorsixTH uses as the bench's north idle animation.
+    /// </summary>
     public int Frame => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[8..]);
+
+    /// <summary>
+    /// The layer ids of the 13 animation layers (<see cref="AnimationSet.LayerCount"/>), choosing the variant drawn
+    /// for each layer, such as head, hair or skin colour; stored halved. A doctor's layer 5 is 2 or 4, as in
+    /// CorsixTH's staff profiles.
+    /// </summary>
+    public IReadOnlyList<int> Layers => [.. Raw.Span.Slice(29, AnimationSet.LayerCount).ToArray().Select(v => v * 2)];
 
     /// <summary>
     /// Byte 12, the kind of entity. Seen so far: 6 objects, 8 doors (with <see cref="Type"/> 3 or a swing door

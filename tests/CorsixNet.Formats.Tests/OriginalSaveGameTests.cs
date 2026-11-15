@@ -203,6 +203,7 @@ public class OriginalSaveGameTests
         var entity = OriginalSaveGame.EntityOffset + (109 * OriginalSaveGame.EntityLength);
         data[entity + 12] = 4;
         data[entity + 14] = 1;
+        data[entity + 34] = 2;
         data[entity + 124] = 16 + 32;
         data[entity + 125] = 1;
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(entity + 126), 565);
@@ -224,6 +225,8 @@ public class OriginalSaveGameTests
         Assert.Equal((16, 15), (staff.NameStart, staff.NameEnd));
         Assert.Equal(((byte)23, (byte)13), staff.Description);
         Assert.Equal(94, staff.Morale);
+        Assert.Equal(13, staff.Layers.Count);
+        Assert.Equal(4, staff.Layers[5]);
         Assert.Equal(324, staff.Energy);
     }
 
@@ -247,6 +250,30 @@ public class OriginalSaveGameTests
         Assert.Equal(42, patient.Thirst);
         Assert.Equal(31, patient.Warmth);
         Assert.Equal(16, patient.Disease);
+    }
+
+    [Fact]
+    public void BenchFramesAreBenchIdleAnimations()
+    {
+        var install = RealGameData.Require();
+        var folder = install.FindDirectory("SAVE");
+        var files = folder is null
+            ? []
+            : Directory.EnumerateFiles(folder, "*.H*").Where(file => new FileInfo(file).Length == OriginalSaveGame.Length).ToList();
+        if (files.Count == 0)
+        {
+            Assert.Skip("No original saves in the SAVE folder.");
+        }
+
+        // CorsixTH bench.lua: idle animations 112 (north) and 114 (east).
+        var animations = AnimationSet.Load(install);
+        int[] benchFrames = [animations.FirstFrame(112), animations.FirstFrame(114)];
+        var benches = files.SelectMany(file => OriginalSaveGame.Parse(File.ReadAllBytes(file)).Entities)
+            .Where(e => e.Kind == 6 && e.Type == 4)
+            .ToList();
+
+        Assert.NotEmpty(benches);
+        Assert.All(benches, bench => Assert.Contains(bench.Frame, benchFrames));
     }
 
     [Fact]
