@@ -171,6 +171,10 @@ strings:
   transactions:
     remove_room: 'Bygging: fjern ödelagt rom'
   corsixnet:
+    chat:
+      caption: 'Chat'
+      none: 'Ingen har sagt noe ennå.'
+      start: 'Trykk Enter for å skrive'
     hospital_number: 'Sykehus %1%'
     main_menu:
       caption: 'Hovedmeny'

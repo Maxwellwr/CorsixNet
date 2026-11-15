@@ -124,6 +124,10 @@ strings:
     eoy_trophy_bonus: 'Μπόνους τροπαίου τέλους χρονιάς'
     remove_room: 'Κατασκευή: αφαίρεση κατεστραμμένου δωματίου'
   corsixnet:
+    chat:
+      caption: 'Συνομιλία'
+      none: 'Κανείς δεν έχει πει τίποτα ακόμα.'
+      start: 'Πατήστε Enter για να μιλήσετε'
     hospital_number: 'Νοσοκομείο %1%'
     main_menu:
       caption: 'Κύριο μενού'

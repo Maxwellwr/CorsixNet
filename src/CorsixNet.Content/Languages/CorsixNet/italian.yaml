@@ -86,6 +86,10 @@ strings:
     toolbar:
       machine_menu: 'Menu macchine (%s)'
   corsixnet:
+    chat:
+      caption: 'Chat'
+      none: 'Nessuno ha ancora detto niente.'
+      start: 'Premi Invio per parlare'
     hospital_number: 'Ospedale %1%'
     main_menu:
       caption: 'Menu principale'

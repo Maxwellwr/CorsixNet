@@ -166,6 +166,10 @@ strings:
     severance: '退職金'
     wages: '給料'
   corsixnet:
+    chat:
+      caption: 'チャット'
+      none: 'まだ誰も発言していません。'
+      start: 'Enterキーで発言'
     hospital_number: '病院 %1%'
     main_menu:
       caption: 'メインメニュー'

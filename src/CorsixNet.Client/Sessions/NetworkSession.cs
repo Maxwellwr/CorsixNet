@@ -1,6 +1,7 @@
 using System.Globalization;
 using CorsixNet.Content.Interface;
 using CorsixNet.Net.Lockstep;
+using CorsixNet.Net.Protocol;
 using CorsixNet.Sim;
 using CorsixNet.Sim.Commands;
 
@@ -70,6 +71,15 @@ internal sealed class NetworkSession : IGameSession
     }
 
     public void Submit(Command command) => _client.Submit(command);
+
+    /// <summary>What the players said, oldest first.</summary>
+    public IReadOnlyList<ChatMessage> Chat => _client.Chat;
+
+    /// <summary>How many chat lines have arrived in all.</summary>
+    public int ChatCount => _client.ChatCount;
+
+    /// <summary>Says a line to every player.</summary>
+    public void Say(string text) => _client.Say(text);
 
     public void Update(TimeSpan elapsed)
     {

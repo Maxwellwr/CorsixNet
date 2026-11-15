@@ -137,6 +137,45 @@ public sealed class LockstepTests : IDisposable
     }
 
     [Fact]
+    public void ChatReachesEveryPlayer()
+    {
+        var a = Connect("Alice");
+        var b = Connect("Bob");
+        Exchange();
+
+        b.Say("  Hello,\tдоктор!  ");
+        a.Say("   ");
+        Exchange();
+
+        Assert.All(new[] { a, b }, client =>
+        {
+            var line = Assert.Single(client.Chat);
+            Assert.Equal(new ChatMessage(b.Player, "Bob", "Hello,доктор!"), line);
+            Assert.Equal(1, client.ChatCount);
+        });
+    }
+
+    [Fact]
+    public void ChatLinesAreCutAndOnlyTheLastAreKept()
+    {
+        var a = Connect("Alice");
+        Exchange();
+
+        for (var i = 0; i < LockstepClient.ChatHistory + 5; i++)
+        {
+            a.Say($"line {i}");
+        }
+
+        a.Say(new string('x', LockstepServer.MaxChatLength + 50));
+        Exchange();
+
+        Assert.Equal(LockstepClient.ChatHistory, a.Chat.Count);
+        Assert.Equal(LockstepClient.ChatHistory + 6, a.ChatCount);
+        Assert.Equal("line 6", a.Chat[0].Text);
+        Assert.Equal(LockstepServer.MaxChatLength, a.Chat[^1].Text.Length);
+    }
+
+    [Fact]
     public void RejectsClientsWithOtherContent()
     {
         var (serverEnd, clientEnd) = InMemoryConnection.CreatePair();

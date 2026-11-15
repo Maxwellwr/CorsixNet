@@ -192,6 +192,10 @@ strings:
   transactions:
     remove_room: 'Bygge: ta bort förstört rum'
   corsixnet:
+    chat:
+      caption: 'Chatt'
+      none: 'Ingen har sagt något än.'
+      start: 'Tryck Enter för att skriva'
     hospital_number: 'Sjukhus %1%'
     main_menu:
       caption: 'Huvudmeny'

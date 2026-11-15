@@ -259,6 +259,10 @@ strings:
   transactions:
     remove_room: 'Építés: lerombolt szoba eltávolítása'
   corsixnet:
+    chat:
+      caption: 'Csevegés'
+      none: 'Még senki nem mondott semmit.'
+      start: 'Nyomj Entert az íráshoz'
     hospital_number: '%1%. kórház'
     main_menu:
       caption: 'Főmenü'

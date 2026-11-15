@@ -73,6 +73,10 @@ strings:
     toolbar:
       machine_menu: 'Меню апаратів (%s)'
   corsixnet:
+    chat:
+      caption: 'Чат'
+      none: 'Поки що ніхто нічого не сказав.'
+      start: 'Натисніть Enter, щоб написати'
     hospital_number: 'Лікарня %1%'
     main_menu:
       caption: 'Головне меню'

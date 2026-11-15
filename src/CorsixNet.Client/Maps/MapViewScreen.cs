@@ -611,6 +611,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
+        UpdateChat(keys.IsKeyDown(Keys.Enter) && !_previousKeys.IsKeyDown(Keys.Enter));
+
         // The level list (F3): a click on a level starts it; a click elsewhere, F3 or Esc closes the list.
         if (_levels.Count > 0 && Pressed(Keys.F3) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
         {
@@ -3540,6 +3542,45 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     private bool _fullscreenToggleRequested;
+
+    /// <summary>The network chat's lines already seen: a new one opens the chat window.</summary>
+    private int _chatSeen;
+
+    /// <inheritdoc/>
+    public void TextInput(char character)
+    {
+        if (_windows.Windows.OfType<ITextInputWindow>().FirstOrDefault(window => window.IsCapturing) is { } typing)
+        {
+            typing.Type(character);
+        }
+    }
+
+    /// <summary>
+    /// The network game's chat: a line said opens its window, and Return on the map (when no build tool or window takes
+    /// it) opens it to type a line.
+    /// </summary>
+    private void UpdateChat(bool returnPressed)
+    {
+        if (_session is not NetworkSession network)
+        {
+            return;
+        }
+
+        var chat = _windows.Windows.OfType<ChatWindow>().FirstOrDefault();
+        var talk = returnPressed && !_buildTool.IsActive && !_furnishTool.IsActive && _editorTool is null && _mainMenu is null;
+        if (chat is null && (talk || network.ChatCount > _chatSeen))
+        {
+            chat = new ChatWindow(() => network.Chat, network.Say);
+            _windows.Open(chat);
+        }
+
+        if (talk)
+        {
+            chat!.StartTyping();
+        }
+
+        _chatSeen = network.ChatCount;
+    }
 
     /// <inheritdoc/>
     public bool TakeFullscreenToggleRequest()

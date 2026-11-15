@@ -243,6 +243,10 @@ strings:
   transactions:
     remove_room: 'Rakennus: tuhoutuneen huoneen poisto'
   corsixnet:
+    chat:
+      caption: 'Keskustelu'
+      none: 'Kukaan ei ole vielä sanonut mitään.'
+      start: 'Paina Enteriä puhuaksesi'
     hospital_number: 'Sairaala %1%'
     main_menu:
       caption: 'Päävalikko'
