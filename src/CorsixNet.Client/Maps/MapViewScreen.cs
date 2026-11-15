@@ -3488,21 +3488,21 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         }
     }
 
-    /// <summary>Saves the replay of the local game so far to the saves folder's replays.</summary>
+    /// <summary>Saves the replay of the game so far (local or network) to the saves folder's replays.</summary>
     private void SaveReplay()
     {
-        if (_session is not LocalSession local)
+        if (_session is not { Recording: { } recording, Simulation: { } simulation } session)
         {
-            ShowNotice(UiText.Get("corsixnet.status.only_local_replay", "Only local games are recorded"));
+            ShowNotice(UiText.Get("corsixnet.status.no_replay", "There is no game to record"));
             return;
         }
 
-        var name = string.Create(CultureInfo.InvariantCulture, $"{Path.GetFileNameWithoutExtension(local.Name)} {DateTime.Now:yyyy-MM-dd HH-mm-ss}{Replay.Extension}");
+        var name = string.Create(CultureInfo.InvariantCulture, $"{Path.GetFileNameWithoutExtension(recording.LevelName)} {DateTime.Now:yyyy-MM-dd HH-mm-ss}{Replay.Extension}");
         var path = Path.Combine(_saves.Directory, Replay.Folder, name);
         try
         {
-            local.Recording.Finish(local.Simulation);
-            local.Recording.Save(path);
+            recording.Finish(simulation);
+            recording.Save(path);
             ShowNotice(UiText.Format("corsixnet.status.replay_saved", "Saved the replay %1%", Path.GetFileNameWithoutExtension(path)));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)

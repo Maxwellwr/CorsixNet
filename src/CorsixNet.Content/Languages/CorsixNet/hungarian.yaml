@@ -704,7 +704,7 @@ strings:
       parcel_not_for_sale: 'A(z) %1%. telek nem eladó'
       cannot_hire: 'Nem sikerült felvenni (%1%): %2%'
       only_local_save: 'Csak helyi játék menthető és tölthető be'
-      only_local_replay: 'Csak helyi játékról készül visszajátszás'
+      no_replay: 'Nincs mit rögzíteni'
       replay_saved: '%1% visszajátszás mentve'
       cannot_save_replay: 'Nem sikerült menteni a visszajátszást: %1%'
       cannot_watch: 'Nem sikerült lejátszani: %1%: %2%'

@@ -637,7 +637,7 @@ strings:
       parcel_not_for_sale: 'Tomt %1% är inte till salu'
       cannot_hire: 'Kunde inte anställa (%1%): %2%'
       only_local_save: 'Bara lokala spel kan sparas och laddas'
-      only_local_replay: 'Bara lokala spel spelas in som repris'
+      no_replay: 'Det finns inget spel att spela in'
       replay_saved: 'Repris %1% sparad'
       cannot_save_replay: 'Kunde inte spara reprisen: %1%'
       cannot_watch: 'Kunde inte spela upp %1%: %2%'

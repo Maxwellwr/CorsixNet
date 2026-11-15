@@ -766,7 +766,7 @@ strings:
       parcel_not_for_sale: 'O lote %1% näo está à venda'
       cannot_hire: 'Näo foi possível contratar (%1%): %2%'
       only_local_save: 'Só os jogos locais podem ser gravados e carregados'
-      only_local_replay: 'Só os jogos locais säo gravados em repetiçäo'
+      no_replay: 'Não há jogo para gravar'
       replay_saved: 'Repetiçäo %1% gravada'
       cannot_save_replay: 'Näo foi possível gravar a repetiçäo: %1%'
       cannot_watch: 'Näo foi possível ver %1%: %2%'

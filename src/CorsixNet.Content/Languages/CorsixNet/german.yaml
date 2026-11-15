@@ -551,7 +551,7 @@ strings:
       parcel_not_for_sale: Grundstück %1% ist nicht zu verkaufen
       cannot_hire: 'Einstellen nicht möglich (%1%): %2%'
       only_local_save: Nur lokale Spiele können gespeichert und geladen werden
-      only_local_replay: Nur lokale Spiele werden aufgezeichnet
+      no_replay: 'Kein Spiel zum Aufzeichnen'
       replay_saved: Aufzeichnung %1% gespeichert
       cannot_save_replay: 'Aufzeichnung konnte nicht gespeichert werden: %1%'
       cannot_watch: '%1% kann nicht angesehen werden: %2%'

@@ -616,7 +616,7 @@ strings:
       parcel_not_for_sale: 'Tomt %1% er ikke til salgs'
       cannot_hire: 'Kunne ikke ansette (%1%): %2%'
       only_local_save: 'Bare lokale spill kan lagres og lastes inn'
-      only_local_replay: 'Bare lokale spill tas opp som reprise'
+      no_replay: 'Det er ikke noe spill å ta opp'
       replay_saved: 'Reprise %1% lagret'
       cannot_save_replay: 'Kunne ikke lagre reprisen: %1%'
       cannot_watch: 'Kunne ikke spille av %1%: %2%'

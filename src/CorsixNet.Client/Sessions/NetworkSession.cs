@@ -1,5 +1,6 @@
 using System.Globalization;
 using CorsixNet.Content.Interface;
+using CorsixNet.Content.Saves;
 using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Protocol;
 using CorsixNet.Sim;
@@ -38,6 +39,8 @@ internal sealed class NetworkSession : IGameSession
     public bool CanChangeSpeed => _client.IsJoined;
 
     public bool IsShared => true;
+
+    public Replay? Recording => _client.Recording;
 
     public GameSpeed Speed => _client.Speed;
 

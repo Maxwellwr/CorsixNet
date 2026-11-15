@@ -1,4 +1,5 @@
 using CorsixNet.Content.Interface;
+using CorsixNet.Content.Saves;
 using CorsixNet.Net.Protocol;
 using CorsixNet.Net.Transport;
 using CorsixNet.Sim;
@@ -53,6 +54,15 @@ public sealed class LockstepClient : IDisposable
     /// <summary>The most recent desync reported by the server, if any.</summary>
     public DesyncMessage? LastDesync { get; private set; }
 
+    /// <summary>The name a recording of the game is saved under (<see cref="Replay.LevelName"/>).</summary>
+    public string RecordingName { get; init; } = "Network game";
+
+    /// <summary>
+    /// The replay of the game since this client joined: the state it joined with and every command the server scheduled
+    /// after, so that the game can be watched again on its own. Null until joined.
+    /// </summary>
+    public Replay? Recording { get; private set; }
+
     /// <summary>The players in the game, by number, as the server last said.</summary>
     public IReadOnlyList<PlayerInfo> Players { get; private set; } = [];
 
@@ -81,6 +91,7 @@ public sealed class LockstepClient : IDisposable
                     Simulation = LoadState(welcome.State);
                     Player = welcome.Player;
                     AllowedTick = welcome.AllowedTick;
+                    Recording = Replay.Start(RecordingName, Simulation);
                     break;
                 case ResyncMessage resync when Simulation is not null:
                     Simulation = LoadState(resync.State);
@@ -89,6 +100,7 @@ public sealed class LockstepClient : IDisposable
                     break;
                 case ScheduledCommandMessage scheduled when Simulation is not null:
                     Simulation.Schedule(scheduled.Command);
+                    Recording?.Record(scheduled.Command.Tick, scheduled.Command.Player, scheduled.Command.Command);
                     break;
                 case AdvanceMessage advance when Simulation is not null:
                     AllowedTick = Math.Max(AllowedTick, advance.AllowedTick);

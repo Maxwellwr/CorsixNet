@@ -652,7 +652,7 @@ strings:
       parcel_not_for_sale: '구역 %1%은(는) 판매하지 않습니다'
       cannot_hire: '고용할 수 없습니다 (%1%): %2%'
       only_local_save: '로컬 게임만 저장하고 불러올 수 있습니다'
-      only_local_replay: '로컬 게임만 기록됩니다'
+      no_replay: '기록할 게임이 없습니다'
       replay_saved: '리플레이 %1% 저장됨'
       cannot_save_replay: '리플레이를 저장할 수 없습니다: %1%'
       cannot_watch: '%1%을(를) 볼 수 없습니다: %2%'

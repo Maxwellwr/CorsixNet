@@ -641,7 +641,7 @@ strings:
       parcel_not_for_sale: 'Działka %1% nie jest na sprzedaż'
       cannot_hire: 'Nie można zatrudnić (%1%): %2%'
       only_local_save: 'Zapisywać i wczytywać można tylko gry lokalne'
-      only_local_replay: 'Nagrywane są tylko gry lokalne'
+      no_replay: 'Nie ma gry do nagrania'
       replay_saved: 'Zapisano powtórkę %1%'
       cannot_save_replay: 'Nie można zapisać powtórki: %1%'
       cannot_watch: 'Nie można obejrzeć %1%: %2%'
