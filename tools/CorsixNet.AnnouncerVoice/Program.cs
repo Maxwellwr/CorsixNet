@@ -1,5 +1,6 @@
-// Speaks a translation's announcer subtitles (subtitles.* of Languages/<language>.yaml) with a Piper or Vosk TTS voice, through a
-// hospital loudspeaker, into Languages/Voice/<language>, where the game hears them instead of the original's.
+// Speaks a translation's announcer subtitles (subtitles.* of Languages/<language>.yaml) with a Piper or Vosk TTS
+// voice, through a hospital loudspeaker, into Languages/Voice/<language>, where the game hears them instead of the
+// original's.
 //
 //   dotnet run --project tools/CorsixNet.AnnouncerVoice -- --voice <voice.onnx | Vosk model folder> [--speaker 0]
 //       [--language Russian] [--python python] [--languages <folder>] [--length-scale 1.0] [--only emerg006,rand001]
