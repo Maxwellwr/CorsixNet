@@ -224,6 +224,9 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
         yield return Stepper(UiText.Get("accessibility_window.scroll_speed", "Scroll speed"), _draft.ScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ScrollSpeed = Math.Max(1, _draft.ScrollSpeed - 1) }, () => _draft = _draft with { ScrollSpeed = Math.Min(10, _draft.ScrollSpeed + 1) });
         yield return Stepper(UiText.Get("accessibility_window.shift_scroll_speed", "Shift scroll speed"), _draft.ShiftScrollSpeed.ToString(CultureInfo.InvariantCulture), () => _draft = _draft with { ShiftScrollSpeed = Math.Max(1, _draft.ShiftScrollSpeed - 1) }, () => _draft = _draft with { ShiftScrollSpeed = Math.Min(10, _draft.ShiftScrollSpeed + 1) });
         yield return Stepper(UiText.Get("options_window.autosave_frequency", "Autosave"), _draft.AutosaveFrequency switch { 0 => UiText.Get("options_window.option_off", "off"), 1 => UiText.Get("autosave_frequency.monthly", "monthly"), 2 => UiText.Get("autosave_frequency.weekly", "weekly"), _ => UiText.Get("autosave_frequency.daily", "daily") }, () => _draft = _draft with { AutosaveFrequency = Math.Max(0, _draft.AutosaveFrequency - 1) }, () => _draft = _draft with { AutosaveFrequency = Math.Min(3, _draft.AutosaveFrequency + 1) });
+        // customise.lua's switches for the settings this game has.
+        yield return Switch(UiText.Get("customise_window.remove_destroyed_rooms", "Remove destroyed rooms"), _draft.RemoveDestroyedRooms, on => _draft = _draft with { RemoveDestroyedRooms = on }, UiText.Get("tooltip.customise_window.remove_destroyed_rooms", "If you would like to be able to remove destroyed rooms for a fee, turn this option on"));
+        yield return Switch(UiText.Get("customise_window.enable_avg_contents", "Average Contents"), _draft.EnableAverageContents, on => _draft = _draft with { EnableAverageContents = on }, UiText.Get("tooltip.customise_window.enable_avg_contents", "If you would like the game to remember which extra objects you usually add while building rooms, turn this option on"));
         var size = string.Create(CultureInfo.InvariantCulture, $"{_draft.Width} x {_draft.Height}");
         yield return WindowRow.Of(UiText.Get("corsixnet.options.screen", "Screen"), _draft.Fullscreen ? UiText.Format("corsixnet.options.screen_fullscreen", "%1%, fullscreen", size) : size);
         var language = UiText.Get("options_window.language", "Language");
@@ -337,8 +340,11 @@ internal sealed class OptionsWindow(GameConfig current, Action<GameConfig> apply
 
     private static string Percent(decimal fraction) => string.Create(CultureInfo.InvariantCulture, $"{(int)Math.Round(fraction * 100)} %");
 
-    private static WindowRow Switch(string label, bool on, Action<bool> set) =>
-        WindowRow.Of(label, WindowCell.Button(UiText.Get("options_window.option_on", "On"), () => set(true), !on, on), WindowCell.Button(UiText.Get("options_window.option_off", "Off"), () => set(false), on, !on));
+    private static WindowRow Switch(string label, bool on, Action<bool> set, string? tooltip = null) =>
+        WindowRow.Of(
+            new WindowCell(label) { Tooltip = tooltip },
+            WindowCell.Button(UiText.Get("options_window.option_on", "On"), () => set(true), !on, on),
+            WindowCell.Button(UiText.Get("options_window.option_off", "Off"), () => set(false), on, !on));
 
     private static WindowRow Stepper(string label, string value, Action down, Action up) =>
         WindowRow.Of(label, WindowCell.Button("-", down), WindowCell.Number(value), WindowCell.Button("+", up));

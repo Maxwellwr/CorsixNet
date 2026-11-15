@@ -112,6 +112,23 @@ public sealed class SettingsWindowTests : IDisposable
     }
 
     [Fact]
+    public void TheOptionsHaveCustomisesSwitches()
+    {
+        var host = new WindowTestHost();
+        GameConfig? applied = null;
+        var window = new OptionsWindow(new GameConfig(), config => applied = config);
+        Assert.Contains(window.Rows(host).SelectMany(row => row.Cells), cell => cell.Text == "Average Contents" && cell.Tooltip is { Length: > 0 });
+
+        // Both are off by default: their On buttons are the only ones to click.
+        host.Click(window, "On");
+        host.Click(window, "On");
+        host.Click(window, "Apply");
+
+        Assert.True(applied!.RemoveDestroyedRooms);
+        Assert.True(applied.EnableAverageContents);
+    }
+
+    [Fact]
     public void TheOptionsGoThroughTheInstalledLanguages()
     {
         var host = new WindowTestHost();
