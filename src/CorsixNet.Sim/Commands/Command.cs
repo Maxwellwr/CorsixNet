@@ -61,6 +61,7 @@ public enum CommandKind : ushort
     HoldOpeningWatch = 46,
     CloseReport = 47,
     SendPatientToReception = 48,
+    MakeDebugRat = 49,
 }
 
 /// <summary>
@@ -133,6 +134,7 @@ public abstract record Command
             CommandKind.HoldOpeningWatch => new HoldOpeningWatchCommand(reader.ReadBool()),
             CommandKind.CloseReport => new CloseReportCommand((FaxReport)reader.ReadByte()),
             CommandKind.SendPatientToReception => new SendPatientToReceptionCommand(reader.ReadInt32()),
+            CommandKind.MakeDebugRat => new MakeDebugRatCommand(reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown command kind {(ushort)kind}."),
         };
     }
@@ -1279,6 +1281,32 @@ public sealed record ShootRatCommand(int RatId) : Command
     }
 
     protected override void WriteArguments(SimWriter writer) => writer.WriteInt32(RatId);
+}
+
+/// <summary>
+/// The debug menu's "make debug rat" (<c>GameUI:makeDebugRat</c>): two rat holes in view, then a rat out of one, in the
+/// issuing player's hospital. The view is the map's pixels shown, tile (x, y)'s top corner being at (32·(x − y),
+/// 16·(x + y)).
+/// </summary>
+public sealed record MakeDebugRatCommand(int Left, int Top, int Right, int Bottom) : Command
+{
+    public override CommandKind Kind => CommandKind.MakeDebugRat;
+
+    public override void Execute(Simulation simulation, int player)
+    {
+        if (player >= 0 && player < simulation.Hospitals.Count)
+        {
+            Disasters.Rats.MakeDebugRat(simulation, simulation.Hospitals[player], Left, Top, Right, Bottom);
+        }
+    }
+
+    protected override void WriteArguments(SimWriter writer)
+    {
+        writer.WriteInt32(Left);
+        writer.WriteInt32(Top);
+        writer.WriteInt32(Right);
+        writer.WriteInt32(Bottom);
+    }
 }
 
 /// <summary>Performs one of CorsixTH's menu cheats for the issuing player's hospital (<see cref="Cheats"/>).</summary>

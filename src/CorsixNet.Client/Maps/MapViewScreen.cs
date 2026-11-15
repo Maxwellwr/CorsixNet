@@ -3463,7 +3463,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 Open("menu_charts.machine_menu", "MACHINE MENU", () => new MachineMenuWindow())]),
             new(Item("menu.debug", "DEBUG"), [
                 Do("corsixnet.menu.save_replay", "Save replay", "savereplay"),
-                Do("corsixnet.menu.watch_replay", "Watch replay", "replays")]),
+                Do("corsixnet.menu.watch_replay", "Watch replay", "replays"),
+                Do("menu_debug.make_debug_rat", "MAKE DEBUG RAT", "debugrat")]),
         ];
         if (_cheatsMenuUnlocked)
         {
@@ -3500,6 +3501,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 break;
             case "savereplay":
                 SaveReplay();
+                break;
+            case "debugrat":
+                MakeDebugRat();
                 break;
             case "replays":
                 _windows.Open(new ReplayListWindow(Path.Combine(_saves.Directory, Replay.Folder), WatchReplay));
@@ -3682,6 +3686,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         _config = _config with { PlayAnnouncements = !_config.PlayAnnouncements };
         SaveConfig();
+    }
+
+    /// <summary><c>GameUI:makeDebugRat</c>: a rat out of a hole in view, the view being the map's pixels shown.</summary>
+    private void MakeDebugRat()
+    {
+        var topLeft = _camera.TopLeft(ViewSize);
+        var size = _camera.WorldSize(ViewSize);
+        _session?.Submit(new MakeDebugRatCommand(topLeft.X, topLeft.Y, topLeft.X + size.X, topLeft.Y + size.Y));
     }
 
     /// <summary>The new game dialog's name, kept in the settings (<c>UINewGame:saveToConfig</c>).</summary>
