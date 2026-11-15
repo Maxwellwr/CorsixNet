@@ -21,6 +21,11 @@ internal interface IScreen : IDisposable
     /// <summary>The file a screenshot of the frame just drawn should be saved to, once asked for (<c>UI:makeScreenshot</c>), else null.</summary>
     string? TakeScreenshotRequest() => null;
 
+    /// <summary>The screenshot asked for has been saved (<c>UI:makeScreenshot</c> then plays SNAPSHOT.WAV).</summary>
+    void ScreenshotSaved()
+    {
+    }
+
     /// <summary>A character typed, as the keyboard layout gives it (MonoGame's <c>GameWindow.TextInput</c>).</summary>
     void TextInput(char character)
     {

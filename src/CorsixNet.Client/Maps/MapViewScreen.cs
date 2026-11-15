@@ -3103,7 +3103,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _hellSounds.Update(Simulation!, _session.Speed, Environment.TickCount64, hole => _sounds.PlayAt("LAVA00*.WAV", ScreenOf(hole), ViewSize));
         if (HotkeyInput.Pressed(_hotkeys["ingame_openFirstMessage"], keys, pressed))
         {
-            _windows.Toggle(new FaxWindow());
+            ToggleFax();
         }
 
         var watch = WatchWindow.IsRunning(Simulation!, _session.Player);
@@ -3605,6 +3605,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _screenshotRequest = null;
         return request;
     }
+
+    /// <inheritdoc/>
+    public void ScreenshotSaved() => _sounds.Play("SNAPSHOT.WAV");
 
     /// <summary>
     /// <c>UI:makeScreenshot</c>: the next frame goes to <c>Screenshot_yyyyMMdd-HHmmss.png</c> in the Screenshots folder
@@ -4970,6 +4973,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             key = "fax";
         }
 
+        if (key == "fax")
+        {
+            ToggleFax();
+            return;
+        }
+
         // research and edit room have no click sound (setSound()).
         if (key is not ("edit" or "research"))
         {
@@ -5002,6 +5011,17 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             _windows.Toggle(dialog);
         }
+    }
+
+    /// <summary><c>UIMessage:openMessage</c>: the faxes open with fax_in.wav, or close again.</summary>
+    private void ToggleFax()
+    {
+        if (!_windows.Windows.Any(w => w is FaxWindow))
+        {
+            _sounds.Play("fax_in.wav");
+        }
+
+        _windows.Toggle(new FaxWindow());
     }
 
     /// <summary>The kinds of dialog the original bottom panel's toggle buttons open, so they show pressed while open.</summary>

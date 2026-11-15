@@ -60,6 +60,7 @@ internal sealed class HospitalAnnouncements(Random random)
     private readonly HashSet<int> _announcedVisitors = [];
     private readonly List<(string Name, AnnouncementPriority Priority)> _announcements = [];
     private bool _heatingBroken;
+    private bool _open;
 
     /// <summary>The announcements for the announcer found by the last <see cref="Update"/>; the list returned holds the plain sounds.</summary>
     public List<(string Name, AnnouncementPriority Priority)> TakeAnnouncements()
@@ -108,6 +109,13 @@ internal sealed class HospitalAnnouncements(Random random)
         if (_watching && hospital.Cheated && !_cheated)
         {
             _announcements.Add(($"cheat00{random.Next(1, 4)}.wav", AnnouncementPriority.Critical));
+        }
+
+        // UIWatch:onCountdownEnd for the initial opening: the fanfare as the hospital opens, when the watch runs down or
+        // is clicked.
+        if (_watching && hospital.IsOpen && !_open)
+        {
+            sounds.Add("fanfare.wav");
         }
 
         // msgCured and msgKilled: the cheer and the boo, always heard.
@@ -177,6 +185,7 @@ internal sealed class HospitalAnnouncements(Random random)
         _epidemic = epidemic;
         _revealed = epidemic?.IsRevealed ?? false;
         _cheated = hospital.Cheated;
+        _open = hospital.IsOpen;
         _hours = simulation.Hours;
         _heatingBroken = hospital.IsHeatingBroken;
         _cured = hospital.Cured;
