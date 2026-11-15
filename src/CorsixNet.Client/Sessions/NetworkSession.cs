@@ -15,6 +15,9 @@ internal sealed class NetworkSession : IGameSession
     private readonly LockstepClient _client;
     private readonly ServerRunner? _hostedServer;
 
+    /// <summary>The last speed request sent, and the server's speed when it was sent.</summary>
+    private (GameSpeed? Request, GameSpeed ServerSpeed)? _lastRequest;
+
     /// <param name="name">Name for the status line.</param>
     /// <param name="client">Connected client; the session owns it.</param>
     /// <param name="hostedServer">Server running in this process, if this client hosts the game; the session owns it.</param>
@@ -31,17 +34,15 @@ internal sealed class NetworkSession : IGameSession
 
     public int Player => _client.Player;
 
-    public bool CanChangeSpeed => false;
+    public bool CanChangeSpeed => _client.IsJoined;
 
-    public GameSpeed Speed => GameSpeed.Normal;
+    public bool IsShared => true;
 
-    public void SetSpeed(GameSpeed speed)
-    {
-    }
+    public GameSpeed Speed => _client.Speed;
 
-    public void ResumeSpeed()
-    {
-    }
+    public void SetSpeed(GameSpeed speed) => Request(speed);
+
+    public void ResumeSpeed() => Request(null);
 
     public string Status
     {
@@ -59,10 +60,11 @@ internal sealed class NetworkSession : IGameSession
 
             var role = _hostedServer is null ? "online" : $"hosting on port {_hostedServer.Port}";
             var behind = _client.AllowedTick - simulation.Tick;
+            var speed = _client.SpeedSetBy < 0 ? string.Empty : $"   {GameSpeeds.Name(_client.Speed)} (player {_client.SpeedSetBy + 1})";
             var desync = _client.LastDesync is { } d ? $"   DESYNC at tick {d.Tick} (player {d.Player + 1})" : string.Empty;
             return string.Create(
                 CultureInfo.InvariantCulture,
-                $"tick {simulation.Tick} {role}   player {Player + 1} of {simulation.Map.PlayerCount}{(behind > 1 ? $"   {behind} ticks behind" : string.Empty)}{desync}");
+                $"tick {simulation.Tick} {role}   player {Player + 1} of {simulation.Map.PlayerCount}{(behind > 1 ? $"   {behind} ticks behind" : string.Empty)}{speed}{desync}");
         }
     }
 
@@ -72,6 +74,21 @@ internal sealed class NetworkSession : IGameSession
     {
         _client.ProcessMessages();
         _client.StepAllowed(MaxTicksPerUpdate);
+    }
+
+    /// <summary>
+    /// Sends a speed request unless the server already runs at that speed, or the same request was sent and the
+    /// server's speed has not changed since: a key held down (speed-up) asks once, not every frame.
+    /// </summary>
+    private void Request(GameSpeed? speed)
+    {
+        if (speed == _client.Speed || _lastRequest == (speed, _client.Speed))
+        {
+            return;
+        }
+
+        _lastRequest = (speed, _client.Speed);
+        _client.RequestSpeed(speed);
     }
 
     public void Dispose()

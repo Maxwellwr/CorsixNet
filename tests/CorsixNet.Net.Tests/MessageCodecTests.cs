@@ -1,3 +1,4 @@
+using CorsixNet.Content.Interface;
 using CorsixNet.Net.Protocol;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
@@ -22,6 +23,11 @@ public class MessageCodecTests
         new AdvanceMessage(123),
         new StateHashMessage(64, 0xDEADBEEFCAFEF00D),
         new DesyncMessage(64, 1, 1, 2),
+        new SpeedRequestMessage(GameSpeed.Pause),
+        new SpeedRequestMessage(GameSpeed.SpeedUp),
+        new SpeedRequestMessage(null),
+        new SpeedMessage(GameSpeed.Insane, 1),
+        new SpeedMessage(GameSpeed.Normal, -1),
     ];
 
     [Theory]
@@ -49,6 +55,15 @@ public class MessageCodecTests
 
         byte[] withExtra = [.. MessageCodec.Encode(new AdvanceMessage(1)), 0];
         Assert.Throws<InvalidDataException>(() => MessageCodec.Decode(withExtra));
+    }
+
+    [Fact]
+    public void RejectsUnknownSpeeds()
+    {
+        byte[] bytes = [.. MessageCodec.Encode(new SpeedRequestMessage(GameSpeed.Pause))];
+        bytes[^1] = 200;
+
+        Assert.Throws<InvalidDataException>(() => MessageCodec.Decode(bytes));
     }
 
     [Fact]

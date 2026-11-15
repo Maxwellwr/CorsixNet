@@ -17,9 +17,6 @@ const string Usage = """
       --seed N       Seed for the simulation's random numbers (default 1)
     """;
 
-// Same as the client's "Normal" speed: CorsixTH runs a tick every 3 frames of 18 ms.
-var tickInterval = TimeSpan.FromMilliseconds(54);
-
 string? gamePath = null;
 var level = "LEVEL.L20";
 string? mapPath = null;
@@ -118,7 +115,7 @@ catch (Exception e) when (e is IOException or InvalidDataException)
 }
 
 var server = new LockstepServer(loaded.StartSimulation(seed)) { Log = line => Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] {line}") };
-using var runner = new ServerRunner(server, new TcpConnectionListener(publicHost ? IPAddress.Any : IPAddress.Loopback, port), tickInterval);
+using var runner = new ServerRunner(server, new TcpConnectionListener(publicHost ? IPAddress.Any : IPAddress.Loopback, port));
 Console.WriteLine($"Serving {levelName} ({loaded.Map.PlayerCount} players) on port {runner.Port}{(publicHost ? "" : " (this machine only; add --public for others)")}. Press Ctrl+C to stop.");
 
 using var stop = new ManualResetEventSlim();

@@ -1,4 +1,5 @@
 using System.Net;
+using CorsixNet.Content.Interface;
 using CorsixNet.Net.Lockstep;
 using CorsixNet.Net.Transport;
 using CorsixNet.Sim;
@@ -16,7 +17,10 @@ public class TcpLockstepTests
     {
         var cancellation = TestContext.Current.CancellationToken;
         var server = new LockstepServer(NewSimulation());
-        using var runner = new ServerRunner(server, new TcpConnectionListener(IPAddress.Loopback, 0), TimeSpan.FromMilliseconds(2));
+
+        // Seven ticks every 18 ms keeps the test short.
+        server.SetSpeed(GameSpeed.Insane);
+        using var runner = new ServerRunner(server, new TcpConnectionListener(IPAddress.Loopback, 0));
 
         using var a = new LockstepClient(await TcpConnection.ConnectAsync("127.0.0.1", runner.Port, cancellation), "Alice");
         using var b = new LockstepClient(await TcpConnection.ConnectAsync("127.0.0.1", runner.Port, cancellation), "Bob");

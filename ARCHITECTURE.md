@@ -102,7 +102,8 @@ entities and pending commands.
   lasts 54 ms of real time (about 18.5 ticks per second). The client decides how many ticks
   to run: a local game follows CorsixTH's game speeds (`GameClock` in the client, from Slowest,
   one tick per 56 frames of 18 ms, to Speed up, eight ticks per frame). A network game runs at
-  the server's Normal speed for now. The simulation knows nothing about real time.
+  the server's speed: the server keeps the one `GameClock`, any player may pause it or change its speed
+  (`SpeedRequestMessage`), and everyone is told (`SpeedMessage`); windows that pause a local game do not pause it. The simulation knows nothing about real time.
 - **Calendar.** `Simulation.Date` (`Sim.Calendar.GameDate`, a port of CorsixTH's `date.lua`) follows
   from `Simulation.Hours`, the tick plus the hours the end-of-month and end-of-year cheats skipped
   (`SkippedHours`, saved): days of 50 hours, months of the usual lengths, no leap years, the game

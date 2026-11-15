@@ -1,4 +1,5 @@
 using System.Text;
+using CorsixNet.Content.Interface;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Serialization;
 
@@ -11,12 +12,15 @@ namespace CorsixNet.Net.Protocol;
 public static class MessageCodec
 {
     /// <summary>Bumped whenever messages or the simulation state format change incompatibly.</summary>
-    public const int ProtocolVersion = 1;
+    public const int ProtocolVersion = 2;
 
     /// <summary>Largest encoded message accepted; a full state for a 128x128 map is far smaller.</summary>
     public const int MaxMessageSize = 16 * 1024 * 1024;
 
     private const int MaxStringBytes = 1024;
+
+    /// <summary>The byte a <see cref="SpeedRequestMessage"/> without a speed (go back to the previous one) carries.</summary>
+    private const byte PreviousSpeed = 0xFF;
 
     private enum MessageType : byte
     {
@@ -28,6 +32,8 @@ public static class MessageCodec
         Advance = 6,
         StateHash = 7,
         Desync = 8,
+        SpeedRequest = 9,
+        Speed = 10,
     }
 
     public static byte[] Encode(Message message)
@@ -76,6 +82,15 @@ public static class MessageCodec
                 writer.WriteUInt64(desync.Expected);
                 writer.WriteUInt64(desync.Actual);
                 break;
+            case SpeedRequestMessage request:
+                writer.WriteByte((byte)MessageType.SpeedRequest);
+                writer.WriteByte(request.Speed is { } wanted ? (byte)wanted : PreviousSpeed);
+                break;
+            case SpeedMessage speed:
+                writer.WriteByte((byte)MessageType.Speed);
+                writer.WriteByte((byte)speed.Speed);
+                writer.WriteInt32(speed.Player);
+                break;
             default:
                 throw new ArgumentException($"Unknown message {message.GetType().Name}.", nameof(message));
         }
@@ -99,6 +114,8 @@ public static class MessageCodec
             MessageType.Advance => new AdvanceMessage(reader.ReadInt64()),
             MessageType.StateHash => new StateHashMessage(reader.ReadInt64(), reader.ReadUInt64()),
             MessageType.Desync => new DesyncMessage(reader.ReadInt64(), reader.ReadInt32(), reader.ReadUInt64(), reader.ReadUInt64()),
+            MessageType.SpeedRequest => ReadSpeedRequest(reader),
+            MessageType.Speed => new SpeedMessage(ToSpeed(reader.ReadByte()), reader.ReadInt32()),
             _ => throw new InvalidDataException($"Unknown message type {(byte)type}."),
         };
 
@@ -108,6 +125,18 @@ public static class MessageCodec
         }
 
         return message;
+    }
+
+    private static SpeedRequestMessage ReadSpeedRequest(SimReader reader)
+    {
+        var wanted = reader.ReadByte();
+        return new SpeedRequestMessage(wanted == PreviousSpeed ? null : ToSpeed(wanted));
+    }
+
+    private static GameSpeed ToSpeed(byte value)
+    {
+        var speed = (GameSpeed)value;
+        return Enum.IsDefined(speed) ? speed : throw new InvalidDataException($"Unknown game speed {value}.");
     }
 
     private static WelcomeMessage ReadWelcome(SimReader reader)
