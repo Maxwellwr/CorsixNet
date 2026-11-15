@@ -15,10 +15,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 | Missing | CorsixTH source |
 |---|---|
 | Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
-| Facilities: (the staff room and training room are done) | `rooms/staff_room.lua`, `toilets.lua`, `training.lua`, `research.lua` |
-| Room closing (staff/patients leave while editing), "room is crashed" state after an explosion | `room.lua` |
-| Room-specific rules: doors that can't be used while busy (swing doors of the operating theatre, ward), rooms that need two staff (operating theatre), max patients per room (ward beds) | `rooms/*.lua`, `objects/doors/*` |
-| Room information windows (staff in room, queue length, room "health") | `dialogs/queue_dialog.lua`, `dialogs/information.lua` |
+| (Done: the staff room, toilets, training and research rooms; room closing while editing (`Room.IsClosing`) and the crashed room (`Room.IsCrashed`); swing doors busy while swinging (`RoomDoor.IsSwingBusy`), the operating theatre's two surgeons and the ward's beds and nurses (`RoomVisits`); the queue window (`QueueScreen`).) | |
 
 ## 2. Objects
 
@@ -28,8 +25,8 @@ bin, plant; side objects; the corridor path check), bought one at a time with F 
 of the three rooms (desk, cabinet, chair, pharmacy cabinet, screen, crash trolley). Map-placed
 objects from the level file.
 
-- Furnish corridor window with counts and prices (`dialogs/furnish_corridor.lua`); the bench drawn
-  split over three tiles as CorsixTH does (drawn from its own tile for now).
+- The bench drawn split over three tiles as CorsixTH does (drawn from its own tile for now). The furnish corridor
+  window with counts and prices is done (`FurnishCorridorScreen`, `dialogs/furnish_corridor.lua`).
 - Side objects inside a room's area when the room is built, and moving or selling corridor objects.
 - (Done: every room of the original with its objects and machines, `BaseGameContent`, `RoomVisits`.)
 - Machines: the gear icon over a machine a handyman was called to is drawn. The machines list (`MachineMenuWindow`, F10), the repair announcement (`RepairAnnouncer`, as sound effects) and the
@@ -77,7 +74,8 @@ doctor in GP and general diagnosis, nurse in the pharmacy.
   between patients, handymen within their parcel (`SetHandymanParcelCommand`; no staff window yet).
 - Training: learning on the job (`Training.LearnOnTheJob`, `doctor.lua`'s `tick`), the room, teaching, skill growth, gaining abilities and the advice (promotions, a consultant needed, too few lecture chairs; `AdviserChecks`) are done (`Training`).
 - (Done: surgeons, psychiatrists and researchers required by their rooms, `RoomVisits.IsQualifiedFor`.)
-- Multiple desks per receptionist logic. (Hiring a receptionist straight onto a desk is done.)
+- (Done: one receptionist per desk, desks calling the nearest free receptionist, patients picking the desk by distance
+  and queue (`ReceptionDesks`; `objects/reception_desk.lua`, `seek_reception.lua`).)
 - Patients waiting look at the watch, yawn and tap a foot with 30, 20 and 10 days left, and those with sleeping illness yawn one day in ten (`PatientSpotAction`; `humanoid_actions/yawn.lua`, `check_watch.lua`, `tap_foot.lua`). In CorsixTH these are patients' animations only.
   Staff speed (juniors, consultants, tiredness, the no-rest cheat) is done (`Tiredness.UpdateSpeed`).
 - Picking staff up with the hand cursor (the grab cursor, the staff drawn under it, `pickup.wav`); the move itself is
@@ -98,10 +96,10 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   that they leave a way round. Health running down, the step aside, the fall, the trip to heaven and, for 65 % of the men,
   the trip to hell with the grim reaper and the gates to hell are done (`PatientBehaviour.UpdateDying`, `DeathAnimations`,
   `GrimReaperBehaviour`); those killed when a room crashes simply vanish, as in CorsixTH.
-- Queue features: benches and the queue window are done. Priorities for VIPs,
+- (Done: queue features: benches and the queue window. Priorities for VIPs,
   the inspector and emergency patients, rooms taking patients from other rooms' queues (`TryToFindNearbyPatients`), and
   the window's size buttons, moving patients in the queue and sending a patient to another room of the same type as
-  commands (`ChangeQueueSizeCommand`, `MoveInQueueCommand`, `SendPatientToRoomCommand`) are done.
+  commands (`ChangeQueueSizeCommand`, `MoveInQueueCommand`, `SendPatientToRoomCommand`).)
 - Patient window: health, happiness, thirst, warmth, diagnosis progress, the health graph and treatment history
   drawn (`dialogs/patient.lua`); what they show is kept (`PatientBehaviour.HealthHistory`, `TreatmentHistory`, and
   the sad mood `IsSad`). Its send home and guess cure buttons are done as commands (`SendPatientHomeCommand`,
@@ -114,11 +112,11 @@ later), treatment in the pharmacy with cure or death; all diseases and pseudo di
   the helicopter's sound is its frames' (`FrameSounds`). The planned and random emergencies, the fax offer, helicopter, watch, bonus,
   reputation and the result on the fax window (`HospitalEmergencies.Report`, `makeEmergencyEndFax`) are done
   (`Emergencies`).
-- Epidemics: vaccinating patients on benches (`epidemic.lua`). The infected mood icons, the adviser's warnings, the
+- (Done: epidemics: vaccinating patients on benches too (`Epidemics`, `PatientBehaviour.SeatedBench`). The infected mood icons, the adviser's warnings, the
   announcements and the inspector's, and showing the infected by cheat (`CheatKind.ShowInfected`) are done. Contagious patients, the spreading, the declare or cover-up fax (I / Shift+I),
   the cover-up watch, vaccination by nurses (`VaccinateCommand`), the inspector and the fines, compensation and
   evacuation and the result fax (`HospitalEpidemics.Report`) are done (`Epidemics`, `InspectorBehaviour`). The fax
-  telling of a newly discovered disease is done too (`Hospital.DiseaseReports`, `adviseDiscoverDisease`).
+  telling of a newly discovered disease is done too (`Hospital.DiseaseReports`, `adviseDiscoverDisease`).)
 - VIP visits: the original's look of
   the asking and reporting faxes. The visit, the rating (with the litter seen), its grant and reputation, the year's
   trophy, the invitation and the report on the fax window (`VipVisits.Report`, `FaxWindow.VipReportLines`,
@@ -145,9 +143,9 @@ rules, wages, patient payments with inflation and insurers, drug cost.
   charge as a percentage for a moment after a change, the cure's kind and whether it can be cured, research, repeat
   buttons with Shift and Ctrl, the wheel, clicks on the list, tooltips, the cure requirements' rooms to research and
   build and staff to hire).
-- Reputation: changes from the year-end award and staff kicked out;
-  the price's effect on patients' happiness (`hospital.lua`). Cures, deaths, patients sent home or put off by the
-  price, prices far from what patients expect, and the price rise above 500 are done.
+- (Done: reputation (`Hospital.ChangeReputation`): cures, deaths, patients sent home or put off by the price, staff
+  sacked, the year-end awards, prices far from what patients expect and their effect on happiness
+  (`ComputePriceLevelImpact`), and the price rise above 500.)
 - Annual report screen (statistics, rankings, trophy and award plaques); trophies and awards for drinks sold,
   rats, plants, staff and patient happiness, cleanliness, emergencies, waiting times, machines and research; the
   salary ranking. The hospital's value, the year's counts, the player's salary (`Hospital.PlayerSalary`, with the
