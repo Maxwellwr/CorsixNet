@@ -181,6 +181,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+## Russian announcer voice (Vosk TTS, speaker F03)
+
+The Russian announcements in `src/CorsixNet.Content/Languages/Voice/russian` were spoken by
+`tools/CorsixNet.AnnouncerVoice` with Vosk TTS (https://github.com/alphacep/vosk-tts, run only as a tool, not shipped)
+and its model vosk-model-tts-ru-0.9-multi (https://alphacephei.com/vosk/models, mirrored at
+https://huggingface.co/alphacep), speaker 2 ("F03", an artificial voice, not a recording of a real speaker). The model
+is released by Alpha Cephei under the Apache License 2.0 (http://www.apache.org/licenses/LICENSE-2.0); it includes
+SberDevices' ruBert-base, also Apache 2.0. The texts are CorsixTH's Russian subtitles (MIT, see CorsixTH above). The
+voice is not the original game's announcer and is not modelled on her recordings.
+
 ## YamlDotNet
 
 CorsixNet reads its language files with YamlDotNet (https://github.com/aaubry/YamlDotNet), used under the MIT

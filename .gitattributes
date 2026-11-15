@@ -9,3 +9,5 @@
 *.json text eol=lf
 *.bin binary
 *.rnc binary
+*.wav binary
+*.WAV binary

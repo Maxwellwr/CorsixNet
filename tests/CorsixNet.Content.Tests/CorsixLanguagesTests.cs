@@ -72,6 +72,18 @@ public class CorsixLanguagesTests
     }
 
     [Fact]
+    public void FindsTheFileAndVoiceFolderOfALanguageByAnyOfItsNames()
+    {
+        var languages = Languages();
+
+        Assert.Equal("russian", languages.FileStem("ru"));
+        Assert.Equal("french", languages.FileStem(" Français "));
+        Assert.Null(languages.FileStem("klingon"));
+        Assert.Equal(Path.Combine("Languages", "Voice", "russian"), languages.VoiceDirectory("Languages", "Russian"));
+        Assert.Null(languages.VoiceDirectory("Languages", "klingon"));
+    }
+
+    [Fact]
     public void EnglishTakesTheOriginalStringsAndItsOwnCorrections()
     {
         var strings = Languages().Load("English", n => n == 0 ? Original("en") : null);

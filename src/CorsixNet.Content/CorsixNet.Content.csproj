@@ -13,6 +13,8 @@
     <!-- The language files beside the game: CorsixTH's translations (CorsixTH/Lua/languages, MIT) as YAML in Languages,
          CorsixNet's own strings in Languages/CorsixNet; read by CorsixLanguages. -->
     <None Include="Languages/**/*.yaml" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The announcer's speech in other languages, Languages/Voice/<language>, read by LanguageVoice. -->
+    <None Include="Languages/Voice/**/*.wav" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
