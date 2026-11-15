@@ -22,7 +22,8 @@ namespace CorsixNet.Client.Ui.Windows;
 /// (Stat01V) and a click there goes back; the sign at the bottom opens the town map. His eyes blink, his brows lift
 /// and he smiles now and then.
 /// </summary>
-internal sealed class BankManagerScreen
+/// <param name="statement">Whether it opens on the statement, as F2 opens it (<c>UIBankManager:showStatistics</c>).</param>
+internal sealed class BankManagerScreen(bool statement = false)
 {
     /// <summary>One of CorsixTH's ticks, which the face's animation counts (the game's 18 a second).</summary>
     public const long TickMilliseconds = 1000 / 18;
@@ -46,9 +47,19 @@ internal sealed class BankManagerScreen
     ];
 
     private readonly long _opened = Environment.TickCount64;
-    private bool _statement;
+    private bool _statement = statement;
     private int? _graph;
     private string? _pressed;
+
+    /// <summary>Whether the statement page is shown rather than the main one.</summary>
+    public bool IsShowingStatement => _statement;
+
+    /// <summary>Shows the statement page or the main one (<c>showStatistics</c>, <c>hideStatistics</c>).</summary>
+    public void ShowStatement(bool show)
+    {
+        _statement = show;
+        _graph = null;
+    }
 
     /// <summary>Whether the original's graphics for it are there.</summary>
     public static bool IsAvailable(IWindowHost host) =>

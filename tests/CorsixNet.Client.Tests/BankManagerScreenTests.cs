@@ -47,4 +47,17 @@ public sealed class BankManagerScreenTests
         Assert.Equal(GameCursor.BankSummary, screen.Cursor(at));
         Assert.Null(screen.Cursor(new Point(700, 10)));
     }
+
+    [Fact]
+    public void F2OpensItOnTheStatementAndThePagesCanBeSwitched()
+    {
+        var at = new Point(300, 200);
+        var window = new BankManagerWindow(statement: true);
+        Assert.True(window.IsShowingStatement);
+        Assert.Equal(GameCursor.BankSummary, new BankManagerScreen(statement: true).Cursor(at));
+
+        window.ShowStatement(false);
+        Assert.False(window.IsShowingStatement);
+        Assert.False(new BankManagerWindow().IsShowingStatement);
+    }
 }
