@@ -153,8 +153,6 @@ strings:
       assign: '設定'
       game_font: '遊戲字型'
       system_font: '系統'
-    new_game:
-      player_name_hint: '（config.yaml 中的 player_name）'
     custom_game:
       none: '找不到關卡：請把 .level 和 .map 檔案放進關卡資料夾（config.yaml 中的 levels）。'
     custom_campaign:

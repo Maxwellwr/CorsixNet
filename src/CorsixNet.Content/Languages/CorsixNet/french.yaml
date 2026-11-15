@@ -98,8 +98,6 @@ strings:
       assign: Attribuer
       game_font: Police du jeu
       system_font: Système
-    new_game:
-      player_name_hint: (player_name dans config.yaml)
     custom_game:
       none: 'Aucun niveau trouvé : placez les fichiers .level et .map dans le dossier des niveaux (levels dans config.yaml).'
     custom_campaign:

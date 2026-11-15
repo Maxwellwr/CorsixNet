@@ -132,8 +132,6 @@ strings:
       assign: 'Призначити'
       game_font: 'Шрифт гри'
       system_font: 'Системний'
-    new_game:
-      player_name_hint: '(player_name у config.yaml)'
     custom_game:
       none: 'Рівні не знайдено: покладіть файли .level і .map у теку рівнів (levels у config.yaml).'
     custom_campaign:

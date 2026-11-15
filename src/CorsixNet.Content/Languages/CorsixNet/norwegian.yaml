@@ -230,8 +230,6 @@ strings:
       assign: 'Tildel'
       game_font: 'Spillets skrift'
       system_font: 'System'
-    new_game:
-      player_name_hint: '(player_name i config.yaml)'
     custom_game:
       none: 'Ingen brett funnet: legg .level- og .map-filer i brettmappen (levels i config.yaml).'
     custom_campaign:

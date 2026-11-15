@@ -225,8 +225,6 @@ strings:
       assign: '割り当て'
       game_font: 'ゲームのフォント'
       system_font: 'システム'
-    new_game:
-      player_name_hint: '（config.yaml の player_name）'
     custom_game:
       none: 'レベルが見つかりません。.level と .map ファイルをレベルフォルダー（config.yaml の levels）に置いてください。'
     custom_campaign:

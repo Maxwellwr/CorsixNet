@@ -133,8 +133,6 @@ strings:
       assign: 'Definir'
       game_font: 'Fonte do jogo'
       system_font: 'Sistema'
-    new_game:
-      player_name_hint: '(player_name em config.yaml)'
     custom_game:
       none: 'Nenhum nível encontrado: coloque arquivos .level e .map na pasta de níveis (levels em config.yaml).'
     custom_campaign:
