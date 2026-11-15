@@ -39,6 +39,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.File, 2, 1, "level", true),
         new(OriginalSaveArea.File, 3, 10, "difficulty", true),
         new(OriginalSaveArea.File, OriginalSaveGame.PlotOffset, OriginalSaveGame.MaxPlots, "plot owners", true),
+        new(OriginalSaveArea.File, OriginalSaveGame.StatementOffset, OriginalSaveGame.StatementCount * 8, "bank statement", true),
         new(OriginalSaveArea.File, OriginalSaveGame.DateOffset, 1, "day", true),
         new(OriginalSaveArea.File, OriginalSaveGame.DateOffset + 1, 1, "month", true),
 
@@ -82,6 +83,8 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Hospital, 53, 4, "money", true),
         new(OriginalSaveArea.Hospital, 61, 4, "loan", true),
         new(OriginalSaveArea.Hospital, 65, 4, "max loan?", false),
+        new(OriginalSaveArea.Hospital, 205, 4, "insurance owed (one company)", true),
+        new(OriginalSaveArea.Hospital, 213, 4, "interest rate x10", true),
         new(OriginalSaveArea.Hospital, 221, 4, "research points?", false),
         new(OriginalSaveArea.Hospital, 225, 188, "expertise research?", false),
         new(OriginalSaveArea.Hospital, 433, 10, "research distribution", true),

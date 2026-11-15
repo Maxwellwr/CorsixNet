@@ -71,6 +71,11 @@ static void Summary(OriginalSaveGame save)
 
     var plots = Enumerable.Range(1, OriginalSaveGame.MaxPlots - 1).Where(p => save.PlotOwner(p) == 1).ToList();
     Console.WriteLine($"Plots bought: {string.Join(", ", plots)}");
+    if (save.Statement.Count > 0)
+    {
+        Console.WriteLine($"Bank statement: {save.Statement.Count} lines; totals by kind: " + string.Join(", ", save.Statement.GroupBy(l => l.Kind).OrderBy(g => g.Key).Select(g => $"{g.Key}:{g.Sum(l => l.Amount)}")));
+    }
+
     Console.WriteLine($"Entities in use: {save.Entities.Count} of {OriginalSaveGame.EntityCount}");
     foreach (var group in save.Entities.GroupBy(e => e.Kind).OrderBy(g => g.Key))
     {

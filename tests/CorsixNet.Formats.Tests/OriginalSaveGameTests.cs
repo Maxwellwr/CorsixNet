@@ -82,7 +82,7 @@ public class OriginalSaveGameTests
     [InlineData(399030, "0x616B6 day")]
     [InlineData(399031, "0x616B7 month")]
     [InlineData(399968 + 4697 + 53, "hospital 1 +53 money")]
-    [InlineData(399000, "0x61698")]
+    [InlineData(0x61000, "0x61000")]
     public void DescribesOffsets(int offset, string expected)
     {
         Assert.Equal(expected, OriginalSaveGame.DescribeOffset(offset));
@@ -159,6 +159,26 @@ public class OriginalSaveGameTests
         Assert.Equal((168, 10000, 9180, true), (disease.Charge, disease.ChargePercent, disease.MoneyEarned, disease.Known));
         Assert.Equal((3, 2, 1), (disease.Recoveries, disease.Fatalities, disease.TurnedAway));
         Assert.False(parsed.Disease(2).Known);
+    }
+
+    [Fact]
+    public void ReadsBankStatement()
+    {
+        var data = new byte[OriginalSaveGame.Length];
+        var line = OriginalSaveGame.StatementOffset + 8;
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(line), -2280);
+        data[line + 4] = 4;
+        data[line + 5] = 2;
+        data[line + 6] = 0;
+        BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(line + 8), 923);
+        data[line + 12] = 7;
+        data[line + 13] = 28;
+        data[line + 14] = 8;
+        data[line + 15] = 2;
+
+        var statement = OriginalSaveGame.Parse(data).Statement;
+
+        Assert.Equal([new OriginalSaveStatementLine(-2280, 4, 2, 0, 0), new OriginalSaveStatementLine(923, 7, 28, 8, 2)], statement);
     }
 
     [Fact]
@@ -253,8 +273,9 @@ public class OriginalSaveGameTests
                 Assert.Equal(1, Math.Abs(room.Door.X - room.Outside.X) + Math.Abs(room.Door.Y - room.Outside.Y));
             }
 
-            // Every staff member on the payroll has an entity, and tiles point at entities standing on them.
-            Assert.Equal(local.Staff, save.Entities.Count(e => e.Kind == 4 && e.TileX != 0));
+            // Every staff member on the payroll has an entity (someone fired and still walking out has one too),
+            // and tiles point at entities standing on them.
+            Assert.True(save.Entities.Count(e => e.Kind == 4 && e.TileX != 0) >= local.Staff);
             var bySlot = save.Entities.ToDictionary(e => e.Slot);
             for (var y = 0; y < OriginalSaveGame.MapSize; y++)
             {

@@ -146,6 +146,17 @@ public sealed record OriginalSaveRoom(int Index, ReadOnlyMemory<byte> Raw)
     }
 }
 
+/// <summary>One line of the bank statement (8 bytes).</summary>
+/// <param name="Amount">Money in (positive) or out (negative).</param>
+/// <param name="Kind">
+/// What it was: 1 wages, 3 furniture bought, 4 room built, 7 treatment, 13 drinks machine income, 16 heating,
+/// 18 loan, 22 drug cost; others (2, 17, 20, 23, 27, 34, 35) not identified yet.
+/// </param>
+/// <param name="Day">Day of the month, from 1.</param>
+/// <param name="Month">Month of the game, from 0.</param>
+/// <param name="Detail">For treatments the disease (expertise) index; for other kinds left over and meaningless.</param>
+public readonly record struct OriginalSaveStatementLine(int Amount, byte Kind, byte Day, byte Month, byte Detail);
+
 /// <summary>Per-player hospital data of an original save (4697 bytes each).</summary>
 /// <param name="Name">Hospital (player) name.</param>
 /// <param name="Kind">1 local player, 2 computer player, 0 unused.</param>
@@ -293,6 +304,12 @@ public sealed class OriginalSaveGame
     /// <summary>Number of plot bytes read; levels use far fewer parcels.</summary>
     public const int MaxPlots = 32;
 
+    /// <summary>Offset of the bank statement: a ring of <see cref="StatementCount"/> lines of 8 bytes.</summary>
+    public const int StatementOffset = 0x6151F;
+
+    /// <summary>Number of bank statement lines kept.</summary>
+    public const int StatementCount = 50;
+
     /// <summary>Offset of the day of the month (1-based); the month follows.</summary>
     public const int DateOffset = 399030;
 
@@ -343,6 +360,29 @@ public sealed class OriginalSaveGame
         ArgumentOutOfRangeException.ThrowIfNegative(parcel);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(parcel, MaxPlots);
         return Data.Span[PlotOffset + parcel];
+    }
+
+    /// <summary>
+    /// The bank statement lines in storage order, empty ones left out. It is a ring, so after 50 lines the
+    /// newest overwrite the oldest; sort by month and day for display.
+    /// </summary>
+    public IReadOnlyList<OriginalSaveStatementLine> Statement
+    {
+        get
+        {
+            var lines = new List<OriginalSaveStatementLine>();
+            var span = Data.Span;
+            for (var i = 0; i < StatementCount; i++)
+            {
+                var line = span.Slice(StatementOffset + (i * 8), 8);
+                if (line.ContainsAnyExcept((byte)0))
+                {
+                    lines.Add(new OriginalSaveStatementLine(BinaryPrimitives.ReadInt32LittleEndian(line), line[4], line[5], line[6], line[7]));
+                }
+            }
+
+            return lines;
+        }
     }
 
     /// <summary>The map tile at a position.</summary>
