@@ -436,7 +436,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         UiText.Current = _texts;
         ApplyLanguageFont();
         _sounds = SoundEffects.Load(install, _config, VoiceOf(_config));
-        _music = new BackgroundMusic(install.MusicTracks(), WinMmMidiOutput.Open() is { } midi ? new MidiPlayer(midi) : null, path => Rnc.DecompressIfNeeded(File.ReadAllBytes(path)), new Random())
+        _music = new BackgroundMusic(install.MusicTracks(), NewMidiPlayer(_config), path => Rnc.DecompressIfNeeded(File.ReadAllBytes(path)), new Random())
         {
             PlayMusic = _config.PlayMusic,
         };
@@ -4058,9 +4058,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private OptionsWindow NewOptionsWindow() =>
         new(_config, ApplyConfig, InstalledLanguageNames(_install), () => _windows.Open(new HotkeyAssignWindow(_hotkeys, SaveHotkeys, () => _windows.Open(NewOptionsWindow()))), FontChoices, PreviewLanguage, OpenSettingsDialog);
 
+    /// <summary>
+    /// <c>Audio:initMidiPlayer</c>: the MIDI player on the output the settings name (<c>midi_api</c>, <c>midi_port</c>),
+    /// or null when there is none.
+    /// </summary>
+    private static MidiPlayer? NewMidiPlayer(GameConfig config) =>
+        WinMmMidiOutput.Open(config.MidiPort) is { } output ? new MidiPlayer(output) : null;
+
     /// <summary>UIOptions's buttons: a settings dialog, whose Back opens the options again.</summary>
     private void OpenSettingsDialog(SettingsDialogKind kind) =>
-        _windows.Open(new SettingsDialog(kind, _config, ApplyConfig, () => _windows.Open(NewOptionsWindow()), FontChoices, _music.HasMusic ? () => _windows.Open(new JukeboxWindow(_music.Playlist.Count)) : null));
+        _windows.Open(new SettingsDialog(kind, _config, ApplyConfig, () => _windows.Open(NewOptionsWindow()), FontChoices, _music.HasMusic ? () => _windows.Open(new JukeboxWindow(_music.Playlist.Count)) : null, WinMmMidiOutput.Ports));
 
     /// <summary>
     /// The system's fonts with every letter of the language's translation, for the options window's font choice, empty
@@ -4502,7 +4509,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// <summary>The options window's Apply: the new settings are saved to <c>config.yaml</c> and used at once.</summary>
     private void ApplyConfig(GameConfig config)
     {
+        var midiChanged = config.MidiApi != _config.MidiApi || config.MidiPort != _config.MidiPort;
         _config = config;
+        if (midiChanged)
+        {
+            _music.SetPlayer(NewMidiPlayer(config), config.MusicVolume);
+        }
+
         _buildTool.AverageContents = config.EnableAverageContents;
         OriginalBottomPanel.MachineMenuButton = config.MachineMenuButton;
         _adviser.IsEnabled = !config.AdviserDisabled;

@@ -32,7 +32,8 @@ internal enum SettingsDialogKind
 /// <param name="back">Opens the options again.</param>
 /// <param name="fonts">The fonts the language can be drawn with (the graphics dialog's font), or null.</param>
 /// <param name="jukebox">Opens the jukebox (the sound dialog's button), or null without music.</param>
-internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config, Action<GameConfig> apply, Action back, Func<string, LanguageFontChoices?>? fonts = null, Action? jukebox = null) : UiWindow
+/// <param name="midiPorts">The system's MIDI outputs (the sound dialog's MIDI API and port), or null for none.</param>
+internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config, Action<GameConfig> apply, Action back, Func<string, LanguageFontChoices?>? fonts = null, Action? jukebox = null, Func<IReadOnlyList<string>>? midiPorts = null) : UiWindow
 {
     /// <summary>graphics_settings.lua's window sizes for a screen of ordinary size.</summary>
     public static readonly (int Width, int Height)[] WindowSizes =
@@ -164,12 +165,24 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
                     Switch(UiText.Get("corsixnet.options.room_information", "Room information"), _config.RoomInformationDialogs, on => _config with { RoomInformationDialogs = on }),
                 ];
             case SettingsDialogKind.Sound:
-                return
+                List<DialogSetting> sound =
                 [
                     Volume(Label("sound_volume", "Sound Volume"), _config.PlaySounds, _config.SoundVolume, (on, volume) => _config with { PlaySounds = on, SoundVolume = volume }, Tip("sound_volume")),
                     Volume(Label("announcement_volume", "Announcement Volume"), _config.PlayAnnouncements, _config.AnnouncementVolume, (on, volume) => _config with { PlayAnnouncements = on, AnnouncementVolume = volume }, Tip("announcement_volume")),
                     Volume(Label("music_volume", "Music Volume"), _config.PlayMusic, _config.MusicVolume, (on, volume) => _config with { PlayMusic = on, MusicVolume = volume }, Tip("music_volume")),
                 ];
+                if (midiPorts?.Invoke() is { Count: > 0 } ports)
+                {
+                    // The MIDI API (the default, or the platform's) and its port, the default first (midi_port_options).
+                    List<string> apis = [string.Empty, Audio.WinMmMidiOutput.ApiName];
+                    List<string> portChoices = [string.Empty, .. ports];
+                    sound.Add(new(Label("midi_api", "MIDI API"), _config.MidiApi is { Length: > 0 } api ? api : Label("default_midi_api", "Default (Software)"),
+                        step => Apply(_config with { MidiApi = Cycle(apis, _config.MidiApi, step) }), Tip("midi_api")));
+                    sound.Add(new(Label("midi_port", "MIDI Port"), _config.MidiPort is { Length: > 0 } port ? port : Label("default_midi_port", "Default"),
+                        step => Apply(_config with { MidiPort = Cycle(portChoices, _config.MidiPort, step) }), Tip("midi_port")));
+                }
+
+                return sound;
             default:
                 return
                 [
@@ -235,6 +248,12 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
         var index = paths.FindIndex(path => string.Equals(path, chosen, StringComparison.OrdinalIgnoreCase));
         var next = ((index < 0 ? 0 : index) + step + paths.Count) % paths.Count;
         return _config.WithLanguageFont(_config.Language, paths[next]);
+    }
+
+    private static string Cycle(List<string> choices, string current, int step)
+    {
+        var index = choices.FindIndex(choice => string.Equals(choice, current, StringComparison.Ordinal));
+        return choices[index < 0 ? 0 : (index + step + choices.Count) % choices.Count];
     }
 
     private static decimal Wrap(decimal value, decimal low, decimal high) => value < low ? high : value > high ? low : value;
