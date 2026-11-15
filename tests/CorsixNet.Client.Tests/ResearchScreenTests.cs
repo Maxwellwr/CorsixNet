@@ -17,5 +17,17 @@ public sealed class ResearchScreenTests
     }
 
     [Fact]
+    public void ALabelTooWideForTheArrowsBreaksAtASpace()
+    {
+        // Eight pixels a character: 24 characters fit before the arrows.
+        static int Width(string text) => text.Length * 8;
+
+        Assert.Equal(["Улучшения"], ResearchScreen.LabelLines("Улучшения", Width));
+        Assert.Equal(["Диагностическое", "оборудование"], ResearchScreen.LabelLines("Диагностическое оборудование", Width));
+        Assert.Equal(["Оборудование для лечения", "пациентов"], ResearchScreen.LabelLines("Оборудование для лечения пациентов", Width));
+        Assert.Equal(["Неразрывноедлинноеслововсеравно"], ResearchScreen.LabelLines("Неразрывноедлинноеслововсеравно", Width));
+    }
+
+    [Fact]
     public void WithoutTheGraphicsResearchIsATable() => Assert.False(new ResearchWindow().IsFullscreen(new WindowTestHost()));
 }

@@ -29,6 +29,9 @@ internal sealed class ResearchScreen
 
     private static readonly Rectangle Close = new(607, 447, 40, 40);
 
+    /// <summary>The labels start at x 170; the arrows (and "done") start at 372.</summary>
+    public const int LabelWidth = 372 - 4 - 170;
+
     private readonly long _opened = Environment.TickCount64;
     private (ResearchCategory Category, int Direction)? _pressed;
     private bool _closePressed;
@@ -40,6 +43,28 @@ internal sealed class ResearchScreen
 
     /// <summary>The arrows of an area (1 to 5 from the top): less at x 372, more at 450, 40 pixels square.</summary>
     public static Rectangle Arrow(int row, int direction) => new(direction < 0 ? 372 : 450, 21 + (row * 41), 40, 40);
+
+    /// <summary>
+    /// A label as it fits before the arrows: on one line, or broken at the last space that lets the first line fit
+    /// (Russian's "Диагностическое оборудование" ran under the arrows and "done"). CorsixTH draws it on one line.
+    /// </summary>
+    public static IReadOnlyList<string> LabelLines(string label, Func<string, int> width)
+    {
+        if (width(label) <= LabelWidth)
+        {
+            return [label];
+        }
+
+        for (var space = label.LastIndexOf(' '); space > 0; space = label.LastIndexOf(' ', space - 1))
+        {
+            if (width(label[..space]) <= LabelWidth)
+            {
+                return [label[..space], label[(space + 1)..]];
+            }
+        }
+
+        return [label];
+    }
 
     /// <summary>The water's and the rat's sprites after <paramref name="ticks"/> (each moves on every fourth tick).</summary>
     public static (int Water, int Rat) Animation(long ticks) => (5 + (int)(ticks / 4 % 8), 13 + (int)(ticks / 4 % 8));
@@ -71,7 +96,15 @@ internal sealed class ResearchScreen
             var category = categories[i - 1];
             var area = research.Area(category);
             var y = 28 + (i * 41);
-            font.Draw(batch, host.Texts?.String(17, i) ?? category.ToString(), new Vector2(origin.X + 170, origin.Y + y));
+            // Two lines stand half a line higher, between the bar above and their own.
+            var lines = LabelLines(host.Texts?.String(17, i) ?? category.ToString(), text => font.Measure(text).Width);
+            var lineHeight = font.LineHeight;
+            var top = y - ((lines.Count - 1) * lineHeight / 2);
+            for (var line = 0; line < lines.Count; line++)
+            {
+                font.Draw(batch, lines[line], new Vector2(origin.X + 170, origin.Y + top + (line * lineHeight)));
+            }
+
             if (area.Current.IsNone)
             {
                 // updateCategories: a finished area's arrows are covered with a dark panel.
