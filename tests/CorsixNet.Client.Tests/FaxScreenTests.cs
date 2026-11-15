@@ -64,6 +64,27 @@ public sealed class FaxScreenTests
     }
 
     [Fact]
+    public void TheFaxesNameTheRoomToBuildInTheChosenTranslation()
+    {
+        // World:getRoomNameAndRequiredStaffName: the faxes name the room by its rooms_long name, not the English one.
+        var languages = CorsixNet.Content.Languages.CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages"));
+        var russian = languages.Load("Russian", _ => null);
+        var host = new WindowTestHost { Texts = new CorsixNet.Content.OriginalTexts(CorsixNet.Formats.StringTable.Parse(new byte[] { 0, 0 }), russian) };
+        var pharmacy = russian.Get("rooms_long.pharmacy")!;
+        Assert.Equal("Аптека", pharmacy);
+
+        var patient = new CorsixNet.Sim.People.PatientBehaviour();
+        patient.SetDisease(CorsixNet.Sim.Diseases.DiseaseCatalog.Find("the_squits")!, 0, host.Simulation.Random);
+        var missing = FaxWindow.NoTreatmentRoomLines(host, patient).ToList()[2];
+        Assert.Contains(pharmacy, missing, StringComparison.Ordinal);
+        Assert.DoesNotContain("Pharmacy", missing, StringComparison.Ordinal);
+
+        var emergency = FaxWindow.EmergencyStartLines(host, new CorsixNet.Sim.Disasters.Emergency("the_squits", 5, 300, 75)).ToList();
+        Assert.Contains(emergency, line => line.Contains(pharmacy, StringComparison.Ordinal));
+        Assert.DoesNotContain(emergency, line => line.Contains("Pharmacy", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void TheEmergencyAndEpidemicFaxesSayWhatTheyAreAbout()
     {
         var host = new WindowTestHost();
