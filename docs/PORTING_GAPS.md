@@ -228,7 +228,7 @@ Hospitals win and lose by the level's criteria (`endconditions.lua`), and the pr
   nothing to play (`MainMenuWindow`: Campaign, Custom Campaign, Single Scenario with Free Build, Continue Game, Load
   Game, Settings, Exit, the map editor; `CustomGames`, `levels`/`campaigns` in `config.txt`), and the new game dialog
   with the player name's text box, saved in the settings, and the tutorial (`NewGameWindow`, `Tutorial`,
-  `resizables/new_game.lua`, `game_ui.lua`). Not yet: the menu's own background.
+  `resizables/new_game.lua`, `game_ui.lua`), on CorsixTH's own background (`MenuBackground`, `UI:setMenuBackground`).
 - AI hospitals (Partial: `computer[n]` opponents take their turns for patients and count them as
   visitors, as CorsixTH's `AIHospital` does; like CorsixTH's, they build nothing and play no part in
   the league, awards or end conditions; `hospitals/ai_hospital.lua`).

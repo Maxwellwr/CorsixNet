@@ -33,7 +33,8 @@ the RNC decompressor modifications (`Rnc.cs`).
 
 Included as is: CorsixTH's own interface sprites `CorsixTH/Bitmap/aux_ui.tab` and `aux_ui.dat` (at commit 1a1460f,
 in `src/CorsixNet.Client/Assets`), for the bottom panel's machine menu button, and its palette `CorsixTH/Bitmap/lose.pl8`, for
-the losing movies' newspaper headlines.
+the losing movies' newspaper headlines, and the main menu's backgrounds `CorsixTH/Bitmap/mainmenu480`, `720` and `1080`
+(`.dat`, carried gzip-compressed, and `.pal`).
 
 Included as YAML: CorsixTH's language files (`src/CorsixNet.Content/Languages/*.yaml`, from
 `CorsixTH/Lua/languages` at commit 7639874, written out by `tools/CorsixNet.LuaConverter` with the same strings),
