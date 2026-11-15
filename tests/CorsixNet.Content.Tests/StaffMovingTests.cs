@@ -1,4 +1,6 @@
+using CorsixNet.Formats.Tests;
 using CorsixNet.Sim;
+using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Commands;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
@@ -154,6 +156,79 @@ public class StaffMovingTests
         stream.Position = 0;
 
         Assert.Equal(command, Command.Read(new SimReader(stream)));
+    }
+
+    [Fact]
+    public void ANursePickedUpInTheMiddleOfATreatmentStopsAndThePatientWaitsForTheNext()
+    {
+        var install = RealGameData.Require();
+        var simulation = NewStaffedHospital(LevelOne(install));
+        BuildPharmacy(simulation);
+        var pharmacy = simulation.Entities.OfType<Room>().Single(r => r.RoomType == "pharmacy");
+        Humanoid? nurse = null;
+        for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay && nurse is null; tick++)
+        {
+            simulation.Step();
+            nurse = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Behaviour is NurseBehaviour { Phase: NursePhase.Treating, Use: not null });
+        }
+
+        Assert.NotNull(nurse);
+        var patient = (Humanoid)simulation.FindEntity(((NurseBehaviour)nurse.Behaviour!).Use!.UseWithId)!;
+        var cured = simulation.Hospitals[0].Cured;
+
+        // CorsixTH lets the room deal with her going: no waiting for the drink to be poured.
+        Assert.Equal(StaffHireProblem.None, StaffMoving.Check(simulation, nurse.Id, new(3, 20), 0));
+        Run(simulation, new MoveStaffCommand(nurse.Id, new(3, 20)));
+
+        Assert.Equal(new TilePosition(3, 20), nurse.Tile);
+        Assert.Null(nurse.ActionAnimation);
+        Assert.False(patient.IsHidden);
+        Assert.Null(patient.ActionAnimation);
+        Assert.Equal(PatientPhase.StandingAtObject, ((PatientBehaviour)patient.Behaviour!).Phase);
+        Assert.False(pharmacy.StaffPresent);
+        Assert.Equal(cured, simulation.Hospitals[0].Cured);
+
+        // The pharmacy sends for her again and she treats the patient from the start.
+        for (var tick = 0; tick < 10 * GameDate.HoursPerDay && simulation.Hospitals[0].Cured == cured; tick++)
+        {
+            simulation.Step();
+        }
+
+        Assert.True(simulation.Hospitals[0].Cured > cured);
+    }
+
+    [Fact]
+    public void ADoctorPickedUpWhileExaminingAtTheTrolleyStopsAndThePatientGetsOff()
+    {
+        var install = RealGameData.Require();
+        var simulation = NewStaffedHospital(LevelOne(install));
+        BuildGeneralDiagnosis(simulation);
+        Humanoid? patient = null;
+        for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay && patient is null; tick++)
+        {
+            simulation.Step();
+            patient = simulation.Entities.OfType<Humanoid>().FirstOrDefault(h => h.Behaviour is PatientBehaviour { TrolleyUse: not null });
+        }
+
+        Assert.NotNull(patient);
+        var behaviour = (PatientBehaviour)patient.Behaviour!;
+        var room = (Room)simulation.FindEntity(behaviour.TargetId)!;
+        var doctor = (Humanoid)simulation.FindEntity(room.StaffId)!;
+
+        Run(simulation, new MoveStaffCommand(doctor.Id, new(3, 20)));
+
+        // The examination stops where it was: both seen again and out of its animation; with nobody in the room the
+        // patient gets off the trolley and goes back to the screen, as when the doctor leaves.
+        Assert.Equal(new TilePosition(3, 20), doctor.Tile);
+        Assert.False(doctor.IsHidden);
+        Assert.Null(doctor.ActionAnimation);
+        Assert.Null(behaviour.TrolleyUse);
+        Assert.Null(patient.ActionAnimation);
+        Assert.NotEqual(PatientPhase.OnTrolley, behaviour.Phase);
+
+        // The room sends for a doctor again.
+        StepFor(simulation, 600);
+        Assert.True(room.StaffPresent);
     }
 
     /// <summary>A passable tile of the GP's office, not taken by its objects.</summary>

@@ -91,6 +91,16 @@ public sealed class NurseBehaviour : HumanoidBehaviour, IRoomStaff
     /// <summary>Whether she is free for a room or a vaccination: without a room and not vaccinating.</summary>
     internal bool IsFree => Phase == NursePhase.Idle && RoomId == 0;
 
+    /// <summary>Picked up in the middle of a treatment at the pharmacy cabinet: the shared use stops where it was.</summary>
+    internal void AbortTreatment(Simulation simulation, Humanoid humanoid)
+    {
+        if (Phase == NursePhase.Treating && Use is { } use)
+        {
+            use.Abort(simulation, humanoid);
+            Use = null;
+        }
+    }
+
     void IRoomStaff.GoToRoom(Simulation simulation, Humanoid humanoid, Room room, TilePosition inside)
     {
         Meander.Reset();

@@ -190,6 +190,34 @@ public sealed class MultiObjectUse
         return ObjectUseEvent.Done;
     }
 
+    /// <summary>
+    /// The use cut off when one of the two is picked up (<c>action_pickup_start</c> interrupting the multi use object
+    /// action): layers back, both seen again and out of the use's animations, the user back at the use position; the
+    /// object does not wear and the use is not done.
+    /// </summary>
+    internal void Abort(Simulation simulation, Humanoid humanoid)
+    {
+        var useWith = simulation.FindEntity(UseWithId) as Humanoid;
+        if (UseLayer3 >= 0)
+        {
+            humanoid.SetLayer(Layer3, OldLayer3);
+            useWith?.SetLayer(Layer3, OldLayer3UseWith);
+        }
+
+        if (useWith is not null)
+        {
+            useWith.IsHidden = false;
+            useWith.ClearActionAnimation();
+        }
+
+        humanoid.IsHidden = false;
+        humanoid.ClearActionAnimation();
+        if (simulation.FindEntity(ObjectId) is RoomObject placed && simulation.Content.FindObject(placed.ObjectType)?.Orientations.GetValueOrDefault(placed.Orientation) is { } layout)
+        {
+            humanoid.PlaceAt(new TilePosition(placed.Tile.X + layout.Use.X, placed.Tile.Y + layout.Use.Y));
+        }
+    }
+
     /// <summary><c>action_multi_use_phase</c>: both users' animations for the phase.</summary>
     private void EnterPhase(Simulation simulation, Humanoid humanoid, int phase)
     {
