@@ -31,10 +31,12 @@ internal sealed class PlaylistEntry(MusicTrack track)
 /// <param name="read">Reads a track's file (RNC compressed or not).</param>
 internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlayer? player, Func<string, byte[]> read, Random random) : IDisposable
 {
+    private MidiPlayer? _player = player;
+
     public IReadOnlyList<PlaylistEntry> Playlist { get; } = [.. tracks.Select(track => new PlaylistEntry(track))];
 
     /// <summary>Whether there is music to play (<c>has_bg_music</c>): tracks and a MIDI output.</summary>
-    public bool HasMusic => player is not null && Playlist.Count > 0;
+    public bool HasMusic => _player is not null && Playlist.Count > 0;
 
     /// <summary>The track playing or paused (<c>background_music</c>), or null when stopped.</summary>
     public int? Current { get; private set; }
@@ -72,20 +74,20 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     /// </summary>
     public void Play(int index)
     {
-        if (player is null || index < 0 || index >= Playlist.Count || !PlayMusic)
+        if (_player is null || index < 0 || index >= Playlist.Count || !PlayMusic)
         {
             return;
         }
 
         if (IsPaused)
         {
-            player.Resume();
+            _player.Resume();
             IsPaused = false;
         }
 
         try
         {
-            player.PlayXmi(read(Playlist[index].Track.Path));
+            _player.PlayXmi(read(Playlist[index].Track.Path));
             Current = index;
         }
         catch (Exception e) when (e is IOException or InvalidDataException or UnauthorizedAccessException)
@@ -98,7 +100,7 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     /// <summary><c>pauseBackgroundTrack</c>: pauses the track, or goes on with it; whether it is paused now.</summary>
     public bool TogglePause()
     {
-        if (player is null || Current is null)
+        if (_player is null || Current is null)
         {
             return false;
         }
@@ -106,11 +108,11 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
         IsPaused = !IsPaused;
         if (IsPaused)
         {
-            player.Pause();
+            _player.Pause();
         }
         else
         {
-            player.Resume();
+            _player.Resume();
         }
 
         return IsPaused;
@@ -120,12 +122,12 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     public void Stop()
     {
         IsPaused = false;
-        player?.Stop();
+        _player?.Stop();
         Current = null;
     }
 
     /// <summary><c>setBackgroundVolume</c>.</summary>
-    public void SetVolume(decimal volume) => player?.SetVolume((double)Math.Clamp(volume, 0m, 1m));
+    public void SetVolume(decimal volume) => _player?.SetVolume((double)Math.Clamp(volume, 0m, 1m));
 
     /// <summary>
     /// <c>UI:togglePlayMusic</c>: with nothing playing, music is allowed and a random track starts; otherwise it is
@@ -150,13 +152,30 @@ internal sealed class BackgroundMusic(IReadOnlyList<MusicTrack> tracks, MidiPlay
     /// <summary><c>onMusicOver</c>: once a track has ended, the next one plays.</summary>
     public void Update()
     {
-        if (player is not null && player.TakeMusicOver() && Current is not null)
+        if (_player is not null && _player.TakeMusicOver() && Current is not null)
         {
             PlayNext();
         }
     }
 
-    public void Dispose() => player?.Dispose();
+    public void Dispose() => _player?.Dispose();
+
+    /// <summary>
+    /// <c>Audio:initMidiPlayer</c> after the MIDI API or port changes: the new player takes over at the volume set, and
+    /// the track playing starts again on it.
+    /// </summary>
+    public void SetPlayer(MidiPlayer? next, decimal volume)
+    {
+        var playing = Current;
+        Stop();
+        _player?.Dispose();
+        _player = next;
+        SetVolume(volume);
+        if (playing is { } index)
+        {
+            Play(index);
+        }
+    }
 
     /// <summary>
     /// <c>UIJukebox:toggleTrack</c>: a track on or off; turning off the one playing stops it and plays another at random.

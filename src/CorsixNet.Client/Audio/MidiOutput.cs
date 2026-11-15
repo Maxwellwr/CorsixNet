@@ -23,8 +23,14 @@ internal sealed partial class WinMmMidiOutput : IMidiOutput
 
     private WinMmMidiOutput(nint handle) => _handle = handle;
 
-    /// <summary>Opens the MIDI mapper, or returns null when this is not Windows or it cannot be opened.</summary>
-    public static WinMmMidiOutput? Open()
+    /// <summary>The API's name in the settings and the sound dialog (RtMidi's <c>midi_api_to_name</c> for WINDOWS_MM).</summary>
+    public const string ApiName = "Windows MM";
+
+    /// <summary>
+    /// Opens the output named <paramref name="port"/> (<c>midi_port</c>), or the MIDI mapper for none or one not found
+    /// (<c>midi_player::set_port</c> and <c>open_default_port</c>); null when this is not Windows or it cannot be opened.
+    /// </summary>
+    public static WinMmMidiOutput? Open(string? port = null)
     {
         if (!OperatingSystem.IsWindows())
         {
@@ -33,11 +39,57 @@ internal sealed partial class WinMmMidiOutput : IMidiOutput
 
         try
         {
-            return midiOutOpen(out var handle, MidiMapper, 0, 0, 0) == 0 ? new WinMmMidiOutput(handle) : null;
+            var device = MidiMapper;
+            if (port is { Length: > 0 })
+            {
+                var index = Ports().ToList().FindIndex(name => string.Equals(name, port, StringComparison.Ordinal));
+                if (index >= 0)
+                {
+                    device = (uint)index;
+                }
+                else
+                {
+                    Console.Error.WriteLine($"MIDI device not found: {port}");
+                }
+            }
+
+            return midiOutOpen(out var handle, device, 0, 0, 0) == 0 ? new WinMmMidiOutput(handle) : null;
         }
         catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException)
         {
             return null;
+        }
+    }
+
+    /// <summary>The names of the system's MIDI outputs (<c>midi_player::port_list</c>); none when this is not Windows.</summary>
+    public static IReadOnlyList<string> Ports()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return [];
+        }
+
+        try
+        {
+            var names = new List<string>();
+            var count = midiOutGetNumDevs();
+            for (uint i = 0; i < count; i++)
+            {
+                var caps = default(MidiOutCaps);
+                unsafe
+                {
+                    if (midiOutGetDevCapsW(i, ref caps, (uint)sizeof(MidiOutCaps)) == 0)
+                    {
+                        names.Add(new string(caps.Name, 0, 32).TrimEnd('\0'));
+                    }
+                }
+            }
+
+            return names;
+        }
+        catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException)
+        {
+            return [];
         }
     }
 
@@ -110,6 +162,20 @@ internal sealed partial class WinMmMidiOutput : IMidiOutput
         }
     }
 
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private unsafe struct MidiOutCaps
+    {
+        public ushort Manufacturer;
+        public ushort Product;
+        public uint DriverVersion;
+        public fixed char Name[32];
+        public ushort Technology;
+        public ushort Voices;
+        public ushort Notes;
+        public ushort ChannelMask;
+        public uint Support;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct MidiHeader
     {
@@ -136,6 +202,12 @@ internal sealed partial class WinMmMidiOutput : IMidiOutput
 
     [LibraryImport("winmm.dll")]
     private static partial uint midiOutShortMsg(nint handle, uint message);
+
+    [LibraryImport("winmm.dll")]
+    private static partial uint midiOutGetNumDevs();
+
+    [LibraryImport("winmm.dll")]
+    private static partial uint midiOutGetDevCapsW(uint deviceId, ref MidiOutCaps caps, uint size);
 
     [LibraryImport("winmm.dll")]
     private static partial uint midiOutPrepareHeader(nint handle, ref MidiHeader header, uint size);

@@ -66,4 +66,21 @@ public class ResizableDialogTests
         Assert.Equal("Short", ResizableLook.ClipLine("Short", 100, text => text.Length * 10));
         Assert.Equal("ABCD...", ResizableLook.ClipLine("ABCDEFGHIJKL", 80, text => text.Length * 10));
     }
+
+    [Fact]
+    public void TheSoundDialogChoosesTheMidiApiAndPort()
+    {
+        var dialog = new SettingsDialog(SettingsDialogKind.Sound, new GameConfig(), _ => { }, () => { }, midiPorts: () => ["Synth A", "Synth B"]);
+        var port = dialog.Settings().Single(setting => setting.Label == "MIDI Port");
+        Assert.Equal("Default", port.Value);
+        port.Change(1);
+        Assert.Equal("Synth A", dialog.Config.MidiPort);
+        dialog.Settings().Single(setting => setting.Label == "MIDI Port").Change(-1);
+        Assert.Equal(string.Empty, dialog.Config.MidiPort);
+        dialog.Settings().Single(setting => setting.Label == "MIDI API").Change(1);
+        Assert.Equal("Windows MM", dialog.Config.MidiApi);
+
+        // Without MIDI outputs there is nothing to choose.
+        Assert.DoesNotContain(new SettingsDialog(SettingsDialogKind.Sound, new GameConfig(), _ => { }, () => { }).Settings(), setting => setting.Label == "MIDI API");
+    }
 }

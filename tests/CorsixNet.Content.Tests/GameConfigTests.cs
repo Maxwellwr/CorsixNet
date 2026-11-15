@@ -46,6 +46,7 @@ public sealed class GameConfigTests : IDisposable
             movies: false
             play_intro: false
             play_demo: false
+            midi_port: 'Microsoft GS Wavetable Synth'
             """);
 
         AssertReadSettings(config);
@@ -71,6 +72,8 @@ public sealed class GameConfigTests : IDisposable
         Assert.False(config.Movies);
         Assert.False(config.PlayIntro);
         Assert.False(config.PlayDemo);
+        Assert.Equal(string.Empty, config.MidiApi);
+        Assert.Equal("Microsoft GS Wavetable Synth", config.MidiPort);
         Assert.False(config.PlaySounds);
         Assert.Equal(0.25m, config.SoundVolume);
         Assert.Equal(new(3, 6.5, 120, 0.5, true), config.ScrollSettings());

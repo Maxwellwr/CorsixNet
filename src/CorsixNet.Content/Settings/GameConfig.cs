@@ -141,6 +141,12 @@ public sealed record GameConfig
     /// <summary>The announcer's volume, from 0 to 1 (<c>announcement_volume</c>).</summary>
     public decimal AnnouncementVolume { get; init; } = 0.5m;
 
+    /// <summary>The MIDI API the music plays through (<c>midi_api</c>); empty for the default.</summary>
+    public string MidiApi { get; init; } = string.Empty;
+
+    /// <summary>The MIDI output of that API (<c>midi_port</c>); empty for the system's default.</summary>
+    public string MidiPort { get; init; } = string.Empty;
+
     /// <summary>Whether movies play at all (<c>movies</c>).</summary>
     public bool Movies { get; init; } = true;
 
@@ -267,6 +273,8 @@ public sealed record GameConfig
             AnnouncementVolume = Number("announcement_volume", defaults.AnnouncementVolume),
             PlayMusic = Bool("play_music", defaults.PlayMusic),
             Movies = Bool("movies", defaults.Movies),
+            MidiApi = Text("midi_api", defaults.MidiApi),
+            MidiPort = Text("midi_port", defaults.MidiPort),
             PlayIntro = Bool("play_intro", defaults.PlayIntro),
             PlayDemo = Bool("play_demo", defaults.PlayDemo),
             MusicVolume = Number("music_volume", defaults.MusicVolume),
@@ -495,6 +503,15 @@ public sealed record GameConfig
             """);
         text.Append(CultureInfo.InvariantCulture, $"play_music: {Yaml(PlayMusic)}\n");
         text.Append(CultureInfo.InvariantCulture, $"music_volume: {Number(MusicVolume)}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Midi API and Device settings. Empty for the default; the sound settings
+            # list the APIs and ports there are.
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"midi_api: {Quote(MidiApi)}\nmidi_port: {Quote(MidiPort)}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------
