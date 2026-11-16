@@ -819,6 +819,29 @@ public sealed class Hospital
         MoneyOutThisMonth = 0;
     }
 
+    /// <summary>
+    /// Takes over an imported save's records: totals, reputation and value, the graphs' monthly figures (oldest first)
+    /// and the bank statement (oldest first; the latest <see cref="LogLength"/> are kept).
+    /// </summary>
+    internal void ImportRecords(int visitors, int cured, int deaths, int reputation, long value, IReadOnlyList<MonthStatistics> months, IReadOnlyList<Transaction> statement)
+    {
+        Visitors = visitors;
+        Cured = cured;
+        Deaths = deaths;
+        Reputation = reputation;
+        Value = value;
+        if (months.Count > 0)
+        {
+            _statistics.Clear();
+            _statistics.AddRange(months);
+        }
+
+        foreach (var transaction in statement)
+        {
+            Log(transaction);
+        }
+    }
+
     internal void Spend(long tick, int amount, TransactionKind kind, string subject)
     {
         if (FreeBuild)

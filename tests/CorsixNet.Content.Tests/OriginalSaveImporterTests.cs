@@ -46,6 +46,14 @@ public sealed class OriginalSaveImporterTests(ITestOutputHelper output)
             output.WriteLine($"   staff {staff.Count}/{staffInSave}");
             Assert.Equal(staffInSave, staff.Count);
             Assert.All(staff, s => Assert.NotNull(s.Profile!.ImportedName));
+            var saved = save.Hospitals[0];
+            Assert.Equal(saved.Reputation, hospital.Reputation);
+            Assert.Equal(saved.PeopleCured, hospital.Cured);
+            output.WriteLine($"   statement {hospital.Transactions.Count}, months {hospital.Statistics.Count}, discovered {hospital.Casebook.Values.Count(c => c.Discovered)}");
+            if (hospital.Transactions.Count > 0)
+            {
+                Assert.Equal(saved.Money, hospital.Transactions[0].Balance);
+            }
         }
     }
 }

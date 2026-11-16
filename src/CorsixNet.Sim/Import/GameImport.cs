@@ -29,6 +29,16 @@ public sealed record ImportedObject(string ObjectType, TilePosition Tile, Direct
 /// <param name="Fatigue">Tiredness, from 0 to 1.</param>
 public sealed record ImportedStaff(StaffProfile Profile, TilePosition Tile, decimal Happiness, decimal Fatigue);
 
+/// <summary>A casebook entry of an imported save.</summary>
+/// <param name="DiseaseId">The disease.</param>
+/// <param name="Discovered">Whether it shows in the casebook.</param>
+/// <param name="Effectiveness">Drug effectiveness in percent.</param>
+/// <param name="Recoveries">Patients cured of it.</param>
+/// <param name="Fatalities">Patients who died of it.</param>
+/// <param name="TurnedAway">Patients turned away.</param>
+/// <param name="MoneyEarned">Money it brought in.</param>
+public sealed record ImportedCase(string DiseaseId, bool Discovered, int Effectiveness, int Recoveries, int Fatalities, int TurnedAway, long MoneyEarned);
+
 /// <summary>
 /// The state of a hospital taken from a save of another game (the original Theme Hospital), to be rebuilt on a
 /// simulation started on the same level.
@@ -60,6 +70,30 @@ public sealed record ImportedGame
 
     /// <summary>The hospital's staff; the level's starting staff are let go for them.</summary>
     public IReadOnlyList<ImportedStaff> Staff { get; init; } = [];
+
+    public int Visitors { get; init; }
+
+    public int Cured { get; init; }
+
+    public int Deaths { get; init; }
+
+    /// <summary>Reputation, or null to keep the level's.</summary>
+    public int? Reputation { get; init; }
+
+    /// <summary>Hospital value, or null to keep what rebuilding cost.</summary>
+    public long? Value { get; init; }
+
+    /// <summary>The graphs' monthly figures, oldest first.</summary>
+    public IReadOnlyList<MonthStatistics> Months { get; init; } = [];
+
+    /// <summary>The bank statement, oldest first.</summary>
+    public IReadOnlyList<Transaction> Statement { get; init; } = [];
+
+    /// <summary>The casebook: what is known of each disease, by disease id.</summary>
+    public IReadOnlyList<ImportedCase> Casebook { get; init; } = [];
+
+    /// <summary>Research shares in percent, by area; missing areas are left as they are.</summary>
+    public IReadOnlyList<(Research.ResearchCategory Category, int Share)> ResearchShares { get; init; } = [];
 
     /// <summary>Radiator heat in tenths, or null to keep the level's.</summary>
     public int? RadiatorHeat { get; init; }
@@ -164,7 +198,27 @@ public static class GameImport
             hospital.SetRadiatorHeat(heat);
         }
 
+        foreach (var entry in game.Casebook)
+        {
+            if (Diseases.DiseaseCatalog.Find(entry.DiseaseId) is { } disease)
+            {
+                var book = hospital.CaseOf(disease, simulation.Rules.Diseases);
+                book.Discovered |= entry.Discovered;
+                book.CureEffectiveness = Math.Clamp(entry.Effectiveness, 0, DiseaseCase.FullEffectiveness);
+                book.Recoveries = entry.Recoveries;
+                book.Fatalities = entry.Fatalities;
+                book.TurnedAway = entry.TurnedAway;
+                book.MoneyEarned = entry.MoneyEarned;
+            }
+        }
+
+        foreach (var (category, share) in game.ResearchShares)
+        {
+            hospital.Research.Area(category).Share = Math.Clamp(share, 0, 100);
+        }
+
         hospital.ImportFinances(game.Balance, game.Loan);
+        hospital.ImportRecords(game.Visitors, game.Cured, game.Deaths, game.Reputation ?? hospital.Reputation, game.Value ?? hospital.Value, game.Months, game.Statement);
         if (game.Month > 1 || game.Day > 1)
         {
             simulation.SkipToLastHour(new GameDate(1, game.Month, game.Day, 0));
