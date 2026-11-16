@@ -233,6 +233,8 @@ public class OriginalSaveGameTests
         data[entity + 12] = 4;
         data[entity + 14] = 1;
         data[entity + 34] = 2;
+        data[entity + 152] = 18;
+        data[entity + 153] = 23;
         data[entity + 124] = 16 + 32;
         data[entity + 125] = 1;
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(entity + 126), 565);
@@ -254,6 +256,7 @@ public class OriginalSaveGameTests
         Assert.Equal((16, 15), (staff.NameStart, staff.NameEnd));
         Assert.Equal(((byte)23, (byte)13), staff.Description);
         Assert.Equal(94, staff.Morale);
+        Assert.Equal(((byte)0, (byte)18, (byte)23), staff.TrainingProgress);
         Assert.Equal(13, staff.Layers.Count);
         Assert.Equal(4, staff.Layers[5]);
         Assert.Equal(324, staff.Energy);

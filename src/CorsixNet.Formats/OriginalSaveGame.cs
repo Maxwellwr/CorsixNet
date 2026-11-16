@@ -139,6 +139,13 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// <summary>Staff only: energy from 0 to 1000; the tiredness bar shows 1000 minus this.</summary>
     public int Energy => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[120..]);
 
+    /// <summary>
+    /// Doctors only: training progress towards the surgeon, psychiatrist and researcher specialities (the small
+    /// bars under the speciality icons of the staff screen); they grow in the training room for specialities the
+    /// doctor does not have yet.
+    /// </summary>
+    public (byte Surgeon, byte Psychiatrist, byte Researcher) TrainingProgress => (Raw.Span[151], Raw.Span[152], Raw.Span[153]);
+
     /// <summary>Staff only: skill from 0 to 1000.</summary>
     public int Skill => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[126..]);
 
