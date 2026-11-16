@@ -236,6 +236,7 @@ public class OriginalSaveGameTests
         data[entity + 12] = 4;
         data[entity + 14] = 1;
         data[entity + 34] = 2;
+        data[entity + 141] = 7;
         data[entity + 152] = 18;
         data[entity + 153] = 23;
         data[entity + 124] = 16 + 32;
@@ -260,6 +261,7 @@ public class OriginalSaveGameTests
         Assert.Equal(((byte)23, (byte)13), staff.Description);
         Assert.Equal(94, staff.Morale);
         Assert.Equal(((byte)0, (byte)18, (byte)23), staff.TrainingProgress);
+        Assert.Equal(7, staff.AttentionToDetail);
         Assert.Equal(13, staff.Layers.Count);
         Assert.Equal(4, staff.Layers[5]);
         Assert.Equal(324, staff.Energy);

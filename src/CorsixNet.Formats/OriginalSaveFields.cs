@@ -68,6 +68,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Entity, 132, 1, "initial", true),
         new(OriginalSaveArea.Entity, 133, 1, "name start", true),
         new(OriginalSaveArea.Entity, 138, 2, "description", true),
+        new(OriginalSaveArea.Entity, 141, 1, "attention to detail", true),
         new(OriginalSaveArea.Entity, 151, 3, "doctor training progress", true),
         new(OriginalSaveArea.Entity, 158, 10, "patient health history", true),
         new(OriginalSaveArea.Entity, 146, 1, "patient diagnosis certainty", true),

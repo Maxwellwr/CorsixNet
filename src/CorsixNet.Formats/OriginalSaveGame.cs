@@ -146,6 +146,9 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// </summary>
     public (byte Surgeon, byte Psychiatrist, byte Researcher) TrainingProgress => (Raw.Span[151], Raw.Span[152], Raw.Span[153]);
 
+    /// <summary>Staff only: attention to detail from 0 to 10, the magnifying-glass bar of the staff screen.</summary>
+    public byte AttentionToDetail => Raw.Span[141];
+
     /// <summary>Staff only: skill from 0 to 1000.</summary>
     public int Skill => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[126..]);
 
