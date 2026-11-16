@@ -1035,7 +1035,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     public bool DrawsCursor => _cursors is not null;
 
     /// <inheritdoc/>
-    public bool CapturesMouse => _config.CaptureMouse && !_mouseReleased;
+    /// <remarks>
+    /// As current games do: only in a game, so not in the main menu, a film or a full-screen dialog such as the
+    /// casebook, where the map cannot be scrolled and the cursor is better free.
+    /// </remarks>
+    public bool CapturesMouse => _config.CaptureMouse && !_mouseReleased && _session is not null && _mainMenu is null
+        && !_movie.IsPlaying && !_windows.Windows.Any(window => window.IsFullscreen(this));
 
     /// <summary><c>UI:releaseMouse</c> (Ctrl+F10): the cursor is let go until a mouse button is pressed (<c>onMouseDown</c>).</summary>
     private bool _mouseReleased;
