@@ -281,6 +281,7 @@ strings:
       confirm_overwrite: '정말요? 덮어쓰기'
       overwrite: '덮어쓰기'
       quick_save: '빠른 저장'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: '효과음'
       adviser: '조언자'
@@ -738,3 +739,4 @@ strings:
       build_mode_furnish: '건설 모드   %1%'
       speed_keys: '   Space P: 일시 정지   1-6: 속도   Z: 누르는 동안 가속'
       keys: '시점: 화살표, WASD, 오른쪽 버튼   휠: 확대   B: 방 짓기   F: 접수대 사기   H: 방문객   G: 방문객 10명   Ctrl+1-4: 고용   클릭: 선택 또는 이동   R: 산책%1%'
+      import_problems: '저장에서 복원하지 못한 항목: %1%'

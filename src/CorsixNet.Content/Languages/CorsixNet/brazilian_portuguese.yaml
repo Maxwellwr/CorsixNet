@@ -148,6 +148,7 @@ strings:
       confirm_overwrite: 'Certeza? Substituir'
       overwrite: 'Substituir'
       quick_save: 'Salvamento rápido'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Efeitos sonoros'
       adviser: 'Conselheiro'
@@ -605,3 +606,4 @@ strings:
       build_mode_furnish: 'CONSTRUÇÄO   %1%'
       speed_keys: '   Espaço P: pausa   1-6: velocidade   Z: segurar para acelerar'
       keys: 'Visäo: setas, WASD, botäo direito   Roda: zoom   B: construir uma sala   F: comprar recepçäo   H: visitante   G: 10 visitantes   Ctrl+1-4: contratar   Clique: escolher ou andar   R: passear%1%'
+      import_problems: 'Itens do jogo salvo não reconstruídos: %1%'

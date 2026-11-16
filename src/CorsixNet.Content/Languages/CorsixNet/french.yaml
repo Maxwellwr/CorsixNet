@@ -113,6 +113,7 @@ strings:
       confirm_overwrite: Sûr ? Écraser
       overwrite: Écraser
       quick_save: Sauvegarde rapide
+      original: 'Theme Hospital : %1%'
     options:
       sound_effects: Effets sonores
       adviser: Conseiller
@@ -570,3 +571,4 @@ strings:
       build_mode_furnish: CONSTRUCTION   %1%
       speed_keys: '   Espace P : pause   1-6 : vitesse   Z : maintenir pour accélérer'
       keys: 'Vue : flèches, WASD, bouton droit   Molette : zoom   B : construire une salle   F : acheter un bureau de réception   H : visiteur   G : 10 visiteurs   Ctrl+1-4 : embaucher   Clic : choisir ou marcher   R : promenade%1%'
+      import_problems: 'Éléments de la sauvegarde non reconstruits : %1%'

@@ -270,6 +270,7 @@ strings:
       confirm_overwrite: 'Na pewno? Nadpisz'
       overwrite: 'Nadpisz'
       quick_save: 'Szybki zapis'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Efekty dźwiękowe'
       adviser: 'Doradca'
@@ -727,3 +728,4 @@ strings:
       build_mode_furnish: 'BUDOWA   %1%'
       speed_keys: '   Spacja P: pauza   1-6: szybkość   Z: przytrzymaj, aby przyspieszyć'
       keys: 'Widok: strzałki, WASD, prawy przycisk   Kółko: przybliżenie   B: zbuduj pomieszczenie   F: kup biurko recepcji   H: odwiedzający   G: 10 odwiedzających   Ctrl+1-4: zatrudnij   Klik: wybierz lub idź   R: spacer%1%'
+      import_problems: 'Nie odtworzono z zapisu: %1%'

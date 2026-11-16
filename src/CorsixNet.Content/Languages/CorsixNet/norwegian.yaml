@@ -245,6 +245,7 @@ strings:
       confirm_overwrite: 'Er du sikker? Overskriv'
       overwrite: 'Overskriv'
       quick_save: 'Hurtiglagring'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Lydeffekter'
       adviser: 'Rådgiver'
@@ -702,3 +703,4 @@ strings:
       build_mode_furnish: 'BYGGING   %1%'
       speed_keys: '   Mellomrom P: pause   1-6: hastighet   Z: hold nede for å öke farten'
       keys: 'Utsikt: piltaster, WASD, höyreknapp   Hjul: zoom   B: bygg et rom   F: kjöp resepsjon   H: besökende   G: 10 besökende   Ctrl+1-4: ansett   Klikk: velg eller gå   R: rusle%1%'
+      import_problems: 'Kunne ikke gjenskapes fra lagringen: %1%'

@@ -99,6 +99,7 @@ strings:
       confirm_overwrite: '¿Seguro? Sobrescribir'
       overwrite: 'Sobrescribir'
       quick_save: 'Guardado rápido'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Efectos de sonido'
       adviser: 'Consejero'
@@ -556,3 +557,4 @@ strings:
       build_mode_furnish: 'CONSTRUCCION   %1%'
       speed_keys: '   Espacio P: pausa   1-6: velocidad   Z: mantener para acelerar'
       keys: 'Vista: flechas, WASD, botón derecho   Rueda: zoom   B: construir una sala   F: comprar recepción   H: visitante   G: 10 visitantes   Ctrl+1-4: contratar   Clic: elegir o andar   R: pasear%1%'
+      import_problems: 'Elementos de la partida no reconstruidos: %1%'

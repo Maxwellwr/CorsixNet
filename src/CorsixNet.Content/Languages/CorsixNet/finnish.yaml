@@ -317,6 +317,7 @@ strings:
       confirm_overwrite: 'Oletko varma? Korvaa'
       overwrite: 'Korvaa'
       quick_save: 'Pikatallennus'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Äänitehosteet'
       adviser: 'Neuvonantaja'
@@ -774,3 +775,4 @@ strings:
       build_mode_furnish: 'RAKENNUS   %1%'
       speed_keys: '   Välilyönti P: tauko   1-6: nopeus   Z: pidä pohjassa nopeuttaaksesi'
       keys: 'Näkymä: nuolinäppäimet, WASD, oikea näppäin   Rulla: zoom   B: rakenna huone   F: osta vastaanottotiski   H: kävijä   G: 10 kävijää   Ctrl+1-4: palkkaa   Klikkaus: valitse tai kävele   R: vaeltele%1%'
+      import_problems: 'Tallennuksesta ei voitu palauttaa: %1%'

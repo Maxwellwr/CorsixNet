@@ -1264,7 +1264,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         SavedGame saved;
         try
         {
-            saved = SaveGameStore.Load(path, BaseGameContent.Create());
+            saved = File.Exists(path) && new FileInfo(path).Length == OriginalSaveGame.Length
+                ? ImportOriginalSave(path)
+                : SaveGameStore.Load(path, BaseGameContent.Create());
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidDataException or EndOfStreamException)
         {
@@ -1291,6 +1293,22 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         PrepareMapIfReady();
         ShowNotice(UiText.Format("corsixnet.status.loaded", "Loaded %1%", Path.GetFileName(path)));
         return true;
+    }
+
+    /// <summary>
+    /// A save of the original game, rebuilt on its level (<see cref="OriginalSaveImporter"/>); what could not be rebuilt
+    /// is told in a notice.
+    /// </summary>
+    private SavedGame ImportOriginalSave(string path)
+    {
+        var save = OriginalSaveGame.Parse(File.ReadAllBytes(path));
+        var (simulation, report) = OriginalSaveImporter.Start(_install, save, seed: (ulong)Environment.TickCount64);
+        if (report.Problems.Count > 0)
+        {
+            ShowNotice(UiText.Format("corsixnet.status.import_problems", "Could not rebuild from the save: %1%", report.Problems.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+
+        return new SavedGame($"LEVEL.L{save.Level}", simulation);
     }
 
     /// <summary>
@@ -3831,7 +3849,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 ShowNotice(UiText.Get("corsixnet.status.finish_building_first", "Finish building before saving or loading"));
                 break;
             case "save" or "load":
-                _windows.Open(new SaveLoadWindow(_saves, action == "save", SaveGameTo, LoadGame));
+                _windows.Open(new SaveLoadWindow(_saves, action == "save", SaveGameTo, LoadGame, _install.FindDirectory("SAVE")));
                 break;
             case "quicksave" or "quickload":
                 QuickSave(load: action == "quickload");
@@ -4659,7 +4677,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
                 _windows.Open(new InformationWindow(["Error while loading game: There are no saved games."]));
                 break;
             case "load":
-                _windows.Open(new SaveLoadWindow(_saves, false, SaveGameTo, LoadGame));
+                _windows.Open(new SaveLoadWindow(_saves, false, SaveGameTo, LoadGame, _install.FindDirectory("SAVE")));
                 break;
             case "options":
                 _windows.Open(NewOptionsWindow());

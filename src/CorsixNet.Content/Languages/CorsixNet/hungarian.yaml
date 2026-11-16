@@ -333,6 +333,7 @@ strings:
       confirm_overwrite: 'Biztos vagy benne? Felülírás'
       overwrite: 'Felülírás'
       quick_save: 'Gyorsmentés'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Hanghatások'
       adviser: 'Tanácsadó'
@@ -790,3 +791,4 @@ strings:
       build_mode_furnish: 'ÉPÍTÉS   %1%'
       speed_keys: '   Szóköz P: szünet   1-6: sebesség   Z: nyomva tartva gyorsít'
       keys: 'Nézet: nyilak, WASD, jobb gomb   Görgő: nagyítás   B: szoba építése   F: recepciós pult vásárlása   H: látogató   G: 10 látogató   Ctrl+1-4: felvétel   Kattintás: kiválasztás vagy séta   R: lődörgés%1%'
+      import_problems: 'A mentésből nem sikerült visszaállítani: %1%'
