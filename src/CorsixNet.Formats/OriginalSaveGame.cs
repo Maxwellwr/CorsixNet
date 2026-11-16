@@ -78,7 +78,7 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
 
     /// <summary>
     /// Byte 12, the kind of entity. Seen so far: 6 objects, 8 doors (with <see cref="Type"/> 3 or a swing door
-    /// type), 4 staff and staff for hire, 2 patients, 20 not yet known.
+    /// type), 4 staff and staff for hire, 2 patients, 20 a VIP visitor.
     /// </summary>
     public byte Kind => Raw.Span[12];
 

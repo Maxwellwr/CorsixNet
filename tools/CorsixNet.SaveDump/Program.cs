@@ -294,6 +294,7 @@ static string KindName(byte kind) => kind switch
     4 => "staff",
     6 => "objects",
     8 => "doors",
+    20 => "VIP",
     _ => "unknown",
 };
 
