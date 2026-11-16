@@ -168,6 +168,7 @@ strings:
       confirm_overwrite: '确定吗？覆盖'
       overwrite: '覆盖'
       quick_save: '快速存档'
+      original: 'Theme Hospital：%1%'
     options:
       sound_effects: '音效'
       adviser: '顾问'
@@ -625,3 +626,4 @@ strings:
       build_mode_furnish: '建造模式   %1%'
       speed_keys: '   空格 P：暂停   1-6：速度   Z：按住加速'
       keys: '视角：方向键、WASD、右键   滚轮：缩放   B：建造房间   F：购买接待台   H：访客   G：10 名访客   Ctrl+1-4：雇用   点击：选择或行走   R：闲逛%1%'
+      import_problems: '未能从存档中重建：%1%'

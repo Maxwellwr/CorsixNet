@@ -345,6 +345,7 @@ strings:
       confirm_overwrite: 'Er du sikker? Overskriv'
       overwrite: 'Overskriv'
       quick_save: 'Hurtig gemning'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Lydeffekter'
       adviser: 'Rådgiver'
@@ -802,3 +803,4 @@ strings:
       build_mode_furnish: 'BYGGERI   %1%'
       speed_keys: '   Mellemrum P: pause   1-6: hastighed   Z: hold nede for at speede op'
       keys: 'Udsigt: piletaster, WASD, höjre knap   Hjul: zoom   B: byg et rum   F: köb receptionsbord   H: besögende   G: 10 besögende   Ctrl+1-4: ansæt   Klik: vælg eller gå   R: gå rundt%1%'
+      import_problems: 'Kunne ikke genskabes fra gemningen: %1%'

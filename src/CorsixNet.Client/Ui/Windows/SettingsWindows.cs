@@ -12,7 +12,10 @@ namespace CorsixNet.Client.Ui.Windows;
 /// <c>load_game.lua</c>), from the menu (Esc): the saved games in the saves folder, newest first,
 /// with the quick save and the autosaves; saving to a new file or over one, and loading one.
 /// </summary>
-internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<string, bool> save, Func<string, bool> load) : UiWindow, ITextInputWindow
+/// <param name="originalSaves">
+/// The original game's SAVE folder: when loading, its saves are listed too, to be imported (<c>MAXWELL.H1</c> and so on).
+/// </param>
+internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<string, bool> save, Func<string, bool> load, string? originalSaves = null) : UiWindow, ITextInputWindow
 {
     /// <summary>A window CorsixTH added to the game, drawn in its own look.</summary>
     public override bool UsesResizableLook => true;
@@ -267,6 +270,13 @@ internal sealed class SaveLoadWindow(SaveGameStore store, bool saving, Func<stri
         if (Directory.Exists(autosaves))
         {
             found.AddRange(Directory.EnumerateFiles(autosaves, "*" + Extension).Select(path => (path, Path.GetFileNameWithoutExtension(path))));
+        }
+
+        if (!saving && originalSaves is not null && Directory.Exists(originalSaves))
+        {
+            found.AddRange(Directory.EnumerateFiles(originalSaves, "*.H*")
+                .Where(path => new FileInfo(path).Length == CorsixNet.Formats.OriginalSaveGame.Length)
+                .Select(path => (path, UiText.Format("corsixnet.save_game.original", "Theme Hospital: %1%", Path.GetFileName(path)))));
         }
 
         return found.OrderByDescending(game => File.GetLastWriteTimeUtc(game.Path));

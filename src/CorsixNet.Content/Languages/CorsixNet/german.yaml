@@ -180,6 +180,7 @@ strings:
       confirm_overwrite: Sicher? Überschreiben
       overwrite: Überschreiben
       quick_save: Schnellspeicherstand
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: Soundeffekte
       adviser: Berater
@@ -637,3 +638,4 @@ strings:
       build_mode_furnish: BAUMODUS   %1%
       speed_keys: '   Leertaste P: Pause   1-6: Tempo   Z: halten zum Beschleunigen'
       keys: 'Ansicht: Pfeile, WASD, rechte Taste   Rad: Zoom   B: Raum bauen   F: Rezeption kaufen   H: Besucher   G: 10 Besucher   Strg+1-4: einstellen   Klick: wählen oder gehen   R: wandern%1%'
+      import_problems: 'Aus dem Spielstand nicht wiederhergestellt: %1%'

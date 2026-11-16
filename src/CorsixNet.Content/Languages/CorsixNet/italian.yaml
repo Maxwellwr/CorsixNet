@@ -160,6 +160,7 @@ strings:
       confirm_overwrite: 'Sicuro? Sovrascrivi'
       overwrite: 'Sovrascrivi'
       quick_save: 'Salvataggio veloce'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Effetti sonori'
       adviser: 'Consigliere'
@@ -617,3 +618,4 @@ strings:
       build_mode_furnish: 'COSTRUZIONE   %1%'
       speed_keys: '   Spazio P: pausa   1-6: velocità   Z: tieni premuto per accelerare'
       keys: 'Vista: frecce, WASD, tasto destro   Rotellina: zoom   B: costruisci una stanza   F: compra l''accettazione   H: visitatore   G: 10 visitatori   Ctrl+1-4: assumi   Clic: scegli o cammina   R: passeggia%1%'
+      import_problems: 'Elementi del salvataggio non ricostruiti: %1%'

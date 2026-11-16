@@ -240,6 +240,7 @@ strings:
       confirm_overwrite: '本当に？上書き'
       overwrite: '上書き'
       quick_save: 'クイックセーブ'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: '効果音'
       adviser: 'アドバイザー'
@@ -697,3 +698,4 @@ strings:
       build_mode_furnish: '建設モード   %1%'
       speed_keys: '   スペース P：一時停止   1-6：速度   Z：押している間加速'
       keys: '視点：矢印、WASD、右ボタン   ホイール：ズーム   B：部屋を建てる   F：受付デスクを買う   H：来院者   G：来院者 10 人   Ctrl+1-4：雇用   クリック：選択か移動   R：散歩%1%'
+      import_problems: 'セーブから復元できなかったもの: %1%'

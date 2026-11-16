@@ -806,6 +806,19 @@ public sealed class Hospital
     /// <summary>Changes the hospital's value without money changing hands, as a crashed room's loss (<c>Room:crashRoom</c>).</summary>
     internal void ChangeValue(long amount) => Value += amount;
 
+    /// <summary>
+    /// Takes over the money of an imported save: what building the hospital up again cost is forgotten, and the
+    /// balance and loan are the save's.
+    /// </summary>
+    internal void ImportFinances(long balance, long loan)
+    {
+        Balance = balance;
+        Loan = Math.Max(0, loan);
+        _transactions.Clear();
+        MoneyInThisMonth = 0;
+        MoneyOutThisMonth = 0;
+    }
+
     internal void Spend(long tick, int amount, TransactionKind kind, string subject)
     {
         if (FreeBuild)

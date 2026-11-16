@@ -266,6 +266,7 @@ strings:
       confirm_overwrite: 'Är du säker? Skriv över'
       overwrite: 'Skriv över'
       quick_save: 'Snabbsparning'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Ljudeffekter'
       adviser: 'Medhjälpare'
@@ -723,3 +724,4 @@ strings:
       build_mode_furnish: 'BYGGE   %1%'
       speed_keys: '   Mellanslag P: paus   1-6: hastighet   Z: håll nere för att snabba upp'
       keys: 'Vy: piltangenter, WASD, högerknapp   Hjul: zoom   B: bygg ett rum   F: köp reception   H: besökare   G: 10 besökare   Ctrl+1-4: anställ   Klick: välj eller gå   R: ströva%1%'
+      import_problems: 'Kunde inte återskapas från sparningen: %1%'

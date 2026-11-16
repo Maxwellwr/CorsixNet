@@ -96,6 +96,7 @@ strings:
       confirm_overwrite: 'Opravdu? Přepsat'
       overwrite: 'Přepsat'
       quick_save: 'Rychlé uložení'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Zvukové efekty'
       adviser: 'Rádce'
@@ -553,3 +554,4 @@ strings:
       build_mode_furnish: 'STAVBA   %1%'
       speed_keys: '   Mezerník P: pauza   1-6: rychlost   Z: držet pro zrychlení'
       keys: 'Pohled: šipky, WASD, pravé tlačítko   Kolečko: přiblížení   B: postavit místnost   F: koupit recepci   H: návštěvník   G: 10 návštěvníků   Ctrl+1-4: najmout   Klepnutí: vybrat nebo jít   R: procházet se%1%'
+      import_problems: 'Z uložené hry nešlo obnovit: %1%'

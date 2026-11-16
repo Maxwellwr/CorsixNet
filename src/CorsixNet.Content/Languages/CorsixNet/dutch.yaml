@@ -167,6 +167,7 @@ strings:
       confirm_overwrite: 'Zeker? Overschrijven'
       overwrite: 'Overschrijven'
       quick_save: 'Snel opgeslagen'
+      original: 'Theme Hospital: %1%'
     options:
       sound_effects: 'Geluidseffecten'
       adviser: 'Adviseur'
@@ -624,3 +625,4 @@ strings:
       build_mode_furnish: 'BOUWEN   %1%'
       speed_keys: '   Spatie P: pauze   1-6: snelheid   Z: ingedrukt houden om te versnellen'
       keys: 'Beeld: pijltjes, WASD, rechterknop   Wiel: zoom   B: kamer bouwen   F: receptie kopen   H: bezoeker   G: 10 bezoekers   Ctrl+1-4: aannemen   Klik: kiezen of lopen   R: wandelen%1%'
+      import_problems: 'Niet uit de opslag herbouwd: %1%'
