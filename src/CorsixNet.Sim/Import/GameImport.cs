@@ -155,7 +155,11 @@ public static class GameImport
                 continue;
             }
 
-            foreach (var obj in game.Objects.Where(o => room.Area.Contains(o.Tile)))
+            // The objects the room needs go first, small ones before big ones: the original let objects stand closer
+            // together than CorsixNet's footprints allow, so whichever comes later may not fit; better an extra object
+            // left out than the room unfinished.
+            var needed = simulation.Content.FindRoom(room.RoomType)?.NeededObjects;
+            foreach (var obj in game.Objects.Where(o => room.Area.Contains(o.Tile)).OrderBy(o => needed?.ContainsKey(o.ObjectType) == true ? 0 : 1).ThenBy(o => FootprintSize(simulation, o)))
             {
                 if (Place(simulation, obj, player))
                 {
@@ -259,6 +263,10 @@ public static class GameImport
         return new ImportReport(problems);
     }
 
+    /// <summary>Tiles an object takes up, so that small objects against the walls go before big ones in the middle.</summary>
+    private static int FootprintSize(Simulation simulation, ImportedObject obj) =>
+        simulation.Content.FindObject(obj.ObjectType)?.Orientations.Values.Select(o => o.Footprint.Count).DefaultIfEmpty(0).Max() ?? 0;
+
     /// <summary>The tile itself if it can be walked on, else the nearest such tile up to two tiles away, or null.</summary>
     private static TilePosition? NearestPassable(LevelMap map, TilePosition tile)
     {
@@ -285,19 +293,34 @@ public static class GameImport
         // The original's direction codes do not always match CorsixNet's footprints: take the save's way if the object
         // fits so, else the opposite way, else any way it fits on the same tile.
         var orientation = obj.Orientation;
+        var tile = obj.Tile;
         Direction[] tries = [obj.Orientation, (Direction)(((int)obj.Orientation + 2) % 4), (Direction)(((int)obj.Orientation + 3) % 4), (Direction)(((int)obj.Orientation + 1) % 4)];
-        foreach (var candidate in tries)
+
+        // Failing that, the object moves to a neighbouring tile: the original let use positions overlap, which
+        // CorsixNet's placement rules (CorsixTH's) do not.
+        (int Dx, int Dy)[] offsets = [(0, 0), (0, 1), (1, 0), (0, -1), (-1, 0)];
+        var found = false;
+        foreach (var (dx, dy) in offsets)
         {
-            if (Objects.ObjectPlacer.Check(simulation, obj.ObjectType, obj.Tile, candidate, player) == Objects.ObjectPlacementProblem.None)
+            foreach (var candidate in tries)
             {
-                orientation = candidate;
+                var at = new TilePosition(obj.Tile.X + dx, obj.Tile.Y + dy);
+                if (Objects.ObjectPlacer.Check(simulation, obj.ObjectType, at, candidate, player) == Objects.ObjectPlacementProblem.None)
+                {
+                    (orientation, tile, found) = (candidate, at, true);
+                    break;
+                }
+            }
+
+            if (found)
+            {
                 break;
             }
         }
 
         var before = simulation.Entities.Count;
-        new PlaceObjectCommand(obj.ObjectType, obj.Tile, orientation).Execute(simulation, player);
-        var created = simulation.Entities.Skip(before).OfType<RoomObject>().FirstOrDefault(o => o.Tile == obj.Tile && o.ObjectType == obj.ObjectType);
+        new PlaceObjectCommand(obj.ObjectType, tile, orientation).Execute(simulation, player);
+        var created = simulation.Entities.Skip(before).OfType<RoomObject>().FirstOrDefault(o => o.Tile == tile && o.ObjectType == obj.ObjectType);
         if (created is null)
         {
             return false;
