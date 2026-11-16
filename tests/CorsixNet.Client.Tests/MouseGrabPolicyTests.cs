@@ -1,3 +1,5 @@
+using Microsoft.Xna.Framework;
+
 namespace CorsixNet.Client.Tests;
 
 public sealed class MouseGrabPolicyTests
@@ -42,4 +44,11 @@ public sealed class MouseGrabPolicyTests
         Assert.False(policy.Update(active: false, clickedInside: true, wanted: true));
         Assert.False(policy.Update(active: true, clickedInside: false, wanted: true));
     }
+
+    [Theory]
+    [InlineData(640, 480, true)]
+    [InlineData(380, 110, false)]
+    [InlineData(640, 200, false)]
+    public void OnlyDialogsCoveringTheGameLetGo(int width, int height, bool covers) =>
+        Assert.Equal(covers, MouseGrabPolicy.CoversGame(new Point(width, height)));
 }

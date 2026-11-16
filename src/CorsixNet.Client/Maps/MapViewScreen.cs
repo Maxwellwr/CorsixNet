@@ -1040,7 +1040,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// casebook, where the map cannot be scrolled and the cursor is better free.
     /// </remarks>
     public bool CapturesMouse => _config.CaptureMouse && !_mouseReleased && _session is not null && _mainMenu is null
-        && !_movie.IsPlaying && !_windows.Windows.Any(window => window.IsFullscreen(this));
+        && !_movie.IsPlaying && !_windows.Windows.Any(window => window.IsFullscreen(this) && MouseGrabPolicy.CoversGame(window.FullscreenSize));
 
     /// <summary><c>UI:releaseMouse</c> (Ctrl+F10): the cursor is let go until a mouse button is pressed (<c>onMouseDown</c>).</summary>
     private bool _mouseReleased;

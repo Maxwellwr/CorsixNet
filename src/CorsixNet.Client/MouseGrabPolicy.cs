@@ -1,3 +1,5 @@
+using Microsoft.Xna.Framework;
+
 namespace CorsixNet.Client;
 
 /// <summary>
@@ -25,4 +27,11 @@ internal sealed class MouseGrabPolicy
         _armed |= clickedInside;
         return _armed && wanted;
     }
+
+    /// <summary>
+    /// Whether a window in its original look (<c>UiWindow.IsFullscreen</c>) is a dialog covering the game, such as the
+    /// casebook (640 by 480), rather than a small one in that look, such as the tip of the day or an information box.
+    /// </summary>
+    /// <param name="size">The window's size drawn by itself (<c>UiWindow.FullscreenSize</c>).</param>
+    public static bool CoversGame(Point size) => size.X >= 640 && size.Y >= 480;
 }
