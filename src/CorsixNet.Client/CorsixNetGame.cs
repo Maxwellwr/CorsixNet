@@ -2,6 +2,7 @@ using CorsixNet.Client.Input;
 using CorsixNet.Client.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace CorsixNet.Client;
 
@@ -12,6 +13,7 @@ internal sealed class CorsixNetGame : Game
     private readonly GraphicsDeviceManager _graphics;
     private SpriteBatch? _batch;
     private IScreen? _screen;
+    private readonly MouseGrabPolicy _grab = new();
 
     /// <summary>The smallest window the settings may ask for (CorsixTH's 640 by 480).</summary>
     private const int MinWidth = 640;
@@ -69,9 +71,13 @@ internal sealed class CorsixNetGame : Game
 
         IsMouseVisible = _screen?.DrawsCursor != true;
 
-        // App:setCaptureMouse: the cursor stays in the window while it has focus; let go without it, so that the
-        // player can use other windows (CorsixTH frees it on quitting).
-        MouseCapture.Set(Window.Handle, IsActive && script is null && _screen?.CapturesMouse == true);
+        // App:setCaptureMouse, as current games do it: the cursor stays in the window only once it has been clicked
+        // since getting focus, and only while the game wants it; without focus it is let go.
+        var mouse = Mouse.GetState();
+        var clickedInside = Window.ClientBounds is var bounds
+            && mouse.X >= 0 && mouse.Y >= 0 && mouse.X < bounds.Width && mouse.Y < bounds.Height
+            && (mouse.LeftButton == ButtonState.Pressed || mouse.RightButton == ButtonState.Pressed || mouse.MiddleButton == ButtonState.Pressed);
+        MouseCapture.Set(Window.Handle, _grab.Update(IsActive && script is null, clickedInside, _screen?.CapturesMouse == true));
 
         if (_screen?.ExitRequested == true || script?.QuitRequested == true)
         {
