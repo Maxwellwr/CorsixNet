@@ -74,6 +74,8 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Entity, 168, 1, "patient disease", true),
         new(OriginalSaveArea.Entity, 169, 1, "patient diagnosis so far? (1 = none)", false),
         new(OriginalSaveArea.Entity, 171, 1, "patient next room purpose?", false),
+        new(OriginalSaveArea.Entity, 55, 4, "times used (objects) / room + 1 (people)", true),
+        new(OriginalSaveArea.Entity, 59, 4, "object strength", true),
         new(OriginalSaveArea.Entity, 75, 2, "next object of the same type", true),
         new(OriginalSaveArea.Entity, 81, 1, "morale / happiness", true),
         new(OriginalSaveArea.Entity, 120, 2, "staff energy", true),

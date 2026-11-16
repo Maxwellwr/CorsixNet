@@ -34,6 +34,20 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// <summary>Slot of the next entity on the same tile, or 0; the tile's <see cref="OriginalSaveTile.Entity"/> is the first.</summary>
     public int NextOnTile => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span);
 
+    /// <summary>Objects only: how many times the object has been used (the "Times used" of its tooltip).</summary>
+    public int TimesUsed => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[55..]);
+
+    /// <summary>
+    /// Objects only: strength. Furniture keeps the <c>StartStrength</c> of the level config (10 for benches and beds);
+    /// machines start there and change with use, repairs and research.
+    /// </summary>
+    public int Strength => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[59..]);
+
+    /// <summary>
+    /// Staff and patients: the room they are in, as <see cref="OriginalSaveRoom.Index"/> + 1, or 0 in the corridors.
+    /// </summary>
+    public int RoomIndexPlusOne => Raw.Span[55];
+
     /// <summary>Objects only: slot of the next object of the same type, or 0 (see <see cref="OriginalSaveGame.FirstObjectOfType"/>).</summary>
     public int NextOfType => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[75..]);
 

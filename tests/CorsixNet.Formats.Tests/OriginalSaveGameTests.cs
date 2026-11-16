@@ -276,6 +276,9 @@ public class OriginalSaveGameTests
 
         Assert.NotEmpty(benches);
         Assert.All(benches, bench => Assert.Contains(bench.Frame, benchFrames));
+
+        // FULL00.SAM: #objects[4] (bench) StartStrength 10; furniture never wears.
+        Assert.All(benches, bench => Assert.Equal(10, bench.Strength));
     }
 
     [Fact]
@@ -336,6 +339,17 @@ public class OriginalSaveGameTests
             var patients = save.Entities.Where(e => e.Kind == 2 && e.Disease != 0).ToList();
             var known = patients.Count(p => p.Disease is > 0 and < OriginalSaveHospital.DiseaseCount && local.Disease(p.Disease).Known);
             Assert.True(known * 10 >= patients.Count * 9, $"{known} of {patients.Count} patients have a known disease");
+
+            // People standing inside a room point at it; people in corridors point nowhere.
+            var people = save.Entities.Where(e => e.Kind is 2 or 4 && e.TileX != 0).ToList();
+            var placed = people.Count(person =>
+            {
+                var room = save.Rooms.FirstOrDefault(r => r.Width > 1
+                    && person.TileX >= r.Origin.X && person.TileX < r.Origin.X + r.Width
+                    && person.TileY >= r.Origin.Y && person.TileY < r.Origin.Y + r.Height);
+                return person.RoomIndexPlusOne == (room is null ? 0 : room.Index + 1);
+            });
+            Assert.True(placed * 10 >= people.Count * 9, $"{placed} of {people.Count} people point at the room they stand in");
 
             // Rooms lie on the map with their door on their edge and the outside tile next to it.
             foreach (var room in save.Rooms.Where(r => r.Width > 1))
