@@ -348,10 +348,8 @@ public class OriginalSaveGameTests
             // A fresh level carries a few stale entries over, so only judge saves with real furniture.
             Assert.True(listed < 20 || wrongType * 10 <= listed, $"{wrongType} of {listed} listed objects have another type");
 
-            // Patients have diseases the hospital's casebook knows (0 is seen on a few visitors without one).
-            var patients = save.Entities.Where(e => e.Kind == 2 && e.Disease != 0).ToList();
-            var known = patients.Count(p => p.Disease is > 0 and < OriginalSaveHospital.DiseaseCount && local.Disease(p.Disease).Known);
-            Assert.True(known * 10 >= patients.Count * 9, $"{known} of {patients.Count} patients have a known disease");
+            // Patients carry a disease index of the casebook (it may not be discovered yet; 0 is seen on a few visitors).
+            Assert.All(save.Entities.Where(e => e.Kind == 2), p => Assert.InRange(p.Disease, 0, OriginalSaveHospital.DiseaseCount - 1));
 
             // People standing inside a room point at it; people in corridors point nowhere.
             var people = save.Entities.Where(e => e.Kind is 2 or 4 && e.TileX != 0).ToList();
