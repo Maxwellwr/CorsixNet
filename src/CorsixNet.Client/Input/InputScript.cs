@@ -6,7 +6,7 @@ namespace CorsixNet.Client.Input;
 /// <summary>
 /// Mouse and keyboard played from a text file (<c>--script</c>) instead of the real ones, with screenshots of the whole
 /// window, so that the client can be checked without anyone at the computer. One command a line, coordinates in the
-/// window's pixels, <c>#</c> starts a comment:
+/// pixels of the picture the game draws (the window's at interface scale 1), <c>#</c> starts a comment:
 /// <code>
 /// wait 6000              milliseconds of real time
 /// key Escape             press and release; several with +, e.g. key LeftShift+F3
@@ -60,8 +60,11 @@ internal sealed class InputScript
     /// <summary>Whether the script has asked to close the client.</summary>
     public bool QuitRequested { get; private set; }
 
-    /// <summary>The mouse: the script's while one runs, else the real one.</summary>
-    public static MouseState Mouse() => Current?.MouseState ?? Microsoft.Xna.Framework.Input.Mouse.GetState();
+    /// <summary>
+    /// The mouse in the pixels of the picture the screens draw (<see cref="Rendering.ScreenCanvas"/>): the script's
+    /// while one runs, else the real one.
+    /// </summary>
+    public static MouseState Mouse() => Current?.MouseState ?? Rendering.ScreenCanvas.ToCanvas(Microsoft.Xna.Framework.Input.Mouse.GetState());
 
     /// <summary>The keyboard: the script's while one runs, else the real one.</summary>
     public static KeyboardState Keyboard() => Current?.KeyboardState ?? Microsoft.Xna.Framework.Input.Keyboard.GetState();

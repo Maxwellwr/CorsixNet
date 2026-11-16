@@ -346,6 +346,8 @@ strings:
       assign: 'Hozzárendelés'
       game_font: 'A játék betűtípusa'
       system_font: 'Rendszer'
+      ui_scale: 'A felület mérete'
+      ui_scale_auto: 'Automatikus (%1%)'
     custom_game:
       none: 'Nem található pálya: tedd a .level és .map fájlokat a pályák mappájába (levels a config.yaml fájlban).'
     custom_campaign:

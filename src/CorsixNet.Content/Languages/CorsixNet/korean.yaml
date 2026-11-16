@@ -294,6 +294,8 @@ strings:
       assign: '설정'
       game_font: '게임 글꼴'
       system_font: '시스템'
+      ui_scale: '인터페이스 배율'
+      ui_scale_auto: '자동 (%1%)'
     custom_game:
       none: '레벨이 없습니다. .level과 .map 파일을 레벨 폴더(config.yaml의 levels)에 넣으세요.'
     custom_campaign:

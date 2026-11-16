@@ -1,4 +1,5 @@
 using CorsixNet.Client.Input;
+using CorsixNet.Client.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -16,13 +17,20 @@ internal sealed class CorsixNetGame : Game
     private const int MinWidth = 640;
     private const int MinHeight = 480;
 
+    /// <param name="width">The window's width in the system's points: pixels at 100 % display scale, more above.</param>
+    /// <param name="height">The window's height, likewise.</param>
     public CorsixNetGame(string title, Func<GraphicsDevice, IScreen> createScreen, int width = 1280, int height = 800, bool fullscreen = false)
     {
         _createScreen = createScreen;
+
+        // The game says it handles the screen's density itself (app.manifest), so Windows no longer stretches its
+        // window smoothly; the window keeps the size it had on the screen, and ScreenCanvas scales the picture by whole
+        // pixels instead.
+        var density = ScreenCanvas.SystemDpiScale();
         _graphics = new GraphicsDeviceManager(this)
         {
-            PreferredBackBufferWidth = Math.Max(MinWidth, width),
-            PreferredBackBufferHeight = Math.Max(MinHeight, height),
+            PreferredBackBufferWidth = (int)Math.Round(Math.Max(MinWidth, width) * density),
+            PreferredBackBufferHeight = (int)Math.Round(Math.Max(MinHeight, height) * density),
             IsFullScreen = fullscreen,
         };
         IsMouseVisible = true;
@@ -42,6 +50,7 @@ internal sealed class CorsixNetGame : Game
     {
         MouseCapture.Set(Window.Handle, false);
         _screen?.Dispose();
+        ScreenCanvas.Dispose();
         _batch?.Dispose();
     }
 
@@ -49,6 +58,7 @@ internal sealed class CorsixNetGame : Game
     {
         var script = InputScript.Current;
         script?.Advance(gameTime.ElapsedGameTime.TotalMilliseconds);
+        ScreenCanvas.BeginFrame(GraphicsDevice);
 
         // Keep updating without focus: a network game must keep up with the server. A script's input counts as focused.
         _screen?.Update(gameTime, IsActive || script is not null);
@@ -75,7 +85,10 @@ internal sealed class CorsixNetGame : Game
     {
         if (_screen is not null && _batch is not null)
         {
+            ScreenCanvas.BeginFrame(GraphicsDevice);
+            ScreenCanvas.Bind(GraphicsDevice);
             _screen.Draw(_batch);
+            ScreenCanvas.Present(GraphicsDevice, _batch);
             if (_screen.TakeScreenshotRequest() is { } screenshot)
             {
                 try

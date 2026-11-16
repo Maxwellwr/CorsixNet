@@ -77,7 +77,7 @@ internal sealed class SpriteViewerScreen : IScreen
         }
 
         var keys = Keyboard.GetState();
-        var mouse = Mouse.GetState();
+        var mouse = Input.InputScript.Mouse();
         bool Pressed(Keys key) => keys.IsKeyDown(key) && !_previousKeys.IsKeyDown(key);
         var shift = keys.IsKeyDown(Keys.LeftShift) || keys.IsKeyDown(Keys.RightShift);
         var pageSize = Math.Max(_device.Viewport.Height - HeaderHeight - 40, 40);

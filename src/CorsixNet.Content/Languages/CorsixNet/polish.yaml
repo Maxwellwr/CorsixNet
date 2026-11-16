@@ -283,6 +283,8 @@ strings:
       assign: 'Przypisz'
       game_font: 'Czcionka gry'
       system_font: 'Systemowa'
+      ui_scale: 'Skala interfejsu'
+      ui_scale_auto: 'Automatyczna (%1%)'
     custom_game:
       none: 'Nie znaleziono poziomów: umieść pliki .level i .map w folderze poziomów (levels w config.yaml).'
     custom_campaign:

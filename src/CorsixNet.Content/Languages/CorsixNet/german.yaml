@@ -193,6 +193,8 @@ strings:
       assign: Belegen
       game_font: Spielschrift
       system_font: System
+      ui_scale: 'Skalierung der Oberfläche'
+      ui_scale_auto: 'Automatisch (%1%)'
     custom_game:
       none: 'Keine Level gefunden: Legen Sie .level- und .map-Dateien in den Level-Ordner (levels in config.yaml).'
     custom_campaign:

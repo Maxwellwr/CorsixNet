@@ -14,6 +14,7 @@ internal sealed class TextRenderer : IDisposable
 {
     private readonly GraphicsDevice _device;
     private readonly BitmapFont _font;
+    private readonly BitmapFont _ownFont;
     private readonly SheetTextures _glyphs;
     private readonly BitmapFontMatch? _match;
     private readonly Dictionary<int, Texture2D?> _trueTypeGlyphs = [];
@@ -21,10 +22,12 @@ internal sealed class TextRenderer : IDisposable
     private int _trueTypeSize;
     private int _trueTypeLineHeight;
     private int _bitmapShift;
+    private bool _faceOverMadeLetters;
 
     public TextRenderer(GraphicsDevice device, BitmapFont font, Palette palette)
     {
         _device = device;
+        _ownFont = font;
 
         // Cyrillic made from the font's own letters, so that Russian keeps the game's lettering where it can.
         _font = font.WithGlyphs(CyrillicGlyphs.Build(font));
@@ -41,10 +44,12 @@ internal sealed class TextRenderer : IDisposable
     /// Draws with the face from now on, coloured after the bitmap font (<c>freetype_font:setFontOptions</c>) and sized
     /// so that its letters are as tall and about as wide as the bitmap font's (see <see cref="TrueTypeFace.PixelSizeFor"/>), but at least
     /// <paramref name="minimumSize"/> pixels to the em, as ideograms need more pixels than letters; null goes back to
-    /// the bitmap font.
+    /// the bitmap font. A face <paramref name="chosen"/> in the settings also draws the text that needs the letters
+    /// <see cref="CyrillicGlyphs"/> made, which otherwise keeps the game's lettering.
     /// </summary>
-    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8)
+    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8, bool chosen = false)
     {
+        _faceOverMadeLetters = chosen;
         if (ReferenceEquals(face, _face) && (face is null || _trueTypeSize == SizeFor(face, minimumSize)))
         {
             return;
@@ -65,9 +70,9 @@ internal sealed class TextRenderer : IDisposable
     /// <summary>
     /// Whether the text is drawn with the TrueType face: only when one is in use and the text has characters the bitmap
     /// font has not, so that Latin text, numbers and (for the fonts <see cref="CyrillicGlyphs"/> can make it for)
-    /// Russian keep the game's own letters, standing on the face's baseline.
+    /// Russian keep the game's own letters, standing on the face's baseline, unless the face was chosen in the settings.
     /// </summary>
-    public bool IsTrueTypeFor(string text) => _face is not null && !BitmapCanDraw(_font, text);
+    public bool IsTrueTypeFor(string text) => _face is not null && !BitmapCanDraw(_faceOverMadeLetters ? _ownFont : _font, text);
 
     public (int Width, int Height) Measure(string text)
     {

@@ -253,6 +253,8 @@ strings:
       assign: '割り当て'
       game_font: 'ゲームのフォント'
       system_font: 'システム'
+      ui_scale: 'UIの拡大率'
+      ui_scale_auto: '自動 (%1%)'
     custom_game:
       none: 'レベルが見つかりません。.level と .map ファイルをレベルフォルダー（config.yaml の levels）に置いてください。'
     custom_campaign:

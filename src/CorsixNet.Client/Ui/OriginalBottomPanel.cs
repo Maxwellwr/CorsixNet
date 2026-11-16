@@ -173,11 +173,11 @@ internal sealed class OriginalBottomPanel : IDisposable
     /// Draws the bitmap fonts' text with the face from now on, at least so many pixels to the em, or the bitmap fonts
     /// again (null).
     /// </summary>
-    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8)
+    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8, bool chosen = false)
     {
-        _dateFont.UseTrueType(face, minimumSize);
-        _whiteFont.UseTrueType(face, minimumSize);
-        _pauseFont.UseTrueType(face, minimumSize);
+        _dateFont.UseTrueType(face, minimumSize, chosen);
+        _whiteFont.UseTrueType(face, minimumSize, chosen);
+        _pauseFont.UseTrueType(face, minimumSize, chosen);
     }
 
     /// <summary>

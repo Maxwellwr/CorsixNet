@@ -126,6 +126,8 @@ strings:
       assign: Attribuer
       game_font: Police du jeu
       system_font: Système
+      ui_scale: 'Échelle de l''interface'
+      ui_scale_auto: 'Auto (%1%)'
     custom_game:
       none: 'Aucun niveau trouvé : placez les fichiers .level et .map dans le dossier des niveaux (levels dans config.yaml).'
     custom_campaign:

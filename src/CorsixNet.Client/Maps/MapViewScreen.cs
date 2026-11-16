@@ -951,7 +951,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _sounds.PlayNumberAt(sound, (new Vector2(x, y) - _camera.TopLeft(viewSize).ToVector2()) * _camera.Zoom, viewSize);
         }
 
-        _device.SetRenderTarget(null);
+        ScreenCanvas.Bind(_device);
         _device.Clear(Background);
 
         var sampler = _camera.Zoom >= scale ? SamplerState.PointClamp : SamplerState.LinearClamp;
@@ -4914,6 +4914,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         _buildTool.AverageContents = config.EnableAverageContents;
         OriginalBottomPanel.MachineMenuButton = config.MachineMenuButton;
+        ScreenCanvas.Requested = config.UiScale;
         _adviser.IsEnabled = !config.AdviserDisabled;
         _scrolling = new MapScrolling(config.ScrollSettings());
         _sounds.Dispose();
@@ -5881,6 +5882,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         TrueTypeFace? face = null;
         var minimumSize = 8;
         var translation = TranslationFiles.Value.Find(_config.Language);
+        var chosen = _config.LanguageFont(translation?.Names ?? [_config.Language]) is not null;
         if (translation is null || translation.UsesGameFont)
         {
             face = _unicodeFonts.Chosen(_config.LanguageFont(translation?.Names ?? [_config.Language]));
@@ -5894,10 +5896,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             minimumSize = translation.NativeName.Any(character => character >= '⺀') ? 14 : 8;
         }
 
-        _text.UseTrueType(face, minimumSize);
-        _blackText?.UseTrueType(face, minimumSize);
-        _bottomPanel?.UseTrueType(face, minimumSize);
-        _graphics.UseTrueType(face, minimumSize);
+        _text.UseTrueType(face, minimumSize, chosen);
+        _blackText?.UseTrueType(face, minimumSize, chosen);
+        _bottomPanel?.UseTrueType(face, minimumSize, chosen);
+        _graphics.UseTrueType(face, minimumSize, chosen);
         _windows.Origin = new Point(8, StatusHeight + 8);
     }
 

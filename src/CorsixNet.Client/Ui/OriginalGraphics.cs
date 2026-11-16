@@ -22,6 +22,7 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     private Texture2D? _pixel;
     private TrueTypeFace? _face;
     private int _minimumSize = 8;
+    private bool _chosen;
 
     /// <summary>The name that stands for the game's main palette, <c>Data/MPalette.dat</c>.</summary>
     public const string MainPalette = "MPALETTE";
@@ -76,7 +77,7 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
         if (!_fonts.TryGetValue(key, out var font))
         {
             font = Palette(palette) is { } colours ? Try(() => new TextRenderer(device, new BitmapFont(install.LoadSpriteSheet("QDATA", name, complex: false)), colours)) : null;
-            font?.UseTrueType(_face, _minimumSize);
+            font?.UseTrueType(_face, _minimumSize, _chosen);
             _fonts[key] = font;
         }
 
@@ -87,13 +88,14 @@ internal sealed class OriginalGraphics(GraphicsDevice device, ThemeHospitalInsta
     /// Draws the dialogs' text with the face from now on (a language the game's fonts cannot draw), sized and coloured
     /// after each bitmap font and at least so many pixels to the em, or the bitmap fonts again (null).
     /// </summary>
-    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8)
+    public void UseTrueType(TrueTypeFace? face, int minimumSize = 8, bool chosen = false)
     {
         _face = face;
         _minimumSize = minimumSize;
+        _chosen = chosen;
         foreach (var font in _fonts.Values)
         {
-            font?.UseTrueType(face, minimumSize);
+            font?.UseTrueType(face, minimumSize, chosen);
         }
     }
 

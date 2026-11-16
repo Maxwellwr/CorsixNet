@@ -119,6 +119,8 @@ strings:
       assign: Назначить
       game_font: Шрифт игры
       system_font: Системный
+      ui_scale: 'Масштаб интерфейса'
+      ui_scale_auto: 'Авто (%1%)'
     custom_game:
       none: 'Уровни не найдены: положите файлы .level и .map в папку уровней (levels в config.yaml).'
     custom_campaign:
