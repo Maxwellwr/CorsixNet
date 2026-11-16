@@ -1,11 +1,13 @@
 using CorsixNet.Content.Levels;
 using CorsixNet.Formats;
 using CorsixNet.Sim;
+using CorsixNet.Sim.Calendar;
 using CorsixNet.Sim.Diseases;
 using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Import;
 using CorsixNet.Sim.Maps;
+using CorsixNet.Sim.Research;
 using CorsixNet.Sim.Rooms;
 using CorsixNet.Sim.Staff;
 
@@ -126,9 +128,35 @@ public static class OriginalSaveImporter
             staff.Add(new ImportedStaff(profile, new TilePosition(entity.TileX, entity.TileY), entity.Morale / 100m, 1m - (entity.Energy / 1000m)));
         }
 
+        var casebook = new List<ImportedCase>();
+        for (var index = 1; index < OriginalSaveHospital.DiseaseCount; index++)
+        {
+            var record = hospital.Disease(index);
+            foreach (var disease in DiseaseCatalog.All.Where(d => d.ExpertiseId == index))
+            {
+                casebook.Add(new ImportedCase(disease.Id, record.Discovered, record.DrugEffectiveness, record.Recoveries, record.Fatalities, record.TurnedAway, record.MoneyEarned));
+            }
+        }
+
+        var distribution = hospital.ResearchDistribution;
+        var shares = new List<(ResearchCategory, int)>();
+        for (var i = 0; i < distribution.Count && i < 5; i++)
+        {
+            shares.Add(((ResearchCategory)i, Math.Max(0, distribution[i])));
+        }
+
         return new ImportedGame
         {
             Staff = staff,
+            Visitors = hospital.Visitors,
+            Cured = hospital.PeopleCured,
+            Deaths = hospital.Deaths,
+            Reputation = hospital.Reputation,
+            Value = hospital.Value,
+            Months = Months(save),
+            Statement = Statement(save, hospital.Money),
+            Casebook = casebook,
+            ResearchShares = shares,
             Month = save.Month + 1,
             Day = Math.Max(1, save.Day),
             Balance = hospital.Money,
@@ -154,6 +182,81 @@ public static class OriginalSaveImporter
     /// objects of level files. Some two-tile objects only fit another way; <see cref="GameImport"/> then tries the others.
     /// </summary>
     public static Direction DirectionOf(byte code) => (Direction)(code & 3);
+
+    /// <summary>The graphs' figures of the months played, oldest first.</summary>
+    private static List<MonthStatistics> Months(OriginalSaveGame save)
+    {
+        var series = Enum.GetValues<OriginalSaveChart>().ToDictionary(s => s, save.Chart);
+        var months = new List<MonthStatistics>();
+        for (var i = 0; i < 12; i++)
+        {
+            var month = new MonthStatistics(
+                series[OriginalSaveChart.MoneyIn][i],
+                series[OriginalSaveChart.MoneyOut][i],
+                series[OriginalSaveChart.Wages][i],
+                series[OriginalSaveChart.Balance][i],
+                series[OriginalSaveChart.Visitors][i],
+                series[OriginalSaveChart.Cures][i],
+                series[OriginalSaveChart.Deaths][i],
+                series[OriginalSaveChart.Reputation][i]);
+            if (month != default)
+            {
+                months.Add(month);
+            }
+        }
+
+        return months;
+    }
+
+    /// <summary>
+    /// This year's bank statement lines, oldest first, as transactions; balances are worked back from today's. Lines of
+    /// kinds without a counterpart are left out.
+    /// </summary>
+    private static List<Transaction> Statement(OriginalSaveGame save, long balance)
+    {
+        var lines = save.Statement.Select((line, order) => (line, order))
+            .Where(item => item.line.Month <= save.Month && item.line.Day >= 1)
+            .OrderBy(item => item.line.Month).ThenBy(item => item.line.Day).ThenBy(item => item.order)
+            .Select(item => item.line)
+            .ToList();
+        var transactions = new List<Transaction>();
+        for (var i = lines.Count - 1; i >= 0; i--)
+        {
+            var line = lines[i];
+            if (KindOf(line.Kind) is not { } kind)
+            {
+                continue;
+            }
+
+            var subject = kind == TransactionKind.Treatment
+                ? DiseaseCatalog.All.FirstOrDefault(d => d.ExpertiseId == line.Detail)?.Id ?? string.Empty
+                : string.Empty;
+            var hour = new GameDate(1, line.Month + 1, line.Day, 0).ToHours();
+            transactions.Insert(0, new Transaction(hour, kind, subject, line.Amount, balance));
+            balance -= line.Amount;
+        }
+
+        return transactions;
+    }
+
+    private static TransactionKind? KindOf(byte kind) => kind switch
+    {
+        1 => TransactionKind.Wages,
+        3 => TransactionKind.BuyObject,
+        4 => TransactionKind.BuildRoom,
+        7 => TransactionKind.Treatment,
+        13 => TransactionKind.Drinks,
+        16 => TransactionKind.Heating,
+        17 => TransactionKind.Insurance,
+        18 => TransactionKind.Loan,
+        20 => TransactionKind.LoanInterest,
+        22 => TransactionKind.DrugCost,
+        23 => TransactionKind.Overdraft,
+        27 => TransactionKind.PersonalBonus,
+        34 => TransactionKind.AwardBonus,
+        35 => TransactionKind.TrophyBonus,
+        _ => null,
+    };
 
     /// <summary>
     /// The door as a room plan wants it: on the north or west edge of the door's tile when the outside lies north or
