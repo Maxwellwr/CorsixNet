@@ -3558,7 +3558,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             {
                 // Rooms already built in a loaded game have had their description.
                 _roomsDescribed.UnionWith(Simulation!.Entities.OfType<Room>().Where(room => room.IsActive).Select(room => room.RoomType));
-
             }
         }
 
