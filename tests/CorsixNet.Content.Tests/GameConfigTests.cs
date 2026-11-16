@@ -107,6 +107,7 @@ public sealed class GameConfigTests : IDisposable
             Fullscreen = true,
             Width = 1920,
             Height = 1080,
+            UiScale = 3,
             EnableScreenShake = false,
             AutosaveFrequency = 2,
             FreeBuildMode = true,
@@ -129,6 +130,15 @@ public sealed class GameConfigTests : IDisposable
 
         Assert.Equal(config, GameConfig.Parse(config.ToText()));
     }
+
+    [Theory]
+    [InlineData("", 0)]
+    [InlineData("ui_scale: 2", 2)]
+    [InlineData("ui_scale: 9", 4)]
+    [InlineData("ui_scale: -1", 0)]
+    [InlineData("ui_scale: big", 0)]
+    public void TheInterfaceScaleIsAutomaticOrOneToFour(string text, int expected) =>
+        Assert.Equal(expected, GameConfig.Parse(text).UiScale);
 
     [Fact]
     public void AConfigPathFileNamesTheFolderOrTheFile()

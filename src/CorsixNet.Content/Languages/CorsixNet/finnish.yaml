@@ -330,6 +330,8 @@ strings:
       assign: 'Aseta'
       game_font: 'Pelin fontti'
       system_font: 'Järjestelmä'
+      ui_scale: 'Käyttöliittymän skaalaus'
+      ui_scale_auto: 'Automaattinen (%1%)'
     custom_game:
       none: 'Tasoja ei löytynyt: laita .level- ja .map-tiedostot tasokansioon (levels tiedostossa config.yaml).'
     custom_campaign:

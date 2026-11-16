@@ -145,6 +145,8 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
                 [
                     Switch(Label("fullscreen", "Fullscreen"), _config.Fullscreen, on => _config with { Fullscreen = on }, Tip("fullscreen")),
                     new(Label("window_size", "Window Size"), size, step => Apply(NextSize(step)), Tip("window_size")),
+                    new(UiText.Get("corsixnet.options.ui_scale", "UI Scale"), UiScaleName(_config.UiScale, Rendering.ScreenCanvas.AutomaticScale),
+                        step => Apply(_config with { UiScale = (int)Wrap(_config.UiScale + step, 0, Rendering.ScreenCanvas.MaxScale) }), Tip("ui_scale")),
                 ];
                 if (fonts?.Invoke(_config.Language) is { Fonts.Count: > 0 } choices)
                 {
@@ -281,6 +283,13 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
             ? null
             : UiText.Format("errors.custom_music_no_tracks", "Custom Music directory chosen contains no playable music files. Please check the directory and try again.// %s", path);
     }
+
+    /// <summary>The interface scale row's value: "2x", or the automatic one with the scale it comes to.</summary>
+    internal static string UiScaleName(int scale, int automatic) => scale <= 0
+        ? UiText.Format("corsixnet.options.ui_scale_auto", "Auto (%1%)", ScaleName(automatic))
+        : ScaleName(scale);
+
+    private static string ScaleName(int scale) => scale.ToString(CultureInfo.InvariantCulture) + "x";
 
     private GameConfig NextSize(int step)
     {

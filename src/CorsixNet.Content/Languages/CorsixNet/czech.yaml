@@ -109,6 +109,8 @@ strings:
       assign: 'Přiřadit'
       game_font: 'Písmo hry'
       system_font: 'Systémové'
+      ui_scale: 'Měřítko rozhraní'
+      ui_scale_auto: 'Automaticky (%1%)'
     custom_game:
       none: 'Nenalezeny žádné úrovně: vložte soubory .level a .map do složky úrovní (levels v config.yaml).'
     custom_campaign:

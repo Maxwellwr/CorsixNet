@@ -211,6 +211,8 @@ strings:
       assign: 'Ορισμός'
       game_font: 'Γραμματοσειρά παιχνιδιού'
       system_font: 'Συστήματος'
+      ui_scale: 'Κλίμακα διεπαφής'
+      ui_scale_auto: 'Αυτόματη (%1%)'
     custom_game:
       none: 'Δεν βρέθηκαν επίπεδα: βάλτε αρχεία .level και .map στον φάκελο επιπέδων (levels στο config.yaml).'
     custom_campaign:

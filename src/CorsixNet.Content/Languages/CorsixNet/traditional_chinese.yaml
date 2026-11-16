@@ -181,6 +181,8 @@ strings:
       assign: '設定'
       game_font: '遊戲字型'
       system_font: '系統'
+      ui_scale: '介面縮放'
+      ui_scale_auto: '自動 (%1%)'
     custom_game:
       none: '找不到關卡：請把 .level 和 .map 檔案放進關卡資料夾（config.yaml 中的 levels）。'
     custom_campaign:

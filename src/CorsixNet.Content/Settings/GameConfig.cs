@@ -53,6 +53,12 @@ public sealed record GameConfig
     /// <summary>The window's height; CorsixTH's default is 600.</summary>
     public int Height { get; init; } = 800;
 
+    /// <summary>
+    /// How many screen pixels each of the game's pixels takes across and down, 1 to 4, or 0 for the screen's density
+    /// (CorsixNet's own <c>ui_scale</c>).
+    /// </summary>
+    public int UiScale { get; init; }
+
     /// <summary>The language of the game's texts, a name or an abbreviation as CorsixTH's settings take it.</summary>
     public string Language { get; init; } = "English";
 
@@ -308,6 +314,7 @@ public sealed record GameConfig
             Fullscreen = Bool("fullscreen", defaults.Fullscreen),
             Width = Int("width", defaults.Width),
             Height = Int("height", defaults.Height),
+            UiScale = Math.Clamp(Int("ui_scale", defaults.UiScale), 0, 4),
             Language = Text("language", defaults.Language),
             EnableScreenShake = Bool("enable_screen_shake", defaults.EnableScreenShake),
             AdviserDisabled = Bool("adviser_disabled", defaults.AdviserDisabled),
@@ -420,6 +427,16 @@ public sealed record GameConfig
 
             """);
         text.Append(CultureInfo.InvariantCulture, $"width: {Width}\nheight: {Height}\n");
+        text.Append("""
+
+            #------------------------------------------------------------------------------
+            # Interface scale: how many screen pixels each of the game's pixels takes, 1 to
+            # 4, so that the game stays sharp on a screen of high density. 0 follows the
+            # display scale of the system (150 % and up gives 2).
+            #
+
+            """);
+        text.Append(CultureInfo.InvariantCulture, $"ui_scale: {UiScale}\n");
         text.Append("""
 
             #------------------------------------------------------------------------------

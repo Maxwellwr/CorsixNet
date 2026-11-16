@@ -279,6 +279,8 @@ strings:
       assign: 'Tilldela'
       game_font: 'Spelets typsnitt'
       system_font: 'System'
+      ui_scale: 'Gränssnittets skala'
+      ui_scale_auto: 'Automatisk (%1%)'
     custom_game:
       none: 'Inga banor hittades: lägg .level- och .map-filer i banmappen (levels i config.yaml).'
     custom_campaign:

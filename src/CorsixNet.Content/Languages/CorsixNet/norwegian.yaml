@@ -258,6 +258,8 @@ strings:
       assign: 'Tildel'
       game_font: 'Spillets skrift'
       system_font: 'System'
+      ui_scale: 'Skalering av grensesnittet'
+      ui_scale_auto: 'Automatisk (%1%)'
     custom_game:
       none: 'Ingen brett funnet: legg .level- og .map-filer i brettmappen (levels i config.yaml).'
     custom_campaign:

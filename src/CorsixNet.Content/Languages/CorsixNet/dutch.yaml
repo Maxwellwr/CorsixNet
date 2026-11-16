@@ -180,6 +180,8 @@ strings:
       assign: 'Toewijzen'
       game_font: 'Lettertype van het spel'
       system_font: 'Systeem'
+      ui_scale: 'Schaal van de interface'
+      ui_scale_auto: 'Automatisch (%1%)'
     custom_game:
       none: 'Geen levels gevonden: zet .level- en .map-bestanden in de levelmap (levels in config.yaml).'
     custom_campaign:

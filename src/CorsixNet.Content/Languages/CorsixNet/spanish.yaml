@@ -112,6 +112,8 @@ strings:
       assign: 'Asignar'
       game_font: 'Fuente del juego'
       system_font: 'Sistema'
+      ui_scale: 'Escala de la interfaz'
+      ui_scale_auto: 'Automática (%1%)'
     custom_game:
       none: 'No se encontraron niveles: pon archivos .level y .map en la carpeta de niveles (levels en config.yaml).'
     custom_campaign:

@@ -184,6 +184,7 @@ if (options.ScriptPath is not null)
     }
 }
 
+CorsixNet.Client.Rendering.ScreenCanvas.Requested = config.UiScale;
 using var game = new CorsixNetGame($"CorsixNet - {install.RootPath}", createScreen, config.Width, config.Height, config.Fullscreen);
 game.Run();
 return 0;
