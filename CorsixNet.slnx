@@ -11,6 +11,7 @@
   <Folder Name="/tools/">
     <Project Path="tools/CorsixNet.AnnouncerVoice/CorsixNet.AnnouncerVoice.csproj" />
     <Project Path="tools/CorsixNet.LuaConverter/CorsixNet.LuaConverter.csproj" />
+    <Project Path="tools/CorsixNet.SaveDump/CorsixNet.SaveDump.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/CorsixNet.Analyzers.Tests/CorsixNet.Analyzers.Tests.csproj" />
