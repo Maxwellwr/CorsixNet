@@ -46,6 +46,11 @@ public sealed class OriginalSaveImporterTests(ITestOutputHelper output)
             output.WriteLine($"   staff {staff.Count}/{staffInSave}");
             Assert.Equal(staffInSave, staff.Count);
             Assert.All(staff, s => Assert.NotNull(s.Profile!.ImportedName));
+            var patientsInSave = save.Entities.Count(e => e.Kind == 2 && e.TileX != 0 && e.Disease > 0);
+            var patients = simulation.Entities.OfType<Humanoid>().Count(h => h.Behaviour is CorsixNet.Sim.People.PatientBehaviour);
+            output.WriteLine($"   patients {patients}/{patientsInSave}");
+            Assert.InRange(patients, patientsInSave * 9 / 10, patientsInSave);
+
             var saved = save.Hospitals[0];
             Assert.Equal(saved.Reputation, hospital.Reputation);
             Assert.Equal(saved.PeopleCured, hospital.Cured);
@@ -53,6 +58,12 @@ public sealed class OriginalSaveImporterTests(ITestOutputHelper output)
             if (hospital.Transactions.Count > 0)
             {
                 Assert.Equal(saved.Money, hospital.Transactions[0].Balance);
+            }
+
+            // The rebuilt hospital runs: a week of play goes by without an error.
+            for (var tick = 0; tick < 7 * 50; tick++)
+            {
+                simulation.Step();
             }
         }
     }

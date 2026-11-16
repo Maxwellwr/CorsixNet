@@ -128,6 +128,26 @@ public static class OriginalSaveImporter
             staff.Add(new ImportedStaff(profile, new TilePosition(entity.TileX, entity.TileY), entity.Morale / 100m, 1m - (entity.Energy / 1000m)));
         }
 
+        var patients = new List<ImportedPatient>();
+        foreach (var entity in save.Entities.Where(e => e.Kind == 2 && e.TileX != 0 && e.Disease is > 0 and < OriginalSaveHospital.DiseaseCount))
+        {
+            if (DiseaseCatalog.All.FirstOrDefault(d => d.ExpertiseId == entity.Disease && !d.IsPseudo) is not { } disease)
+            {
+                continue;
+            }
+
+            // The newest recorded point of the health graph (values above 100 are points not recorded yet).
+            var health = entity.HealthHistory.ToArray().Where(v => v <= 100).Select(v => (int)v).LastOrDefault(90);
+            patients.Add(new ImportedPatient(
+                disease.Id,
+                new TilePosition(entity.TileX, entity.TileY),
+                health / 100m,
+                entity.Happiness / 100m,
+                1m - (entity.Thirst / 100m),
+                entity.Warmth / 100m,
+                entity.DiagnosisCertainty * 1000 / 255));
+        }
+
         var casebook = new List<ImportedCase>();
         for (var index = 1; index < OriginalSaveHospital.DiseaseCount; index++)
         {
@@ -148,6 +168,7 @@ public static class OriginalSaveImporter
         return new ImportedGame
         {
             Staff = staff,
+            Patients = patients,
             Visitors = hospital.Visitors,
             Cured = hospital.PeopleCured,
             Deaths = hospital.Deaths,
