@@ -63,7 +63,7 @@ static void Summary(OriginalSaveGame save)
         Console.WriteLine($"  staff {hospital.Staff}: {hospital.Doctors} doctors, {hospital.Nurses} nurses, {hospital.Handymen} handymen, {hospital.Receptionists} receptionists");
         Console.WriteLine($"  reputation {hospital.Reputation}, research (cure/diagnosis/drugs/improvements/specialisation) {string.Join('/', hospital.ResearchDistribution)}");
         Console.WriteLine($"  policy: guess cure {hospital.GuessCurePercent}%, send home {hospital.SendHomePercent}%, stop at {hospital.StopProcedure / 10}%, rest at {hospital.StaffRestLevel / 10}%, leave rooms {(hospital.StaffLeaveRooms ? "yes" : "no")}");
-        foreach (var disease in Enumerable.Range(0, OriginalSaveHospital.DiseaseCount).Select(hospital.Disease).Where(d => d.Known && d.Charge > 0))
+        foreach (var disease in Enumerable.Range(0, OriginalSaveHospital.DiseaseCount).Select(hospital.Disease).Where(d => d.Discovered && d.Charge > 0))
         {
             Console.WriteLine($"  expertise {disease.Index,2}: charge ${disease.Charge} ({disease.ChargePercent / 100}%), earned ${disease.MoneyEarned}, cured {disease.Recoveries}, died {disease.Fatalities}, turned away {disease.TurnedAway}");
         }

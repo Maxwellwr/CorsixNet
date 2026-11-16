@@ -315,6 +315,19 @@ public sealed record OriginalSaveHospital(
     public IReadOnlyList<int> ResearchDistribution =>
         [.. Enumerable.Range(0, 5).Select(i => (int)BinaryPrimitives.ReadInt16LittleEndian(Raw.Span[(433 + (2 * i))..]))];
 
+    /// <summary>Research points not yet spent.</summary>
+    public int ResearchPoints => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[221..]);
+
+    /// <summary>
+    /// Research accumulated for a casebook (expertise) index; it starts growing once a research department works.
+    /// </summary>
+    public int ExpertiseResearch(int index)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, DiseaseCount);
+        return BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[(225 + (4 * index))..]);
+    }
+
     /// <summary>The disease (expertise) record with an index.</summary>
     public OriginalSaveDisease Disease(int index)
     {
@@ -329,6 +342,12 @@ public sealed record OriginalSaveHospital(
 /// <param name="Raw">The stored bytes.</param>
 public sealed record OriginalSaveDisease(int Index, ReadOnlyMemory<byte> Raw)
 {
+    /// <summary>
+    /// Research towards the next drug improvement: rises while drug research runs and drops back when the
+    /// drug improves (<see cref="DrugEffectiveness"/> then goes up by 5).
+    /// </summary>
+    public int DrugResearch => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span);
+
     /// <summary>Treatment charge.</summary>
     public int Charge => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[12..]);
 
@@ -341,8 +360,11 @@ public sealed record OriginalSaveDisease(int Index, ReadOnlyMemory<byte> Raw)
     /// <summary>Drug effectiveness in percent, the flask on the casebook page (0 for diseases not cured by drugs).</summary>
     public byte DrugEffectiveness => Raw.Span[27];
 
-    /// <summary>Whether it is known (shown in the casebook).</summary>
+    /// <summary>Byte 28: set for most entries of the level from the start; its exact meaning is not known.</summary>
     public bool Known => Raw.Span[28] != 0;
+
+    /// <summary>Whether the disease has been discovered (the "new condition" fax), so the casebook shows it.</summary>
+    public bool Discovered => Raw.Span[29] != 0;
 
     /// <summary>Patients cured.</summary>
     public int Recoveries => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[30..]);

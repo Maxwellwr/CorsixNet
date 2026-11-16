@@ -103,8 +103,8 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Hospital, 65, 4, "max loan?", false),
         new(OriginalSaveArea.Hospital, 205, 4, "insurance owed (one company)", true),
         new(OriginalSaveArea.Hospital, 213, 4, "interest rate x10", true),
-        new(OriginalSaveArea.Hospital, 221, 4, "research points?", false),
-        new(OriginalSaveArea.Hospital, 225, 188, "expertise research?", false),
+        new(OriginalSaveArea.Hospital, 221, 4, "research points", true),
+        new(OriginalSaveArea.Hospital, 225, 188, "expertise research", true),
         new(OriginalSaveArea.Hospital, 433, 10, "research distribution", true),
         new(OriginalSaveArea.Hospital, 443, 4, "value", true),
         new(OriginalSaveArea.Hospital, 459, 2, "population share?", false),
@@ -129,7 +129,7 @@ public static class OriginalSaveFields
     {
         (int Offset, int Length, string Name)[] fields =
         [
-            (12, 4, "charge"), (16, 4, "charge percent"), (20, 4, "money earned"), (27, 1, "drug effectiveness"), (28, 1, "known"),
+            (0, 4, "drug research"), (12, 4, "charge"), (16, 4, "charge percent"), (20, 4, "money earned"), (27, 1, "drug effectiveness"), (28, 1, "known?"), (29, 1, "discovered"),
             (30, 2, "recoveries"), (32, 2, "fatalities"), (36, 2, "turned away"),
         ];
         for (var disease = 0; disease < OriginalSaveHospital.DiseaseCount; disease++)
