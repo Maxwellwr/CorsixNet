@@ -38,6 +38,7 @@ public sealed class OriginalSaveImporterTests(ITestOutputHelper output)
                 output.WriteLine("   " + problem);
             }
 
+            Assert.Empty(report.Problems);
             Assert.Equal(save.Hospitals[0].Money, hospital.Balance);
             Assert.Equal(save.Hospitals[0].Loan, hospital.Loan);
             Assert.Equal(save.Month + 1, simulation.Date.Month);
