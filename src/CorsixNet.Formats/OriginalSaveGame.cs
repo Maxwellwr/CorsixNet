@@ -321,6 +321,21 @@ public sealed record OriginalSaveHospital(
     public IReadOnlyList<int> ResearchDistribution =>
         [.. Enumerable.Range(0, 5).Select(i => (int)BinaryPrimitives.ReadInt16LittleEndian(Raw.Span[(433 + (2 * i))..]))];
 
+    /// <summary>Current or last emergency: bonus paid per patient cured.</summary>
+    public int EmergencyBonus => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[477..]);
+
+    /// <summary>Current or last emergency: the disease (casebook index).</summary>
+    public int EmergencyDisease => Raw.Span[484];
+
+    /// <summary>Current or last emergency: patients cured so far.</summary>
+    public int EmergencyCured => Raw.Span[485];
+
+    /// <summary>Current or last emergency: patients brought in.</summary>
+    public int EmergencyPatients => Raw.Span[486];
+
+    /// <summary>Current or last emergency: share of patients that must be cured, in percent.</summary>
+    public int EmergencyPassPercent => Raw.Span[488];
+
     /// <summary>Research points not yet spent.</summary>
     public int ResearchPoints => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[221..]);
 
