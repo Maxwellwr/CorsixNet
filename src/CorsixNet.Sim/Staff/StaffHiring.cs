@@ -194,7 +194,7 @@ public static class StaffHiring
     }
 
     /// <summary>Puts a new member of staff of the player's hospital on a tile (<c>Staff:onPlaceInCorridor</c>).</summary>
-    private static Humanoid Place(Simulation simulation, StaffProfile profile, TilePosition tile, int player)
+    internal static Humanoid Place(Simulation simulation, StaffProfile profile, TilePosition tile, int player)
     {
         var staff = simulation.AddEntity(id => Humanoid.CreateStaff(id, tile, profile, player));
         staff.Behaviour = NewBehaviour(profile.Class);

@@ -71,6 +71,12 @@ public sealed class StaffTexts
     /// <summary>The initial (CorsixTH's <c>initial</c>, from <c>name_seed</c>).</summary>
     public string Initial(StaffProfile profile)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+        if (profile.ImportedName is { } imported)
+        {
+            return imported.Initial.ToString();
+        }
+
         if (_initials.Length == 0)
         {
             return "?";
@@ -84,6 +90,12 @@ public sealed class StaffTexts
     /// <summary>The surname: a random start and a random end.</summary>
     public string Name(StaffProfile profile)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+        if (profile.ImportedName is { } imported)
+        {
+            return At(_nameStarts, imported.NameStart) + At(_nameEnds, imported.NameEnd);
+        }
+
         var random = RandomFor(profile);
         return Pick(_nameStarts, random) + Pick(_nameEnds, random);
     }
@@ -97,6 +109,12 @@ public sealed class StaffTexts
     /// </summary>
     public string Description(StaffProfile profile)
     {
+        ArgumentNullException.ThrowIfNull(profile);
+        if (profile.ImportedName is { } imported)
+        {
+            return At(profile.Skill < GoodSkill ? _bad : _good, imported.CharacterDescription) + At(_misc, imported.MiscDescription);
+        }
+
         var random = RandomFor(profile);
 
         // The name's two picks come first, as in randomiseOrganical.
@@ -112,6 +130,9 @@ public sealed class StaffTexts
 
         return random.Next(2) == 0 ? second + first : first + second;
     }
+
+    /// <summary>The string at an index of an imported name or description, or nothing if the list is shorter.</summary>
+    private static string At(IReadOnlyList<string> list, int index) => index >= 0 && index < list.Count ? list[index] : string.Empty;
 
     /// <summary>The name of a staff class (<c>staff_class</c>, the profession CorsixTH shows for staff).</summary>
     public string Profession(StaffClass staffClass) =>

@@ -7,6 +7,7 @@ using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Import;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Rooms;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Content.Saves;
 
@@ -21,6 +22,9 @@ public static class OriginalSaveImporter
     /// two-part objects (op_sink2, operating_table_b; placed with their first half), litter, the helicopter and ratholes.
     /// </summary>
     private static readonly byte[] SkippedTypes = [58, 59, 34, 12, 62, 63, 64];
+
+    /// <summary>Training progress as the original stores it for a whole ability (assumed; seen growing a few points a month).</summary>
+    private const decimal TrainingScale = 100m;
 
     /// <summary>The radiation shield: both halves carry its type; the first one in the save is placed.</summary>
     private const byte RadiationShield = 28;
@@ -98,8 +102,33 @@ public static class OriginalSaveImporter
             }
         }
 
+        var staff = new List<ImportedStaff>();
+        foreach (var entity in save.Entities.Where(e => e.Kind == 4 && e.TileX != 0))
+        {
+            // Type 4 is a doctor dressed for surgery.
+            var staffClass = entity.Type is 4 ? StaffClass.Doctor : (StaffClass)Math.Min((int)entity.Type, 3);
+            var flags = entity.StaffFlags;
+            var (surgery, psychiatry, research) = entity.TrainingProgress;
+            var name = new ImportedStaffName(entity.Initial, entity.NameStart, entity.NameEnd, entity.Description.Misc, entity.Description.Character);
+            var profile = StaffProfile.Import(
+                staffClass,
+                entity.Skill,
+                entity.AttentionToDetail * 100,
+                psychiatrist: (flags & 64) != 0,
+                surgeon: (flags & 32) != 0,
+                researcher: (flags & 256) != 0,
+                entity.Salary,
+                (byte)entity.Layers[5],
+                [surgery / TrainingScale, psychiatry / TrainingScale, research / TrainingScale],
+                name,
+                simulation.Rules.Staff,
+                simulation.Random);
+            staff.Add(new ImportedStaff(profile, new TilePosition(entity.TileX, entity.TileY), entity.Morale / 100m, 1m - (entity.Energy / 1000m)));
+        }
+
         return new ImportedGame
         {
+            Staff = staff,
             Month = save.Month + 1,
             Day = Math.Max(1, save.Day),
             Balance = hospital.Money,
