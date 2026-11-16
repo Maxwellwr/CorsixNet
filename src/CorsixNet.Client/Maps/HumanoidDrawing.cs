@@ -250,6 +250,15 @@ internal sealed class HumanoidDrawing
     }
 
     /// <summary>
+    /// Ticks an action animation has run when drawn at <paramref name="tick"/>. The simulation starts it during the
+    /// update of tick <paramref name="start"/> and the map draws <see cref="Simulation.Tick"/> after that update, so the
+    /// first draw is at <c>start + 1</c> and must show the first frame. CorsixTH (entity.lua's <c>Entity:tick</c>) advances
+    /// the frame before running the timer that sets the next animation, so the new animation is drawn at its first frame
+    /// and an animation of length L shows frames 0 to L-1 before its timer, set to L, swaps it.
+    /// </summary>
+    internal static long ActionElapsed(long tick, long start) => Math.Max(0, tick - 1 - start);
+
+    /// <summary>
     /// Draws the animation of using an object, from the tile the simulation gives (the object's, or the use
     /// position's), one frame per tick from when it started, as CorsixTH's use object action sets it.
     /// </summary>
@@ -258,7 +267,7 @@ internal sealed class HumanoidDrawing
         _current.Remove(humanoid.Id);
         var set = _renderer.Animations;
         var first = set.FirstFrame(action.Id);
-        var elapsed = Math.Max(0, tick - humanoid.ActionAnimationStart);
+        var elapsed = ActionElapsed(tick, humanoid.ActionAnimationStart);
         var frame = set.Advance(first, (int)(elapsed % set.Length(first)));
         Span<byte> layers = stackalloc byte[Humanoid.LayerCount];
         for (var i = 0; i < layers.Length; i++)
