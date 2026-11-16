@@ -34,6 +34,12 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     /// <summary>Slot of the next entity on the same tile, or 0; the tile's <see cref="OriginalSaveTile.Entity"/> is the first.</summary>
     public int NextOnTile => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span);
 
+    /// <summary>
+    /// Plants only: water left. A new plant starts at 400; it drops by about one a game hour and goes back up
+    /// when a handyman waters it.
+    /// </summary>
+    public int PlantWater => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[100..]);
+
     /// <summary>Objects only: how many times the object has been used (the "Times used" of its tooltip).</summary>
     public int TimesUsed => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[55..]);
 

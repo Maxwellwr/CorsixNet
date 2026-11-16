@@ -61,6 +61,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Entity, 29, 13, "animation layers", true),
         new(OriginalSaveArea.Entity, 14, 1, "type", true),
         new(OriginalSaveArea.Entity, 17, 1, "direction", true),
+        new(OriginalSaveArea.Entity, 100, 2, "plant water (plants)", true),
         new(OriginalSaveArea.Entity, 108, 2, "salary", true),
         new(OriginalSaveArea.Entity, 124, 2, "staff flags", true),
         new(OriginalSaveArea.Entity, 126, 2, "skill", true),
