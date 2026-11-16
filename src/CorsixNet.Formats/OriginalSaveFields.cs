@@ -122,7 +122,7 @@ public static class OriginalSaveFields
     {
         (int Offset, int Length, string Name)[] fields =
         [
-            (12, 4, "charge"), (16, 4, "charge percent"), (20, 4, "money earned"), (28, 1, "known"),
+            (12, 4, "charge"), (16, 4, "charge percent"), (20, 4, "money earned"), (27, 1, "drug effectiveness"), (28, 1, "known"),
             (30, 2, "recoveries"), (32, 2, "fatalities"), (36, 2, "turned away"),
         ];
         for (var disease = 0; disease < OriginalSaveHospital.DiseaseCount; disease++)

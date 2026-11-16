@@ -314,6 +314,9 @@ public sealed record OriginalSaveDisease(int Index, ReadOnlyMemory<byte> Raw)
     /// <summary>Money earned from it.</summary>
     public int MoneyEarned => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[20..]);
 
+    /// <summary>Drug effectiveness in percent, the flask on the casebook page (0 for diseases not cured by drugs).</summary>
+    public byte DrugEffectiveness => Raw.Span[27];
+
     /// <summary>Whether it is known (shown in the casebook).</summary>
     public bool Known => Raw.Span[28] != 0;
 

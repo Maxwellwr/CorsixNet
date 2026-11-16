@@ -145,6 +145,7 @@ public class OriginalSaveGameTests
         BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 12), 168);
         BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 16), 10000);
         BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 20), 9180);
+        data[gp + 27] = 100;
         data[gp + 28] = 1;
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(gp + 30), 3);
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(gp + 32), 2);
@@ -158,6 +159,7 @@ public class OriginalSaveGameTests
         var disease = parsed.Disease(1);
         Assert.Equal((168, 10000, 9180, true), (disease.Charge, disease.ChargePercent, disease.MoneyEarned, disease.Known));
         Assert.Equal((3, 2, 1), (disease.Recoveries, disease.Fatalities, disease.TurnedAway));
+        Assert.Equal(100, disease.DrugEffectiveness);
         Assert.False(parsed.Disease(2).Known);
     }
 
