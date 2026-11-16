@@ -248,7 +248,8 @@ public enum OriginalSaveChart
 /// <param name="Amount">Money in (positive) or out (negative).</param>
 /// <param name="Kind">
 /// What it was: 1 wages, 3 furniture bought, 4 room built, 7 treatment, 13 drinks machine income, 16 heating,
-/// 18 loan, 22 drug cost; others (2, 17, 20, 23, 27, 34, 35) not identified yet.
+/// 18 loan, 17 insurance payment (detail: the insurer), 20 loan interest, 22 drug cost, 23 overdraft interest,
+/// 27 personal bonus, 34 end-of-year bonus or penalty, 35 end-of-year trophy bonus; 2 and 32 not identified yet.
 /// </param>
 /// <param name="Day">Day of the month, from 1.</param>
 /// <param name="Month">Month of the game, from 0.</param>

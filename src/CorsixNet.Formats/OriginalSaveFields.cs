@@ -103,7 +103,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Hospital, 53, 4, "money", true),
         new(OriginalSaveArea.Hospital, 61, 4, "loan", true),
         new(OriginalSaveArea.Hospital, 65, 4, "max loan?", false),
-        new(OriginalSaveArea.Hospital, 161, 60, "yearly per-category sums? (reset on 1 January; +205 matched one insurer's debt once)", false),
+        new(OriginalSaveArea.Hospital, 161, 60, "insurance owed per insurer? (+205 held a SwanLeaf claim later paid in full; cleared on payment)", false),
         new(OriginalSaveArea.Hospital, 221, 4, "research points", true),
         new(OriginalSaveArea.Hospital, 225, 188, "expertise research", true),
         new(OriginalSaveArea.Hospital, 433, 10, "research distribution", true),
