@@ -145,8 +145,8 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
                 [
                     Switch(Label("fullscreen", "Fullscreen"), _config.Fullscreen, on => _config with { Fullscreen = on }, Tip("fullscreen")),
                     new(Label("window_size", "Window Size"), size, step => Apply(NextSize(step)), Tip("window_size")),
-                    new(UiText.Get("corsixnet.options.ui_scale", "Interface scale"), UiScaleName(_config.UiScale, Rendering.ScreenCanvas.AutomaticScale),
-                        step => Apply(_config with { UiScale = (int)Wrap(_config.UiScale + step, 0, Rendering.ScreenCanvas.MaxScale) })),
+                    new(UiText.Get("corsixnet.options.ui_scale", "UI Scale"), UiScaleName(_config.UiScale, Rendering.ScreenCanvas.AutomaticScale),
+                        step => Apply(_config with { UiScale = (int)Wrap(_config.UiScale + step, 0, Rendering.ScreenCanvas.MaxScale) }), Tip("ui_scale")),
                 ];
                 if (fonts?.Invoke(_config.Language) is { Fonts.Count: > 0 } choices)
                 {
