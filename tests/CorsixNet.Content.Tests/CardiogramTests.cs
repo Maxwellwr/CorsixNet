@@ -27,6 +27,9 @@ public class CardiogramTests
         var monitored = new HashSet<int>();
         var animations = new HashSet<int>();
         var kinds = new HashSet<HumanoidType>();
+        var speeds = new HashSet<int>();
+        var rounds = new Dictionary<int, int>();
+        var roundStarts = new Dictionary<int, long>();
 
         for (var tick = 0; tick < 4 * 31 * GameDate.HoursPerDay; tick++)
         {
@@ -40,6 +43,15 @@ public class CardiogramTests
                     if (humanoid.ActionAnimation is { } animation)
                     {
                         animations.Add(animation.Id);
+                        if (animation.Id is 652 or 2840)
+                        {
+                            speeds.Add(humanoid.ActionAnimationSpeed);
+                            if (roundStarts.GetValueOrDefault(humanoid.Id, -1) != humanoid.ActionAnimationStart)
+                            {
+                                roundStarts[humanoid.Id] = humanoid.ActionAnimationStart;
+                                rounds[humanoid.Id] = rounds.GetValueOrDefault(humanoid.Id) + 1;
+                            }
+                        }
                     }
                 }
 
@@ -54,6 +66,13 @@ public class CardiogramTests
         Assert.Contains(animations, id => id is 1018 or 3008);
         Assert.Contains(animations, id => id is 652 or 2840);
         Assert.Contains(656, animations);
+
+        // cardiogram_cardio_loop_callback: the doctor stands by (1030) between readings, the monitor runs one, two and
+        // three frames a tick, and each examination is 31 rounds of the in-use animation (five spells of six, and one).
+        Assert.Contains(1030, animations);
+        Assert.Equal([1, 2, 3], speeds.Order());
+        Assert.Contains(31, rounds.Values);
+        Assert.All(rounds.Values, count => Assert.InRange(count, 1, 31));
         Assert.All(kinds, kind => Assert.Contains("Stripped", kind.ToString(), StringComparison.Ordinal));
         Assert.Contains(hospital.Transactions, t => t is { Kind: TransactionKind.Treatment, Subject: "diag_cardiogram" });
         Assert.DoesNotContain(simulation.Entities.OfType<Humanoid>(), h => h.Behaviour is PatientBehaviour { Phase: PatientPhase.GoingHome } && h.Type.ToString().Contains("Stripped", StringComparison.Ordinal));

@@ -259,7 +259,10 @@ internal sealed class HumanoidDrawing
         var set = _renderer.Animations;
         var first = set.FirstFrame(action.Id);
         var elapsed = Math.Max(0, tick - humanoid.ActionAnimationStart);
-        var frame = set.Advance(first, (int)(elapsed % set.Length(first)));
+
+        // num_animation_ticks: some uses (the cardiogram's monitor) move on more than one frame a tick.
+        var played = (int)(elapsed * humanoid.ActionAnimationSpeed % set.Length(first));
+        var frame = set.Advance(first, played);
         Span<byte> layers = stackalloc byte[Humanoid.LayerCount];
         for (var i = 0; i < layers.Length; i++)
         {
@@ -277,11 +280,11 @@ internal sealed class HumanoidDrawing
         if (humanoid.MorphAnimation is { } into)
         {
             DrawMorph(batch, humanoid, action, into, frame, elapsed, x, y, layers);
-            return new Drawn(x, y, action.Id, (int)(elapsed % set.Length(first)), set.Length(first), humanoid.ActionAnimationFlip);
+            return new Drawn(x, y, action.Id, played, set.Length(first), humanoid.ActionAnimationFlip);
         }
 
         DrawFrame(batch, humanoid, frame, x, y, layers, humanoid.ActionAnimationFlip, tick);
-        return new Drawn(x, y, action.Id, (int)(elapsed % set.Length(first)), set.Length(first), humanoid.ActionAnimationFlip);
+        return new Drawn(x, y, action.Id, played, set.Length(first), humanoid.ActionAnimationFlip);
     }
 
     /// <summary>
