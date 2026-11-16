@@ -152,7 +152,7 @@ public sealed record OriginalSaveEntity(int Slot, ReadOnlyMemory<byte> Raw)
     public (byte Misc, byte Character) Description => (Raw.Span[138], Raw.Span[139]);
 }
 
-/// <summary>One 35-byte record of the room table. Only the first ten bytes are understood.</summary>
+/// <summary>One 35-byte record of the room table.</summary>
 /// <param name="Index">Index of the record from the start of the table.</param>
 /// <param name="Raw">The 35 stored bytes.</param>
 public sealed record OriginalSaveRoom(int Index, ReadOnlyMemory<byte> Raw)
@@ -177,6 +177,24 @@ public sealed record OriginalSaveRoom(int Index, ReadOnlyMemory<byte> Raw)
 
     /// <summary>Tile just outside the door.</summary>
     public (int X, int Y) Outside => ReadTile(4);
+
+    /// <summary>
+    /// Entity slots of up to two staff members working in the room (an operating theatre lists both surgeons).
+    /// </summary>
+    public IReadOnlyList<int> Staff =>
+        [.. new[] { 16, 18 }.Select(o => (int)BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[o..])).Where(s => s != 0)];
+
+    /// <summary>Patients who have used the room ("Visitor Count" of the queue window).</summary>
+    public int VisitorCount => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[20..]);
+
+    /// <summary>Maximum queue length ("Max Size" of the queue window).</summary>
+    public int MaxQueueSize => Raw.Span[30];
+
+    /// <summary>Patients queueing ("Queue Size").</summary>
+    public int QueueSize => Raw.Span[31];
+
+    /// <summary>Patients on their way ("Expected").</summary>
+    public int Expected => Raw.Span[32];
 
     private (int X, int Y) ReadTile(int offset)
     {

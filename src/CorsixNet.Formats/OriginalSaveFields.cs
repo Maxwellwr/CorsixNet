@@ -88,6 +88,12 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Room, 4, 2, "outside tile", true),
         new(OriginalSaveArea.Room, 6, 2, "door tile", true),
         new(OriginalSaveArea.Room, 8, 2, "origin tile", true),
+        new(OriginalSaveArea.Room, 14, 2, "someone in the room? (patient or staff)", false),
+        new(OriginalSaveArea.Room, 16, 4, "staff slots", true),
+        new(OriginalSaveArea.Room, 20, 2, "visitor count", true),
+        new(OriginalSaveArea.Room, 30, 1, "max queue size", true),
+        new(OriginalSaveArea.Room, 31, 1, "queue size", true),
+        new(OriginalSaveArea.Room, 32, 1, "expected patients", true),
 
         new(OriginalSaveArea.Hospital, 0, 42, "name", true),
         new(OriginalSaveArea.Hospital, 42, 1, "kind", true),

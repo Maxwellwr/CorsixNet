@@ -99,6 +99,12 @@ public class OriginalSaveGameTests
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 4), (81 * 128) + 82);
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 6), (81 * 128) + 83);
         BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 8), (80 * 128) + 83);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 16), 124);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 18), 157);
+        BinaryPrimitives.WriteUInt16LittleEndian(data.AsSpan(room + 20), 83);
+        data[room + 30] = 6;
+        data[room + 31] = 2;
+        data[room + 32] = 1;
 
         var parsed = Assert.Single(OriginalSaveGame.Parse(data).Rooms);
 
@@ -108,6 +114,9 @@ public class OriginalSaveGameTests
         Assert.Equal((83, 80), parsed.Origin);
         Assert.Equal((83, 81), parsed.Door);
         Assert.Equal((82, 81), parsed.Outside);
+        Assert.Equal([124, 157], parsed.Staff);
+        Assert.Equal(83, parsed.VisitorCount);
+        Assert.Equal((6, 2, 1), (parsed.MaxQueueSize, parsed.QueueSize, parsed.Expected));
     }
 
     [Fact]
@@ -352,6 +361,15 @@ public class OriginalSaveGameTests
                 return person.RoomIndexPlusOne == (room is null ? 0 : room.Index + 1);
             });
             Assert.True(placed * 10 >= people.Count * 9, $"{placed} of {people.Count} people point at the room they stand in");
+
+            // Staff listed by a room are staff standing in that room or close by.
+            foreach (var room in save.Rooms.Where(r => r.Width > 1))
+            {
+                foreach (var staffSlot in room.Staff)
+                {
+                    Assert.True(bySlotAll.TryGetValue(staffSlot, out var member) && member.Kind == 4, $"room {room.Index} lists slot {staffSlot}, not staff");
+                }
+            }
 
             // Rooms lie on the map with their door on their edge and the outside tile next to it.
             foreach (var room in save.Rooms.Where(r => r.Width > 1))
