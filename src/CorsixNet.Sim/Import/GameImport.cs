@@ -29,6 +29,16 @@ public sealed record ImportedObject(string ObjectType, TilePosition Tile, Direct
 /// <param name="Fatigue">Tiredness, from 0 to 1.</param>
 public sealed record ImportedStaff(StaffProfile Profile, TilePosition Tile, decimal Happiness, decimal Fatigue);
 
+/// <summary>A patient of an imported save; they start again from reception with what they have.</summary>
+/// <param name="DiseaseId">Their disease.</param>
+/// <param name="Tile">Where they stand.</param>
+/// <param name="Health">How well they are, from 0 to 1.</param>
+/// <param name="Happiness">From 0 to 1.</param>
+/// <param name="Thirst">From 0 (not thirsty) to 1.</param>
+/// <param name="Warmth">From 0 to 1.</param>
+/// <param name="DiagnosisProgress">How certain the diagnosis is, in thousandths.</param>
+public sealed record ImportedPatient(string DiseaseId, TilePosition Tile, decimal Health, decimal Happiness, decimal Thirst, decimal Warmth, int DiagnosisProgress);
+
 /// <summary>A casebook entry of an imported save.</summary>
 /// <param name="DiseaseId">The disease.</param>
 /// <param name="Discovered">Whether it shows in the casebook.</param>
@@ -88,6 +98,9 @@ public sealed record ImportedGame
 
     /// <summary>The bank statement, oldest first.</summary>
     public IReadOnlyList<Transaction> Statement { get; init; } = [];
+
+    /// <summary>The patients in the hospital.</summary>
+    public IReadOnlyList<ImportedPatient> Patients { get; init; } = [];
 
     /// <summary>The casebook: what is known of each disease, by disease id.</summary>
     public IReadOnlyList<ImportedCase> Casebook { get; init; } = [];
@@ -198,6 +211,25 @@ public static class GameImport
             hospital.SetRadiatorHeat(heat);
         }
 
+        foreach (var imported in game.Patients)
+        {
+            // Someone sitting on a bench stands up next to it.
+            if (Diseases.DiseaseCatalog.Find(imported.DiseaseId) is not { } disease || NearestPassable(simulation.Map, imported.Tile) is not { } tile)
+            {
+                problems.Add($"patient with {imported.DiseaseId} at {imported.Tile} could not be placed");
+                continue;
+            }
+
+            var patient = simulation.AddEntity(id => Humanoid.CreatePatient(id, tile, simulation.Random, disease.Look, player));
+            var behaviour = new People.PatientBehaviour { Health = Math.Clamp(imported.Health, 0.01m, 1m) };
+            behaviour.SetDisease(disease, People.PatientCare.ChooseInsuranceCompany(simulation.Random), simulation.Random);
+            behaviour.DiagnosisProgress = Math.Clamp(imported.DiagnosisProgress, 0, 1000);
+            behaviour.Thirst = Math.Clamp(imported.Thirst, 0m, 1m);
+            patient.Behaviour = behaviour;
+            patient.Happiness = Math.Clamp(imported.Happiness, 0m, 1m);
+            patient.Warmth = Math.Clamp(imported.Warmth, 0m, 1m);
+        }
+
         foreach (var entry in game.Casebook)
         {
             if (Diseases.DiseaseCatalog.Find(entry.DiseaseId) is { } disease)
@@ -225,6 +257,27 @@ public static class GameImport
         }
 
         return new ImportReport(problems);
+    }
+
+    /// <summary>The tile itself if it can be walked on, else the nearest such tile up to two tiles away, or null.</summary>
+    private static TilePosition? NearestPassable(LevelMap map, TilePosition tile)
+    {
+        for (var radius = 0; radius <= 2; radius++)
+        {
+            for (var dy = -radius; dy <= radius; dy++)
+            {
+                for (var dx = -radius; dx <= radius; dx++)
+                {
+                    var (x, y) = (tile.X + dx, tile.Y + dy);
+                    if (Math.Max(Math.Abs(dx), Math.Abs(dy)) == radius && map.Contains(x, y) && map[x, y].Has(TileFlags.Passable))
+                    {
+                        return new TilePosition(x, y);
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     private static bool Place(Simulation simulation, ImportedObject obj, int player)
