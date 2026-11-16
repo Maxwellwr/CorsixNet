@@ -4,6 +4,7 @@ using CorsixNet.Sim.Economy;
 using CorsixNet.Sim.Entities;
 using CorsixNet.Sim.Maps;
 using CorsixNet.Sim.Rooms;
+using CorsixNet.Sim.Staff;
 
 namespace CorsixNet.Sim.Import;
 
@@ -20,6 +21,13 @@ public sealed record ImportedRoom(string RoomType, TileRect Area, DoorPlacement 
 /// <param name="Strength">Its strength, for machines.</param>
 /// <param name="TimesUsed">How many times it has been used, for machines.</param>
 public sealed record ImportedObject(string ObjectType, TilePosition Tile, Direction Orientation, int Strength, int TimesUsed);
+
+/// <summary>A member of staff of an imported save.</summary>
+/// <param name="Profile">Who they are (<see cref="StaffProfile.Import"/>).</param>
+/// <param name="Tile">Where they stand.</param>
+/// <param name="Happiness">Morale, from 0 to 1.</param>
+/// <param name="Fatigue">Tiredness, from 0 to 1.</param>
+public sealed record ImportedStaff(StaffProfile Profile, TilePosition Tile, decimal Happiness, decimal Fatigue);
 
 /// <summary>
 /// The state of a hospital taken from a save of another game (the original Theme Hospital), to be rebuilt on a
@@ -49,6 +57,9 @@ public sealed record ImportedGame
 
     /// <summary>Treatment prices in percent of the standard price, by disease id.</summary>
     public IReadOnlyList<(string DiseaseId, int Percent)> Prices { get; init; } = [];
+
+    /// <summary>The hospital's staff; the level's starting staff are let go for them.</summary>
+    public IReadOnlyList<ImportedStaff> Staff { get; init; } = [];
 
     /// <summary>Radiator heat in tenths, or null to keep the level's.</summary>
     public int? RadiatorHeat { get; init; }
@@ -122,6 +133,20 @@ public static class GameImport
             {
                 problems.Add($"{obj.ObjectType} at {obj.Tile} facing {obj.Orientation} could not be placed: {Objects.ObjectPlacer.Check(simulation, obj.ObjectType, obj.Tile, obj.Orientation, player)}");
             }
+        }
+
+        // The level's starting staff make way for the save's.
+        foreach (var starter in simulation.Entities.OfType<Humanoid>().Where(h => h.Profile is not null && h.Employer == player).ToList())
+        {
+            StaffEmployment.Detach(simulation, starter);
+            simulation.RemoveEntity(starter.Id);
+        }
+
+        foreach (var member in game.Staff)
+        {
+            var staff = StaffHiring.Place(simulation, member.Profile, member.Tile, player);
+            staff.Happiness = Math.Clamp(member.Happiness, 0m, 1m);
+            staff.Fatigue = Math.Clamp(member.Fatigue, 0m, 1m);
         }
 
         foreach (var (kind, value) in game.Policies)

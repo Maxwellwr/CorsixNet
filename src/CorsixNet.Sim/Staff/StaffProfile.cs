@@ -38,6 +38,17 @@ public enum Specialism : byte
 }
 
 /// <summary>
+/// The name and description of a member of staff taken from a save of the original game, as numbers into the
+/// original's string lists, so that they keep them instead of ones drawn from <see cref="StaffProfile.NameSeed"/>.
+/// </summary>
+/// <param name="Initial">The initial letter.</param>
+/// <param name="NameStart">Index into the list of name starts.</param>
+/// <param name="NameEnd">Index into the list of name ends.</param>
+/// <param name="MiscDescription">Index into the miscellaneous descriptions.</param>
+/// <param name="CharacterDescription">Index into the good or bad descriptions (by skill).</param>
+public readonly record struct ImportedStaffName(char Initial, int NameStart, int NameEnd, int MiscDescription, int CharacterDescription);
+
+/// <summary>
 /// A member of staff as a candidate for hire and, once hired, as an employee: skill, abilities,
 /// salary and looks.
 /// </summary>
@@ -79,6 +90,9 @@ public sealed class StaffProfile
 
     /// <summary>Skill at least <see cref="StaffRules.ConsultantThreshold"/>. Set for every class, as CorsixTH does; it matters for doctors.</summary>
     public bool IsConsultant { get; private set; }
+
+    /// <summary>The original name and description of a member of staff imported from the original game, else null.</summary>
+    public ImportedStaffName? ImportedName { get; private set; }
 
     /// <summary>Monthly salary, which is also what hiring costs.</summary>
     public int Wage { get; internal set; }
@@ -212,6 +226,51 @@ public sealed class StaffProfile
     }
 
     /// <summary>
+    /// A member of staff as an imported save of the original game describes them: skill, attention, abilities, salary,
+    /// skin colour, training so far and name. Junior and consultant follow the skill as usual; the face is random.
+    /// </summary>
+    public static StaffProfile Import(
+        StaffClass staffClass,
+        int skill,
+        int attentionToDetail,
+        bool psychiatrist,
+        bool surgeon,
+        bool researcher,
+        int wage,
+        byte layer5,
+        IReadOnlyList<decimal> specialismProgress,
+        ImportedStaffName name,
+        StaffRules rules,
+        SimRandom random)
+    {
+        ArgumentNullException.ThrowIfNull(specialismProgress);
+        var profile = new StaffProfile(staffClass)
+        {
+            NameSeed = random.NextInclusive(1, 1009),
+            AttentionToDetail = Math.Clamp(attentionToDetail, 0, MaxSkill - 1),
+            IsPsychiatrist = psychiatrist,
+            IsSurgeon = surgeon,
+            IsResearcher = researcher,
+            Skill = Math.Clamp(skill, 0, MaxSkill),
+            ImportedName = name,
+        };
+        profile.ParseSkillLevel(rules);
+        profile.Wage = Math.Max(0, wage);
+        profile.RandomiseLooks(random);
+        if (staffClass == StaffClass.Doctor && layer5 != 0)
+        {
+            profile.Layer5 = layer5;
+        }
+
+        for (var i = 0; i < profile._specialismMillionths.Length && i < specialismProgress.Count; i++)
+        {
+            profile._specialismMillionths[i] = (int)(Math.Clamp(specialismProgress[i], 0m, 1m) * 1_000_000m);
+        }
+
+        return profile;
+    }
+
+    /// <summary>
     /// What the member of staff should earn (<c>getFairWage</c>): the class's minimum salary, plus
     /// skill divided by <see cref="StaffRules.SalaryAbilityDivisor"/>, plus for a doctor the
     /// additions for each ability (or the plain doctor's addition), and never below the minimum.
@@ -259,6 +318,16 @@ public sealed class StaffProfile
         {
             writer.WriteInt32(progress);
         }
+
+        writer.WriteBool(ImportedName is not null);
+        if (ImportedName is { } name)
+        {
+            writer.WriteInt32(name.Initial);
+            writer.WriteInt32(name.NameStart);
+            writer.WriteInt32(name.NameEnd);
+            writer.WriteInt32(name.MiscDescription);
+            writer.WriteInt32(name.CharacterDescription);
+        }
     }
 
     internal static StaffProfile Read(SimReader reader)
@@ -292,6 +361,11 @@ public sealed class StaffProfile
             {
                 profile._specialismMillionths[i] = reader.ReadInt32();
             }
+        }
+
+        if ((reader.Version is 0 or >= 100) && reader.ReadBool())
+        {
+            profile.ImportedName = new ImportedStaffName((char)reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
         }
 
         return profile;

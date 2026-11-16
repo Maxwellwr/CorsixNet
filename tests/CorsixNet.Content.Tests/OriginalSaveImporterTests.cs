@@ -41,6 +41,11 @@ public sealed class OriginalSaveImporterTests(ITestOutputHelper output)
             Assert.Equal(save.Hospitals[0].Money, hospital.Balance);
             Assert.Equal(save.Hospitals[0].Loan, hospital.Loan);
             Assert.Equal(save.Month + 1, simulation.Date.Month);
+            var staffInSave = save.Entities.Count(e => e.Kind == 4 && e.TileX != 0);
+            var staff = simulation.Entities.OfType<Humanoid>().Where(h => h.Profile is not null && h.Employer == 0).ToList();
+            output.WriteLine($"   staff {staff.Count}/{staffInSave}");
+            Assert.Equal(staffInSave, staff.Count);
+            Assert.All(staff, s => Assert.NotNull(s.Profile!.ImportedName));
         }
     }
 }
