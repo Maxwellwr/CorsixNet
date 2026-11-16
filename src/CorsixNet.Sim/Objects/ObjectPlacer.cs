@@ -94,6 +94,7 @@ public static class ObjectPlacer
             }
 
             var position = new TilePosition(x, y);
+            var sharedUse = part.IsUsePosition && !part.IsShareable && IsSharedUseTile(simulation, position);
             if (part.IsSide)
             {
                 if (!cell.Has(SideOf(definition, orientation).Buildable))
@@ -101,13 +102,14 @@ public static class ObjectPlacer
                     return ObjectPlacementProblem.Blocked;
                 }
             }
-            else if (!IsTileFree(cell, part, layout.Footprint))
+            else if (!IsTileFree(cell, part, layout.Footprint, sharedUse))
             {
                 return ObjectPlacementProblem.Blocked;
             }
 
-            // Only one object per tile, and not on a tile someone has to stand on (CorsixTH's check 4).
-            if (!part.IsShareable && (cell.ObjectId != 0 || !IsTileExclusivelyPassable(simulation, position)))
+            // Only one object per tile, and not on a tile someone has to stand on (CorsixTH's check 4). Unlike
+            // CorsixTH, two objects may be used from the same tile, as the original game allows.
+            if (!part.IsShareable && !sharedUse && (cell.ObjectId != 0 || !IsTileExclusivelyPassable(simulation, position)))
             {
                 return ObjectPlacementProblem.Blocked;
             }
@@ -173,6 +175,40 @@ public static class ObjectPlacer
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Whether the tile is where another object is used from and nothing else keeps it clear (no door, door walkway
+    /// or other tile people must not idle on). The original game lets a second object be used from such a tile, for
+    /// example the surgeons' sink from the operating table's side; CorsixTH does not.
+    /// </summary>
+    private static bool IsSharedUseTile(Simulation simulation, TilePosition tile)
+    {
+        var cell = simulation.Map[tile.X, tile.Y];
+        if (cell.ObjectId != 0 || cell.Has(TileFlags.DoNotIdle) || !cell.Has(TileFlags.Passable))
+        {
+            return false;
+        }
+
+        var used = false;
+        foreach (var entity in simulation.Entities)
+        {
+            switch (entity)
+            {
+                case RoomObject placed
+                    when !used
+                    && simulation.Content.FindObject(placed.ObjectType) is { } definition
+                    && definition.Orientations.TryGetValue(placed.Orientation, out var layout):
+                    used = layout.Footprint.Any(part => part.IsUsePosition && placed.Tile.X + part.X == tile.X && placed.Tile.Y + part.Y == tile.Y);
+                    break;
+                case RoomDoor door when door.Tile == tile || door.OtherSide == tile:
+                    return false;
+                case EntranceDoor entrance when entrance.Tile == tile || OtherSide(entrance.Tile, entrance.Orientation) == tile:
+                    return false;
+            }
+        }
+
+        return used;
     }
 
     private static TilePosition OtherSide(TilePosition tile, EdgeOrientation edge) =>
@@ -554,7 +590,7 @@ public static class ObjectPlacer
     /// the object covers must still be buildable: sides towards other footprint tiles, all sides of a
     /// complete cell, and sides the object explicitly needs.
     /// </summary>
-    private static bool IsTileFree(MapTile cell, FootprintTile part, IReadOnlyList<FootprintTile> footprint)
+    private static bool IsTileFree(MapTile cell, FootprintTile part, IReadOnlyList<FootprintTile> footprint, bool sharedUse)
     {
         var required = part.IsUsePosition ? TileFlags.Passable : TileFlags.Buildable;
         if (!cell.Has(required))
@@ -562,9 +598,9 @@ public static class ObjectPlacer
             return false;
         }
 
-        // A use position may not overlap another object's use position or a door's walkway,
-        // which are no longer buildable, unless it is shareable.
-        if (part.IsUsePosition && (part.Flags & FootprintFlags.Shareable) == 0 && !cell.Has(TileFlags.Buildable))
+        // A use position may not overlap a door's walkway, or another object's use position unless the original
+        // game would allow it there (see IsSharedUseTile); those are no longer buildable. Shareable ones may.
+        if (part.IsUsePosition && (part.Flags & FootprintFlags.Shareable) == 0 && !sharedUse && !cell.Has(TileFlags.Buildable))
         {
             return false;
         }

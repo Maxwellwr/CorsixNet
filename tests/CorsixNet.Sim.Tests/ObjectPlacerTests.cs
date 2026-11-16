@@ -96,8 +96,21 @@ public class ObjectPlacerTests
         // A pillar on the cabinet's use position would block it.
         Assert.Equal(ObjectPlacementProblem.Blocked, Check(simulation, "pillar", new(2, 3), Direction.North));
 
-        // A second cabinet whose use position overlaps the first one's is not allowed either.
-        Assert.Equal(ObjectPlacementProblem.Blocked, Check(simulation, "cabinet", new(2, 4), Direction.South));
+    }
+
+    [Fact]
+    public void LetsTwoObjectsBeUsedFromTheSameTile()
+    {
+        // The original game allows it (the surgeons' sink beside the operating table); CorsixTH does not.
+        var simulation = NewSimulationWithRoom();
+        Place(simulation, "cabinet", new(2, 2), Direction.North);
+
+        Place(simulation, "cabinet", new(2, 4), Direction.South);
+        var second = Assert.IsType<RoomObject>(simulation.FindEntity(simulation.Map[2, 4].ObjectId));
+        Assert.Equal([new TilePosition(2, 3)], ObjectPlacer.UsePositions(simulation, second));
+
+        // The shared tile still takes no object of its own.
+        Assert.Equal(ObjectPlacementProblem.Blocked, Check(simulation, "pillar", new(2, 3), Direction.North));
     }
 
     [Fact]
