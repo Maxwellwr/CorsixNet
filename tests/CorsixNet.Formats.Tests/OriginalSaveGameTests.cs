@@ -150,6 +150,7 @@ public class OriginalSaveGameTests
         }
 
         BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(hospital + 3198), 844);
+        data[hospital + 3220] = 9;
         var gp = hospital + 544 + 38;
         BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 12), 168);
         BinaryPrimitives.WriteInt32LittleEndian(data.AsSpan(gp + 16), 10000);
@@ -165,6 +166,7 @@ public class OriginalSaveGameTests
         Assert.Equal((1000, 79, 70, 600, true), (parsed.StopProcedure, parsed.GuessCurePercent, parsed.SendHomePercent, parsed.StaffRestLevel, parsed.StaffLeaveRooms));
         Assert.Equal([-1, -1, 20, 0, 20], parsed.ResearchDistribution);
         Assert.Equal(844, parsed.Reputation);
+        Assert.Equal(9, parsed.HeatingLevel);
         var disease = parsed.Disease(1);
         Assert.Equal((168, 10000, 9180, true), (disease.Charge, disease.ChargePercent, disease.MoneyEarned, disease.Known));
         Assert.Equal((3, 2, 1), (disease.Recoveries, disease.Fatalities, disease.TurnedAway));

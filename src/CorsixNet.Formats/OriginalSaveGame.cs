@@ -284,6 +284,12 @@ public sealed record OriginalSaveHospital(
     /// <summary>Number of disease records, indexed like <c>#expertise[n]</c> in the <c>.SAM</c> files (1 general practice).</summary>
     public const int DiseaseCount = 47;
 
+    /// <summary>
+    /// Heating level set on the town map. The heating cost shown there is radiators × level × 7.5
+    /// (27 radiators: level 6 costs $1215, level 9 costs $1822).
+    /// </summary>
+    public int HeatingLevel => Raw.Span[3220];
+
     /// <summary>Reputation as shown in the casebook.</summary>
     public int Reputation => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[3198..]);
 

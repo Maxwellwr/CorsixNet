@@ -117,6 +117,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Hospital, 515, 18, "epidemic/disaster?", false),
         new(OriginalSaveArea.Hospital, 535, 9, "policy", true),
         new(OriginalSaveArea.Hospital, 3198, 4, "reputation", true),
+        new(OriginalSaveArea.Hospital, 3220, 1, "heating level", true),
         new(OriginalSaveArea.Hospital, 3228, 10, "staff counts", true),
         .. DiseaseFields(),
         new(OriginalSaveArea.Hospital, 3242, 129, "litter/rats?", false),
