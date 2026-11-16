@@ -328,7 +328,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private AdviserChecks _adviserChecks;
     private object? _adviserSession;
     private readonly HashSet<string> _roomsDescribed = new(StringComparer.Ordinal);
-    private bool _tipShown;
+    /// <summary>The tip of the day shown with the main menu, which goes with it (CorsixTH app.lua, <c>loadMainMenu</c>).</summary>
+    private TipOfTheDayWindow? _tipOfTheDay;
     private bool _pickingRoomToEdit;
 
     /// <summary>The original's sound effects, silent when they are turned off or cannot be played.</summary>
@@ -3557,13 +3558,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             {
                 // Rooms already built in a loaded game have had their description.
                 _roomsDescribed.UnionWith(Simulation!.Entities.OfType<Room>().Where(room => room.IsActive).Select(room => room.RoomType));
-
-                // CorsixTH shows a tip with the main menu; here, with the first game.
-                if (!_tipShown && _editorTool is null)
-                {
-                    _tipShown = true;
-                    _windows.Open(new TipOfTheDayWindow(_adviserRandom.Next(TipOfTheDayWindow.Tips.Count)));
-                }
             }
         }
 
@@ -4585,6 +4579,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         _mainMenu = new MainMenuWindow(MainMenuAction, typeof(MapViewScreen).Assembly.GetName().Version?.ToString(3) ?? "?");
         StartUpdateCheck();
         _windows.Open(_mainMenu);
+
+        // CorsixTH opens a tip of the day beside the main menu; starting or loading a game replaces the whole UI, so the
+        // tip goes with the menu.
+        _tipOfTheDay = new TipOfTheDayWindow(_adviserRandom.Next(TipOfTheDayWindow.Tips.Count));
+        _windows.Open(_tipOfTheDay);
     }
 
     private void CloseMainMenu()
@@ -4593,6 +4592,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         {
             _windows.Close(_mainMenu);
             _mainMenu = null;
+        }
+
+        if (_tipOfTheDay is not null)
+        {
+            _windows.Close(_tipOfTheDay);
+            _tipOfTheDay = null;
         }
     }
 
