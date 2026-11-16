@@ -238,6 +238,12 @@ public sealed class Humanoid : Entity
     /// <summary>The tick <see cref="ActionAnimation"/> started on.</summary>
     public long ActionAnimationStart { get; private set; }
 
+    /// <summary>
+    /// How many frames of <see cref="ActionAnimation"/> each tick moves on, 1 normally (CorsixTH's
+    /// <c>num_animation_ticks</c>, which the cardiogram raises to make its monitor run fast).
+    /// </summary>
+    public int ActionAnimationSpeed { get; private set; } = 1;
+
     /// <summary>The tile <see cref="ActionAnimation"/> is drawn from.</summary>
     public TilePosition ActionAnimationTile { get; private set; }
 
@@ -410,11 +416,12 @@ public sealed class Humanoid : Entity
     }
 
     /// <summary>Starts an animation of using an object.</summary>
-    internal void SetActionAnimation(Simulation simulation, AnimationRef animation, bool flip, TilePosition tile, TilePosition drawTile, int hiddenObject)
+    internal void SetActionAnimation(Simulation simulation, AnimationRef animation, bool flip, TilePosition tile, TilePosition drawTile, int hiddenObject, int speed = 1)
     {
         ActionAnimation = animation;
         ActionAnimationFlip = flip;
         ActionAnimationStart = simulation.Tick;
+        ActionAnimationSpeed = speed;
         ActionAnimationTile = tile;
         ActionDrawTile = drawTile;
         HiddenObjectId = hiddenObject;
@@ -820,6 +827,8 @@ public sealed class Humanoid : Entity
                 humanoid.MorphFlip = reader.ReadBool();
                 humanoid.MorphRounds = reader.ReadInt32();
             }
+
+            humanoid.ActionAnimationSpeed = reader.Version is 0 or >= 101 ? reader.ReadInt32() : 1;
         }
 
         humanoid.Behaviour = HumanoidBehaviour.Read(reader);
@@ -890,6 +899,8 @@ public sealed class Humanoid : Entity
                 writer.WriteBool(MorphFlip);
                 writer.WriteInt32(MorphRounds);
             }
+
+            writer.WriteInt32(ActionAnimationSpeed);
         }
 
         HumanoidBehaviour.Write(writer, Behaviour);
