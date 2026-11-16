@@ -99,7 +99,7 @@ public static class OriginalSaveFields
 
         new(OriginalSaveArea.Hospital, 0, 42, "name", true),
         new(OriginalSaveArea.Hospital, 42, 1, "kind", true),
-        new(OriginalSaveArea.Hospital, 45, 4, "salary?", false),
+        new(OriginalSaveArea.Hospital, 45, 4, "player salary (score)", true),
         new(OriginalSaveArea.Hospital, 53, 4, "money", true),
         new(OriginalSaveArea.Hospital, 61, 4, "loan", true),
         new(OriginalSaveArea.Hospital, 65, 4, "max loan?", false),
@@ -108,6 +108,7 @@ public static class OriginalSaveFields
         new(OriginalSaveArea.Hospital, 225, 188, "expertise research", true),
         new(OriginalSaveArea.Hospital, 433, 10, "research distribution", true),
         new(OriginalSaveArea.Hospital, 443, 4, "value", true),
+        new(OriginalSaveArea.Hospital, 455, 2, "visitors at the last 1 January", true),
         new(OriginalSaveArea.Hospital, 459, 2, "population share?", false),
         new(OriginalSaveArea.Hospital, 477, 4, "emergency bonus per cure", true),
         new(OriginalSaveArea.Hospital, 481, 3, "emergency timers?", false),

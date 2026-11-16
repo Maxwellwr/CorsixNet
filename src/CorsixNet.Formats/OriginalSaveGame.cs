@@ -303,6 +303,14 @@ public sealed record OriginalSaveHospital(
     /// </summary>
     public int HeatingLevel => Raw.Span[3220];
 
+    /// <summary>
+    /// The player's own salary, the score of the Hall of Fame and the "Highest salary" of the yearly charts.
+    /// </summary>
+    public int PlayerSalary => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[45..]);
+
+    /// <summary>Visitor total as of the last 1 January; this year's visitors are <see cref="Visitors"/> minus this.</summary>
+    public int VisitorsAtYearStart => BinaryPrimitives.ReadUInt16LittleEndian(Raw.Span[455..]);
+
     /// <summary>Reputation as shown in the casebook.</summary>
     public int Reputation => BinaryPrimitives.ReadInt32LittleEndian(Raw.Span[3198..]);
 
