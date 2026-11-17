@@ -14,8 +14,7 @@ rooms, cancel; three working room types: GP's office, general diagnosis, pharmac
 
 | Missing | CorsixTH source |
 |---|---|
-| Diagnosis rooms: the cardiogram's slowed-down monitoring (its time is kept); in psychiatry the king complex change of clothes at the screen and the specialists' dispatch bonus | `cardiogram.lua`, `ward.lua`, `psych.lua` |
-| (Done: the staff room, toilets, training and research rooms; room closing while editing (`Room.IsClosing`) and the crashed room (`Room.IsCrashed`); swing doors busy while swinging (`RoomDoor.IsSwingBusy`), the operating theatre's two surgeons and the ward's beds and nurses (`RoomVisits`); the queue window (`QueueScreen`).) | |
+| (Done: the cardiogram's loop: the monitor running one, two and three frames a tick over 31 rounds, the doctor standing by between readings (`MultiObjectUse.CardiogramLoop`, `Humanoid.ActionAnimationSpeed`; `cardiogram.lua`); in psychiatry the king complex change of clothes at the screen (`PatientBehaviour.StartKingChange`; `psych.lua`) and the specialists' dispatch bonus (`RoomVisits.CallScore`; `calls_dispatcher.lua`); the staff room, toilets, training and research rooms; room closing while editing (`Room.IsClosing`) and the crashed room (`Room.IsCrashed`); swing doors busy while swinging (`RoomDoor.IsSwingBusy`), the operating theatre's two surgeons and the ward's beds and nurses (`RoomVisits`); the queue window (`QueueScreen`).) | |
 
 ## 2. Objects
 

@@ -2510,8 +2510,6 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
 
                 if (simulation.FindEntity(room.StaffId) is Humanoid { Behaviour: DoctorBehaviour { Phase: DoctorPhase.AtTrolley }, IsMoving: false } doctor)
                 {
-                    // CardiogramRoom's loop callback runs the in-use animation for five spells of six rounds, the
-                    // middle ones slowed to two and three ticks a frame: 54 rounds' time, played here at normal speed.
                     if (string.Equals(room.RoomType, RoomVisits.ScannerRoom, StringComparison.Ordinal))
                     {
                         // ScannerRoom:commandEnteringPatient: both ready, the patient goes into the scanner (its five begin
@@ -2523,8 +2521,10 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
                         return;
                     }
 
-                    var rounds = string.Equals(room.RoomType, RoomVisits.CardiogramRoom, StringComparison.Ordinal) ? CardiogramRounds : 0;
-                    TrolleyUse = MultiObjectUse.Start(simulation, humanoid, trolley, doctor, inUseRounds: rounds);
+                    // CardiogramRoom's prolonged use, whose loop callback (MultiObjectUse.CardiogramLoop) runs the
+                    // monitor fast and has the doctor stand by between readings.
+                    var cardiogram = string.Equals(room.RoomType, RoomVisits.CardiogramRoom, StringComparison.Ordinal);
+                    TrolleyUse = MultiObjectUse.Start(simulation, humanoid, trolley, doctor, cardiogram: cardiogram);
                     Phase = PatientPhase.OnTrolley;
                     IsExamined = TrolleyUse is null;
                 }
@@ -2887,9 +2887,6 @@ public sealed class PatientBehaviour : HumanoidBehaviour, IQueueMember
         Phase = PatientPhase.OnTrolley;
         IsExamined = TrolleyUse is null;
     }
-
-    /// <summary>The cardiogram's in-use rounds after the first (see <see cref="GeneralDiagnosisStep"/>).</summary>
-    private const int CardiogramRounds = 53;
 
     /// <summary>The electrolysis doctor's fatigue as the use began (CorsixTH reads it at each round; it barely changes).</summary>
     private decimal _electrolysisFatigue;

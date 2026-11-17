@@ -1,4 +1,5 @@
-// Ported from CorsixTH CorsixTH/Lua/humanoid_actions/multi_use_object.lua.
+// Ported from CorsixTH CorsixTH/Lua/humanoid_actions/multi_use_object.lua and the cardiogram's loop callback in
+// CorsixTH/Lua/rooms/cardiogram.lua.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using CorsixNet.Sim.Definitions;
@@ -52,6 +53,21 @@ public sealed class MultiObjectUse
     /// <summary>Which of the object's animation variants the use plays (CorsixTH's <c>random_anim</c>).</summary>
     public int Variant { get; private set; }
 
+    /// <summary>Whether the in-use phase loops as the cardiogram's does (<see cref="CardiogramLoop"/>).</summary>
+    public bool IsCardiogram { get; private init; }
+
+    /// <summary>The cardiogram's rounds left of the current spell (<c>timer</c> in <c>cardiogram_cardio_loop_callback</c>).</summary>
+    private int CardioTimer { get; set; } = CardioSpellRounds;
+
+    /// <summary>The cardiogram's spell, −2 to 2 (<c>phase</c> in the loop callback); 3 once the last round is under way.</summary>
+    private int CardioSpell { get; set; } = -2;
+
+    /// <summary>How many frames a tick the user's in-use animation moves on (<c>num_animation_ticks</c>).</summary>
+    private int CardioSpeed { get; set; } = 1;
+
+    /// <summary>Rounds in each of the cardiogram's spells.</summary>
+    private const int CardioSpellRounds = 6;
+
     /// <summary>
     /// The phases, numbered as CorsixTH does (−5 to −1 the begin phases, 0 the in-use one, 1 to 5 the finish phases), in
     /// which the other user is hidden when the phase has no animation for them; outside them they stand visible
@@ -71,7 +87,7 @@ public sealed class MultiObjectUse
     /// null when the object has no animations for the two.
     /// </summary>
     internal static MultiObjectUse? Start(Simulation simulation, Humanoid humanoid, RoomObject placed, Humanoid useWith, int layer3 = -1, int inUseRounds = 0,
-        (int From, int To)? invisiblePhases = null)
+        (int From, int To)? invisiblePhases = null, bool cardiogram = false)
     {
         if (simulation.Content.FindObject(placed.ObjectType)?.MultiUse(placed.Orientation, humanoid.Type, useWith.Type) is not var (variants, _))
         {
@@ -83,6 +99,7 @@ public sealed class MultiObjectUse
             UseLayer3 = layer3,
             InUseRounds = inUseRounds,
             InvisiblePhases = invisiblePhases,
+            IsCardiogram = cardiogram,
             Variant = variants.Count > 1 ? simulation.Random.Next(variants.Count) : 0,
         };
         if (humanoid.Profile is not null)
@@ -128,6 +145,13 @@ public sealed class MultiObjectUse
             // A prolonged use: the in-use animation again.
             InUseRounds--;
             EnterPhase(simulation, humanoid, Phase);
+            return ObjectUseEvent.Loop;
+        }
+
+        if (Phase == animations.Begin.Count && IsCardiogram && CardioSpell < 3)
+        {
+            var idle = CardiogramLoop();
+            EnterPhase(simulation, humanoid, Phase, idle ? animations.Begin.FirstOrDefault().Secondary : null);
             return ObjectUseEvent.Loop;
         }
 
@@ -218,8 +242,37 @@ public sealed class MultiObjectUse
         }
     }
 
+    /// <summary>
+    /// <c>cardiogram_cardio_loop_callback</c>, at the end of each round of the in-use phase: the rounds come in five
+    /// spells of six, during which the patient's monitor runs one, two, three, two and one frames a tick, with the
+    /// round's length unchanged; then one last round. The doctor stands by (the machine's begin animation, 1030) in
+    /// every round but the first of each spell and the last, when they work the machine (its in-use one).
+    /// Returns whether the next round has the doctor stand by. A member of staff picked up cuts the use short as soon as
+    /// it happens here (<see cref="Abort"/>), so the callback's check for an interrupted use is not needed.
+    /// </summary>
+    private bool CardiogramLoop()
+    {
+        CardioTimer--;
+        if (CardioTimer != 0)
+        {
+            return true;
+        }
+
+        CardioSpell++;
+        if (CardioSpell < 3)
+        {
+            CardioSpeed = 3 - Math.Abs(CardioSpell);
+        }
+
+        CardioTimer = CardioSpellRounds;
+        return false;
+    }
+
     /// <summary><c>action_multi_use_phase</c>: both users' animations for the phase.</summary>
-    private void EnterPhase(Simulation simulation, Humanoid humanoid, int phase)
+    /// <param name="secondaryOverride">
+    /// The other user's animation in place of the phase's own (the loop callback's <c>action.secondary_anim</c>).
+    /// </param>
+    private void EnterPhase(Simulation simulation, Humanoid humanoid, int phase, AnimationRef? secondaryOverride = null)
     {
         Phase = phase;
         if (Resolve(simulation, humanoid) is not var (placed, layout, animations, flip, useWith))
@@ -242,7 +295,13 @@ public sealed class MultiObjectUse
             drawTile = new TilePosition(placed.Tile.X + layout.RenderAttach.X, placed.Tile.Y + layout.RenderAttach.Y);
         }
 
-        humanoid.SetActionAnimation(simulation, current.Primary, flip, tile, drawTile, placed.Id);
+        var inUse = phase == animations.Begin.Count;
+        humanoid.SetActionAnimation(simulation, current.Primary, flip, tile, drawTile, placed.Id, IsCardiogram && inUse ? CardioSpeed : 1);
+        if (secondaryOverride is { } replaced)
+        {
+            current = current with { Secondary = replaced, SecondaryMorph = null };
+        }
+
         if (current.Secondary is { } secondary)
         {
             useWith.SetActionAnimation(simulation, secondary, flip, useWith.Tile, useWith.Tile, 0);
@@ -300,6 +359,11 @@ public sealed class MultiObjectUse
             writer.WriteInt32(from);
             writer.WriteInt32(to);
         }
+
+        writer.WriteBool(IsCardiogram);
+        writer.WriteInt32(CardioTimer);
+        writer.WriteInt32(CardioSpell);
+        writer.WriteInt32(CardioSpeed);
     }
 
     internal static MultiObjectUse Read(SimReader reader)
@@ -314,8 +378,16 @@ public sealed class MultiObjectUse
         var oldLayer3UseWith = reader.ReadByte();
         var rounds = reader.Version is 0 or >= 63 ? reader.ReadInt32() : 0;
         (int, int)? invisible = (reader.Version is 0 or >= 69) && reader.ReadBool() ? (reader.ReadInt32(), reader.ReadInt32()) : null;
+        var (cardiogram, cardioTimer, cardioSpell, cardioSpeed) = reader.Version is 0 or >= 101
+            ? (reader.ReadBool(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32())
+            : (false, CardioSpellRounds, -2, 1);
+
         return new MultiObjectUse(objectId, useWithId)
         {
+            IsCardiogram = cardiogram,
+            CardioTimer = cardioTimer,
+            CardioSpell = cardioSpell,
+            CardioSpeed = cardioSpeed,
             Phase = phase,
             Timer = timer,
             Variant = variant,
