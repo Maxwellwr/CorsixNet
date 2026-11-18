@@ -1,0 +1,518 @@
+using OpenWards.Client.Ui;
+using OpenWards.Client.Ui.Windows;
+using OpenWards.Sim.Calendar;
+using OpenWards.Sim.Commands;
+using OpenWards.Sim.Diseases;
+using OpenWards.Sim.Economy;
+using OpenWards.Sim.Entities;
+using OpenWards.Sim.Maps;
+using OpenWards.Sim.Objects;
+using OpenWards.Sim.People;
+using OpenWards.Sim.Research;
+using OpenWards.Sim.Rooms;
+using OpenWards.Sim.Staff;
+
+namespace OpenWards.Client.Tests;
+
+/// <summary>The adviser's queue and history, what makes him speak, and his place in the bottom panel.</summary>
+public class AdviserTests
+{
+    [Fact]
+    public void MessagesAreSaidInTurnForAWhileEach()
+    {
+        var adviser = new Adviser();
+
+        adviser.Say("one", 0);
+        adviser.Say("two", 0);
+        adviser.Say("two", 0);
+        adviser.Say("one", 0);
+
+        Assert.Equal("one", adviser.Current);
+        Assert.Equal(1, adviser.Queued);
+        adviser.Update(Adviser.SpeakMilliseconds - 1);
+        Assert.Equal("one", adviser.Current);
+        adviser.Update(Adviser.SpeakMilliseconds);
+        Assert.Equal("two", adviser.Current);
+        adviser.Next(Adviser.SpeakMilliseconds);
+        Assert.Null(adviser.Current);
+        Assert.Equal(["two", "one"], adviser.History);
+    }
+
+    [Fact]
+    public void QuietSendsTheRestToTheHistoryAndAMessageSaidAgainMovesUp()
+    {
+        var adviser = new Adviser();
+        adviser.Say("one", 0);
+        adviser.Say("two", 0);
+        adviser.Say("three", 0);
+
+        adviser.DismissAll();
+
+        Assert.Null(adviser.Current);
+        Assert.Equal(["three", "two", "one"], adviser.History);
+        adviser.Say("one", 0);
+        Assert.Equal(["one", "three", "two"], adviser.History);
+
+        for (var i = 0; i < Adviser.HistoryLimit + 5; i++)
+        {
+            adviser.Say($"m{i}", 0, interrupt: true);
+        }
+
+        Assert.Equal(Adviser.HistoryLimit, adviser.History.Count);
+        Assert.Equal($"m{Adviser.HistoryLimit + 4}", adviser.History[0]);
+    }
+
+    [Fact]
+    public void ADisabledAdviserSaysNothing()
+    {
+        var adviser = new Adviser { IsEnabled = false };
+
+        adviser.Say("one", 0);
+
+        Assert.Null(adviser.Current);
+        Assert.Empty(adviser.History);
+    }
+
+    [Fact]
+    public void AdviceFillsInItsArgumentsAndFallsBackToEnglish()
+    {
+        Assert.Equal("Another patient cured: that makes 12.", AdviserChecks.AnotherPatientCured.Text(null, 12));
+        Assert.Equal("Research has produced a new X-Ray.", AdviserChecks.NewMachineResearched.Text(null, "X-Ray"));
+    }
+
+    [Fact]
+    public void AnAutopsyComingOutIsAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.Hospitals[0].AutopsiesDiscovered = 1;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.AutopsyDiscovered.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void PricesPatientsNotPayingAndImprovementsAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        var hospital = simulation.Hospitals[0];
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var entry = hospital.CaseOf(DiseaseCatalog.Find("uncommon_cold")!, simulation.Rules.Diseases);
+        entry.DrugCost = 100;
+        checks.Observe(simulation, 0, null, 0);
+
+        // advisePriceLevelImpact.
+        hospital.AdvisePrice(PriceJudgment.Over, entry);
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.HighPrices.Fallback.Replace("%s", "uncommon_cold", StringComparison.Ordinal), host.Adviser.Current);
+        host.Adviser.Next(0);
+
+        // warnPatientNotPaying, once a month.
+        hospital.UpdateNotCuredCounts(simulation.Random, ReputationChange.OverPriced, entry);
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.PatientNotPaying.Fallback.Replace("%s", "uncommon_cold", StringComparison.Ordinal), host.Adviser.Current);
+        host.Adviser.Next(0);
+        hospital.UpdateNotCuredCounts(simulation.Random, ReputationChange.OverPriced, entry);
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        // improveDrug: cheaper or more effective.
+        entry.DrugCost = 90;
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.DrugImproved.Fallback.Replace("%s", "uncommon_cold", StringComparison.Ordinal), host.Adviser.Current);
+    }
+
+    [Fact]
+    public void ADoctorGoneCrazyIsAnnounced()
+    {
+        var host = new WindowTestHost();
+        var simulation = host.Simulation;
+        host.Submit(new HireStaffCommand(StaffClass.Doctor, 0, new(5, 2)));
+        var doctor = simulation.Entities.OfType<Humanoid>().Single(h => h.Profile is { Class: StaffClass.Doctor });
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(simulation, 0, null, 0);
+
+        doctor.IsCrazy = true;
+        checks.Observe(simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.DoctorCrazyOverwork.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AnAreaResearchedToTheEndIsAnnounced()
+    {
+        var host = new WindowTestHost();
+        var research = host.Simulation.Hospitals[0].Research;
+        research.Area(ResearchCategory.Drugs).Current = ResearchTarget.Drain;
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        research.Area(ResearchCategory.Drugs).Current = ResearchTarget.None;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.DrugFullyResearched.Fallback.Replace("%s", "Drugs", StringComparison.Ordinal), host.Adviser.Current);
+    }
+
+    [Fact]
+    public void WithoutHandymenTheFirstLitterAndANewMachineAskForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.Hospitals[0].Littered = true;
+        var machine = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(5, 5), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.NeedHandymanLitter.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.NeedHandymanMachines.Fallback, host.Adviser.Current);
+
+        // Worn below six uses left it calls for repair: with no handyman, the adviser asks for one.
+        host.Adviser.Next(0);
+        machine.Machine!.TimesUsed = 5;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.MachineryDamaged2.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void TheFirstPuddleTheHelicopterAndTheInspectorAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var hospital = host.Simulation.Hospitals[0];
+        hospital.Emergencies.HelicopterPhase = 59;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        hospital.DidItOnFloor = true;
+        hospital.Emergencies.HelicopterPhase = 60;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.PeopleDidItOnTheFloor.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.EmergencyArrived.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void ADeskBoughtWithoutAReceptionistAsksForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.AddEntity(id => new RoomObject(id, ReceptionDesks.ObjectId, new TilePosition(5, 5), Direction.North, 0));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.ReceptionNeedReceptionist.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void TheTutorialAsksForTheReceptionistAndTheGpsDoctorItself()
+    {
+        // player_hospital.lua msgReceptionDesk and gp.lua roomFinished check ui.start_tutorial.
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1)) { StartedWithTutorial = true };
+        var gp = host.Simulation.AddEntity(id => new Room(id, "gp", new TileRect(2, 2, 4, 4), new OriginalTile[16]));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.AddEntity(id => new RoomObject(id, ReceptionDesks.ObjectId, new TilePosition(8, 8), Direction.North, 0));
+        gp.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AGpsOfficeWithoutADoctorAsksForOne()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var gp = host.Simulation.AddEntity(id => new Room(id, "gp", new TileRect(2, 2, 4, 4), new OriginalTile[16]));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        gp.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.GpsOfficeNeedDoctor.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void APatientSettingOffForReceptionWithAReceptionistTooManyAsksForAnotherDesk()
+    {
+        var host = new WindowTestHost();
+        host.Submit(new PlaceObjectCommand(ReceptionDesks.ObjectId, new TilePosition(8, 8), Direction.South));
+        host.Hire(StaffClass.Receptionist);
+        host.Hire(StaffClass.Receptionist, 7, 7);
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        checks.Observe(host.Simulation, 0, null, 0);
+        while (host.Adviser.Current is not null)
+        {
+            host.Adviser.Next(0);
+        }
+
+        var patient = host.AddPatient(10, 10);
+        for (var i = 0; i < 50 && patient.Behaviour is PatientBehaviour { Phase: PatientPhase.SeekReception }; i++)
+        {
+            host.Simulation.Step();
+        }
+
+        Assert.True(patient.Behaviour is PatientBehaviour { Phase: PatientPhase.WalkingToReception or PatientPhase.InReceptionQueue });
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.AnotherDesk.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void AMachineWornStraightBelowFourUsesIsFallingApart()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        host.Hire(StaffClass.Handyman);
+        var machine = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(5, 5), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        // Below six (a handyman is there), then below four after it: no advice.
+        machine.Machine!.TimesUsed = 5;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        machine.Machine.TimesUsed = 7;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+
+        var second = host.Simulation.AddEntity(id => new RoomObject(id, "inflator", new TilePosition(6, 6), Direction.North, 0) { Machine = new MachineState(10) });
+        checks.Observe(host.Simulation, 0, null, 0);
+        second.Machine!.TimesUsed = 8;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.MachinesFallingApart.Fallback, host.Adviser.Current);
+    }
+
+    [Fact]
+    public void TheFirstCureAndTheFirstRaiseRequestAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var doctor = host.Hire(StaffClass.Doctor);
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.Hospitals[0].Cured = 1;
+        doctor.RaiseRequest = 50;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        Assert.Equal(AdviserChecks.FirstCure.Fallback, host.Adviser.Current);
+        Assert.Equal(1, host.Adviser.Queued);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.PayRise.Fallback, host.Adviser.Current);
+
+        // Only the first request is explained.
+        host.Adviser.Next(0);
+        doctor.RaiseRequest = 0;
+        checks.Observe(host.Simulation, 0, null, 0);
+        doctor.RaiseRequest = 50;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void PromotionsAreAnnounced()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var doctor = host.Hire(StaffClass.Doctor);
+        var profile = doctor.Profile!;
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        var specialism = profile.IsSurgeon ? (profile.IsPsychiatrist ? Specialism.Researcher : Specialism.Psychiatrist) : Specialism.Surgeon;
+        Assert.True(profile.TrainSpecialism(specialism, 1m));
+        checks.Observe(host.Simulation, 0, null, 0);
+        var title = specialism switch { Specialism.Surgeon => "surgeon", Specialism.Psychiatrist => "psychiatrist", _ => "researcher" };
+        Assert.Equal(AdviserChecks.PromotionToSpecialist.Text(null, title), host.Adviser.Current);
+        host.Adviser.Next(0);
+
+        if (!profile.IsConsultant)
+        {
+            profile.TrainSkill(1m, host.Simulation.Rules.Staff);
+            checks.Observe(host.Simulation, 0, null, 0);
+            Assert.Contains(host.Adviser.Current, new[] { AdviserChecks.PromotionToDoctor.Fallback, AdviserChecks.PromotionToConsultant.Fallback });
+        }
+    }
+
+    [Fact]
+    public void AFinishedRoomSaysWhichStaffItLacks()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        var theatre = host.Simulation.AddEntity(id => new Room(id, "operating_theatre", new TileRect(2, 2, 4, 4), new OriginalTile[16]));
+        var ward = host.Simulation.AddEntity(id => new Room(id, "ward", new TileRect(8, 2, 4, 4), new OriginalTile[16]));
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        // operating_theatre.lua: no ward and no surgeon.
+        theatre.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.OpNeedWard.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal(AdviserChecks.OpNeedTwoSurgeons.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+
+        // ward.lua: a nurse; once there is one, nothing more is said.
+        ward.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(AdviserChecks.WardNeedNurse.Fallback, host.Adviser.Current);
+        host.Adviser.Next(0);
+        host.Hire(StaffClass.Nurse);
+        ward.IsActive = false;
+        checks.Observe(host.Simulation, 0, null, 0);
+        ward.IsActive = true;
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Null(host.Adviser.Current);
+    }
+
+    [Fact]
+    public void ThereIsNoAdviceBeforeTheFifthMonthAndNoRadiatorAdviceOnceThereAreSome()
+    {
+        var host = new WindowTestHost();
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        host.Simulation.Hospitals[0].Open();
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.SkipToLastHour(new GameDate(1, 2, 5, 0));
+        host.Simulation.Step();
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.DoesNotContain(AdviserChecks.PlaceRadiators.Fallback, host.Adviser.History);
+
+        host.Simulation.SkipToLastHour(new GameDate(1, 6, 5, 0));
+        host.Simulation.Step();
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Contains(AdviserChecks.PlaceRadiators.Fallback, host.Adviser.History);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void LowCashIsAdvisedOnTheFirstOfTheMonthButNotInFreeBuild(bool freeBuild)
+    {
+        var rules = new LevelRules(1_000, [], []);
+        var host = new WindowTestHost(freeBuild ? rules.WithFreeBuild() : rules);
+        var checks = new AdviserChecks(host.Adviser, new Random(1));
+        host.Simulation.Hospitals[0].Open();
+        checks.Observe(host.Simulation, 0, null, 0);
+
+        host.Simulation.SkipToLastHour(new GameDate(1, 6, 1, 0));
+        host.Simulation.Step();
+        checks.Observe(host.Simulation, 0, null, 0);
+        Assert.Equal(1, host.Simulation.Date.Day);
+
+        // PlayerHospital:_adviseMoney with $1,000; in free build mode the balance is 0 and nothing is said about it.
+        string[] money = [AdviserChecks.MoneyLow.Fallback, AdviserChecks.MoneyVeryLowTakeLoan.Fallback, AdviserChecks.CashLowConsiderLoan.Fallback];
+        Assert.Equal(!freeBuild, host.Adviser.History.Append(host.Adviser.Current).Any(money.Contains));
+    }
+
+    [Fact]
+    public void StaffPutIntoTheWrongRoomAreToldWhoWorksThere()
+    {
+        var host = new WindowTestHost();
+        var doctor = host.Hire(StaffClass.Doctor).Profile!;
+        var nurse = host.Hire(StaffClass.Nurse).Profile!;
+        var handyman = host.Hire(StaffClass.Handyman).Profile!;
+        var x = 2;
+        TilePosition AddRoom(string type)
+        {
+            var room = host.Simulation.AddEntity(id => new Room(id, type, new TileRect(x, 10, 2, 2), new OriginalTile[4]) { IsActive = true });
+            host.Simulation.Map[x, 10].RoomId = room.Id;
+            x += 3;
+            return new TilePosition(x - 3, 10);
+        }
+
+        (Advice, string?)? Say(StaffProfile profile, TilePosition tile) => AdviserChecks.StaffPlacement(host.Simulation, profile, tile, 0, _ => 0);
+
+        var research = AddRoom("research");
+        var theatre = AddRoom("operating_theatre");
+        var pharmacy = AddRoom("pharmacy");
+        var toilets = AddRoom("toilets");
+        var gp = AddRoom("gp");
+        var name = host.Simulation.Content.FindRoom("pharmacy")!.Name;
+
+        Assert.Equal(doctor.IsResearcher ? null : (AdviserChecks.OnlyResearchers, null), Say(doctor, research));
+        Assert.Equal(doctor.IsSurgeon ? null : (AdviserChecks.OnlySurgeons, null), Say(doctor, theatre));
+        Assert.Equal((AdviserChecks.OnlyNursesInRoom, name), Say(doctor, pharmacy));
+        Assert.Null(Say(nurse, pharmacy));
+        Assert.Equal((AdviserChecks.NursesCannotWorkInRoom, host.Simulation.Content.FindRoom("gp")!.Name), Say(nurse, gp));
+        Assert.Null(Say(doctor, gp));
+        Assert.Equal(AdviserChecks.DoctorsCannotWorkInRoom, Say(doctor, toilets)?.Item1);
+        Assert.Null(Say(handyman, toilets));
+        Assert.Null(Say(doctor, new TilePosition(6, 6)));
+
+        // A researcher put into a research department whose desks are all taken is told to give them one each.
+        if (doctor.IsResearcher)
+        {
+            var room = (Room)host.Simulation.FindEntity(host.Simulation.Map[research.X, research.Y].RoomId)!;
+            room.StaffId = 1;
+            Assert.Equal((AdviserChecks.ResearcherNeedsDesk[0], null), Say(doctor, research));
+        }
+    }
+
+    [Fact]
+    public void ClicksOnTheAdviserMoveOnAndTheHistoryCanBeCleared()
+    {
+        var host = new WindowTestHost();
+        host.Adviser.Say("Build a staff room.", 0);
+        host.Adviser.Say("Hire a handyman.", 0);
+
+        Assert.Equal("Build a staff room.", host.Adviser.Current);
+        host.Adviser.Next(0);
+        Assert.Equal("Hire a handyman.", host.Adviser.Current);
+        host.Adviser.DismissAll();
+        Assert.Null(host.Adviser.Current);
+
+        var history = new AdviserHistoryWindow();
+        host.Click(history, "Delete");
+        Assert.Equal(["Build a staff room."], host.Adviser.History);
+        host.Click(history, "Delete all");
+        Assert.Equal(["The adviser has said nothing yet."], host.Lines(history));
+    }
+
+    [Fact]
+    public void LongSpeechWraps()
+    {
+        var lines = BottomPanel.Wrap(string.Join(' ', Enumerable.Repeat("word", 50)), 30);
+
+        Assert.All(lines, line => Assert.True(line.Length <= 30));
+        Assert.Equal(50, lines.Sum(line => line.Split(' ').Length));
+    }
+}
+
+/// <summary>CorsixTH's own adviser messages, named in its language files.</summary>
+public class AdviserNameTests
+{
+    [Fact]
+    public void EveryNamedMessageIsInEnglishAndTranslated()
+    {
+        var languages = OpenWards.Content.Languages.CorsixLanguages.Load(Path.Combine(AppContext.BaseDirectory, "Languages"));
+        var english = languages.Load("English", _ => null);
+        var german = languages.Load("German", _ => null);
+        var advice = typeof(AdviserChecks).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .SelectMany(field => field.GetValue(null) switch
+            {
+                Advice one => [one],
+                Advice[] many => many,
+                _ => [],
+            })
+            .Where(a => a.Name is not null)
+            .ToList();
+
+        Assert.NotEmpty(advice);
+        foreach (var named in advice)
+        {
+            Assert.NotNull(english.Get(named.Name!));
+            Assert.NotNull(german.Get(named.Name!));
+        }
+
+        var texts = new OpenWards.Content.OriginalTexts(EmptyStrings(), german);
+        Assert.Equal(german.Get("adviser.warnings.no_desk"), AdviserChecks.NoDesk.Text(texts));
+    }
+
+    private static OpenWards.Formats.StringTable EmptyStrings() => OpenWards.Formats.StringTable.Parse(new byte[] { 0, 0 });
+}

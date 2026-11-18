@@ -1,6 +1,6 @@
-# CorsixNet architecture
+# OpenWards architecture
 
-CorsixNet is a reimplementation of Bullfrog's Theme Hospital (1997) in C# on .NET,
+OpenWards is a reimplementation of Bullfrog's Theme Hospital (1997) in C# on .NET,
 modelled on [CorsixTH](https://github.com/CorsixTH/CorsixTH). It plays with the
 graphics, sounds and levels of an original copy of the game, which the player supplies.
 
@@ -18,15 +18,15 @@ graphics, sounds and levels of an original copy of the game, which the player su
 
 | Project | Role | Depends on |
 |---|---|---|
-| `CorsixNet.Formats` | Readers for original data files: install detection, RNC, palettes, sprite sheets, fonts, maps, sounds, music, video, strings | — |
-| `CorsixNet.Sim` | Deterministic simulation: ticks, RNG, entities, commands, saving, state hashing. No engine dependencies | — |
-| `CorsixNet.Content` | Builds simulation state from game data: level maps now, content definitions and mods later | Formats, Sim |
-| `CorsixNet.Net` | Lockstep multiplayer: message protocol, TCP transport, server and client logic | Sim |
-| `CorsixNet.Server` | Headless dedicated server | Content, Net |
-| `CorsixNet.Client` | MonoGame (DesktopGL) front end: isometric renderer, sprite-based UI, audio, input | Content, Formats, Net, Sim |
-| `CorsixNet.Analyzers` | Roslyn analyzer enforcing the determinism rules below | — |
+| `OpenWards.Formats` | Readers for original data files: install detection, RNC, palettes, sprite sheets, fonts, maps, sounds, music, video, strings | — |
+| `OpenWards.Sim` | Deterministic simulation: ticks, RNG, entities, commands, saving, state hashing. No engine dependencies | — |
+| `OpenWards.Content` | Builds simulation state from game data: level maps now, content definitions and mods later | Formats, Sim |
+| `OpenWards.Net` | Lockstep multiplayer: message protocol, TCP transport, server and client logic | Sim |
+| `OpenWards.Server` | Headless dedicated server | Content, Net |
+| `OpenWards.Client` | MonoGame (DesktopGL) front end: isometric renderer, sprite-based UI, audio, input | Content, Formats, Net, Sim |
+| `OpenWards.Analyzers` | Roslyn analyzer enforcing the determinism rules below | — |
 
-Planned, added when needed: `CorsixNet.Tools` (converters and other offline tools).
+Planned, added when needed: `OpenWards.Tools` (converters and other offline tools).
 
 The simulation never references the client. The client reads simulation state and
 submits commands. This split is what makes headless servers, replays, automated tests
@@ -35,14 +35,14 @@ and lockstep multiplayer possible.
 ## Determinism
 
 Every machine in a game runs the same simulation from the same inputs and must reach
-bit-identical state. Projects that set `<CorsixNetDeterministic>true</CorsixNetDeterministic>`
+bit-identical state. Projects that set `<OpenWardsDeterministic>true</OpenWardsDeterministic>`
 get the analyzer, which turns violations into build errors:
 
 | Rule | Forbids | Use instead |
 |---|---|---|
-| `CNET0001` | `System.Random`, `DateTime`, `Stopwatch`, `Environment.TickCount`, `Guid.NewGuid`, `HashCode`, threads, tasks, `async`, string or identity `GetHashCode()` | `SimRandom`, simulation ticks, single-threaded tick processing |
-| `CNET0002` | `float`, `double`, `Half` | Integers or a fixed-point type; `decimal` is allowed |
-| `CNET0003` | Iterating `Dictionary`, `HashSet` and other hash-based collections (`foreach`, LINQ, passing as `IEnumerable`) | Lists ordered by entity ID, `SortedDictionary`, or sort before iterating. Lookups, `Count`, `Any`, `Contains` and `OrderBy` are fine |
+| `OW0001` | `System.Random`, `DateTime`, `Stopwatch`, `Environment.TickCount`, `Guid.NewGuid`, `HashCode`, threads, tasks, `async`, string or identity `GetHashCode()` | `SimRandom`, simulation ticks, single-threaded tick processing |
+| `OW0002` | `float`, `double`, `Half` | Integers or a fixed-point type; `decimal` is allowed |
+| `OW0003` | Iterating `Dictionary`, `HashSet` and other hash-based collections (`foreach`, LINQ, passing as `IEnumerable`) | Lists ordered by entity ID, `SortedDictionary`, or sort before iterating. Lookups, `Count`, `Any`, `Contains` and `OrderBy` are fine |
 
 Further rules that the analyzer does not check yet:
 
@@ -70,7 +70,7 @@ UI state never enters the simulation.
 
 ### Implementation (M4)
 
-`CorsixNet.Net` implements this with the **server always ahead**:
+`OpenWards.Net` implements this with the **server always ahead**:
 
 - `LockstepServer` runs its own copy of the simulation. When a client's
   `CommandRequestMessage` arrives, the server schedules it (current tick plus
@@ -92,7 +92,7 @@ UI state never enters the simulation.
   `InMemoryConnection` runs the same code in tests, through the real codec.
 - `ServerRunner` drives a server on its own thread at the tick rate. Game time stands still
   while nobody is connected. The client can host in-process (`--host`), or the headless
-  `CorsixNet.Server` can host.
+  `OpenWards.Server` can host.
 - Clients keep running when their window loses focus; only input is ignored.
 
 ## Simulation core
@@ -154,16 +154,16 @@ entities and pending commands.
   `UI:playSound` (heard alike everywhere) and `Entity:playSound` (quieter away from the view's centre and not heard
   off it, `SoundChoice.VolumeAt`). It is driven by the client's own actions only, never by the simulation, and is
   silent without the archive, with `play_sounds = false` or without a sound device.
-- **Announcer speech in other languages.** CorsixNet's own: a language may speak the announcements itself from
+- **Announcer speech in other languages.** OpenWards's own: a language may speak the announcements itself from
   `Languages/Voice/<language file>` beside the game (`LanguageVoice`, folder from `CorsixLanguages.VoiceDirectory`):
   a WAV file there named as the original's sound (`EMERG006.WAV`) is heard instead of it, the rest stay the
-  original's. Russian has one, made by `tools/CorsixNet.AnnouncerVoice`: it speaks the translation's `subtitles.*`
+  original's. Russian has one, made by `tools/OpenWards.AnnouncerVoice`: it speaks the translation's `subtitles.*`
   (or `speech.yaml`'s fixes) with a Piper voice or a Vosk TTS model (Russian: Vosk ru 0.9 multi, artificial female
   speaker F03, Apache 2.0) and runs them through a hospital
   loudspeaker (horn band 380–3400 Hz, compressor, light distortion, hall echo, line hiss), written as the original's
   22050 Hz 8-bit mono; `voice.yaml` records the voice, settings and texts so that only changed lines are spoken again,
   and a test fails when it no longer matches the subtitles. It is not a copy of the original announcer's voice.
-- **Scrolling.** `MapScrolling` (CorsixNet.Content, so that it can be tested) is CorsixTH's `GameUI` scrolling, run in
+- **Scrolling.** `MapScrolling` (OpenWards.Content, so that it can be tested) is CorsixTH's `GameUI` scrolling, run in
   18 ms interface ticks whatever the frame rate: keys and screen edges with the speed settings and the growing
   multiplier, dragging by whole map pixels, and the wheel's zoom momentum through `World:adjustZoom`.
 
@@ -677,9 +677,9 @@ The same serializer feeds network joins and state hashing.
 `ComputeStateHash` streams the same bytes into a 64-bit FNV-1a hash without buffering them.
 Tests check that a saved and reloaded simulation continues to produce identical hashes.
 
-Save files (`SaveGameStore` in `CorsixNet.Content`, after CorsixTH's `app.lua` and `world.lua`) add a short header
+Save files (`SaveGameStore` in `OpenWards.Content`, after CorsixTH's `app.lua` and `world.lua`) add a short header
 (`CNETSAVE`, a header version and the level's name) before the simulation's own save, and are written to a
-temporary file first. They live in `%AppData%/CorsixNet/Saves` (or `CORSIXNET_SAVES`): the quick save
+temporary file first. They live in `%AppData%/OpenWards/Saves` (or `OPENWARDS_SAVES`): the quick save
 `quicksave.qs` (Alt+Shift+S, Alt+Shift+L; loading without one makes one) and, for local games, autosaves
 `Autosaves/Autosave-mm-dd.sav` at the settings' `autosave_frequency`: as each month's last day begins (the
 default, so a year keeps one per month), also on days 6, 13, 20 and 27 (weekly), every day, or never. `--load FILE`
@@ -687,15 +687,15 @@ and `--continue` (the newest autosave) start the client on a saved game. Network
 
 ## Settings
 
-CorsixNet reads no Lua. `tools/CorsixNet.LuaConverter` turns CorsixTH's Lua files into its YAML: the language files
+OpenWards reads no Lua. `tools/OpenWards.LuaConverter` turns CorsixTH's Lua files into its YAML: the language files
 (`languages`), `.campaign` files (`campaign`), `config.txt` (`config`) and `hotkeys.txt` (`hotkeys`).
 
-`GameConfig` (`CorsixNet.Content`, after CorsixTH's `config_finder.lua`) reads and writes `config.yaml`, a YAML
-mapping (YamlDotNet) with CorsixTH's setting names, in `%AppData%/CorsixNet` on Windows and
-`$XDG_CONFIG_HOME/CorsixNet` or `~/.config/CorsixNet` elsewhere (or `CORSIXNET_CONFIG`, or `--config FILE`). A
-missing file is written with the defaults; `Hotkeys` does the same with `hotkeys.yaml`. Only the settings the client acts on are kept: `language` (the
+`GameConfig` (`OpenWards.Content`, after CorsixTH's `config_finder.lua`) reads and writes `config.yaml`, a YAML
+mapping (YamlDotNet) with CorsixTH's setting names, in `%AppData%/OpenWards` on Windows and
+`$XDG_CONFIG_HOME/OpenWards` or `~/.config/OpenWards` elsewhere (or `OPENWARDS_CONFIG`, or `--config FILE`). An old `CorsixNet` folder from before the rename is moved to `OpenWards` first (`LegacyFolders`, which also
+points paths in its `config.yaml` at the new folder and reads the old `CORSIXNET_*` variables). A missing file is written with the defaults; `Hotkeys` does the same with `hotkeys.yaml`. Only the settings the client acts on are kept: `language` (the
 original's `LANG-n.DAT` for English, French, German, Italian, Spanish or Swedish, with CorsixTH's translation from
-`Languages/*.yaml` beside the game laid over it, and CorsixNet's own strings from `Languages/CorsixNet/*.yaml` over that; CorsixTH's other translations are offered too), `unicode_font`,
+`Languages/*.yaml` beside the game laid over it, and OpenWards's own strings from `Languages/OpenWards/*.yaml` over that; CorsixTH's other translations are offered too), `unicode_font`,
 `fullscreen`, `width` and
 `height`, `enable_screen_shake`, `autosave_frequency`, `theme_hospital_install` (used when no game folder is given
 and it exists) and `player_name`. Command-line options still win.
@@ -703,9 +703,9 @@ and it exists) and `player_name`. Command-line options still win.
 Translations whose `Font(...)` is "unicode" or "mik" (Russian; the Russian original's own bitmap font is not read)
 are drawn with a TrueType font, as CorsixTH's `freetype_font`. `UnicodeFonts` (client) finds it as
 `Graphics:loadFontFile` does, after the font chosen for the language (`unicode_fonts = { Russian = [[...]] }` in
-`config.yaml`, CorsixNet's own, set by the options window's Font row, which lists the system fonts with every letter
+`config.yaml`, OpenWards's own, set by the options window's Font row, which lists the system fonts with every letter
 of the language, `UnicodeFonts.Choices`, looked for in the background): `unicode_font`, then `CorsixTHUnicode.ttf` or `GoNotoKurrent-Regular.ttf` beside the
-game, and, since CorsixNet bundles no font, the first system font (Tahoma, Verdana, Segoe UI, Arial, ..., then the
+game, and, since OpenWards bundles no font, the first system font (Tahoma, Verdana, Segoe UI, Arial, ..., then the
 Chinese, Japanese and Korean ones) that has every character of the translation. `TrueTypeFace` reads it with
 StbTrueTypeSharp (which characters it has, kerning, letter heights) and draws it with FreeType (FreeTypeSharp, native
 libraries for Windows, Linux and macOS; `FreeTypeGlyphs`) hinted and one bit a pixel, crisp like the game's fonts, or
@@ -797,10 +797,10 @@ attached to.
 ## Original data
 
 `ThemeHospitalInstall` finds the game automatically (common install folders, the EA/Origin
-`data\Game` layout, GOG) or uses the `CORSIXNET_TH_PATH` environment variable. File names
+`data\Game` layout, GOG) or uses the `OPENWARDS_TH_PATH` environment variable. File names
 are resolved case-insensitively. Tests that need the data skip themselves when it is absent.
 
-Format readers in `CorsixNet.Formats`:
+Format readers in `OpenWards.Formats`:
 
 | Type | Reads |
 |---|---|
@@ -811,15 +811,15 @@ Format readers in `CorsixNet.Formats`:
 | `BitmapFont`, `Cp437` | Bitmap fonts: sprite `i` draws character `31 + i` in the game's code page |
 | `LevelConfig` | Level settings (`LEVELS/*.SAM`, CorsixTH `.level` files) as flat keys such as `towns[1].StartCash` |
 | `PaletteRemaps` | Colour remap tables (`QDATA/GHOST*.DAT`), for example the red room blueprint |
-| `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. `StaffTexts` (Content) names and describes staff from them: the simulation keeps no text, so the picks come from the profile's fixed random values; the client shows them for a member of staff under the cursor. `OriginalTexts` adds disease names, causes, symptoms and cures and the VIPs' names, which the client's status line uses. `CorsixLanguages` (Content) reads the language files as YAML (YamlDotNet): each declares its language and the steps CorsixTH's `strings.lua` takes for it, in order: strings merge into dotted names, `inherit` runs another language first, and original_strings' `original` steps name the original's `S[section][index]`. `tools/CorsixNet.LuaConverter` writes CorsixTH's Lua language files out as this YAML and checks every language gives the same strings both ways; `OriginalTexts` lays the chosen translation over the original's strings by those names |
+| `StringTable` | The original's strings (`DATA/LANG-n.DAT`) by section and index, in code page 437, MIK (Russian) or 936 (Chinese) as CorsixTH guesses it; `ThemeHospitalInstall.LoadStrings` applies CorsixTH's German fixes. `StaffTexts` (Content) names and describes staff from them: the simulation keeps no text, so the picks come from the profile's fixed random values; the client shows them for a member of staff under the cursor. `OriginalTexts` adds disease names, causes, symptoms and cures and the VIPs' names, which the client's status line uses. `CorsixLanguages` (Content) reads the language files as YAML (YamlDotNet): each declares its language and the steps CorsixTH's `strings.lua` takes for it, in order: strings merge into dotted names, `inherit` runs another language first, and original_strings' `original` steps name the original's `S[section][index]`. `tools/OpenWards.LuaConverter` writes CorsixTH's Lua language files out as this YAML and checks every language gives the same strings both ways; `OriginalTexts` lays the chosen translation over the original's strings by those names |
 | `SoundArchive` | The original's sound effects and speech (`SOUND/DATA/SOUND-n.DAT`): the table of WAV files by name, looked up in any case of letters, their durations from the WAV headers, and the names a `*` wildcard matches, as CorsixTH's `th_sound.cpp` and `audio.lua`; `ThemeHospitalInstall.LoadSounds` falls back to English as `Audio:initSpeech` does |
 | `Xmi` | The original's music (`SOUND/MIDI/*.XMI`) converted to a type 0 standard MIDI file as CorsixTH's `xmi2mid.cpp` does: times × 100, notes ending with a velocity-0 note-on, the first tempo setting the division; `ThemeHospitalInstall.MusicTracks` lists the tracks titled and ordered by `MIDI.TXT` |
 
 Images stay as palette indices so that the renderer can apply palette effects.
 The client converts them to textures.
 
-The sprite viewer (`CorsixNet --sprite-viewer`) browses every sheet and background with
-its palette. `CorsixNet --sheet DATA/VBLK-0` opens a given item.
+The sprite viewer (`OpenWards --sprite-viewer`) browses every sheet and background with
+its palette. `OpenWards --sheet DATA/VBLK-0` opens a given item.
 
 ## Roadmap
 

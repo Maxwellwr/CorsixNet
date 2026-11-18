@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Lockstep multiplayer: protocol, transport, server and client.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenWards.Net.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OpenWards.Content/OpenWards.Content.csproj" />
+    <ProjectReference Include="../OpenWards.Sim/OpenWards.Sim.csproj" />
+  </ItemGroup>
+
+</Project>

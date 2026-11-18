@@ -1,0 +1,567 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using OpenWards.Client.Input;
+using OpenWards.Client.Rendering;
+
+namespace OpenWards.Client.Ui;
+
+/// <summary>
+/// The windows open over the map, front one last: lays out their tables, draws them, and takes the mouse while it is
+/// over one. A window is moved by dragging its title bar and closed with its [x] or Esc; the wheel scrolls a long one.
+/// </summary>
+internal sealed class WindowLayer
+{
+    private const int Padding = 8;
+    private const int ColumnGap = 14;
+    private const int CascadeStep = 24;
+
+    private static readonly Color PanelColor = new(0, 0, 0, 215);
+    private static readonly Color TitleColor = new(0, 48, 144);
+    private static readonly Color ButtonColor = new(55, 55, 80);
+    private static readonly Color ButtonHover = new(60, 90, 160);
+    private static readonly Color DimText = new(140, 140, 140);
+    private static readonly Color HighlightText = new(255, 220, 120);
+    private static readonly Color TooltipColor = new(40, 40, 24, 235);
+
+    private readonly List<OpenWindow> _open = [];
+    private readonly Func<string, int> _measure;
+    private readonly Func<int> _textHeight;
+    private OpenWindow? _dragging;
+
+    /// <summary>Whether windows stay where they are (the options menu's lock windows, <c>runtime_config.lock_windows</c>).</summary>
+    public bool LockWindows { get; set; }
+    private Point _dragOffset;
+
+    /// <param name="measure">The width of a text in pixels.</param>
+    /// <param name="textHeight">The height of a line of text, which changes with the language's font.</param>
+    public WindowLayer(Func<string, int> measure, Func<int> textHeight)
+    {
+        _measure = measure;
+        _textHeight = textHeight;
+    }
+
+    public WindowLayer(Func<string, int> measure, int textHeight)
+        : this(measure, () => textHeight)
+    {
+    }
+
+    private int RowHeight => _textHeight() + 6;
+
+    /// <summary>The open windows, back to front.</summary>
+    public IEnumerable<UiWindow> Windows => _open.Select(open => open.Window);
+
+    /// <summary>Whether a dialog is open; pinned windows such as the bottom panel do not count.</summary>
+    public bool Any => _open.Any(open => !open.Window.IsPinned);
+
+    /// <summary>The top-left corner of the area windows open in: below the status bar.</summary>
+    public Point Origin { get; set; } = new(8, 44);
+
+    /// <summary>Opens a window, or brings the open one of its kind to the front.</summary>
+    public void Open(UiWindow window)
+    {
+        if (_open.FindIndex(open => open.Window.IsSameAs(window)) is >= 0 and var index)
+        {
+            var existing = _open[index];
+            _open.RemoveAt(index);
+            _open.Add(existing);
+            return;
+        }
+
+        var step = _open.Count % 8;
+        _open.Add(new OpenWindow(window)
+        {
+            Position = Origin + new Point(step * CascadeStep, step * CascadeStep),
+            Placed = window.DefaultPosition is null,
+        });
+    }
+
+    /// <summary>Opens the window, or closes it if one of its kind is open already (the dialogs' hotkeys).</summary>
+    public void Toggle(UiWindow window)
+    {
+        if (_open.FindIndex(open => open.Window.IsSameAs(window)) is >= 0 and var index)
+        {
+            RemoveAt(index);
+            return;
+        }
+
+        Open(window);
+    }
+
+    /// <summary>The windows' <c>default_button_sound</c>.</summary>
+    public const string DefaultButtonSound = "selectx.wav";
+
+    public void Close(UiWindow window) => RemoveAll(open => ReferenceEquals(open.Window, window));
+
+    /// <summary>Closes the front window that Esc closes (Esc).</summary>
+    /// <returns>Whether there was one to close.</returns>
+    public bool CloseTop()
+    {
+        var index = _open.FindLastIndex(open => !open.Window.IsPinned && open.Window.ClosesWithEsc);
+        if (index < 0)
+        {
+            return false;
+        }
+
+        RemoveAt(index);
+        return true;
+    }
+
+    /// <summary>
+    /// The tooltip of the cell under the mouse in the front window under it (CorsixTH's <c>Window:getTooltipAt</c>),
+    /// or null. The windows must have been laid out by <see cref="Update"/>.
+    /// </summary>
+    public string? TooltipAt(Point mouse)
+    {
+        var hit = _open.LastOrDefault(open => open.Layout is { } layout && layout.Bounds.Contains(mouse));
+        if (hit?.Layout is { Fullscreen: true } full && _host is { } host)
+        {
+            return hit.Window.FullscreenTooltip(host, mouse - full.Bounds.Location);
+        }
+
+        return hit?.Layout!.Cells.FirstOrDefault(cell => cell.Area.Contains(mouse)).Cell?.Tooltip;
+    }
+
+    /// <summary>
+    /// The cursor the front fullscreen dialog under the mouse sets there, or null; a dialog dragging something out of
+    /// itself (<see cref="UiWindow.CapturesMouse"/>) sets it wherever the mouse is.
+    /// </summary>
+    public GameCursor? CursorAt(Point mouse)
+    {
+        if (_host is { } captorHost
+            && _open.LastOrDefault(open => open.Layout is { Fullscreen: true } && open.Window.CapturesMouse) is { Layout: { } capturing } captor)
+        {
+            return captor.Window.FullscreenCursor(captorHost, mouse - capturing.Bounds.Location);
+        }
+
+        var hit = _open.LastOrDefault(open => open.Layout is { } layout && layout.Bounds.Contains(mouse));
+        return hit?.Layout is { Fullscreen: true } full && _host is { } host ? hit.Window.FullscreenCursor(host, mouse - full.Bounds.Location) : null;
+    }
+
+    /// <summary>
+    /// The middle of the <paramref name="nth"/> enabled button (from 1) reading <paramref name="text"/>, ignoring case,
+    /// in the front window that has one, or null; for <c>--script</c>. A text ending in * matches the start of a label.
+    /// </summary>
+    public Point? FindButton(string text, int nth)
+    {
+        var prefix = text.EndsWith('*');
+        var wanted = prefix ? text[..^1] : text;
+        for (var i = _open.Count - 1; i >= 0; i--)
+        {
+            if (_open[i].Layout is { Fullscreen: true } full && _host is { } host && _open[i].Window.FindFullscreenButton(host, text, nth) is { } local)
+            {
+                return full.Bounds.Location + local;
+            }
+
+            var matches = (_open[i].Layout?.Cells ?? [])
+                .Where(cell => cell.Cell.OnClick is not null && (prefix
+                    ? cell.Cell.Text.StartsWith(wanted, StringComparison.OrdinalIgnoreCase)
+                    : cell.Cell.Text.Equals(wanted, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+            if (matches.Count >= nth)
+            {
+                return matches[nth - 1].Area.Center;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Closes every dialog; pinned windows stay.</summary>
+    public void CloseAll() => RemoveAll(open => !open.Window.IsPinned);
+
+    /// <summary>Takes the window at <paramref name="index"/> off the screen and tells it so.</summary>
+    private void RemoveAt(int index)
+    {
+        var window = _open[index].Window;
+        _open.RemoveAt(index);
+        window.Closed();
+    }
+
+    /// <summary>Takes the windows that match off the screen and tells each so.</summary>
+    private void RemoveAll(Predicate<OpenWindow> match)
+    {
+        for (var i = _open.Count - 1; i >= 0; i--)
+        {
+            if (match(_open[i]))
+            {
+                RemoveAt(i);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Lays out the windows from the game's state and handles the mouse: clicks on buttons, dragging title bars,
+    /// scrolling.
+    /// </summary>
+    /// <param name="screen">The area the windows must stay in.</param>
+    /// <returns>Whether the mouse is over a window (or dragging one), so that the map should ignore it.</returns>
+    public bool Update(IWindowHost host, MouseState mouse, MouseState previous, Rectangle screen)
+    {
+        _host = host;
+        RemoveAll(open => open.Window.IsDone(host));
+        foreach (var open in _open)
+        {
+            open.Layout = Lay(open, host, screen);
+        }
+
+        var point = new Point(mouse.X, mouse.Y);
+        var pressed = mouse.LeftButton == ButtonState.Pressed && previous.LeftButton == ButtonState.Released;
+        if (_dragging is { } dragged)
+        {
+            if (mouse.LeftButton == ButtonState.Released)
+            {
+                _dragging = null;
+            }
+            else
+            {
+                dragged.Position = point - _dragOffset;
+            }
+
+            return true;
+        }
+
+        // A window dragging something out of itself takes the mouse anywhere until it lets go.
+        if (_open.LastOrDefault(open => open.Layout is { Fullscreen: true } && open.Window.CapturesMouse) is { Layout: { } capturing } captor)
+        {
+            captor.Window.FullscreenMouse(host, point - capturing.Bounds.Location, mouse, previous);
+            return true;
+        }
+
+        var hit = _open.LastOrDefault(open => open.Layout!.Bounds.Contains(point));
+        if (hit is null)
+        {
+            return false;
+        }
+
+        if (hit.Layout is { Fullscreen: true } full)
+        {
+            // UIFullscreen: the dialog handles its own buttons over its picture.
+            if (pressed && !hit.Window.IsPinned)
+            {
+                _open.Remove(hit);
+                _open.Add(hit);
+            }
+
+            hit.Window.FullscreenMouse(host, point - full.Bounds.Location, mouse, previous);
+            return true;
+        }
+
+        var wheel = mouse.ScrollWheelValue - previous.ScrollWheelValue;
+        if (wheel != 0)
+        {
+            hit.Scroll = Math.Clamp(hit.Scroll - Math.Sign(wheel) * 3, 0, hit.Layout!.MaxScroll);
+        }
+
+        if (!pressed)
+        {
+            return true;
+        }
+
+        if (!hit.Window.IsPinned)
+        {
+            _open.Remove(hit);
+            _open.Add(hit);
+        }
+
+        var layout = hit.Layout!;
+        if (layout.Close.Contains(point))
+        {
+            // Window:addPanel gives a button that closes its window no4.wav.
+            host.PlaySound("no4.wav");
+            RemoveAt(_open.IndexOf(hit));
+            return true;
+        }
+
+        if (layout.TitleBar.Contains(point))
+        {
+            // Window:beginDrag: no dragging while the windows are locked.
+            if (LockWindows)
+            {
+                return true;
+            }
+
+            _dragging = hit;
+            _dragOffset = point - hit.Position;
+            return true;
+        }
+
+        var clicked = layout.Cells.FirstOrDefault(cell => cell.Cell.OnClick is not null && cell.Area.Contains(point));
+        if (clicked.Cell is { OnClick: { } onClick } cell)
+        {
+            // Button:handleClick: the button's sound, then what it does.
+            if ((cell.Sound ?? DefaultButtonSound) is { Length: > 0 } sound)
+            {
+                host.PlaySound(sound);
+            }
+
+            onClick();
+        }
+        if (layout.Canvas.Contains(point))
+        {
+            hit.Window.CanvasClicked(host, point - layout.Canvas.Location);
+        }
+
+        return true;
+    }
+
+    public void Draw(SpriteBatch batch, TextRenderer text, Texture2D pixel, Point mouse)
+    {
+        foreach (var open in _open)
+        {
+            if (open.Layout is not { } layout)
+            {
+                continue;
+            }
+
+            if (layout.Fullscreen)
+            {
+                if (_host is { } host)
+                {
+                    open.Window.DrawFullscreen(batch, host, layout.Bounds.Location, InputScript.Mouse());
+                }
+
+                continue;
+            }
+
+            if (open.Window.UsesResizableLook && _host?.Graphics?.Resizable is { } look)
+            {
+                DrawResizable(batch, look, text, pixel, open, layout, mouse);
+                continue;
+            }
+
+            batch.Draw(pixel, layout.Bounds, PanelColor);
+            if (!open.Window.IsPinned)
+            {
+                batch.Draw(pixel, layout.TitleBar, TitleColor);
+                text.Draw(batch, layout.TitleText, new Vector2(layout.TitleBar.X + Padding, layout.TitleBar.Y + 3));
+                batch.Draw(pixel, layout.Close, layout.Close.Contains(mouse) ? ButtonHover : ButtonColor);
+                text.Draw(batch, "x", new Vector2(layout.Close.X + ((layout.Close.Width - _measure("x")) / 2), layout.Close.Y + 3));
+            }
+
+            foreach (var (area, cell) in layout.Cells)
+            {
+                if (cell.IsButton)
+                {
+                    var hover = cell.OnClick is not null && area.Contains(mouse) && (ReferenceEquals(open, _open[^1]) || open.Window.IsPinned);
+                    batch.Draw(pixel, area, hover ? ButtonHover : ButtonColor);
+                }
+
+                var tint = cell.Dim ? DimText : cell.Highlight ? HighlightText : Color.White;
+                var width = _measure(cell.Text);
+                var x = cell.IsButton ? area.X + ((area.Width - width) / 2) : cell.Align == CellAlign.Right ? area.Right - width : area.X;
+                text.Draw(batch, cell.Text, new Vector2(x, area.Y + 3), tint: tint);
+            }
+
+            if (layout.Canvas != Rectangle.Empty)
+            {
+                open.Window.DrawCanvas(batch, layout.Canvas, pixel, text);
+            }
+
+            if (layout.MaxScroll > 0)
+            {
+                // How far down the table the window shows, as a thin bar on the right.
+                var track = layout.Bounds.Height - layout.TitleBar.Height;
+                var barHeight = Math.Max(8, track * layout.VisibleRows / (layout.VisibleRows + layout.MaxScroll));
+                var barY = layout.Bounds.Y + layout.TitleBar.Height + ((track - barHeight) * open.Scroll / layout.MaxScroll);
+                batch.Draw(pixel, new Rectangle(layout.Bounds.Right - 4, barY, 3, barHeight), ButtonHover);
+            }
+        }
+
+        if (_dragging is null && TooltipAt(mouse) is { } tooltip && _open.Count > 0)
+        {
+            // Above the cursor, kept on the screen the windows were laid out on (CorsixTH's UI:drawTooltip).
+            var screen = _open.Select(open => open.Layout?.Bounds ?? Rectangle.Empty).Aggregate(Rectangle.Union);
+            var width = _measure(tooltip) + (2 * 4);
+            var x = Math.Clamp(mouse.X - (width / 2), 0, Math.Max(0, screen.Right - width));
+            var y = Math.Max(0, mouse.Y - RowHeight - 8);
+            batch.Draw(pixel, new Rectangle(x, y, width, RowHeight), TooltipColor);
+            text.Draw(batch, tooltip, new Vector2(x + 4, y + 3));
+        }
+    }
+
+    /// <summary>
+    /// A table window in CorsixTH's look (<c>UIResizable</c>): the pale purple window in its aux_ui frame, the title on a
+    /// lowered panel, buttons as raised panels (darker under the mouse, pressed while held, grey when disabled), the
+    /// rest as text.
+    /// </summary>
+    private void DrawResizable(SpriteBatch batch, ResizableLook look, TextRenderer text, Texture2D pixel, OpenWindow open, WindowLayout layout, Point mouse)
+    {
+        look.DrawWindow(batch, layout.Bounds, ResizableLook.PanelDefault);
+        if (!open.Window.IsPinned)
+        {
+            look.DrawBevel(batch, layout.TitleBar, ResizableLook.Title, lowered: true, layout.TitleText, text);
+            look.DrawBevel(batch, layout.Close, layout.Close.Contains(mouse) ? ResizableLook.SettingHover : ResizableLook.PanelDefault, lowered: false, "x", text);
+        }
+
+        var front = ReferenceEquals(open, _open[^1]) || open.Window.IsPinned;
+        var held = InputScript.Mouse().LeftButton == ButtonState.Pressed;
+        foreach (var (area, cell) in layout.Cells)
+        {
+            var tint = cell.Dim ? DimText : cell.Highlight ? HighlightText : Color.White;
+            if (cell.IsButton)
+            {
+                var hover = cell.OnClick is not null && area.Contains(mouse) && front;
+                var colour = cell.OnClick is null ? ResizableLook.Disabled : hover ? ResizableLook.SettingHover : ResizableLook.PanelDefault;
+                look.DrawBevel(batch, area, colour, lowered: hover && held, cell.Text, text, tint);
+                continue;
+            }
+
+            var width = _measure(cell.Text);
+            var x = cell.Align == CellAlign.Right ? area.Right - width : area.X;
+            text.Draw(batch, cell.Text, new Vector2(x, area.Y + 3), tint: tint);
+        }
+
+        if (layout.Canvas != Rectangle.Empty)
+        {
+            open.Window.DrawCanvas(batch, layout.Canvas, pixel, text);
+        }
+    }
+
+    /// <summary>Lays out a window's table: columns as wide as their widest cell, buttons padded, kept on screen.</summary>
+    private WindowLayout Lay(OpenWindow open, IWindowHost host, Rectangle screen)
+    {
+        if (open.Window.IsFullscreen(host))
+        {
+            // UIFullscreen: 640 by 480, centred on the screen, and kept on it from the top left.
+            // A smaller one opens where it says (Window:setDefaultPosition), kept on the screen.
+            var size = open.Window.FullscreenSize;
+            var full = open.Window.FullscreenScreenPosition is { } fixedAt
+                ? new Rectangle(Math.Clamp(fixedAt.X, screen.X, Math.Max(screen.X, screen.Right - size.X)), Math.Clamp(fixedAt.Y, screen.Y, Math.Max(screen.Y, screen.Bottom - size.Y)), size.X, size.Y)
+                : open.Window.FullscreenPosition is { } at
+                ? new Rectangle(Place(at.X, screen.X, screen.Width, size.X), Place(at.Y, screen.Y, screen.Height, size.Y), size.X, size.Y)
+                : new Rectangle(screen.X + Math.Max(0, (screen.Width - size.X) / 2), screen.Y + Math.Max(0, (screen.Height - size.Y) / 2), size.X, size.Y);
+            open.Position = full.Location;
+            return new WindowLayout(full, Rectangle.Empty, Rectangle.Empty, open.Window.Title, [], 0, 0, Rectangle.Empty, Fullscreen: true);
+        }
+
+        var rows = open.Window.Rows(host).ToList();
+        var columns = new List<int>();
+        var spanWidth = 0;
+        foreach (var row in rows)
+        {
+            var column = 0;
+            var used = 0;
+            foreach (var cell in row.Cells)
+            {
+                var cellWidth = CellWidth(cell);
+                if (cell.Span)
+                {
+                    spanWidth = Math.Max(spanWidth, used + cellWidth);
+                    break;
+                }
+
+                if (column == columns.Count)
+                {
+                    columns.Add(0);
+                }
+
+                columns[column] = Math.Max(columns[column], cellWidth);
+                used += columns[column] + ColumnGap;
+                column++;
+            }
+        }
+
+        var pinned = open.Window.IsPinned;
+        var titleHeight = pinned ? 0 : RowHeight;
+        var title = open.Window.Hotkey is { } key ? $"{open.Window.Title}  ({key})" : open.Window.Title;
+        var tableWidth = columns.Count == 0 ? 0 : columns.Sum() + (ColumnGap * (columns.Count - 1));
+        var canvas = open.Window.CanvasSize ?? Point.Zero;
+        var width = Math.Max(Math.Max(Math.Max(tableWidth, spanWidth), canvas.X), pinned ? 0 : _measure(title) + RowHeight + Padding) + (2 * Padding);
+        width = pinned ? screen.Width : Math.Min(width, screen.Width);
+        var canvasHeight = canvas.Y > 0 ? canvas.Y + Padding : 0;
+        var visibleRows = Math.Max(1, Math.Min(rows.Count, ((screen.Height - titleHeight - canvasHeight - (2 * Padding)) / RowHeight) - 1));
+        var height = titleHeight + (visibleRows * RowHeight) + canvasHeight + (2 * Padding);
+        if (pinned)
+        {
+            open.Position = new Point(screen.X, screen.Bottom - height);
+        }
+
+        var maxScroll = Math.Max(0, rows.Count - visibleRows);
+        open.Scroll = Math.Clamp(open.Scroll, 0, maxScroll);
+        if (!open.Placed)
+        {
+            // The first layout knows the window's size, which a default position from the right or bottom needs.
+            open.Placed = true;
+            var wanted = open.Window.DefaultPosition!.Value;
+            // Kept clear of the bottom panel, which CorsixTH draws over the map's bottom middle.
+            var panel = _open.Where(other => other.Window.IsPinned && other.Layout is not null).Sum(other => other.Layout!.Bounds.Height);
+            open.Position = new Point(
+                Place(wanted.X, screen.X, screen.Width, width),
+                Place(wanted.Y, screen.Y, Math.Max(height, screen.Height - panel), height));
+        }
+
+        var x = Math.Clamp(open.Position.X, screen.X, Math.Max(screen.X, screen.Right - width));
+        var y = Math.Clamp(open.Position.Y, screen.Y, Math.Max(screen.Y, screen.Bottom - height));
+        open.Position = new Point(x, y);
+        var bounds = new Rectangle(x, y, width, height);
+        var titleBar = pinned ? Rectangle.Empty : new Rectangle(x, y, width - RowHeight, RowHeight);
+        var close = pinned ? Rectangle.Empty : new Rectangle(x + width - RowHeight, y, RowHeight, RowHeight);
+        var cells = new List<(Rectangle Area, WindowCell Cell)>();
+        for (var i = 0; i < visibleRows && i + open.Scroll < rows.Count; i++)
+        {
+            var rowY = y + titleHeight + Padding + (i * RowHeight);
+            var cellX = x + Padding;
+            var column = 0;
+            foreach (var cell in rows[i + open.Scroll].Cells)
+            {
+                if (cell.Span)
+                {
+                    cells.Add((new Rectangle(cellX, rowY, bounds.Right - Padding - cellX, RowHeight - 2), cell));
+                    break;
+                }
+
+                cells.Add((new Rectangle(cellX, rowY, columns[column], RowHeight - 2), cell));
+                cellX += columns[column] + ColumnGap;
+                column++;
+            }
+        }
+
+        var canvasArea = canvas.Y > 0 ? new Rectangle(x + Padding, bounds.Bottom - Padding - canvas.Y, canvas.X, canvas.Y) : Rectangle.Empty;
+        return new WindowLayout(bounds, titleBar, close, title, cells, visibleRows, maxScroll, canvasArea);
+    }
+
+    /// <summary>One coordinate of CorsixTH's <c>Window:setPosition</c> within an area from <paramref name="start"/>.</summary>
+    private static int Place(float value, int start, int area, int size) => value switch
+    {
+        < 0 => start + (int)MathF.Ceiling(area - size + value),
+        < 1 => start + (int)MathF.Floor(((area - size) * value) + 0.5f),
+        _ => start + (int)value,
+    };
+
+    /// <summary>The size of the original's fullscreen dialogs.</summary>
+    public const int FullscreenWidth = 640;
+
+    /// <inheritdoc cref="FullscreenWidth"/>
+    public const int FullscreenHeight = 480;
+
+    /// <summary>The host of the last <see cref="Update"/>, for the fullscreen dialogs' drawing and tooltips.</summary>
+    private IWindowHost? _host;
+
+    private int CellWidth(WindowCell cell) => _measure(cell.Text) + (cell.IsButton ? 12 : 0);
+
+    private sealed class OpenWindow(UiWindow window)
+    {
+        public UiWindow Window { get; } = window;
+
+        public Point Position { get; set; }
+
+        /// <summary>Whether <see cref="Position"/> is set; false until a window with a default position is laid out.</summary>
+        public bool Placed { get; set; }
+
+        public int Scroll { get; set; }
+
+        public WindowLayout? Layout { get; set; }
+    }
+
+    private sealed record WindowLayout(
+        Rectangle Bounds,
+        Rectangle TitleBar,
+        Rectangle Close,
+        string TitleText,
+        IReadOnlyList<(Rectangle Area, WindowCell Cell)> Cells,
+        int VisibleRows,
+        int MaxScroll,
+        Rectangle Canvas,
+        bool Fullscreen = false);
+}

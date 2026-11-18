@@ -1,7 +1,7 @@
 <Project>
-  <ItemGroup Condition="'$(CorsixNetDeterministic)' == 'true'">
-    <CompilerVisibleProperty Include="CorsixNetDeterministic" />
-    <ProjectReference Include="$(MSBuildThisFileDirectory)src/CorsixNet.Analyzers/CorsixNet.Analyzers.csproj"
+  <ItemGroup Condition="'$(OpenWardsDeterministic)' == 'true'">
+    <CompilerVisibleProperty Include="OpenWardsDeterministic" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)src/OpenWards.Analyzers/OpenWards.Analyzers.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false"
                       PrivateAssets="all" />

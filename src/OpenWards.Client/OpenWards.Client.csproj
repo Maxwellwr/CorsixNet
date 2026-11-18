@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>OpenWards</AssemblyName>
+    <RootNamespace>OpenWards.Client</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.DesktopGL" />
+    <PackageReference Include="MeltySynth" />
+    <PackageReference Include="NLayer" />
+    <PackageReference Include="Concentus" />
+    <PackageReference Include="Concentus.Oggfile" />
+    <PackageReference Include="FreeTypeSharp" />
+    <PackageReference Include="StbTrueTypeSharp" />
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Assets/aux_ui.tab" LogicalName="OpenWards.Client.Assets.aux_ui.tab" />
+    <EmbeddedResource Include="Assets/aux_ui.dat" LogicalName="OpenWards.Client.Assets.aux_ui.dat" />
+    <EmbeddedResource Include="Assets/lose.pl8" LogicalName="OpenWards.Client.Assets.lose.pl8" />
+    <EmbeddedResource Include="Assets/tree_ctrl.*" LogicalName="OpenWards.Client.Assets.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets/mainmenu*.dat.gz" LogicalName="OpenWards.Client.Assets.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets/mainmenu*.pal" LogicalName="OpenWards.Client.Assets.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenWards.Client.Tests" />
+    <ProjectReference Include="../OpenWards.Content/OpenWards.Content.csproj" />
+    <ProjectReference Include="../OpenWards.Formats/OpenWards.Formats.csproj" />
+    <ProjectReference Include="../OpenWards.Net/OpenWards.Net.csproj" />
+    <ProjectReference Include="../OpenWards.Sim/OpenWards.Sim.csproj" />
+  </ItemGroup>
+
+</Project>

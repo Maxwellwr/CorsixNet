@@ -1,0 +1,26 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenWards.Analyzers/OpenWards.Analyzers.csproj" />
+    <Project Path="src/OpenWards.Client/OpenWards.Client.csproj" />
+    <Project Path="src/OpenWards.Content/OpenWards.Content.csproj" />
+    <Project Path="src/OpenWards.Formats/OpenWards.Formats.csproj" />
+    <Project Path="src/OpenWards.Net/OpenWards.Net.csproj" />
+    <Project Path="src/OpenWards.Server/OpenWards.Server.csproj" />
+    <Project Path="src/OpenWards.Sim/OpenWards.Sim.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/OpenWards.AnnouncerVoice/OpenWards.AnnouncerVoice.csproj" />
+    <Project Path="tools/OpenWards.LuaConverter/OpenWards.LuaConverter.csproj" />
+    <Project Path="tools/OpenWards.SaveDump/OpenWards.SaveDump.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OpenWards.Analyzers.Tests/OpenWards.Analyzers.Tests.csproj" />
+    <Project Path="tests/OpenWards.AnnouncerVoice.Tests/OpenWards.AnnouncerVoice.Tests.csproj" />
+    <Project Path="tests/OpenWards.Client.Tests/OpenWards.Client.Tests.csproj" />
+    <Project Path="tests/OpenWards.Content.Tests/OpenWards.Content.Tests.csproj" />
+    <Project Path="tests/OpenWards.Formats.Tests/OpenWards.Formats.Tests.csproj" />
+    <Project Path="tests/OpenWards.LuaConverter.Tests/OpenWards.LuaConverter.Tests.csproj" />
+    <Project Path="tests/OpenWards.Net.Tests/OpenWards.Net.Tests.csproj" />
+    <Project Path="tests/OpenWards.Sim.Tests/OpenWards.Sim.Tests.csproj" />
+  </Folder>
+</Solution>

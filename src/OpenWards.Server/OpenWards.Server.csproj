@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>Headless lockstep game server.</Description>
+    <AssemblyName>OpenWards.Server</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../OpenWards.Content/OpenWards.Content.csproj" />
+    <ProjectReference Include="../OpenWards.Net/OpenWards.Net.csproj" />
+  </ItemGroup>
+
+</Project>

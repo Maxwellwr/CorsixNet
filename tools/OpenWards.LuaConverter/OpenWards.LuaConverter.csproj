@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>Turns CorsixTH's Lua files (languages, campaigns, config.txt, hotkeys.txt) into the YAML OpenWards reads.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/OpenWards.Content/OpenWards.Content.csproj" />
+    <InternalsVisibleTo Include="OpenWards.LuaConverter.Tests" />
+  </ItemGroup>
+
+</Project>

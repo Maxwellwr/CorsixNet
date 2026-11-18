@@ -1,0 +1,95 @@
+using System.Globalization;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using OpenWards.Client.Maps;
+using OpenWards.Sim.Commands;
+using OpenWards.Sim.Diseases;
+using OpenWards.Sim.Economy;
+
+namespace OpenWards.Client.Ui.Windows;
+
+/// <summary>
+/// The drug casebook (CorsixTH's <c>dialogs/fullscreen/drug_casebook.lua</c>, F5): every disease and diagnosis the
+/// hospital knows, with its reputation, charge, earnings, recoveries, fatalities, patients turned away and cure rating.
+/// The price buttons change it by 1 or 5 percent (<c>increasePay</c>, <c>decreasePay</c> with and without Shift), and
+/// the research button concentrates research on the disease or stops.
+/// </summary>
+/// <remarks>
+/// The original shows one disease at a time with a list to pick from; this stand-in shows all of them as a table.
+/// </remarks>
+internal sealed class CasebookWindow : UiWindow
+{
+    private bool _showPercent;
+
+    public override string Title => UiText.Get("openwards.casebook.caption", "Drug casebook");
+
+    public override string? Hotkey => "F5";
+
+    private readonly CasebookScreen _screen = new();
+
+    /// <summary>The original's look (<see cref="CasebookScreen"/>) where its graphics are there; else the table below.</summary>
+    public override bool IsFullscreen(IWindowHost host) => CasebookScreen.IsAvailable(host);
+
+    public override void DrawFullscreen(SpriteBatch batch, IWindowHost host, Point origin, MouseState mouse) => _screen.Draw(batch, host, origin, mouse);
+
+    public override void FullscreenMouse(IWindowHost host, Point local, MouseState mouse, MouseState previous) => _screen.Mouse(host, this, local, mouse, previous);
+
+    public override string? FullscreenTooltip(IWindowHost host, Point local) => _screen.Tooltip(host, local);
+
+    /// <summary>The arrow keys (ingame_scroll_*), as the original's key handlers.</summary>
+    public override bool TakesKey(string action) => action.StartsWith("ingame_scroll_", StringComparison.Ordinal);
+
+    public override void FullscreenKey(IWindowHost host, string action) => _screen.Key(host, action);
+    public override IEnumerable<WindowRow> Rows(IWindowHost host)
+    {
+        var simulation = host.Simulation;
+        var hospital = simulation.Hospitals[host.Player];
+        var rules = simulation.Rules.Diseases;
+        yield return WindowCell.Button(_showPercent ? UiText.Get("openwards.casebook.show_charges", "Show charges") : UiText.Get("openwards.casebook.show_percent", "Show percent"), () => _showPercent = !_showPercent).WithTooltip(OriginalTooltips.Get(host, 140, "Show the charge as money or as a percentage"));
+        yield return WindowRow.Of(UiText.Get("openwards.casebook.disease", "Disease"), WindowCell.Number(UiText.Get("openwards.bank.reputation", "Rep")), WindowCell.Number(UiText.Get("openwards.casebook.charge", "Charge")), "", "", "", "", WindowCell.Number(UiText.Get("openwards.casebook.earned", "Earned")), WindowCell.Number(UiText.Get("openwards.casebook.cured", "Cured")), WindowCell.Number(UiText.Get("openwards.casebook.died", "Died")), WindowCell.Number(UiText.Get("openwards.casebook.away", "Away")), WindowCell.Number(UiText.Get("openwards.casebook.cure", "Cure")), UiText.Get("openwards.menu.research", "Research"));
+        var known = DiseaseCatalog.All
+            .Where(disease => hospital.PeekCase(disease, rules).Discovered)
+            .Select(disease => (Disease: disease, Name: host.Texts?.DiseaseName(disease.Id) ?? disease.Id))
+            .OrderBy(entry => entry.Disease.IsPseudo)
+            .ThenBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase);
+        foreach (var (disease, name) in known)
+        {
+            var entry = hospital.PeekCase(disease, rules);
+            var reputation = Math.Clamp(entry.Reputation ?? hospital.Reputation, Hospital.MinReputation, Hospital.MaxReputation);
+            var charge = _showPercent
+                ? string.Create(CultureInfo.InvariantCulture, $"{entry.PricePercent} %")
+                : MoneyText.Format(hospital.TreatmentPrice(disease, rules));
+            var concentrated = string.Equals(hospital.Research.Concentrated, disease.Id, StringComparison.Ordinal);
+            yield return WindowRow.Of(
+                new WindowCell(name, Highlight: concentrated),
+                WindowCell.Number(reputation.ToString(CultureInfo.InvariantCulture)),
+                WindowCell.Number(charge),
+                Price(host, "-5", disease, entry.PricePercent - 5),
+                Price(host, "-1", disease, entry.PricePercent - 1),
+                Price(host, "+1", disease, entry.PricePercent + 1),
+                Price(host, "+5", disease, entry.PricePercent + 5),
+                WindowCell.Number(MoneyText.Format(entry.MoneyEarned)),
+                WindowCell.Number(entry.Recoveries.ToString(CultureInfo.InvariantCulture)),
+                WindowCell.Number(entry.Fatalities.ToString(CultureInfo.InvariantCulture)),
+                WindowCell.Number(entry.TurnedAway.ToString(CultureInfo.InvariantCulture)),
+                WindowCell.Number(disease.IsPseudo ? string.Empty : string.Create(CultureInfo.InvariantCulture, $"{entry.CureEffectiveness} %")),
+                disease.IsPseudo
+                    ? string.Empty
+                    : WindowCell.Button(concentrated ? UiText.Get("openwards.casebook.stop", "Stop") : UiText.Get("openwards.casebook.concentrate", "Concentrate"), () => host.Submit(new ConcentrateResearchCommand(disease.Id)), highlight: concentrated).WithTooltip(OriginalTooltips.Get(host, 147, "Concentrate research on treating this disease")));
+        }
+    }
+
+    private WindowCell Price(IWindowHost host, string text, DiseaseDefinition disease, int percent) =>
+        WindowCell.Button(text, () =>
+        {
+            // UICasebook:increasePay and decreasePay: the wrong-choice buzz at the end of the range.
+            if (percent is < DiseaseCase.MinPrice or > DiseaseCase.MaxPrice)
+            {
+                host.PlaySound("Wrong2.wav");
+            }
+
+            host.Submit(new SetTreatmentPriceCommand(disease.Id, percent));
+            _showPercent = true;
+        }).WithTooltip(text.StartsWith('-') ? OriginalTooltips.Get(host, 145, "Lower the charge") : OriginalTooltips.Get(host, 146, "Raise the charge"));
+}

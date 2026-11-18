@@ -1,0 +1,43 @@
+using OpenWards.Client.Ui.Windows;
+using OpenWards.Sim.Diseases;
+using Xunit;
+
+namespace OpenWards.Client.Tests;
+
+public sealed class CasebookScreenTests
+{
+    [Fact]
+    public void TheCureKindFollowsTheTreatmentRooms()
+    {
+        Assert.Equal(7, CasebookScreen.CureSprite(new DiseaseDefinition("a", 1, 1) { TreatmentRooms = ["pharmacy"] }));
+        Assert.Equal(8, CasebookScreen.CureSprite(new DiseaseDefinition("b", 1, 1) { TreatmentRooms = ["ward", "operating_theatre"] }));
+        Assert.Equal(10, CasebookScreen.CureSprite(new DiseaseDefinition("c", 1, 1) { TreatmentRooms = ["psych"] }));
+        Assert.Equal(6, CasebookScreen.CureSprite(new DiseaseDefinition("d", 1, 1) { TreatmentRooms = ["inflation"] }));
+    }
+
+    [Fact]
+    public void TheListHasDiagnosesFirstThenDiseasesByName()
+    {
+        var host = new WindowTestHost();
+        var known = CasebookScreen.Known(host);
+
+        Assert.NotEmpty(known);
+        var expected = known.OrderByDescending(disease => disease.IsPseudo).ThenBy(disease => disease.Id.ToUpperInvariant(), StringComparer.Ordinal);
+        Assert.Equal(expected.Select(disease => disease.Id), known.Select(disease => disease.Id));
+        Assert.False(new CasebookWindow().IsFullscreen(host));
+    }
+
+    [Fact]
+    public void TheCureRequirementTooltipNamesTheRoomsToBuildAndTheStaffToHire()
+    {
+        var host = new WindowTestHost();
+        var surgery = new DiseaseDefinition("s", 1, 1) { TreatmentRooms = ["ward", "operating_theatre"] };
+
+        var tooltip = CasebookScreen.CureRequirementTooltip(host, surgery);
+
+        Assert.Contains("Build (", tooltip, StringComparison.Ordinal);
+        Assert.Contains("You need to employ staff to handle this treatment (", tooltip, StringComparison.Ordinal);
+        Assert.Contains("Surgeon: 2", tooltip, StringComparison.Ordinal);
+        Assert.EndsWith(").", tooltip, StringComparison.Ordinal);
+    }
+}

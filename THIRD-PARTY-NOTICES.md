@@ -1,6 +1,6 @@
 # Third-party notices
 
-CorsixNet contains code ported from the projects below. Each file with ported
+OpenWards contains code ported from the projects below. Each file with ported
 code names its origin in a header comment.
 
 ## CorsixTH
@@ -32,13 +32,13 @@ and `CorsixTH/Lua/dialogs/place_staff.lua`), walk timing and animation numbers (
 the RNC decompressor modifications (`Rnc.cs`).
 
 Included as is: CorsixTH's own interface sprites `CorsixTH/Bitmap/aux_ui.tab` and `aux_ui.dat` (at commit 1a1460f,
-in `src/CorsixNet.Client/Assets`), for the bottom panel's machine menu button, the tree control's sprites
+in `src/OpenWards.Client/Assets`), for the bottom panel's machine menu button, the tree control's sprites
 `CorsixTH/Bitmap/tree_ctrl.tab`, `.dat` and `.pal`, for the folder browser, and its palette `CorsixTH/Bitmap/lose.pl8`, for
 the losing movies' newspaper headlines, and the main menu's backgrounds `CorsixTH/Bitmap/mainmenu480`, `720` and `1080`
 (`.dat`, carried gzip-compressed, and `.pal`).
 
-Included as YAML: CorsixTH's language files (`src/CorsixNet.Content/Languages/*.yaml`, from
-`CorsixTH/Lua/languages` at commit 7639874, written out by `tools/CorsixNet.LuaConverter` with the same strings),
+Included as YAML: CorsixTH's language files (`src/OpenWards.Content/Languages/*.yaml`, from
+`CorsixTH/Lua/languages` at commit 7639874, written out by `tools/OpenWards.LuaConverter` with the same strings),
 each with its translators' copyright and the MIT license in its header, read by `CorsixLanguages.cs` (from
 `CorsixTH/Lua/strings.lua`).
 
@@ -189,8 +189,8 @@ SOFTWARE.
 
 ## Russian announcer voice (Vosk TTS, speaker F03)
 
-The Russian announcements in `src/CorsixNet.Content/Languages/Voice/russian` were spoken by
-`tools/CorsixNet.AnnouncerVoice` with Vosk TTS (https://github.com/alphacep/vosk-tts, run only as a tool, not shipped)
+The Russian announcements in `src/OpenWards.Content/Languages/Voice/russian` were spoken by
+`tools/OpenWards.AnnouncerVoice` with Vosk TTS (https://github.com/alphacep/vosk-tts, run only as a tool, not shipped)
 and its model vosk-model-tts-ru-0.9-multi (https://alphacephei.com/vosk/models, mirrored at
 https://huggingface.co/alphacep), speaker 2 ("F03", an artificial voice, not a recording of a real speaker). The model
 is released by Alpha Cephei under the Apache License 2.0 (http://www.apache.org/licenses/LICENSE-2.0); it includes
@@ -199,12 +199,12 @@ voice is not the original game's announcer and is not modelled on her recordings
 
 ## YamlDotNet
 
-CorsixNet reads its language files with YamlDotNet (https://github.com/aaubry/YamlDotNet), used under the MIT
+OpenWards reads its language files with YamlDotNet (https://github.com/aaubry/YamlDotNet), used under the MIT
 license: Copyright (c) Antoine Aubry and contributors.
 
 ## MeltySynth
 
-CorsixNet plays the music on a software synthesiser by default with MeltySynth (https://github.com/sinshu/meltysynth),
+OpenWards plays the music on a software synthesiser by default with MeltySynth (https://github.com/sinshu/meltysynth),
 used under the MIT license: Copyright (c) 2021 Nobuaki Tanaka. No SoundFont is included; the player supplies one.
 
 ## NLayer and NVorbis
@@ -218,12 +218,12 @@ Andrew Ward), which MonoGame brings.
 The player's own Opus music is decoded in managed code with Concentus (https://github.com/lostromb/concentus, a C#
 port of the Opus reference library, under Opus's BSD 3-clause license; its copyright holders include Skype Limited,
 the Xiph.Org Foundation, CSIRO and Microsoft Corporation, as the package's license lists them) and Concentus.Oggfile (https://github.com/lostromb/concentus.oggfile,
-MIT: Copyright (c) Logan Stromberg), which reads the Ogg container. FLAC is decoded by CorsixNet's own `FlacDecoder`,
+MIT: Copyright (c) Logan Stromberg), which reads the Ogg container. FLAC is decoded by OpenWards's own `FlacDecoder`,
 written from the format's specification (RFC 9639).
 
 ## FreeType
 
-CorsixNet draws TrueType fonts with FreeType through FreeTypeSharp (MIT, https://github.com/ryancheung/FreeTypeSharp),
+OpenWards draws TrueType fonts with FreeType through FreeTypeSharp (MIT, https://github.com/ryancheung/FreeTypeSharp),
 whose package carries FreeType's native libraries. FreeType is used under the FreeType License (FTL):
 
 ```text
