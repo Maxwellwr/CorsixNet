@@ -147,6 +147,8 @@ internal sealed class HotkeyAssignWindow(Hotkeys current, Action<Hotkeys> accept
         "ingame_showCheatWindow" => "Cheat Menu",
         "ingame_openFirstMessage" => "Level Message",
         "global_fullscreen_toggle" => "Fullscreen",
+        "ingame_saveMenu" => "Save Game",
+        "ingame_restartLevel" => "Restart Level",
         "ingame_quickSave" => "Quick Save",
         "ingame_quickLoad" => "Quick Load",
         "global_screenshot" => "Screenshot",
