@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <Description>Speaks a translation's announcer subtitles with a freely licensed Piper or Vosk TTS voice, as a hospital loudspeaker, into Languages/Voice.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/OpenWards.Content/OpenWards.Content.csproj" />
+    <InternalsVisibleTo Include="OpenWards.AnnouncerVoice.Tests" />
+  </ItemGroup>
+
+</Project>

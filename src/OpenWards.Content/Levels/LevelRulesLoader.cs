@@ -1,0 +1,630 @@
+// Which level files are read, and where starting cash and costs come from, ported from CorsixTH
+// CorsixTH/Lua/map.lua (Map:_loadOriginalCampaignLevel), CorsixTH/Lua/hospital.lua (Hospital:Hospital,
+// Hospital:getObjectBuildCost) and CorsixTH/Lua/world.lua (World:getAvailableRooms); the fallback
+// starting cash and reputation are CorsixTH/Lua/base_config.lua's town.StartCash and StartRep, and the staff settings fall back
+// to the same file's staff, gbv and staff_levels. The planned earthquakes are CorsixTH/Lua/earthquake.lua's quake_control.
+// The extra settings for campaign levels 5, 7, 8, 11 and 12 are CorsixTH/Levels/original05.level to original12.level, and
+// the starting staff are read as CorsixTH/Lua/hospital.lua's Hospital:initStaff reads start_staff.
+// Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
+
+using System.Globalization;
+using System.Text.RegularExpressions;
+using OpenWards.Formats;
+using OpenWards.Sim.Definitions;
+using OpenWards.Sim.Disasters;
+using OpenWards.Sim.Diseases;
+using OpenWards.Sim.Economy;
+using OpenWards.Sim.People;
+using OpenWards.Sim.Staff;
+
+namespace OpenWards.Content.Levels;
+
+/// <summary>Builds a level's <see cref="LevelRules"/> from the original game's level files.</summary>
+public static partial class LevelRulesLoader
+{
+    /// <summary>
+    /// The prefix of a difficulty's level files (<c>EASY</c>, <c>FULL</c> or <c>HARD</c>, CorsixTH's <c>easy</c>,
+    /// <c>full</c> and <c>hard</c>).
+    /// </summary>
+    public static string FilePrefix(Difficulty difficulty) => difficulty switch
+    {
+        Difficulty.Easy => "EASY",
+        Difficulty.Medium => "FULL",
+        Difficulty.Hard => "HARD",
+        _ => throw new ArgumentOutOfRangeException(nameof(difficulty)),
+    };
+
+    /// <summary>Reads a difficulty by name: easy, medium (or full, as CorsixTH calls it) or hard, in any case.</summary>
+    public static bool TryParseDifficulty(string text, out Difficulty difficulty)
+    {
+        difficulty = text.ToUpperInvariant() switch
+        {
+            "EASY" => Difficulty.Easy,
+            "MEDIUM" or "FULL" => Difficulty.Medium,
+            "HARD" => Difficulty.Hard,
+            _ => 0,
+        };
+        return difficulty != 0;
+    }
+
+    /// <summary>Starting cash when the level files give none (CorsixTH's base_config.lua).</summary>
+    public const int DefaultStartCash = 40000;
+
+    /// <summary>Number of levels in the original campaign; each has its own settings file.</summary>
+    public const int CampaignLevels = 12;
+
+    /// <summary>The most <c>start_staff</c> entries read.</summary>
+    private const int MaxStartStaff = 1000;
+
+    /// <summary>base_config.lua's <c>gbv.HoldVisualMonths</c>.</summary>
+    private const int BaseHoldVisualMonths = 2;
+
+    /// <summary>base_config.lua's <c>gbv.HoldVisualPeepCount</c>.</summary>
+    private const int BaseHoldVisualPeepCount = 6;
+
+    /// <summary>CorsixTH's base_config.lua: the names of the computer opponents 0 to 14.</summary>
+    private static readonly string[] BaseCompetitorNames =
+    [
+        "ORAC", "COLOSSUS", "HAL", "MULTIVAC", "HOLLY", "DEEP THOUGHT", "ZEN", "SKYNET", "MARVIN", "CEREBRO", "MOTHER",
+        "JAYNE", "CORSIX", "ROUJIN", "EDVIN",
+    ];
+
+    /// <summary>base_config.lua's <c>visuals_available</c>; its <c>visuals</c>, <c>non_visuals</c> and <c>non_visuals_available</c> are all 0.</summary>
+    private static readonly int[] BaseVisualsAvailable = [0, 12, 3, 12, 18, 6, 0, 6, 12, 0, 18, 0, 0, 6];
+
+    /// <summary>
+    /// The level number of an original level map such as <c>LEVEL.L1</c>, or null for other maps.
+    /// </summary>
+    /// <remarks>
+    /// Both '/' and '\' separate directories here, whatever the platform: <see cref="Path.GetFileName(string)"/>
+    /// keeps a Windows path whole on Linux and macOS.
+    /// </remarks>
+    public static int? LevelNumber(string mapFileName)
+    {
+        var fileName = mapFileName[(mapFileName.LastIndexOfAny(['/', '\\']) + 1)..];
+        var match = OriginalLevel().Match(fileName);
+        return match.Success ? int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture) : null;
+    }
+
+    /// <summary>
+    /// CorsixTH's extra settings for some campaign levels (<c>Levels/original05.level</c> and so on, which
+    /// <c>Map:_loadOriginalCampaignLevel</c> reads after the level's own file at every difficulty): three specialist
+    /// consultants on level 5, an emergency on level 7, other goals on level 8 and alien DNA on levels 11 and 12.
+    /// </summary>
+    private static readonly Dictionary<int, string> CorsixThAdditions = new()
+    {
+        [5] = """
+            #start_staff[1].Doctor.Shrink.Consultant.Skill 1 1 1 100
+            #start_staff[2].Doctor.Surgeon.Consultant.Skill 1 1 1 100
+            #start_staff[3].Doctor.Researcher.Consultant.Skill 1 1 1 100
+            """,
+        [7] = "#emergency_control[9].StartMonth.EndMonth.Min.Max.Illness.PercWin.Bonus 60 70 5 8 4 75 1000",
+        [8] = """
+            #win_criteria[1].Criteria.MaxMin.Value.Group.Bound	3 1 55 1 0
+            #win_criteria[2].Criteria.MaxMin.Value.Group.Bound 4 1 500 1 0
+            #win_criteria[3].Criteria.MaxMin.Value.Group.Bound 6 1 180000 1 0
+            #lose_criteria[0].Criteria.MaxMin.Value.Group.Bound 1 0 200 1 400
+            #lose_criteria[1].Criteria.MaxMin.Value.Group.Bound 2 0 -1000 2 10000
+            #lose_criteria[2].Criteria.MaxMin.Value.Group.Bound 5 1 25 3 20
+            """,
+        [11] = "#visuals[6] 10 I_ALIEN",
+        [12] = "#visuals[6] 10 I_ALIEN",
+    };
+
+    /// <summary>
+    /// Reads the settings of a level: the difficulty's base file (such as <c>FULL00.SAM</c>), then,
+    /// for a campaign level, the level's own file (such as <c>FULL01.SAM</c>) and CorsixTH's extra settings for it.
+    /// </summary>
+    public static LevelConfig LoadConfig(ThemeHospitalInstall install, int? levelNumber, Difficulty difficulty = Difficulty.Medium)
+    {
+        var prefix = FilePrefix(difficulty);
+        var config = LevelConfig.Parse(install.ReadDataFile("LEVELS", $"{prefix}00.SAM"));
+        if (levelNumber is >= 1 and <= CampaignLevels)
+        {
+            config.Apply(install.ReadDataFile("LEVELS", $"{prefix}{levelNumber:00}.SAM"));
+            ApplyCorsixThAdditions(config, levelNumber.Value);
+        }
+
+        return config;
+    }
+
+    /// <summary>
+    /// The money settings of a CorsixTH custom level, from its <c>.level</c> file's settings (<c>Map:loadMapConfig</c> on
+    /// top of base_config.lua, whose values are this loader's defaults). A file whose <c>overlay.difficulty</c> (easy,
+    /// full or hard) and <c>overlay.level_number</c> (1 to 12) name a campaign level gets that level's files read on top,
+    /// which then win over the file's own settings, and plays at that difficulty; otherwise it plays at medium.
+    /// </summary>
+    /// <exception cref="InvalidDataException">The overlay is incomplete or names no campaign level.</exception>
+    /// <exception cref="InvalidOperationException">The overlay needs the original game, which is not at hand.</exception>
+    public static LevelRules LoadCustom(LevelConfig config, ThemeHospitalInstall? install, GameContent content)
+    {
+        var difficulty = Difficulty.Medium;
+        var overlayDifficulty = config["overlay.difficulty"];
+        var overlayLevel = config.GetInt("overlay.level_number");
+        if (overlayDifficulty is not null || overlayLevel is not null)
+        {
+            if (overlayDifficulty is null || overlayLevel is null)
+            {
+                throw new InvalidDataException("The level's overlay needs both a difficulty and a level number.");
+            }
+
+            difficulty = overlayDifficulty switch
+            {
+                "easy" => Difficulty.Easy,
+                "full" => Difficulty.Medium,
+                "hard" => Difficulty.Hard,
+                _ => throw new InvalidDataException($"Incorrect overlay difficulty {overlayDifficulty}."),
+            };
+            if (overlayLevel is not (>= 1 and <= CampaignLevels))
+            {
+                throw new InvalidDataException($"Incorrect overlay level number {overlayLevel}.");
+            }
+
+            if (install is null)
+            {
+                throw new InvalidOperationException("The level's overlay needs the original game's level files.");
+            }
+
+            var prefix = FilePrefix(difficulty);
+            config.Apply(install.ReadDataFile("LEVELS", $"{prefix}00.SAM"));
+            config.Apply(install.ReadDataFile("LEVELS", $"{prefix}{overlayLevel:00}.SAM"));
+            ApplyCorsixThAdditions(config, overlayLevel.Value);
+        }
+
+        return FromConfig(config, null, content, difficulty);
+    }
+
+    /// <summary>CorsixTH's extra settings for campaign level <paramref name="levelNumber"/>, if it has any.</summary>
+    public static void ApplyCorsixThAdditions(LevelConfig config, int levelNumber)
+    {
+        if (CorsixThAdditions.TryGetValue(levelNumber, out var additions))
+        {
+            config.Apply(System.Text.Encoding.ASCII.GetBytes(additions));
+        }
+    }
+
+    /// <summary>
+    /// The money settings of level <paramref name="levelNumber"/> (if any) for the given content, at the difficulty its
+    /// files were read for.
+    /// </summary>
+    public static LevelRules FromConfig(LevelConfig config, int? levelNumber, GameContent content, Difficulty difficulty = Difficulty.Medium)
+    {
+        // A level's own town settings win over the general ones.
+        var startCash = (levelNumber is { } level ? config.GetInt($"towns[{level}].StartCash") : null)
+            ?? config.GetInt("town.StartCash")
+            ?? DefaultStartCash;
+        var startReputation = (levelNumber is { } repLevel ? config.GetInt($"towns[{repLevel}].StartRep") : null)
+            ?? config.GetInt("town.StartRep")
+            ?? Hospital.AverageReputation;
+
+        var rooms = content.Rooms
+            .Where(room => room.LevelConfigId != 0 && config.GetInt($"rooms[{room.LevelConfigId}].Cost") is not null)
+            .Select(room => KeyValuePair.Create(room.Id, config.GetInt($"rooms[{room.LevelConfigId}].Cost")!.Value));
+        var objects = content.Objects
+            .Where(definition => config.GetInt($"objects[{definition.ObjectType}].StartCost") is not null)
+            .Select(definition => KeyValuePair.Create(definition.Id, config.GetInt($"objects[{definition.ObjectType}].StartCost")!.Value));
+        return new LevelRules(startCash, rooms, objects, StaffFromConfig(config), PopulationFromConfig(config), DiseasesFromConfig(config), startReputation,
+            AwardsFromConfig(config), config.GetInt("gbv.LandCostPerTile") ?? LevelRules.DefaultLandCostPerTile,
+            EndConditionsFromConfig(config, startCash, startReputation),
+            TownInt(config, levelNumber, "InterestRate") ?? Hospital.DefaultInterestRate,
+            TownInt(config, levelNumber, "OverdraftDiff") ?? Hospital.DefaultOverdraftDifferential,
+            ObjectAvailabilityFromConfig(config, content),
+            EarthquakesFromConfig(config),
+            config.GetInt("payroll.MaxSalary") ?? LevelRules.DefaultMaxSalary,
+            new TirednessRules(
+                config.GetInt("gbv.Tired") ?? TirednessRules.Default.Tired,
+                config.GetInt("gbv.VeryTired") ?? TirednessRules.Default.VeryTired,
+                config.GetInt("gbv.CrackUpTired") ?? TirednessRules.Default.CrackUpTired),
+            config.GetInt("gbv.MayorLaunch") ?? LevelRules.DefaultMayorLaunch,
+            EmergenciesFromConfig(config),
+            EpidemicsFromConfig(config),
+            CompetitorsFromConfig(config),
+            config.GetInt("gbv.ScoreMaxInc") ?? LevelRules.DefaultScoreMaxIncrease,
+            levelNumber,
+            RandomEmergenciesFromConfig(config),
+            difficulty,
+            config.GetInt("gbv.SodaPrice") ?? LevelRules.DefaultSodaPrice,
+            ResearchFromConfig(config));
+    }
+
+    /// <summary>
+    /// The computer opponents that play (<c>computer[n].Playing</c> 1), with their names (<c>computer[n].Name</c>, by
+    /// default CorsixTH's base_config.lua's), in the order World:World's <c>pairs</c> visits base_config.lua's table:
+    /// 1 to 14, then 0.
+    /// </summary>
+    public static IEnumerable<PlannedCompetitor> CompetitorsFromConfig(LevelConfig config)
+    {
+        foreach (var index in Enumerable.Range(1, BaseCompetitorNames.Length - 1).Append(0))
+        {
+            if (config.GetInt($"computer[{index}].Playing") == 1)
+            {
+                yield return new PlannedCompetitor(index + 1, config[$"computer[{index}].Name"] ?? BaseCompetitorNames[index]);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The research settings: <c>objects[n]</c> of the objects research knows about (those the level names), each
+    /// <c>expertise[n].RschReqd</c>, and <c>gbv.ResearchPointsDivisor</c>, <c>RschImproveCostPercent</c>,
+    /// <c>RschImproveIncrementPercent</c>, <c>DrugImproveRate</c>, <c>MinDrugCost</c>, <c>MaxObjectStrength</c>,
+    /// <c>ResearchIncrement</c> and <c>AutopsyRschPercent</c>, by default base_config.lua's.
+    /// </summary>
+    public static Sim.Research.ResearchRules ResearchFromConfig(LevelConfig config)
+    {
+        var objects = new List<KeyValuePair<int, Sim.Research.ResearchObjectRules>>();
+        foreach (var obj in Sim.Research.ResearchObjects.All)
+        {
+            var key = $"objects[{obj.ObjectType}]";
+            if (config.GetInt($"{key}.AvailableForLevel") is not { } forLevel)
+            {
+                continue;
+            }
+
+            objects.Add(KeyValuePair.Create(obj.ObjectType, new Sim.Research.ResearchObjectRules(
+                config.GetInt($"{key}.StartCost") ?? 0,
+                config.GetInt($"{key}.StartAvail") == 1,
+                config.GetInt($"{key}.WhenAvail") ?? 0,
+                config.GetInt($"{key}.StartStrength") ?? obj.DefaultStrength,
+                forLevel == 1,
+                config.GetInt($"{key}.RschReqd"))));
+        }
+
+        var required = new int[DiseaseRules.ExpertiseCount + 1];
+        for (var i = 1; i < required.Length; i++)
+        {
+            required[i] = config.GetInt($"expertise[{i}].RschReqd") ?? 0;
+        }
+
+        return new Sim.Research.ResearchRules(
+            objects,
+            required,
+            config.GetInt("gbv.ResearchPointsDivisor") ?? Sim.Research.ResearchRules.DefaultPointsDivisor,
+            config.GetInt("gbv.RschImproveCostPercent") ?? Sim.Research.ResearchRules.DefaultImproveCostPercent,
+            config.GetInt("gbv.RschImproveIncrementPercent") ?? Sim.Research.ResearchRules.DefaultImproveIncrementPercent,
+            config.GetInt("gbv.DrugImproveRate") ?? Sim.Research.ResearchRules.DefaultDrugImproveRate,
+            config.GetInt("gbv.MinDrugCost") ?? Sim.Research.ResearchRules.DefaultMinDrugCost,
+            config.GetInt("gbv.MaxObjectStrength") ?? Sim.Research.ResearchRules.DefaultMaxObjectStrength,
+            config.GetInt("gbv.ResearchIncrement") ?? Sim.Research.ResearchRules.DefaultResearchIncrement,
+            config.GetInt("gbv.AutopsyRschPercent") ?? Sim.Research.ResearchRules.DefaultAutopsyPercent,
+            config.GetInt("gbv.AutopsyRepHitPercent") ?? Sim.Research.ResearchRules.DefaultAutopsyReputationHitPercent);
+    }
+
+    /// <summary>
+    /// The epidemic settings: <c>expertise[n].ContRate</c> and <c>gbv.ContagiousSpreadFactor</c>, <c>ReduceContMonths</c>,
+    /// <c>ReduceContPeepCount</c>, <c>VacCost</c>, <c>EpidemicFine</c>, <c>EpidemicCompLo</c>, <c>EpidemicCompHi</c>,
+    /// <c>EpidemicRepLossMinimum</c>, <c>EpidemicEvacMinimum</c> and <c>EpidemicConcurrentLimit</c>, on top of
+    /// CorsixTH's base_config.lua.
+    /// </summary>
+    public static EpidemicRules EpidemicsFromConfig(LevelConfig config)
+    {
+        var defaults = EpidemicRules.Default;
+        var rates = new int[DiseaseRules.ExpertiseCount + 1];
+        for (var i = 1; i < rates.Length; i++)
+        {
+            rates[i] = config.GetInt($"expertise[{i}].ContRate") ?? 0;
+        }
+
+        return new EpidemicRules(
+            rates,
+            config.GetInt("gbv.ContagiousSpreadFactor") ?? defaults.SpreadFactor,
+            config.GetInt("gbv.ReduceContMonths") ?? defaults.ReduceContagiousMonths,
+            config.GetInt("gbv.ReduceContPeepCount") ?? defaults.ReduceContagiousPeopleCount,
+            config.GetInt("gbv.VacCost") ?? defaults.VaccinationCost,
+            config.GetInt("gbv.EpidemicFine") ?? defaults.Fine,
+            config.GetInt("gbv.EpidemicCompLo") ?? defaults.CompensationLow,
+            config.GetInt("gbv.EpidemicCompHi") ?? defaults.CompensationHigh,
+            config.GetInt("gbv.EpidemicRepLossMinimum") ?? defaults.ReputationLossMinimum,
+            config.GetInt("gbv.EpidemicEvacMinimum") ?? defaults.EvacuationMinimum,
+            config.GetInt("gbv.EpidemicConcurrentLimit") ?? defaults.ConcurrentLimit);
+    }
+
+    /// <summary>
+    /// The <c>quake_control[n].StartMonth</c>, <c>EndMonth</c> and <c>Severity</c> entries from 0 up to the first one the
+    /// files leave out; a missing field counts as 0. CorsixTH's base_config.lua has none.
+    /// </summary>
+    public static IEnumerable<PlannedEarthquake> EarthquakesFromConfig(LevelConfig config)
+    {
+        for (var i = 0; ; i++)
+        {
+            var startMonth = config.GetInt($"quake_control[{i}].StartMonth");
+            var endMonth = config.GetInt($"quake_control[{i}].EndMonth");
+            var severity = config.GetInt($"quake_control[{i}].Severity");
+            if (startMonth is null && endMonth is null && severity is null)
+            {
+                yield break;
+            }
+
+            yield return new PlannedEarthquake(startMonth ?? 0, endMonth ?? 0, severity ?? 0);
+        }
+    }
+
+    /// <summary>
+    /// <c>World:nextEmergency</c>'s test <c>control[0].Random or control[0].Mean</c>: either setting, whatever its value
+    /// (0 is true in Lua), makes the level's emergencies random, <c>Mean</c> (180) days apart give or take
+    /// <c>Variance</c> (30).
+    /// </summary>
+    public static RandomEmergencies? RandomEmergenciesFromConfig(LevelConfig config)
+    {
+        var mean = config.GetInt("emergency_control[0].Mean");
+        return config.GetInt("emergency_control[0].Random") is null && mean is null
+            ? null
+            : new RandomEmergencies(mean ?? RandomEmergencies.DefaultMean, config.GetInt("emergency_control[0].Variance") ?? RandomEmergencies.DefaultVariance);
+    }
+
+    /// <summary>
+    /// The <c>emergency_control[n]</c> entries (<c>StartMonth</c>, <c>EndMonth</c>, <c>Min</c>, <c>Max</c>, <c>Illness</c>,
+    /// <c>PercWin</c>, <c>Bonus</c>) up to the first two numbers in a row that the files leave out, as CorsixTH steps over
+    /// one missing entry (level 3 has no fifth). CorsixTH's base_config.lua has an empty first one, which never comes.
+    /// </summary>
+    public static IEnumerable<PlannedEmergency> EmergenciesFromConfig(LevelConfig config)
+    {
+        var missing = 0;
+        for (var i = 0; missing < 2; i++)
+        {
+            int? Get(string field) => config.GetInt($"emergency_control[{i}].{field}");
+            var fields = new[] { Get("StartMonth"), Get("EndMonth"), Get("Min"), Get("Max"), Get("Illness"), Get("PercWin"), Get("Bonus") };
+            if (fields.All(field => field is null))
+            {
+                missing++;
+                continue;
+            }
+
+            missing = 0;
+            yield return new PlannedEmergency(i, fields[0] ?? 0, fields[1] ?? 0, fields[2] ?? 0, fields[3] ?? 0, fields[4] ?? 0, fields[5] ?? 0, fields[6] ?? 0);
+        }
+    }
+
+    /// <summary>
+    /// The <c>objects[n].AvailableForLevel</c> and <c>objects[n].StartAvail</c> settings of the objects the level names;
+    /// a missing one counts as 1, as for an object the level does not name at all.
+    /// </summary>
+    public static IEnumerable<KeyValuePair<string, ObjectAvailability>> ObjectAvailabilityFromConfig(LevelConfig config, GameContent content)
+    {
+        foreach (var definition in content.Objects)
+        {
+            var forLevel = config.GetInt($"objects[{definition.ObjectType}].AvailableForLevel");
+            var atStart = config.GetInt($"objects[{definition.ObjectType}].StartAvail");
+            if (forLevel is not null || atStart is not null)
+            {
+                yield return KeyValuePair.Create(definition.Id, new ObjectAvailability(forLevel != 0, atStart != 0));
+            }
+        }
+    }
+
+    /// <summary>
+    /// The <c>popn[n].Month</c> and <c>popn[n].Change</c> entries, read on top of CorsixTH's base_config.lua entries
+    /// index by index; the list goes on as long as the indices do without a gap.
+    /// </summary>
+    public static IReadOnlyList<PopulationChange> PopulationFromConfig(LevelConfig config)
+    {
+        var defaults = LevelRules.Free.Population;
+        var entries = new List<PopulationChange>();
+        while (true)
+        {
+            var i = entries.Count;
+            var fallback = i < defaults.Count ? defaults[i] : (PopulationChange?)null;
+            var month = config.GetInt($"popn[{i}].Month") ?? fallback?.Month;
+            var change = config.GetInt($"popn[{i}].Change") ?? fallback?.Change;
+            if (month is null || change is null)
+            {
+                return entries;
+            }
+
+            entries.Add(new PopulationChange(month.Value, change.Value));
+        }
+    }
+
+    /// <summary>
+    /// The level's <c>win_criteria[n]</c> and <c>lose_criteria[n]</c> entries (CorsixTH's <c>EndConditions:_loadGoals</c>);
+    /// entries with a criterion CorsixTH does not know, such as base_config.lua's zeros, are left out.
+    /// </summary>
+    public static EndConditions EndConditionsFromConfig(LevelConfig config, int startCash, int startReputation)
+    {
+        return new EndConditions(GoalsFromConfig(config, "win_criteria", startCash, startReputation), GoalsFromConfig(config, "lose_criteria", startCash, startReputation));
+    }
+
+    /// <summary>The level's <c>awards_trophies</c> settings on top of CorsixTH's base_config.lua.</summary>
+    public static AwardRules AwardsFromConfig(LevelConfig config)
+    {
+        var given = new List<KeyValuePair<string, int>>();
+        foreach (var name in AwardRules.Names)
+        {
+            if (config.GetInt("awards_trophies." + name) is { } value)
+            {
+                given.Add(new(name, value));
+            }
+        }
+
+        return AwardRules.With(given);
+    }
+
+    /// <summary>
+    /// The staff settings: <c>staff[n].MinSalary</c>, <c>gbv.SalaryAdd[3]</c> to <c>[8]</c>,
+    /// <c>gbv.SalaryAbilityDivisor</c>, <c>gbv.DoctorThreshold</c>, <c>gbv.ConsultantThreshold</c> and
+    /// the <c>staff_levels</c> entries, and the training settings (<c>gbv.TrainingRate</c>, <c>gbv.AbilityThreshold</c>,
+    /// <c>gbv.TrainingValue</c>). What the files leave out comes from CorsixTH's base_config.lua,
+    /// on which CorsixTH reads the level files.
+    /// </summary>
+    public static StaffRules StaffFromConfig(LevelConfig config)
+    {
+        var defaults = StaffRules.Default;
+        var minSalaries = new int[StaffClasses.Count];
+        for (var i = 0; i < minSalaries.Length; i++)
+        {
+            minSalaries[i] = config.GetInt($"staff[{i}].MinSalary") ?? defaults.MinSalary((StaffClass)i);
+        }
+
+        var salaryAdds = new int[StaffRules.LastSalaryAdd - StaffRules.FirstSalaryAdd + 1];
+        for (var i = 0; i < salaryAdds.Length; i++)
+        {
+            var index = StaffRules.FirstSalaryAdd + i;
+            salaryAdds[i] = config.GetInt($"gbv.SalaryAdd[{index}]") ?? defaults.SalaryAdd(index);
+        }
+
+        // CorsixTH requires the divisor to be above 0; a file that breaks this keeps the default.
+        var divisor = config.GetInt("gbv.SalaryAbilityDivisor") is { } given and > 0 ? given : defaults.SalaryAbilityDivisor;
+
+        // staff_levels[0] is base_config's entry with the files' values on top; later entries exist as
+        // far as the files give their months without a gap, as Lua's length operator counts them.
+        var levels = new List<StaffLevel> { StaffLevelFromConfig(config, 0, defaults.Levels[0]) };
+        while (config.GetInt($"staff_levels[{levels.Count}].Month") is not null)
+        {
+            levels.Add(StaffLevelFromConfig(config, levels.Count, null));
+        }
+
+        return new StaffRules(
+            minSalaries,
+            salaryAdds,
+            divisor,
+            config.GetInt("gbv.DoctorThreshold") ?? defaults.DoctorThreshold,
+            config.GetInt("gbv.ConsultantThreshold") ?? defaults.ConsultantThreshold,
+            levels,
+            StartStaffFromConfig(config))
+        {
+            Training = new TrainingRules(
+                config.GetInt("gbv.TrainingRate") ?? TrainingRules.Default.Rate,
+                config.GetInt("gbv.AbilityThreshold[0]") ?? TrainingRules.Default.SurgeonThreshold,
+                config.GetInt("gbv.AbilityThreshold[1]") ?? TrainingRules.Default.PsychiatristThreshold,
+                config.GetInt("gbv.AbilityThreshold[2]") ?? TrainingRules.Default.ResearcherThreshold,
+                config.GetInt("gbv.TrainingValue[0]") ?? TrainingRules.Default.ProjectorValue,
+                config.GetInt("gbv.TrainingValue[1]") ?? TrainingRules.Default.SkeletonValue,
+                config.GetInt("gbv.TrainingValue[2]") ?? TrainingRules.Default.BookcaseValue),
+        };
+    }
+
+    /// <summary>
+    /// The <c>start_staff</c> entries from 1 on, as far as they go without a gap (Lua's <c>ipairs</c>). An entry is a
+    /// nurse, receptionist, handyman or doctor, the first of these its flag sets to 1 (<c>Hospital:initStaff</c>), with
+    /// <c>Skill</c> in percent (0 by default); a doctor's <c>Shrink</c>, <c>Surgeon</c> and <c>Researcher</c> flags give
+    /// their abilities. An entry naming none of the classes is skipped.
+    /// </summary>
+    public static IReadOnlyList<StartingStaff> StartStaffFromConfig(LevelConfig config)
+    {
+        string[] fields = ["Doctor", "Nurse", "Receptionist", "Handyman", "Skill", "Shrink", "Surgeon", "Researcher", "Junior", "Consultant"];
+        var staff = new List<StartingStaff>();
+        for (var i = 1; i <= MaxStartStaff && fields.Any(field => config[$"start_staff[{i}].{field}"] is not null); i++)
+        {
+            bool Is(string field) => config.GetInt($"start_staff[{i}].{field}") == 1;
+            StaffClass? staffClass = Is("Nurse") ? StaffClass.Nurse
+                : Is("Receptionist") ? StaffClass.Receptionist
+                : Is("Handyman") ? StaffClass.Handyman
+                : Is("Doctor") ? StaffClass.Doctor
+                : null;
+            if (staffClass is not { } found)
+            {
+                continue;
+            }
+
+            // skill = Skill / 100; a skill beyond 0 to 100 percent is kept within it here.
+            var skill = Math.Clamp((config.GetInt($"start_staff[{i}].Skill") ?? 0) * 10, 0, StaffProfile.MaxSkill);
+            var doctor = found == StaffClass.Doctor;
+            staff.Add(new StartingStaff(found, skill, doctor && Is("Shrink"), doctor && Is("Surgeon"), doctor && Is("Researcher")));
+        }
+
+        return staff;
+    }
+
+    /// <summary>
+    /// The disease settings: <c>expertise[n].StartPrice</c>, <c>.Known</c> and <c>.MaxDiagDiff</c>, <c>visuals[n]</c>,
+    /// <c>non_visuals[n]</c>, <c>visuals_available[n]</c>, <c>non_visuals_available[n]</c>, <c>gbv.HoldVisualMonths</c>,
+    /// <c>gbv.HoldVisualPeepCount</c>, <c>gbv.StartRating</c> and <c>gbv.StartCost</c>, on top of CorsixTH's base_config.lua.
+    /// </summary>
+    public static DiseaseRules DiseasesFromConfig(LevelConfig config)
+    {
+        var defaults = DiseaseRules.Default;
+        var count = DiseaseRules.ExpertiseCount + 1;
+        var prices = new int[count];
+        var known = new bool[count];
+        var difficulties = new int[count];
+        for (var i = 1; i < count; i++)
+        {
+            prices[i] = config.GetInt($"expertise[{i}].StartPrice") ?? defaults.StartPrice(i);
+            known[i] = (config.GetInt($"expertise[{i}].Known") ?? (defaults.IsKnown(i) ? 1 : 0)) == 1;
+            difficulties[i] = config.GetInt($"expertise[{i}].MaxDiagDiff") ?? defaults.MaxDiagDiff(i);
+        }
+
+        int[] Values(string table, int length, IReadOnlyList<int>? fallback) =>
+            [.. Enumerable.Range(0, length).Select(i => config.GetInt($"{table}[{i}].Value") ?? fallback?[i] ?? 0)];
+
+        return new DiseaseRules(
+            prices,
+            known,
+            difficulties,
+            Values("visuals", DiseaseRules.VisualsCount, null),
+            Values("non_visuals", DiseaseRules.NonVisualsCount, null),
+            Values("visuals_available", DiseaseRules.VisualsCount, BaseVisualsAvailable),
+            Values("non_visuals_available", DiseaseRules.NonVisualsCount, null),
+            config.GetInt("gbv.HoldVisualMonths") ?? BaseHoldVisualMonths,
+            config.GetInt("gbv.HoldVisualPeepCount") ?? BaseHoldVisualPeepCount,
+            config.GetInt("gbv.StartRating") ?? DiseaseRules.BaseDrugStartRating,
+            config.GetInt("gbv.StartCost") ?? DiseaseRules.BaseDrugStartCost);
+    }
+
+    private static StaffLevel StaffLevelFromConfig(LevelConfig config, int index, StaffLevel? fallback)
+    {
+        int? Get(string field, int? value) => config.GetInt($"staff_levels[{index}].{field}") ?? value;
+        return new StaffLevel(
+            Get("Month", fallback?.Month) ?? 0,
+            Get("Doctors", fallback?.Doctors),
+            Get("Nurses", fallback?.Nurses),
+            Get("Handymen", fallback?.Handymen),
+            Get("Receptionists", fallback?.Receptionists),
+            Get("ShrkRate", fallback?.ShrkRate),
+            Get("SurgRate", fallback?.SurgRate),
+            Get("RschRate", fallback?.RschRate),
+            Get("JrRate", fallback?.JrRate),
+            Get("ConsRate", fallback?.ConsRate));
+    }
+
+    /// <summary>The money settings for an original level map such as <c>LEVEL.L1</c>, or for any other map.</summary>
+    /// <remarks>As in CorsixTH's <c>Map:load</c>, only the original campaign's levels have a difficulty; any other map is medium.</remarks>
+    public static LevelRules LoadOriginal(ThemeHospitalInstall install, string mapFileName, GameContent content, Difficulty difficulty = Difficulty.Medium)
+    {
+        var level = LevelNumber(mapFileName);
+        if (level is not (>= 1 and <= CampaignLevels))
+        {
+            difficulty = Difficulty.Medium;
+        }
+
+        return FromConfig(LoadConfig(install, level, difficulty), level, content, difficulty);
+    }
+
+    [GeneratedRegex(@"^LEVEL\.L(\d+)$", RegexOptions.IgnoreCase)]
+    private static partial Regex OriginalLevel();
+
+    private static List<EndGoal> GoalsFromConfig(LevelConfig config, string table, int startCash, int startReputation)
+    {
+        const int maxIndex = 100;
+        var goals = new List<EndGoal>();
+        for (var i = 0; i < maxIndex; i++)
+        {
+            if (config.GetInt($"{table}[{i}].Criteria") is not { } number || !Enum.IsDefined((EndCriterion)number) || number > byte.MaxValue)
+            {
+                continue;
+            }
+
+            var criterion = (EndCriterion)number;
+            var start = criterion switch
+            {
+                EndCriterion.Balance => startCash,
+                EndCriterion.Reputation => startReputation,
+                _ => 0,
+            };
+            goals.Add(new EndGoal(
+                criterion,
+                config.GetInt($"{table}[{i}].Group") ?? 0,
+                config.GetInt($"{table}[{i}].MaxMin") == 1,
+                config.GetInt($"{table}[{i}].Value") ?? 0,
+                config.GetInt($"{table}[{i}].Bound") ?? 0,
+                start));
+        }
+
+        return goals;
+    }
+
+    /// <summary>A setting of the level's own <c>towns[n]</c> entry, else of <c>town</c>.</summary>
+    private static int? TownInt(LevelConfig config, int? levelNumber, string name)
+    {
+        return (levelNumber is { } level ? config.GetInt($"towns[{level}].{name}") : null) ?? config.GetInt($"town.{name}");
+    }
+}

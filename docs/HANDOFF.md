@@ -28,10 +28,10 @@ the new session has absorbed it.
   `C:\Games\Theme Hospital`; data in `data\Game` (DATA, QDATA, LEVELS, ...). While DOSBox runs the
   original, `RncTests.DecompressesEveryCompressedGameFile` fails: it reads every file of the install
   and `DOSBOX\stderr.txt` is locked. `ThemeHospitalInstall.Locate()` finds it, or set
-  `CORSIXNET_TH_PATH`. Real-data tests skip without it.
+  `OPENWARDS_TH_PATH`. Real-data tests skip without it.
 - CorsixTH checkout: `C:\repos\github\CorsixTH`.
 - Commands: `dotnet build`, `dotnet test`, `dotnet format --verify-no-changes`.
-- Live checks: `CorsixNet.exe --script checks.txt` plays the mouse and keyboard from a text file and saves
+- Live checks: `OpenWards.exe --script checks.txt` plays the mouse and keyboard from a text file and saves
   screenshots of the whole window (commands in `Client/Input/InputScript.cs`: wait, key, click, drag, wheel,
   shot, quit). It needs no focus and leaves the real mouse alone, so it works while the user is at the computer.
 - Earlier live checks were done by starting the client and injecting mouse and keyboard input from a
@@ -43,6 +43,19 @@ the new session has absorbed it.
 ## Where the work stands
 
 Milestone M5 (build mode and a first complete room, then reception → GP patient flow).
+
+The project was renamed from CorsixNet to OpenWards on 2026-11-18 (solution, projects, namespaces, the `openwards.*`
+strings, the `OW0001`–`OW0003` analyzer rules, the `OPENWARDS_*` environment variables). The client moves an old
+`CorsixNet` settings and saves folder to `OpenWards` on start (`LegacyFolders`) and still reads the `CORSIXNET_*`
+variables. Saves and replays keep their `CNETSAVE`/`CNETRPLY` headers so older files load. Each original level is
+named to the player as a ward of the hospital, "Ward No. n" ("Палата №n"). The GitHub repository is still
+`Maxwellwr/CorsixNet`.
+
+The porting backlog is finished and its list was removed. Three differences from CorsixTH remain: in
+multi-hospital games patients do not choose a hospital by reputation and price (`gbv.AllocDelay`, `AllocRand`,
+`AllocIndRep`), since that code is commented out in CorsixTH and the hospitals take turns instead; the calls dispatcher
+is built differently (rooms call every tick instead of queuing calls, `calls_dispatcher.lua`) but behaves the same;
+CorsixTH's own saves cannot be loaded (they are its persisted Lua heap), while the original game's saves can (#474–#480).
 
 Done and committed:
 

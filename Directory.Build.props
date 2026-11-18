@@ -13,10 +13,10 @@
 
   <!--
     Projects whose code runs inside the lockstep simulation set
-    CorsixNetDeterministic=true. The determinism analyzer is attached to
+    OpenWardsDeterministic=true. The determinism analyzer is attached to
     them in Directory.Build.targets.
   -->
   <PropertyGroup>
-    <CorsixNetDeterministic Condition="'$(CorsixNetDeterministic)' == ''">false</CorsixNetDeterministic>
+    <OpenWardsDeterministic Condition="'$(OpenWardsDeterministic)' == ''">false</OpenWardsDeterministic>
   </PropertyGroup>
 </Project>

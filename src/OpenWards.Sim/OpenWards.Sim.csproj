@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <Description>Deterministic, engine-independent game simulation.</Description>
+    <OpenWardsDeterministic>true</OpenWardsDeterministic>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenWards.Sim.Tests" />
+    <InternalsVisibleTo Include="OpenWards.Client.Tests" />
+    <InternalsVisibleTo Include="OpenWards.Content.Tests" />
+  </ItemGroup>
+
+</Project>

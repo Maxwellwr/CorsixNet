@@ -1,12 +1,12 @@
-# CorsixNet
+# OpenWards
 
 C# / .NET 10 reimplementation of Theme Hospital, modelled on CorsixTH
 (reference checkout: `C:\repos\github\CorsixTH`). Read `ARCHITECTURE.md` first.
 
 ## Rules
 
-- `CorsixNet.Sim` (and any project with `CorsixNetDeterministic=true`) must stay
-  deterministic. The analyzer (`CNET0001`–`CNET0003`) enforces part of this. Do not
+- `OpenWards.Sim` (and any project with `OpenWardsDeterministic=true`) must stay
+  deterministic. The analyzer (`OW0001`–`OW0003`) enforces part of this. Do not
   suppress its diagnostics. Restructure the code instead.
 - The simulation must not reference the client or MonoGame.
 - When porting logic from CorsixTH, keep behaviour faithful and note the source file.

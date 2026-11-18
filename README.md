@@ -1,4 +1,4 @@
-# CorsixNet
+# OpenWards
 
 A reimplementation of Theme Hospital in C# / .NET, modelled on
 [CorsixTH](https://github.com/CorsixTH/CorsixTH), with deterministic lockstep
@@ -17,12 +17,12 @@ dotnet test
 ```
 
 Tests that read original game data are skipped unless the game is found. Detection
-checks common install folders. Set `CORSIXNET_TH_PATH` to point at a copy explicitly.
+checks common install folders. Set `OPENWARDS_TH_PATH` to point at a copy explicitly.
 
 ## Running
 
 ```bash
-dotnet run --project src/CorsixNet.Client
+dotnet run --project src/OpenWards.Client
 ```
 
 Optionally pass the game folder as an argument. The client opens the map view on the
@@ -44,7 +44,7 @@ first original level:
 | Left click | Select a patient, or send the selected one walking |
 | R | Toggle random wandering |
 | Space / P | Pause or resume the game (P picks up while building) |
-| 1-6 | Game speed: slowest, slower, normal, max speed, and then some more, insane (CorsixNet only: 21 times normal) |
+| 1-6 | Game speed: slowest, slower, normal, max speed, and then some more, insane (OpenWards only: 21 times normal) |
 | Z (hold) | Speed up, eight game hours per tick |
 | Ctrl+1-4 | Hire the first doctor, nurse, handyman or receptionist onto the hovered tile |
 | Shift+O | Open the hospital before the opening watch runs down |
@@ -77,22 +77,25 @@ from a text file and saves screenshots of the whole window (see `Input/InputScri
 wandering into and around the hospital.
 
 Alt+Shift+S quick saves a local game and Alt+Shift+L loads the quick save. The game also saves
-itself as each month's last day begins, in `Autosaves`. Saves go to `%AppData%/CorsixNet/Saves`
-(or the folder in `CORSIXNET_SAVES`). `--load FILE` starts on a saved game and `--continue`
+itself as each month's last day begins, in `Autosaves`. Saves go to `%AppData%/OpenWards/Saves`
+(or the folder in `OPENWARDS_SAVES`). `--load FILE` starts on a saved game and `--continue`
 on the newest autosave.
+
+OpenWards was called CorsixNet before. On start it moves an old `CorsixNet` settings and saves folder to
+`OpenWards`, and it still reads the old `CORSIXNET_*` environment variables.
 
 ### Multiplayer
 
 Host a game on the two-player map `LEVEL.L20` and join it yourself:
 
 ```bash
-dotnet run --project src/CorsixNet.Client -- --host --demo
+dotnet run --project src/OpenWards.Client -- --host --demo
 ```
 
 Join from a second window:
 
 ```bash
-dotnet run --project src/CorsixNet.Client -- --connect 127.0.0.1
+dotnet run --project src/OpenWards.Client -- --connect 127.0.0.1
 ```
 
 `--host PORT` and `--connect HOST:PORT` choose another port (default 7777). `--name` sets
@@ -100,7 +103,7 @@ the player name. Hosting accepts only local connections unless you add `--public
 headless server is available too:
 
 ```bash
-dotnet run --project src/CorsixNet.Server -- --level LEVEL.L20
+dotnet run --project src/OpenWards.Server -- --level LEVEL.L20
 ```
 
 Each player's camera starts at their own hospital. The status bar shows the tick, the player
@@ -124,5 +127,5 @@ number, and any desync the server detects.
 ## License
 
 [MIT](LICENSE). Parts are ported from CorsixTH; see
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Theme Hospital is a trademark of Electronic Arts; CorsixNet is not
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Theme Hospital is a trademark of Electronic Arts; OpenWards is not
 affiliated with or endorsed by EA or Bullfrog. Original game data is not included.

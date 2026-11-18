@@ -1,0 +1,162 @@
+using OpenWards.Content.Settings;
+
+namespace OpenWards.Content.Tests;
+
+public sealed class HotkeysTests : IDisposable
+{
+    private readonly string _folder = Path.Combine(Path.GetTempPath(), "OpenWardsHotkeysTests", Guid.NewGuid().ToString("N"));
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_folder))
+        {
+            Directory.Delete(_folder, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ReadsKeysAndModifiersAndKeepsTheDefaultsForTheRest()
+    {
+        var hotkeys = Hotkeys.Parse("""
+            # My keys.
+            ingame_panel_bankManager: B
+            ingame_panel_adviserHistory: [alt, shift, m]
+            ingame_pause: 'space'
+
+            """);
+
+        Assert.Equal(new Hotkey("b"), hotkeys["ingame_panel_bankManager"]);
+        Assert.Equal(new Hotkey("m", Shift: true, Alt: true), hotkeys["ingame_panel_adviserHistory"]);
+        Assert.Equal(new Hotkey("space"), hotkeys["ingame_pause"]);
+        Assert.Equal(new Hotkey("f2"), hotkeys["ingame_panel_bankStats"]);
+        Assert.Equal(new Hotkey("f3", Shift: true), hotkeys["ingame_panel_staffManage"]);
+    }
+
+    [Fact]
+    public void IgnoresUnknownActionsAndValuesThatAreNotKeys()
+    {
+        var hotkeys = Hotkeys.Parse("""
+            ingame_panel_casebook: printscreen
+            ingame_panel_research: [hyper, r]
+            ingame_panel_policy: 9
+            ingame_poopLog: f12
+            """);
+
+        Assert.Equal(new Hotkey("f5"), hotkeys["ingame_panel_casebook"]);
+        Assert.Equal(new Hotkey("f6"), hotkeys["ingame_panel_research"]);
+        Assert.Equal(new Hotkey("f9"), hotkeys["ingame_panel_policy"]);
+        Assert.Null(hotkeys["ingame_poopLog"]);
+    }
+
+    [Fact]
+    public void AssigningAKeyAnotherActionHasSwapsTheirKeys()
+    {
+        var hotkeys = new Hotkeys();
+
+        Assert.True(hotkeys.Assign("ingame_panel_bankManager", new Hotkey("f2")));
+
+        Assert.Equal(new Hotkey("f2"), hotkeys["ingame_panel_bankManager"]);
+        Assert.Equal(new Hotkey("f1"), hotkeys["ingame_panel_bankStats"]);
+        Assert.True(hotkeys.Assign("ingame_panel_bankManager", new Hotkey("g", Ctrl: true)));
+        Assert.Equal(new Hotkey("g", Ctrl: true), hotkeys["ingame_panel_bankManager"]);
+        Assert.Equal(new Hotkey("f1"), hotkeys["ingame_panel_bankStats"]);
+    }
+
+    [Fact]
+    public void EscapeAndReturnAloneAreRefusedAndScrollKeysLoseTheirModifiers()
+    {
+        var hotkeys = new Hotkeys();
+
+        Assert.False(hotkeys.Assign("ingame_pause", new Hotkey("escape")));
+        Assert.False(hotkeys.Assign("ingame_pause", new Hotkey("return")));
+        Assert.True(hotkeys.Assign("ingame_pause", new Hotkey("return", Ctrl: true)));
+        Assert.Equal(new Hotkey("return", Ctrl: true), hotkeys["ingame_pause"]);
+
+        Assert.True(hotkeys.Assign("ingame_scroll_up", new Hotkey("i", Shift: true)));
+        Assert.Equal(new Hotkey("i"), hotkeys["ingame_scroll_up"]);
+        Assert.Throws<ArgumentException>(() => hotkeys.Assign("ingame_poopLog", new Hotkey("q")));
+    }
+
+    [Fact]
+    public void ACopyChangesApart()
+    {
+        var hotkeys = new Hotkeys();
+        var copy = hotkeys.Copy();
+        Assert.True(copy.SameAs(hotkeys));
+
+        copy.Assign("ingame_pause", new Hotkey("q"));
+
+        Assert.False(copy.SameAs(hotkeys));
+        Assert.Equal(new Hotkey("p"), hotkeys["ingame_pause"]);
+    }
+
+    [Fact]
+    public void RejectsTextThatIsNotAHotkeysFile() =>
+        Assert.Throws<InvalidDataException>(() => Hotkeys.Parse("[print, hello]"));
+
+    [Fact]
+    public void WritesTheDefaultsWhenThereIsNoFileAndReadsThemBack()
+    {
+        var path = Path.Combine(_folder, Hotkeys.FileName);
+
+        var first = Hotkeys.Load(path);
+
+        Assert.True(File.Exists(path));
+        var again = Hotkeys.Load(path);
+        foreach (var (name, key) in Hotkeys.Defaults)
+        {
+            Assert.Equal(key, first[name]);
+            Assert.Equal(key, again[name]);
+        }
+    }
+
+    [Fact]
+    public void TheCameraAndSpeedKeysAreCorsixThsAndCanBeChanged()
+    {
+        var hotkeys = Hotkeys.Parse("""
+            ingame_zoom_in: up
+            ingame_recallPosition_7: [shift, '7']
+            ingame_gamespeed_normal: f12
+            """);
+
+        Assert.Equal(new Hotkey("up"), hotkeys["ingame_zoom_in"]);
+        Assert.Equal(new Hotkey("7", Shift: true), hotkeys["ingame_recallPosition_7"]);
+        Assert.Equal(new Hotkey("f12"), hotkeys["ingame_gamespeed_normal"]);
+        Assert.Equal(new Hotkey("=", Shift: true), hotkeys["ingame_zoom_in_more"]);
+        Assert.Equal(new Hotkey("0", Alt: true), hotkeys["ingame_storePosition_0"]);
+        Assert.Equal(new Hotkey("left"), hotkeys["ingame_scroll_left"]);
+        Assert.Equal(new Hotkey("b"), hotkeys["ingame_panel_buildRoom"]);
+    }
+
+    [Fact]
+    public void ARewrittenFileKeepsTheChangedKeys()
+    {
+        var hotkeys = Hotkeys.Parse("ingame_quickSave: [ctrl, s]\ningame_zoom_out_more: ['shift', '-']");
+
+        var reread = Hotkeys.Parse(hotkeys.ToText());
+
+        Assert.Equal(new Hotkey("s", Ctrl: true), reread["ingame_quickSave"]);
+        Assert.Equal(new Hotkey("-", Shift: true), reread["ingame_zoom_out_more"]);
+        Assert.Contains("ingame_quickSave: ['ctrl', 's']", hotkeys.ToText(), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("f1", true)]
+    [InlineData("F12", true)]
+    [InlineData("f13", false)]
+    [InlineData("a", true)]
+    [InlineData("7", true)]
+    [InlineData("=", true)]
+    [InlineData("escape", true)]
+    [InlineData("ctrl", false)]
+    [InlineData("", false)]
+    public void KnowsTheKeyNames(string name, bool known) => Assert.Equal(known, Hotkeys.IsKeyName(name));
+
+    [Fact]
+    public void ShowsKeysAsThePlayerReadsThem()
+    {
+        Assert.Equal("F1", new Hotkey("f1").ToString());
+        Assert.Equal("Ctrl+H", new Hotkey("h", Ctrl: true).ToString());
+        Assert.Equal("Shift+Alt+S", new Hotkey("s", Shift: true, Alt: true).ToString());
+    }
+}

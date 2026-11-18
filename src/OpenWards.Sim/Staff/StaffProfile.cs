@@ -1,0 +1,454 @@
+// Staff profiles ported from CorsixTH CorsixTH/Lua/staff_profile.lua (StaffProfile:initDoctor,
+// StaffProfile:init, StaffProfile:randomise,
+// StaffProfile:randomiseOrganical, StaffProfile:parseSkillLevel, StaffProfile:getFairWage).
+// Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
+
+using OpenWards.Sim.Serialization;
+
+namespace OpenWards.Sim.Staff;
+
+/// <summary>A class of staff, numbered as the level files' <c>staff[n]</c> (CorsixTH's <c>conf_id</c>).</summary>
+public enum StaffClass : byte
+{
+    Nurse = 0,
+    Doctor = 1,
+    Handyman = 2,
+    Receptionist = 3,
+}
+
+/// <summary>Helpers for <see cref="StaffClass"/>.</summary>
+public static class StaffClasses
+{
+    /// <summary>Number of staff classes.</summary>
+    public const int Count = 4;
+
+    /// <summary>
+    /// The classes in the order CorsixTH makes their candidates for hire (<c>staff_to_make</c> in
+    /// world.lua), which decides the order random numbers are drawn in.
+    /// </summary>
+    public static IReadOnlyList<StaffClass> HireOrder { get; } = [StaffClass.Doctor, StaffClass.Nurse, StaffClass.Handyman, StaffClass.Receptionist];
+}
+
+/// <summary>A doctor's ability beyond the general skill.</summary>
+public enum Specialism : byte
+{
+    Surgeon,
+    Psychiatrist,
+    Researcher,
+}
+
+/// <summary>
+/// The name and description of a member of staff taken from a save of the original game, as numbers into the
+/// original's string lists, so that they keep them instead of ones drawn from <see cref="StaffProfile.NameSeed"/>.
+/// </summary>
+/// <param name="Initial">The initial letter.</param>
+/// <param name="NameStart">Index into the list of name starts.</param>
+/// <param name="NameEnd">Index into the list of name ends.</param>
+/// <param name="MiscDescription">Index into the miscellaneous descriptions.</param>
+/// <param name="CharacterDescription">Index into the good or bad descriptions (by skill).</param>
+public readonly record struct ImportedStaffName(char Initial, int NameStart, int NameEnd, int MiscDescription, int CharacterDescription);
+
+/// <summary>
+/// A member of staff as a candidate for hire and, once hired, as an employee: skill, abilities,
+/// salary and looks.
+/// </summary>
+/// <remarks>
+/// CorsixTH keeps skill as a number from 0 to 1. Here it is in thousandths, from 0 to 1000, like the
+/// thresholds in the level files, so that the simulation stays free of floating point. Names and
+/// descriptions come from the language files and are left to the client; <see cref="NameSeed"/>
+/// picks the initial, as in CorsixTH.
+/// </remarks>
+public sealed class StaffProfile
+{
+    /// <summary>Skill is in thousandths: 1000 stands for CorsixTH's 1.0.</summary>
+    public const int MaxSkill = 1000;
+
+    public StaffProfile(StaffClass staffClass)
+    {
+        Class = staffClass;
+    }
+
+    public StaffClass Class { get; }
+
+    /// <summary>Picks the initial from the language's list (CorsixTH's <c>name_seed</c>, 1 to 1009).</summary>
+    public int NameSeed { get; private set; }
+
+    /// <summary>Attention to detail in thousandths (0 to 999).</summary>
+    public int AttentionToDetail { get; private set; }
+
+    /// <summary>Skill in thousandths (0 to 1000).</summary>
+    public int Skill { get; private set; }
+
+    public bool IsPsychiatrist { get; private set; }
+
+    public bool IsSurgeon { get; private set; }
+
+    public bool IsResearcher { get; private set; }
+
+    /// <summary>Skill at most <see cref="StaffRules.DoctorThreshold"/>. Set for every class, as CorsixTH does; it matters for doctors.</summary>
+    public bool IsJunior { get; private set; }
+
+    /// <summary>Skill at least <see cref="StaffRules.ConsultantThreshold"/>. Set for every class, as CorsixTH does; it matters for doctors.</summary>
+    public bool IsConsultant { get; private set; }
+
+    /// <summary>The original name and description of a member of staff imported from the original game, else null.</summary>
+    public ImportedStaffName? ImportedName { get; private set; }
+
+    /// <summary>Monthly salary, which is also what hiring costs.</summary>
+    public int Wage { get; internal set; }
+
+    /// <summary>Picture parts for the face in the staff window.</summary>
+    public int HairIndex { get; private set; }
+
+    public int FaceIndex { get; private set; }
+
+    public int ChinIndex { get; private set; }
+
+    /// <summary>Variant of animation layer 5 (skin colour of doctors).</summary>
+    public byte Layer5 { get; private set; } = 2;
+
+    /// <summary>
+    /// What training has added to the skill beyond its thousandths, in millionths (CorsixTH keeps the skill as a fraction).
+    /// </summary>
+    private int _skillMillionths;
+
+    /// <summary>How far a doctor has been taught surgery, psychiatry and research, in millionths of the ability.</summary>
+    private readonly int[] _specialismMillionths = new int[3];
+
+    /// <summary>How far a doctor has been taught an ability they do not have yet, from 0 to 1 (CorsixTH's <c>is_surgeon</c> etc.).</summary>
+    public decimal SpecialismProgress(Specialism specialism) =>
+        Has(specialism) ? 1 : _specialismMillionths[(int)specialism] / 1_000_000m;
+
+    /// <summary>Whether the doctor has the ability (CorsixTH's <c>hasSpecialism</c>).</summary>
+    public bool Has(Specialism specialism) => specialism switch
+    {
+        Specialism.Surgeon => IsSurgeon,
+        Specialism.Psychiatrist => IsPsychiatrist,
+        _ => IsResearcher,
+    };
+
+    /// <summary>
+    /// <c>Doctor:updateSkill("skill", amount)</c>: the skill grows, up to 1, and whether the doctor is a junior or a
+    /// consultant follows it.
+    /// </summary>
+    internal void TrainSkill(decimal amount, StaffRules rules)
+    {
+        if (Skill >= MaxSkill)
+        {
+            return;
+        }
+
+        var total = ((long)Skill * 1000) + _skillMillionths + (long)decimal.Floor(amount * 1_000_000);
+        total = Math.Min(total, (long)MaxSkill * 1000);
+        Skill = (int)(total / 1000);
+        _skillMillionths = (int)(total % 1000);
+        ParseSkillLevel(rules);
+    }
+
+    /// <summary><c>Doctor:updateSkill("is_surgeon", amount)</c> and so on: at 1 the doctor has the ability.</summary>
+    /// <returns>Whether the doctor has just gained the ability.</returns>
+    internal bool TrainSpecialism(Specialism specialism, decimal amount)
+    {
+        if (Has(specialism))
+        {
+            return false;
+        }
+
+        var index = (int)specialism;
+        _specialismMillionths[index] = (int)Math.Min(1_000_000, _specialismMillionths[index] + (long)decimal.Floor(amount * 1_000_000));
+        if (_specialismMillionths[index] < 1_000_000)
+        {
+            return false;
+        }
+
+        _specialismMillionths[index] = 0;
+        switch (specialism)
+        {
+            case Specialism.Surgeon:
+                IsSurgeon = true;
+                break;
+            case Specialism.Psychiatrist:
+                IsPsychiatrist = true;
+                break;
+            default:
+                IsResearcher = true;
+                break;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Makes a random candidate for hire in month <paramref name="month"/> of the game, as CorsixTH's
+    /// <c>StaffProfile</c> constructor and <c>randomise</c> do; with <paramref name="superDoctor"/> (the super doctor
+    /// cheat) a doctor is a consultant with every ability.
+    /// </summary>
+    public static StaffProfile CreateRandom(StaffClass staffClass, int month, StaffRules rules, SimRandom random, bool superDoctor = false)
+    {
+        var profile = new StaffProfile(staffClass)
+        {
+            NameSeed = random.NextInclusive(1, 1009),
+            AttentionToDetail = random.Next(MaxSkill),
+        };
+        profile.Randomise(month, rules, random, superDoctor);
+        return profile;
+    }
+
+    /// <summary>
+    /// Makes a member of staff with a given skill and abilities, as CorsixTH's <c>initDoctor</c> and
+    /// <c>init</c> do (for starting staff): the skill decides whether a doctor is a junior or a
+    /// consultant, the wage follows, and the looks are random.
+    /// </summary>
+    public static StaffProfile Create(
+        StaffClass staffClass,
+        int skill,
+        StaffRules rules,
+        SimRandom random,
+        bool psychiatrist = false,
+        bool surgeon = false,
+        bool researcher = false)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(skill);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(skill, MaxSkill);
+        var profile = new StaffProfile(staffClass)
+        {
+            NameSeed = random.NextInclusive(1, 1009),
+            AttentionToDetail = random.Next(MaxSkill),
+            IsPsychiatrist = psychiatrist,
+            IsSurgeon = surgeon,
+            IsResearcher = researcher,
+            Skill = skill,
+        };
+        profile.ParseSkillLevel(rules);
+        profile.Wage = profile.FairWage(rules);
+        profile.RandomiseLooks(random);
+        return profile;
+    }
+
+    /// <summary>
+    /// A member of staff as an imported save of the original game describes them: skill, attention, abilities, salary,
+    /// skin colour, training so far and name. Junior and consultant follow the skill as usual; the face is random.
+    /// </summary>
+    public static StaffProfile Import(
+        StaffClass staffClass,
+        int skill,
+        int attentionToDetail,
+        bool psychiatrist,
+        bool surgeon,
+        bool researcher,
+        int wage,
+        byte layer5,
+        IReadOnlyList<decimal> specialismProgress,
+        ImportedStaffName name,
+        StaffRules rules,
+        SimRandom random)
+    {
+        ArgumentNullException.ThrowIfNull(specialismProgress);
+        var profile = new StaffProfile(staffClass)
+        {
+            NameSeed = random.NextInclusive(1, 1009),
+            AttentionToDetail = Math.Clamp(attentionToDetail, 0, MaxSkill - 1),
+            IsPsychiatrist = psychiatrist,
+            IsSurgeon = surgeon,
+            IsResearcher = researcher,
+            Skill = Math.Clamp(skill, 0, MaxSkill),
+            ImportedName = name,
+        };
+        profile.ParseSkillLevel(rules);
+        profile.Wage = Math.Max(0, wage);
+        profile.RandomiseLooks(random);
+        if (staffClass == StaffClass.Doctor && layer5 != 0)
+        {
+            profile.Layer5 = layer5;
+        }
+
+        for (var i = 0; i < profile._specialismMillionths.Length && i < specialismProgress.Count; i++)
+        {
+            profile._specialismMillionths[i] = (int)(Math.Clamp(specialismProgress[i], 0m, 1m) * 1_000_000m);
+        }
+
+        return profile;
+    }
+
+    /// <summary>
+    /// What the member of staff should earn (<c>getFairWage</c>): the class's minimum salary, plus
+    /// skill divided by <see cref="StaffRules.SalaryAbilityDivisor"/>, plus for a doctor the
+    /// additions for each ability (or the plain doctor's addition), and never below the minimum.
+    /// </summary>
+    public int FairWage(StaffRules rules)
+    {
+        var minimum = rules.MinSalary(Class);
+
+        // CorsixTH floors the sum; the other terms are whole, so flooring the skill part is the same.
+        var wage = minimum + (Skill / rules.SalaryAbilityDivisor);
+        if (Class == StaffClass.Doctor)
+        {
+            wage += (IsJunior ? rules.SalaryAdd(StaffRules.JuniorAdd) : 0)
+                + (IsSurgeon ? rules.SalaryAdd(StaffRules.SurgeonAdd) : 0)
+                + (IsPsychiatrist ? rules.SalaryAdd(StaffRules.PsychiatristAdd) : 0)
+                + (IsConsultant ? rules.SalaryAdd(StaffRules.ConsultantAdd) : 0)
+                + (IsResearcher ? rules.SalaryAdd(StaffRules.ResearcherAdd) : 0);
+            if (!IsJunior && !IsConsultant)
+            {
+                wage += rules.SalaryAdd(StaffRules.DoctorAdd);
+            }
+        }
+
+        return Math.Max(wage, minimum);
+    }
+
+    internal void Write(SimWriter writer)
+    {
+        writer.WriteByte((byte)Class);
+        writer.WriteInt32(NameSeed);
+        writer.WriteInt32(AttentionToDetail);
+        writer.WriteInt32(Skill);
+        writer.WriteBool(IsPsychiatrist);
+        writer.WriteBool(IsSurgeon);
+        writer.WriteBool(IsResearcher);
+        writer.WriteBool(IsJunior);
+        writer.WriteBool(IsConsultant);
+        writer.WriteInt32(Wage);
+        writer.WriteInt32(HairIndex);
+        writer.WriteInt32(FaceIndex);
+        writer.WriteInt32(ChinIndex);
+        writer.WriteByte(Layer5);
+        writer.WriteInt32(_skillMillionths);
+        foreach (var progress in _specialismMillionths)
+        {
+            writer.WriteInt32(progress);
+        }
+
+        writer.WriteBool(ImportedName is not null);
+        if (ImportedName is { } name)
+        {
+            writer.WriteInt32(name.Initial);
+            writer.WriteInt32(name.NameStart);
+            writer.WriteInt32(name.NameEnd);
+            writer.WriteInt32(name.MiscDescription);
+            writer.WriteInt32(name.CharacterDescription);
+        }
+    }
+
+    internal static StaffProfile Read(SimReader reader)
+    {
+        var staffClass = reader.ReadByte();
+        if (staffClass >= StaffClasses.Count)
+        {
+            throw new InvalidDataException($"Unknown staff class {staffClass}.");
+        }
+
+        var profile = new StaffProfile((StaffClass)staffClass)
+        {
+            NameSeed = reader.ReadInt32(),
+            AttentionToDetail = reader.ReadInt32(),
+            Skill = reader.ReadInt32(),
+            IsPsychiatrist = reader.ReadBool(),
+            IsSurgeon = reader.ReadBool(),
+            IsResearcher = reader.ReadBool(),
+            IsJunior = reader.ReadBool(),
+            IsConsultant = reader.ReadBool(),
+            Wage = reader.ReadInt32(),
+            HairIndex = reader.ReadInt32(),
+            FaceIndex = reader.ReadInt32(),
+            ChinIndex = reader.ReadInt32(),
+            Layer5 = reader.ReadByte(),
+        };
+        if (reader.Version is 0 or >= 70)
+        {
+            profile._skillMillionths = reader.ReadInt32();
+            for (var i = 0; i < profile._specialismMillionths.Length; i++)
+            {
+                profile._specialismMillionths[i] = reader.ReadInt32();
+            }
+        }
+
+        if ((reader.Version is 0 or >= 100) && reader.ReadBool())
+        {
+            profile.ImportedName = new ImportedStaffName((char)reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32());
+        }
+
+        return profile;
+    }
+
+    private void Randomise(int month, StaffRules rules, SimRandom random, bool superDoctor)
+    {
+        // CorsixTH: self.skill = math.random(), a number in [0, 1).
+        Skill = random.Next(MaxSkill);
+        if (Class == StaffClass.Doctor && superDoctor)
+        {
+            // initDoctor(1, 1, 1, false, true, math.random(cons_limit * 1000, 1000) / 1000), which works out the
+            // wage and the looks, before randomise does both again below.
+            IsPsychiatrist = true;
+            IsSurgeon = true;
+            IsResearcher = true;
+            Skill = random.NextInclusive(rules.ConsultantThreshold, MaxSkill);
+            ParseSkillLevel(rules);
+            Wage = FairWage(rules);
+            RandomiseLooks(random);
+        }
+        else if (Class == StaffClass.Doctor)
+        {
+            // "One in x" for each ability; CorsixTH tests math.random() < 1 / x.
+            IsPsychiatrist = OneIn(rules.LevelValue(month, level => level.ShrkRate), random);
+            IsSurgeon = OneIn(rules.LevelValue(month, level => level.SurgRate), random);
+            IsResearcher = OneIn(rules.LevelValue(month, level => level.RschRate), random);
+            IsJunior = OneIn(rules.LevelValue(month, level => level.JrRate), random);
+            IsConsultant = !IsJunior && OneIn(rules.LevelValue(month, level => level.ConsRate), random);
+
+            // Put the doctor in the right skill band.
+            var junior = rules.DoctorThreshold;
+            var consultant = rules.ConsultantThreshold;
+            if (IsJunior)
+            {
+                Skill = junior * Skill / MaxSkill;
+            }
+            else if (IsConsultant)
+            {
+                Skill = consultant + ((MaxSkill - consultant) * Skill / MaxSkill);
+            }
+            else
+            {
+                Skill = junior + ((consultant - junior) * Skill / MaxSkill);
+            }
+        }
+
+        // As in CorsixTH, the wage is worked out from the rolled abilities, before the skill
+        // decides again whether the doctor counts as a junior or a consultant.
+        Wage = FairWage(rules);
+        ParseSkillLevel(rules);
+        RandomiseLooks(random);
+    }
+
+    /// <summary>Whether the skill makes a junior or a consultant (<c>parseSkillLevel</c>).</summary>
+    private void ParseSkillLevel(StaffRules rules)
+    {
+        IsJunior = Skill <= rules.DoctorThreshold;
+        IsConsultant = Skill >= rules.ConsultantThreshold;
+    }
+
+    /// <summary>Picks the face parts and skin colour (<c>randomiseOrganical</c>).</summary>
+    private void RandomiseLooks(SimRandom random)
+    {
+        var (first, last) = Class switch
+        {
+            StaffClass.Doctor => (0, 4),
+            StaffClass.Nurse => (10, 12),
+            StaffClass.Receptionist => (13, 14),
+            _ => (15, 17),
+        };
+
+        if (Class == StaffClass.Doctor && random.Next(2) == 0)
+        {
+            (first, last) = (5, 9);
+            Layer5 = 4;
+        }
+
+        HairIndex = random.NextInclusive(first, last);
+        FaceIndex = random.NextInclusive(first, last);
+        ChinIndex = random.NextInclusive(first, last);
+    }
+
+    /// <summary>True with probability 1 in <paramref name="rate"/>; never for 0 (or less).</summary>
+    private static bool OneIn(int rate, SimRandom random) => rate > 0 && random.Next(rate) == 0;
+}
