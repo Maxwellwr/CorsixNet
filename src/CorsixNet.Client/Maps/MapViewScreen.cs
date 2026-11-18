@@ -1946,7 +1946,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         UpdateSpeed(keys, pressed);
         UpdateReplaySeek(keys, pressed);
 
-        if (pressed(Keys.R))
+        if (pressed(Keys.R) && !keys.IsKeyDown(Keys.LeftShift) && !keys.IsKeyDown(Keys.RightShift))
         {
             _wander = !_wander;
         }
@@ -3442,6 +3442,18 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         if (HotkeyInput.Pressed(_hotkeys["global_fullscreen_toggle"], keys, pressed))
         {
             ToggleFullscreen();
+        }
+
+        // UIBottomPanel's openSave and restart (CorsixTH's Shift+L load and Shift+Q quit are still this game's repay
+        // and guess cure stand-in keys).
+        if (HotkeyInput.Pressed(_hotkeys["ingame_saveMenu"], keys, pressed))
+        {
+            MenuAction("save");
+        }
+
+        if (HotkeyInput.Pressed(_hotkeys["ingame_restartLevel"], keys, pressed))
+        {
+            MenuAction("restart");
         }
 
         if (HotkeyInput.Pressed(_hotkeys["ingame_toggleSounds"], keys, pressed))
