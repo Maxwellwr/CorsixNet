@@ -1,6 +1,6 @@
 // The main menu's background, ported from CorsixTH CorsixTH/Lua/ui.lua (UI:setMenuBackground, UI:draw's background)
-// and graphics.lua (the mainmenu palettes). The pictures are CorsixTH's own (CorsixTH/Bitmap/mainmenu480, 720 and 1080
-// .dat with their .pal), carried in the client compressed.
+// and graphics.lua (the mainmenu palettes). The pictures are OpenWards' own, drawn by tools/menu-art/draw.py in CorsixTH's
+// format (mainmenu480, 720 and 1080: .dat with its .pal), carried in the client compressed.
 // Copyright (c) the CorsixTH contributors. Licensed under the MIT license; see THIRD-PARTY-NOTICES.md.
 
 using System.IO.Compression;
@@ -11,7 +11,7 @@ using OpenWards.Formats;
 namespace OpenWards.Client.Ui;
 
 /// <summary>
-/// The picture behind the main menu: the largest of CorsixTH's three sizes no higher than the window (the smallest if
+/// The picture behind the main menu: the largest of the three sizes no higher than the window (the smallest if
 /// none is), scaled to cover the screen and centred.
 /// </summary>
 internal sealed class MenuBackground : IDisposable

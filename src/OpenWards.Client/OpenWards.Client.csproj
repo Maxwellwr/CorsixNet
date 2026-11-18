@@ -7,6 +7,7 @@
     <InvariantGlobalization>true</InvariantGlobalization>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/Icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +27,8 @@
     <EmbeddedResource Include="Assets/lose.pl8" LogicalName="OpenWards.Client.Assets.lose.pl8" />
     <EmbeddedResource Include="Assets/tree_ctrl.*" LogicalName="OpenWards.Client.Assets.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Assets/mainmenu*.dat.gz" LogicalName="OpenWards.Client.Assets.%(Filename)%(Extension)" />
+    <!-- MonoGame DesktopGL sets the window icon from the entry assembly's Icon.bmp resource. -->
+    <EmbeddedResource Include="Assets/Icon.bmp" LogicalName="Icon.bmp" />
     <EmbeddedResource Include="Assets/mainmenu*.pal" LogicalName="OpenWards.Client.Assets.%(Filename)%(Extension)" />
   </ItemGroup>
 

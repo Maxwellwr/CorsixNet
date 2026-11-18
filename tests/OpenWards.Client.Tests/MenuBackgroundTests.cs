@@ -27,6 +27,16 @@ public class MenuBackgroundTests
             Assert.NotNull(typeof(MenuBackground).Assembly.GetManifestResourceStream($"OpenWards.Client.Assets.mainmenu{height}.pal"));
         }
     }
+
+    [Fact]
+    public void TheWindowIconIsWhereMonoGameLooksForIt()
+    {
+        // SdlGameWindow loads the entry assembly's "Icon.bmp" resource, or falls back to MonoGame's own icon.
+        using var icon = typeof(MenuBackground).Assembly.GetManifestResourceStream("Icon.bmp");
+        Assert.NotNull(icon);
+        Assert.Equal((byte)'B', (byte)icon.ReadByte());
+        Assert.Equal((byte)'M', (byte)icon.ReadByte());
+    }
 }
 
 /// <summary>The menu bar's submenus and the warmth colours (CorsixTH's menu.lua and th_lua_ui.cpp).</summary>
