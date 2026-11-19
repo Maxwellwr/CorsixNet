@@ -79,12 +79,10 @@ def background():
     px = 4  # the sign is drawn on a grid of 4 by 4 screen pixels, like the picture's own pixels
     gw, gh = W // px, H // px
     logo = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
-    em = emblem(24 / SS * 2).resize((24, 24), Image.LANCZOS)
-    mark = wordmark(17, colour=(255, 255, 255), accent=(150, 240, 200))
+    mark = wordmark(19, colour=(255, 255, 255), accent=(150, 240, 200))
     mark = mark.resize((mark.width // SS, mark.height // SS), Image.LANCZOS)
-    x, y = 920 // px, 36 // px
-    logo.alpha_composite(em, (x, y))
-    logo.alpha_composite(mark, (x + 29, y - 2))
+    x, y = 980 // px, 30 // px
+    logo.alpha_composite(mark, (x, y))
     # hard alpha, then a dark one-cell outline and drop shadow, as pixel art has
     alpha = logo.split()[3].point(lambda v: 255 if v > 110 else 0)
     logo.putalpha(alpha)
