@@ -30,6 +30,7 @@
     <!-- MonoGame DesktopGL sets the window icon from the entry assembly's Icon.bmp resource. -->
     <EmbeddedResource Include="Assets/Icon.bmp" LogicalName="Icon.bmp" />
     <EmbeddedResource Include="Assets/mainmenu*.pal" LogicalName="OpenWards.Client.Assets.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Assets/mainmenu_sign.png" LogicalName="OpenWards.Client.Assets.mainmenu_sign.png" />
   </ItemGroup>
 
   <ItemGroup>
