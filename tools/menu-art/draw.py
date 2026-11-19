@@ -76,11 +76,11 @@ def wordmark(height, colour, accent):
 def background():
     img = Image.open(os.path.join(HERE, "atrium.png")).convert("RGB").resize((s(W), s(H)), Image.LANCZOS).convert("RGBA")
     # The wordmark beside the picture's own emblem, on a soft light halo so it reads on the busy wall.
-    x, y = s(368), s(70)
+    x, y = s(462), s(84)
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    layer.alpha_composite(wordmark(84, colour=(18, 52, 62), accent=(22, 140, 110)), (x, y))
-    sub = ImageFont.truetype(FONT_SEMI, s(30))
-    ImageDraw.Draw(layer).text((x + s(8), y + s(108)), "Палата №1 ждёт главврача", font=sub, fill=(30, 70, 80))
+    layer.alpha_composite(wordmark(70, colour=(18, 52, 62), accent=(22, 140, 110)), (x, y))
+    sub = ImageFont.truetype(FONT_SEMI, s(25))
+    ImageDraw.Draw(layer).text((x + s(7), y + s(90)), "Палата №1 ждёт главврача", font=sub, fill=(30, 70, 80))
     halo = layer.split()[3].filter(ImageFilter.MaxFilter(s(9) | 1)).filter(ImageFilter.GaussianBlur(s(12)))
     white = Image.new("RGBA", img.size, (255, 252, 244, 255))
     white.putalpha(halo.point(lambda v: min(235, v * 3)))
