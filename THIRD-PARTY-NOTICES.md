@@ -36,7 +36,7 @@ in `src/OpenWards.Client/Assets`), for the bottom panel's machine menu button, t
 `CorsixTH/Bitmap/tree_ctrl.tab`, `.dat` and `.pal`, for the folder browser, and its palette `CorsixTH/Bitmap/lose.pl8`, for
 the losing movies' newspaper headlines. The main menu's backgrounds (`mainmenu480`, `720` and `1080`) and the
 window icon (`Icon.ico`, `Icon.bmp`) are OpenWards' own, drawn by `tools/menu-art/draw.py` (the background from
-`tools/menu-art/atrium.png`, made for OpenWards with an image generator).
+`tools/menu-art/ward6.png`, made for OpenWards with an image generator).
 
 Included as YAML: CorsixTH's language files (`src/OpenWards.Content/Languages/*.yaml`, from
 `CorsixTH/Lua/languages` at commit 7639874, written out by `tools/OpenWards.LuaConverter` with the same strings),

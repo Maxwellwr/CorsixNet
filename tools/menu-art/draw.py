@@ -6,8 +6,8 @@ Writes src/OpenWards.Client/Assets/mainmenu{480,720,1080}.dat.gz and .pal (the p
 centred, in 256 colours with a 6-bit palette, as CorsixTH's mainmenu .dat/.pal pairs that MenuBackground reads) and
 Icon.ico / Icon.bmp (the OpenWards emblem: a white cross with an open door in the middle).
 
-The background is atrium.png (made by the project's owner with an image generator) with the OpenWards wordmark laid
-over it. Needs Pillow and the Segoe UI fonts of Windows.
+The background is ward6.png (made by the project's owner with an image generator, a nod to Chekhov's Ward No. 6) with
+a pixel-art OpenWards sign laid over it. Needs Pillow and the Segoe UI fonts of Windows.
 """
 import gzip
 import math
@@ -74,19 +74,29 @@ def wordmark(height, colour, accent):
 
 
 def background():
-    img = Image.open(os.path.join(HERE, "atrium.png")).convert("RGB").resize((s(W), s(H)), Image.LANCZOS).convert("RGBA")
-    # The wordmark beside the picture's own emblem, on a soft light halo so it reads on the busy wall.
-    x, y = s(462), s(84)
-    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    layer.alpha_composite(wordmark(70, colour=(18, 52, 62), accent=(22, 140, 110)), (x, y))
-    sub = ImageFont.truetype(FONT_SEMI, s(25))
-    ImageDraw.Draw(layer).text((x + s(7), y + s(90)), "Палата №1 ждёт главврача", font=sub, fill=(30, 70, 80))
-    halo = layer.split()[3].filter(ImageFilter.MaxFilter(s(9) | 1)).filter(ImageFilter.GaussianBlur(s(12)))
-    white = Image.new("RGBA", img.size, (255, 252, 244, 255))
-    white.putalpha(halo.point(lambda v: min(235, v * 3)))
-    img.alpha_composite(white)
-    img.alpha_composite(layer)
-    return img.convert("RGB").resize((W, H), Image.LANCZOS)
+    """ward6.png with a pixel-art OpenWards sign laid above the menu, over the yard."""
+    img = Image.open(os.path.join(HERE, "ward6.png")).convert("RGB").resize((W, H), Image.LANCZOS).convert("RGBA")
+    px = 4  # the sign is drawn on a grid of 4 by 4 screen pixels, like the picture's own pixels
+    gw, gh = W // px, H // px
+    logo = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
+    em = emblem(24 / SS * 2).resize((24, 24), Image.LANCZOS)
+    mark = wordmark(17, colour=(255, 255, 255), accent=(150, 240, 200))
+    mark = mark.resize((mark.width // SS, mark.height // SS), Image.LANCZOS)
+    x, y = 920 // px, 36 // px
+    logo.alpha_composite(em, (x, y))
+    logo.alpha_composite(mark, (x + 29, y - 2))
+    # hard alpha, then a dark one-cell outline and drop shadow, as pixel art has
+    alpha = logo.split()[3].point(lambda v: 255 if v > 110 else 0)
+    logo.putalpha(alpha)
+    outline = alpha.filter(ImageFilter.MaxFilter(3))
+    shadow = Image.new("L", (gw, gh), 0)
+    shadow.paste(outline, (1, 1))
+    base = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
+    base.paste((20, 24, 34, 140), (0, 0, gw, gh), shadow)
+    base.paste((24, 30, 40, 255), (0, 0, gw, gh), outline)
+    base.alpha_composite(logo)
+    img.alpha_composite(base.resize((gw * px, gh * px), Image.NEAREST))
+    return img.convert("RGB")
 
 
 def to_indexed(img, w, h):
