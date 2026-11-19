@@ -4,7 +4,7 @@
 
 Writes src/OpenWards.Client/Assets/mainmenu{480,720,1080}.dat.gz and .pal (the picture cover-scaled to each size,
 centred, in 256 colours with a 6-bit palette, as CorsixTH's mainmenu .dat/.pal pairs that MenuBackground reads) and
-Icon.ico / Icon.bmp (the OpenWards emblem: a white cross with an open door in the middle).
+Icon.ico / Icon.bmp (from icon.png, an enamel plate with a 6).
 
 The background is ward6.png (made by the project's owner with an image generator, a nod to Chekhov's Ward No. 6) with
 a pixel-art OpenWards sign laid over it. Needs Pillow and the Segoe UI fonts of Windows.
@@ -26,38 +26,6 @@ SIZES = ((640, 480), (1280, 720), (1920, 1080))
 
 def s(v):
     return int(round(v * SS))
-
-
-def lerp(a, b, t):
-    return tuple(int(round(a[i] + (b[i] - a[i]) * t)) for i in range(len(a)))
-
-
-def emblem(size, bg=(22, 140, 110), fg=(255, 255, 255), door=(255, 214, 120)):
-    """The OpenWards emblem: a rounded square, a cross whose middle is an open door with warm light behind it."""
-    n = s(size)
-    im = Image.new("RGBA", (n, n), (0, 0, 0, 0))
-    r = n * 0.22
-    mask = Image.new("L", (n, n), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, n - 1, n - 1], radius=r, fill=255)
-    ImageDraw.Draw(im).rounded_rectangle([0, 0, n - 1, n - 1], radius=r, fill=bg + (255,))
-    highlight = Image.new("RGBA", (n, n), (0, 0, 0, 0))
-    ImageDraw.Draw(highlight).rounded_rectangle([0, 0, n - 1, n * 0.55], radius=r, fill=(255, 255, 255, 34))
-    im.alpha_composite(Image.composite(highlight, Image.new("RGBA", (n, n), (0, 0, 0, 0)), mask))
-    d = ImageDraw.Draw(im)
-    c = n / 2
-    arm, reach, cr = n * 0.18, n * 0.40, n * 0.05
-    d.rounded_rectangle([c - arm, c - reach, c + arm, c + reach], radius=cr, fill=fg + (255,))
-    d.rounded_rectangle([c - reach, c - arm, c + reach, c + arm], radius=cr, fill=fg + (255,))
-    dw, dh = n * 0.21, n * 0.36
-    dx0, dy0 = c - dw / 2 + n * 0.02, c - dh / 2 + n * 0.01
-    d.rectangle([dx0, dy0, dx0 + dw, dy0 + dh], fill=door + (255,))
-    d.polygon([(dx0, dy0 + dh), (dx0 + dw, dy0 + dh), (dx0 + dw + n * 0.07, dy0 + dh + n * 0.05),
-               (dx0 + n * 0.03, dy0 + dh + n * 0.05)], fill=lerp(door, fg, 0.55) + (255,))
-    d.polygon([(dx0, dy0), (dx0 - dw * 0.40, dy0 - n * 0.03), (dx0 - dw * 0.40, dy0 + dh + n * 0.04), (dx0, dy0 + dh)],
-              fill=lerp(bg, (0, 0, 0), 0.25) + (255,))
-    hx, hy = dx0 - dw * 0.30, dy0 + dh * 0.52
-    d.ellipse([hx - n * 0.012, hy - n * 0.012, hx + n * 0.012, hy + n * 0.012], fill=door + (255,))
-    return im
 
 
 def wordmark(height, colour, accent):
@@ -118,9 +86,10 @@ def save_pair(q, base):
 
 
 def icons():
-    em = emblem(256 / SS).resize((256, 256), Image.LANCZOS)
-    em.save(os.path.join(ASSETS, "Icon.ico"), sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
-    em.resize((128, 128), Image.LANCZOS).save(os.path.join(ASSETS, "Icon.bmp"))
+    """icon.png (the plate of Ward No. 6, made with the same image generator) as the exe and window icons."""
+    icon = Image.open(os.path.join(HERE, "icon.png")).convert("RGBA").resize((256, 256), Image.LANCZOS)
+    icon.save(os.path.join(ASSETS, "Icon.ico"), sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)])
+    icon.resize((128, 128), Image.LANCZOS).save(os.path.join(ASSETS, "Icon.bmp"))
 
 
 if __name__ == "__main__":
