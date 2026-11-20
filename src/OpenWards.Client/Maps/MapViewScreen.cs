@@ -994,8 +994,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (ShowsStatusBar)
         {
-            _text.Draw(batch, StatusLine(), new Vector2(8, 4));
-            _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
+            _text.Draw(batch, StatusLine(), new Vector2(8, StatusTop + 4));
+            _text.Draw(batch, _error ?? TileLine(), new Vector2(8, StatusTop + 4 + _text.LineHeight + 2));
             DrawDatePanel(batch, viewport);
         }
         else
@@ -1213,7 +1213,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     /// The status bar's height: two lines of text, taller with a TrueType font. The bar is a developer's aid, shown
     /// only with --debug-status and in the map editor; otherwise the map starts at the top of the screen.
     /// </summary>
-    private int StatusHeight => ShowsStatusBar ? Math.Max(36, (2 * _text.LineHeight) + 10) : 0;
+    private int StatusHeight => ShowsStatusBar ? StatusTop + Math.Max(36, (2 * _text.LineHeight) + 10) : 0;
+
+    /// <summary>
+    /// Where the status bar's text begins: below the original menu bar, which slides down over the top of the screen
+    /// whenever the cursor comes near and would otherwise cover the first line.
+    /// </summary>
+    private int StatusTop => IsWindowHostReady && OriginalMenuBar.IsAvailable(this) ? OriginalMenuBar.Height : 0;
 
     /// <summary>Whether the black status bar with the debug lines is shown (--debug-status, or the map editor).</summary>
     private bool ShowsStatusBar => _debugStatus || _editorTool is not null;
@@ -5379,10 +5385,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         var speed = GameSpeeds.Name(_session.Speed);
         var width = Math.Max(_text.Measure(date).Width, _text.Measure(speed).Width) + 16;
-        var box = new Rectangle(viewport.Width - width, 0, width, StatusHeight);
+        // With the status bar the box fills its height; without it, the box is as tall as the two lines.
+        var top = StatusTop;
+        var height = ShowsStatusBar ? StatusHeight - top : (2 * _text.LineHeight) + 10;
+        var box = new Rectangle(viewport.Width - width, top, width, height);
         batch.Draw(_pixel, box, DatePanelColor);
-        _text.Draw(batch, date, new Vector2(box.X + 8, 4));
-        _text.Draw(batch, speed, new Vector2(box.X + 8, 4 + _text.LineHeight + 2));
+        _text.Draw(batch, date, new Vector2(box.X + 8, top + 4));
+        _text.Draw(batch, speed, new Vector2(box.X + 8, top + 4 + _text.LineHeight + 2));
     }
 
     /// <summary>
