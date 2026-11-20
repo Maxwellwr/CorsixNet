@@ -34,7 +34,7 @@ the RNC decompressor modifications (`Rnc.cs`).
 Included as is: CorsixTH's own interface sprites `CorsixTH/Bitmap/aux_ui.tab` and `aux_ui.dat` (at commit 1a1460f,
 in `src/OpenWards.Client/Assets`), for the bottom panel's machine menu button, the tree control's sprites
 `CorsixTH/Bitmap/tree_ctrl.tab`, `.dat` and `.pal`, for the folder browser, and its palette `CorsixTH/Bitmap/lose.pl8`, for
-the losing movies' newspaper headlines. The main menu's backgrounds (`mainmenu480`, `720` and `1080`) and the
+the losing movies' newspaper headlines. The main menu's backgrounds (`mainmenu720` and `1080`), its sign (`mainmenu_sign.png`) and the
 window icon (`Icon.ico`, `Icon.bmp`) are OpenWards' own, drawn by `tools/menu-art/draw.py` (from
 `tools/menu-art/ward6.png` and `icon.png`, made for OpenWards with an image generator).
 

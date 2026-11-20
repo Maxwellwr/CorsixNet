@@ -2,15 +2,15 @@
 
     python tools/menu-art/draw.py
 
-Writes src/OpenWards.Client/Assets/mainmenu{480,720,1080}.dat.gz and .pal (the picture cover-scaled to each size,
-centred, in 256 colours with a 6-bit palette, as CorsixTH's mainmenu .dat/.pal pairs that MenuBackground reads) and
+Writes src/OpenWards.Client/Assets/mainmenu{720,1080}.dat.gz and .pal (the picture at each size, in 256 colours with
+a 6-bit palette, as CorsixTH's mainmenu .dat/.pal pairs that MenuBackground reads), mainmenu_sign.png (the pixel-art
+OpenWards sign, one pixel a cell, which MenuBackground lays over the picture where the menu leaves room) and
 Icon.ico / Icon.bmp (from icon.png, an enamel plate with a 6).
 
-The background is ward6.png (made by the project's owner with an image generator, a nod to Chekhov's Ward No. 6) with
-a pixel-art OpenWards sign laid over it. Needs Pillow and the Segoe UI fonts of Windows.
+The background is ward6.png (made by the project's owner with an image generator, a nod to Chekhov's Ward No. 6).
+Needs Pillow and the Segoe UI fonts of Windows.
 """
 import gzip
-import math
 import os
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -21,7 +21,7 @@ SS = 2  # supersampling
 W, H = 1920, 1080
 FONT_BOLD = r"C:\Windows\Fonts\segoeuib.ttf"
 FONT_SEMI = r"C:\Windows\Fonts\seguisb.ttf"
-SIZES = ((640, 480), (1280, 720), (1920, 1080))
+SIZES = ((1280, 720), (1920, 1080))
 
 
 def s(v):
@@ -42,18 +42,23 @@ def wordmark(height, colour, accent):
 
 
 def background():
-    """ward6.png with a pixel-art OpenWards sign laid above the menu, over the yard."""
-    img = Image.open(os.path.join(HERE, "ward6.png")).convert("RGB").resize((W, H), Image.LANCZOS).convert("RGBA")
-    px = 4  # the sign is drawn on a grid of 4 by 4 screen pixels, like the picture's own pixels
-    gw, gh = W // px, H // px
-    logo = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
+    """ward6.png, without the sign: the client lays the sign over it where the menu leaves room."""
+    return Image.open(os.path.join(HERE, "ward6.png")).convert("RGB").resize((W, H), Image.LANCZOS)
+
+
+def sign():
+    """The pixel-art OpenWards sign, one pixel a cell (the client draws each cell as a square of whole pixels), with
+    a dark one-cell outline and a drop shadow, as pixel art has."""
     mark = wordmark(19, colour=(255, 255, 255), accent=(150, 240, 200))
     mark = mark.resize((mark.width // SS, mark.height // SS), Image.LANCZOS)
-    x, y = 980 // px, 30 // px
-    logo.alpha_composite(mark, (x, y))
-    # hard alpha, then a dark one-cell outline and drop shadow, as pixel art has
-    alpha = logo.split()[3].point(lambda v: 255 if v > 110 else 0)
-    logo.putalpha(alpha)
+    # hard alpha, cut to the letters, one cell of room on each side for the outline and one more for the shadow
+    alpha = mark.split()[3].point(lambda v: 255 if v > 110 else 0)
+    mark.putalpha(alpha)
+    mark = mark.crop(alpha.getbbox())
+    gw, gh = mark.width + 3, mark.height + 3
+    logo = Image.new("RGBA", (gw, gh), (0, 0, 0, 0))
+    logo.alpha_composite(mark, (1, 1))
+    alpha = logo.split()[3]
     outline = alpha.filter(ImageFilter.MaxFilter(3))
     shadow = Image.new("L", (gw, gh), 0)
     shadow.paste(outline, (1, 1))
@@ -61,17 +66,12 @@ def background():
     base.paste((20, 24, 34, 140), (0, 0, gw, gh), shadow)
     base.paste((24, 30, 40, 255), (0, 0, gw, gh), outline)
     base.alpha_composite(logo)
-    img.alpha_composite(base.resize((gw * px, gh * px), Image.NEAREST))
-    return img.convert("RGB")
+    return base
 
 
 def to_indexed(img, w, h):
-    """Cover-scaled and centred to w by h, then 256 colours that a 6-bit palette can show."""
-    factor = max(w / W, h / H)
-    rw, rh = math.ceil(W * factor), math.ceil(H * factor)
-    r = img.resize((rw, rh), Image.LANCZOS)
-    left, top = (rw - w) // 2, (rh - h) // 2
-    r = r.crop((left, top, left + w, top + h))
+    """Scaled to w by h (the picture's own 16:9), then 256 colours that a 6-bit palette can show."""
+    r = img.resize((w, h), Image.LANCZOS)
     r = r.point(lambda v: (v >> 2) * 255 // 63)
     return r.quantize(colors=256, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.FLOYDSTEINBERG)
 
@@ -96,5 +96,6 @@ if __name__ == "__main__":
     picture = background()
     for w, h in SIZES:
         save_pair(to_indexed(picture, w, h), os.path.join(ASSETS, f"mainmenu{h}"))
+    sign().save(os.path.join(ASSETS, "mainmenu_sign.png"), optimize=True)
     icons()
     print("wrote the main menu backgrounds and the icon to", os.path.normpath(ASSETS))

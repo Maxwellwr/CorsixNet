@@ -7,15 +7,80 @@ namespace OpenWards.Client.Tests;
 public class MenuBackgroundTests
 {
     [Fact]
-    public void TheLargestPictureNoHigherThanTheWindowIsChosenAndCoversTheScreen()
+    public void TheSmallestPictureNotBlownUpIsChosen()
     {
-        Assert.Equal((640, 480), MenuBackground.SizeFor(400));
-        Assert.Equal((640, 480), MenuBackground.SizeFor(719));
-        Assert.Equal((1280, 720), MenuBackground.SizeFor(800));
-        Assert.Equal((1920, 1080), MenuBackground.SizeFor(1440));
+        Assert.Equal((1280, 720), MenuBackground.SizeFor(new Point(640, 480)));
+        Assert.Equal((1280, 720), MenuBackground.SizeFor(new Point(960, 600)));
+        Assert.Equal((1280, 720), MenuBackground.SizeFor(new Point(1280, 720)));
+        Assert.Equal((1920, 1080), MenuBackground.SizeFor(new Point(1280, 800)));
+        Assert.Equal((1920, 1080), MenuBackground.SizeFor(new Point(2560, 1440)));
+    }
 
-        // A 1280 by 720 picture on a 1280 by 800 window: scaled by 800/720 to cover it, centred.
-        Assert.Equal(new Rectangle(-71, 0, 1423, 800), MenuBackground.Cover(1280, 720, new Rectangle(0, 0, 1280, 800)));
+    [Fact]
+    public void ThePictureCoversTheScreenCentred()
+    {
+        // 16:10: scaled by 800/720 to cover it, centred, a little cut off each side.
+        Assert.Equal(new Rectangle(-71, 0, 1423, 800), MenuBackground.Place(1280, 720, new Rectangle(0, 0, 1280, 800)));
+
+        // 16:9: exactly.
+        Assert.Equal(new Rectangle(0, 0, 1920, 1080), MenuBackground.Place(1920, 1080, new Rectangle(0, 0, 1920, 1080)));
+    }
+
+    [Fact]
+    public void OnANarrowScreenThePartToKeepStaysOnIt()
+    {
+        foreach (var screen in new[] { new Rectangle(0, 0, 640, 480), new Rectangle(0, 0, 1280, 1024), new Rectangle(0, 0, 800, 1200) })
+        {
+            var picture = MenuBackground.Place(1920, 1080, screen);
+            var factor = (double)picture.Width / 1920;
+            var keepLeft = picture.X + (MenuBackground.Keep.Left * factor);
+            var keepRight = picture.X + (MenuBackground.Keep.Right * factor);
+            Assert.InRange(keepLeft, -2, screen.Width);
+            Assert.InRange(keepRight, 0, screen.Width + 2);
+        }
+
+        // 4:3 still covers: scaled to the height, moved right so that the doctor at the window is in.
+        var fourByThree = MenuBackground.Place(1920, 1080, new Rectangle(0, 0, 640, 480));
+        Assert.Equal(0, fourByThree.Y);
+        Assert.Equal(480, fourByThree.Height);
+        Assert.True(fourByThree.X <= 0 && fourByThree.Right >= 640);
+
+        // An ultra-wide window: scaled to the part's height, so that the ward's plate is not cut off; bars at the sides.
+        var wide = MenuBackground.Place(1920, 1080, new Rectangle(0, 0, 2560, 1080));
+        Assert.True(wide.Y + (MenuBackground.Keep.Top * wide.Height / 1080.0) >= -1, wide.ToString());
+        Assert.True(wide.X > 0 && wide.Right < 2560, wide.ToString());
+
+        // A tall window: scaled down to the part's width, bars above and below.
+        var tall = MenuBackground.Place(1920, 1080, new Rectangle(0, 0, 800, 1200));
+        Assert.True(tall.Y > 0 && tall.Bottom < 1200, tall.ToString());
+    }
+
+    [Fact]
+    public void TheSignStaysWholeAndClearOfTheMenu()
+    {
+        var sign = new Point(107, 22);
+        var cases = new (Rectangle Screen, Rectangle Menu)[]
+        {
+            (new Rectangle(0, 0, 1920, 1200), new Rectangle(855, 200, 212, 450)),
+            (new Rectangle(0, 0, 1920, 1080), new Rectangle(855, 140, 212, 450)),
+            (new Rectangle(0, 0, 960, 600), new Rectangle(374, 48, 212, 450)),
+            (new Rectangle(0, 0, 640, 480), new Rectangle(214, 15, 212, 450)),
+            (new Rectangle(0, 0, 1280, 1024), new Rectangle(534, 287, 212, 450)),
+        };
+        foreach (var (screen, menu) in cases)
+        {
+            var picture = MenuBackground.Place(1920, 1080, screen);
+            var (area, cell) = MenuBackground.PlaceSign(picture, screen, menu, sign);
+            Assert.True(cell >= 1);
+            Assert.Equal(sign.X * cell, area.Width);
+            Assert.True(screen.Contains(area), $"{screen}: {area}");
+            Assert.False(area.Intersects(menu), $"{screen}: {area} over {menu}");
+        }
+
+        // With room, it keeps its place in the picture at the picture's size: 4 pixels a cell on 1920 by 1080.
+        var (full, fullCell) = MenuBackground.PlaceSign(new Rectangle(0, 0, 1920, 1080), new Rectangle(0, 0, 1920, 1080), new Rectangle(855, 200, 212, 450), sign);
+        Assert.Equal(4, fullCell);
+        Assert.Equal(new Rectangle(976, 48, 428, 88), full);
     }
 
     [Fact]
@@ -26,6 +91,8 @@ public class MenuBackgroundTests
             Assert.NotNull(typeof(MenuBackground).Assembly.GetManifestResourceStream($"OpenWards.Client.Assets.mainmenu{height}.dat.gz"));
             Assert.NotNull(typeof(MenuBackground).Assembly.GetManifestResourceStream($"OpenWards.Client.Assets.mainmenu{height}.pal"));
         }
+
+        Assert.NotNull(typeof(MenuBackground).Assembly.GetManifestResourceStream("OpenWards.Client.Assets.mainmenu_sign.png"));
     }
 
     [Fact]

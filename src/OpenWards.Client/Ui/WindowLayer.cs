@@ -54,6 +54,9 @@ internal sealed class WindowLayer
     /// <summary>Whether a dialog is open; pinned windows such as the bottom panel do not count.</summary>
     public bool Any => _open.Any(open => !open.Window.IsPinned);
 
+    /// <summary>Where an open window was last laid out; null if it is not open or not laid out yet.</summary>
+    public Rectangle? BoundsOf(UiWindow window) => _open.Find(open => ReferenceEquals(open.Window, window))?.Layout?.Bounds;
+
     /// <summary>The top-left corner of the area windows open in: below the status bar.</summary>
     public Point Origin { get; set; } = new(8, 44);
 

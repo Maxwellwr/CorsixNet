@@ -987,8 +987,16 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var inMainMenu = _mainMenu is not null && _windows.Windows.Contains(_mainMenu);
         if (inMainMenu)
         {
-            _menuBackground ??= MenuBackground.Load(_device, viewport.Height);
-            _menuBackground?.Draw(batch, new Rectangle(0, 0, viewport.Width, viewport.Height));
+            var screen = new Point(viewport.Width, viewport.Height);
+            if (_menuBackground is not null && _menuBackground.Size != MenuBackground.SizeFor(screen))
+            {
+                // The window was resized enough for the other size to fit better.
+                _menuBackground.Dispose();
+                _menuBackground = null;
+            }
+
+            _menuBackground ??= MenuBackground.Load(_device, screen);
+            _menuBackground?.Draw(batch, _pixel, new Rectangle(0, 0, viewport.Width, viewport.Height), _windows.BoundsOf(_mainMenu!));
         }
         else if (_menuBackground is not null)
         {
