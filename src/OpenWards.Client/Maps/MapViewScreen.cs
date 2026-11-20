@@ -5374,14 +5374,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
-        var date = DateText(simulation.Date);
-        if (_session.Player < simulation.Hospitals.Count && simulation.Hospitals[_session.Player] is { IsOpen: false, IsOpeningWatchHeld: false } hospital)
-        {
-            // Stands in for CorsixTH's opening watch; whole days rounded up.
-            var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;
-            date += UiText.Format("openwards.status.status_opens_in", ", opens in %1% days (Shift+O: now)", days);
-        }
-
+        var date = DateText(simulation.Date) + OpeningText(simulation);
         var speed = GameSpeeds.Name(_session.Speed);
         var width = Math.Max(_text.Measure(date).Width, _text.Measure(speed).Width) + 16;
         // With the status bar the box fills its height; without it, the box is as tall as the two lines.
@@ -5390,6 +5383,20 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         batch.Draw(_pixel, box, DatePanelColor);
         _text.Draw(batch, date, new Vector2(box.X + 8, 4));
         _text.Draw(batch, speed, new Vector2(box.X + 8, 4 + _text.LineHeight + 2));
+    }
+
+    /// <summary>Until the hospital opens, how many days are left; stands in for CorsixTH's opening watch.</summary>
+    private string OpeningText(Simulation simulation)
+    {
+        if (_session is null || _session.Player >= simulation.Hospitals.Count
+            || simulation.Hospitals[_session.Player] is not { IsOpen: false, IsOpeningWatchHeld: false } hospital)
+        {
+            return string.Empty;
+        }
+
+        // Whole days rounded up.
+        var days = (hospital.HoursUntilOpen + GameDate.HoursPerDay - 1) / GameDate.HoursPerDay;
+        return UiText.Format("openwards.status.status_opens_in", ", opens in %1% days (Shift+O: now)", days);
     }
 
     /// <summary>
@@ -5910,7 +5917,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
-        var segments = DebugSegments(StatusLine()).Concat(DebugSegments(_error ?? TileLine()));
+        // The bottom panel shows the date but not the speed or the days until opening, which the top box showed.
+        var opening = Simulation is { } simulation ? OpeningText(simulation).TrimStart(',', ' ') : string.Empty;
+        var timing = opening.Length > 0 ? new[] { GameSpeeds.Name(_session.Speed), opening } : [GameSpeeds.Name(_session.Speed)];
+        var segments = DebugSegments(StatusLine()).Concat(timing).Concat(DebugSegments(_error ?? TileLine()));
         if (_bottomPanel is { } panel)
         {
             var bounds = OriginalBottomPanel.Bounds(viewport);
