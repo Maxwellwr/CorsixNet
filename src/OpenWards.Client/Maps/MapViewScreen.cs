@@ -194,7 +194,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private string? _error;
 
-    /// <summary>--debug-status: show the status bar with the debug lines above the map.</summary>
+    /// <summary>--debug-status: show the debug window at the bottom left.</summary>
     private readonly bool _debugStatus;
     private MapOverlay _overlay;
     private RenderTarget2D? _target;
@@ -994,8 +994,8 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
         if (ShowsStatusBar)
         {
-            _text.Draw(batch, StatusLine(), new Vector2(8, StatusTop + 4));
-            _text.Draw(batch, _error ?? TileLine(), new Vector2(8, StatusTop + 4 + _text.LineHeight + 2));
+            _text.Draw(batch, StatusLine(), new Vector2(8, 4));
+            _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
             DrawDatePanel(batch, viewport);
         }
         else
@@ -1005,6 +1005,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             {
                 // Without the original bottom panel nothing else shows the date and speed.
                 DrawDatePanel(batch, viewport);
+            }
+
+            if (_debugStatus)
+            {
+                DrawDebugWindow(batch, viewport);
             }
         }
 
@@ -1210,19 +1215,13 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     }
 
     /// <summary>
-    /// The status bar's height: two lines of text, taller with a TrueType font. The bar is a developer's aid, shown
-    /// only with --debug-status and in the map editor; otherwise the map starts at the top of the screen.
+    /// The status bar's height: two lines of text, taller with a TrueType font. Only the map editor has the bar; in a
+    /// game the map starts at the top of the screen and --debug-status shows the debug window at the bottom left.
     /// </summary>
-    private int StatusHeight => ShowsStatusBar ? StatusTop + Math.Max(36, (2 * _text.LineHeight) + 10) : 0;
+    private int StatusHeight => ShowsStatusBar ? Math.Max(36, (2 * _text.LineHeight) + 10) : 0;
 
-    /// <summary>
-    /// Where the status bar's text begins: below the original menu bar, which slides down over the top of the screen
-    /// whenever the cursor comes near and would otherwise cover the first line.
-    /// </summary>
-    private int StatusTop => IsWindowHostReady && OriginalMenuBar.IsAvailable(this) ? OriginalMenuBar.Height : 0;
-
-    /// <summary>Whether the black status bar with the debug lines is shown (--debug-status, or the map editor).</summary>
-    private bool ShowsStatusBar => _debugStatus || _editorTool is not null;
+    /// <summary>Whether the black status bar with the editor's lines is shown above the map.</summary>
+    private bool ShowsStatusBar => _editorTool is not null;
 
     private Point ViewSize => new(_device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight));
 
@@ -5386,12 +5385,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var speed = GameSpeeds.Name(_session.Speed);
         var width = Math.Max(_text.Measure(date).Width, _text.Measure(speed).Width) + 16;
         // With the status bar the box fills its height; without it, the box is as tall as the two lines.
-        var top = StatusTop;
-        var height = ShowsStatusBar ? StatusHeight - top : (2 * _text.LineHeight) + 10;
-        var box = new Rectangle(viewport.Width - width, top, width, height);
+        var height = ShowsStatusBar ? StatusHeight : (2 * _text.LineHeight) + 10;
+        var box = new Rectangle(viewport.Width - width, 0, width, height);
         batch.Draw(_pixel, box, DatePanelColor);
-        _text.Draw(batch, date, new Vector2(box.X + 8, top + 4));
-        _text.Draw(batch, speed, new Vector2(box.X + 8, top + 4 + _text.LineHeight + 2));
+        _text.Draw(batch, date, new Vector2(box.X + 8, 4));
+        _text.Draw(batch, speed, new Vector2(box.X + 8, 4 + _text.LineHeight + 2));
     }
 
     /// <summary>
@@ -5898,6 +5896,86 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var box = new Rectangle(0, top, _text.Measure(line).Width + 16, _text.LineHeight + 8);
         batch.Draw(_pixel, box, building ? BuildModeColor : Color.Black * 0.75f);
         _text.Draw(batch, line, new Vector2(8, top + 4));
+    }
+
+    /// <summary>
+    /// --debug-status: the debug lines (the level, money, people, overlay, zoom, the tile under the cursor and the keys)
+    /// in a window at the bottom left, in the look of the bottom panel's info bar, beside the panel where there is room
+    /// and above it where there is not.
+    /// </summary>
+    private void DrawDebugWindow(SpriteBatch batch, Viewport viewport)
+    {
+        if (_session is null)
+        {
+            return;
+        }
+
+        var segments = DebugSegments(StatusLine()).Concat(DebugSegments(_error ?? TileLine()));
+        if (_bottomPanel is { } panel)
+        {
+            var bounds = OriginalBottomPanel.Bounds(viewport);
+            var beside = bounds.X >= DebugWindowMinWidth;
+            var width = beside ? Math.Min(bounds.X, DebugWindowMaxWidth) : Math.Min(viewport.Width, DebugWindowMaxWidth);
+            var bottom = beside ? viewport.Height : bounds.Y - DebugWindowFaxRoom;
+            panel.DrawInfoWindow(batch, 0, bottom, width, segments);
+            return;
+        }
+
+        // Without the panel's graphics: the game's font on a dark box.
+        var lines = PackSegments(segments, DebugWindowMaxWidth - 16, text => _text.Measure(text).Width);
+        var lineHeight = _text.LineHeight + 2;
+        var box = new Rectangle(0, viewport.Height - (lines.Count * lineHeight) - 8, DebugWindowMaxWidth, (lines.Count * lineHeight) + 8);
+        batch.Draw(_pixel, box, Color.Black * 0.75f);
+        for (var i = 0; i < lines.Count; i++)
+        {
+            _text.Draw(batch, lines[i], new Vector2(box.X + 8, box.Y + 4 + (i * lineHeight)));
+        }
+    }
+
+    /// <summary>The narrowest the debug window may be beside the bottom panel; narrower, it goes above the panel.</summary>
+    private const int DebugWindowMinWidth = 200;
+
+    /// <summary>The widest the debug window gets.</summary>
+    private const int DebugWindowMaxWidth = 420;
+
+    /// <summary>Room left above the bottom panel for the faxes that rise out of it, when the window goes above.</summary>
+    private const int DebugWindowFaxRoom = 30;
+
+    /// <summary>The status line's parts, which it separates with three spaces.</summary>
+    private static IEnumerable<string> DebugSegments(string line) =>
+        line.Split("   ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>
+    /// Puts <paramref name="segments"/> on lines at most <paramref name="width"/> wide, three spaces apart, starting a
+    /// new line when the next does not fit; a segment wider than a line is wrapped at its spaces.
+    /// </summary>
+    internal static IReadOnlyList<string> PackSegments(IEnumerable<string> segments, int width, Func<string, int> measure)
+    {
+        var lines = new List<string>();
+        var current = string.Empty;
+        foreach (var segment in segments)
+        {
+            foreach (var part in WrapToWidth(segment, width, measure))
+            {
+                var joined = current.Length == 0 ? part : current + "   " + part;
+                if (current.Length > 0 && measure(joined) > width)
+                {
+                    lines.Add(current);
+                    current = part;
+                }
+                else
+                {
+                    current = joined;
+                }
+            }
+        }
+
+        if (current.Length > 0)
+        {
+            lines.Add(current);
+        }
+
+        return lines;
     }
 
     private string TileLine()

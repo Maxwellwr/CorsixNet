@@ -129,7 +129,7 @@ internal static class ClientCommandLine
 
     private static readonly Option<bool> DebugStatusOption = new("--debug-status")
     {
-        Description = "Show the developer's status bar above the map: money, people, overlay, zoom, the tile under the cursor and the keys",
+        Description = "Show the debug window at the bottom left: the level, money, people, overlay, zoom, the tile under the cursor and the keys",
     };
 
     private static readonly Option<GameSpeed> SpeedOption = new("--speed")

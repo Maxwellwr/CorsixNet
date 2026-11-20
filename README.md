@@ -74,7 +74,7 @@ a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels
 initial view. `--upscale 2` (or 4) starts with smoothed sprites. `--capture shot.png` saves
 the map view to a PNG after a few seconds and quits, which works even when the screen is locked. `--script checks.txt` plays the mouse and keyboard
 from a text file and saves screenshots of the whole window (see `Input/InputScript.cs`). `--demo` builds and furnishes a GP's office near the start and adds twenty patients, half of them outside,
-wandering into and around the hospital. `--debug-status` shows the developer's status bar above the map: balance, people, overlay, zoom, the tile under the cursor and the keys.
+wandering into and around the hospital. `--debug-status` shows the debug window at the bottom left, in the look of the bottom panel: the level, money, people, overlay, zoom, the tile under the cursor and the keys.
 
 Alt+Shift+S quick saves a local game and Alt+Shift+L loads the quick save. The game also saves
 itself as each month's last day begins, in `Autosaves`. Saves go to `%AppData%/OpenWards/Saves`

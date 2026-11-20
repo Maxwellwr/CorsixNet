@@ -427,6 +427,46 @@ internal sealed class OriginalBottomPanel : IDisposable
         }
     }
 
+    /// <summary>
+    /// The debug window (--debug-status): strips of the info bar's pieces (sprite 12 on the left, 13 repeated every 10
+    /// pixels, 14 on the right, as <c>drawPanels</c> lays the bar out), stacked up from <paramref name="bottom"/>, each
+    /// with three lines of white text ten pixels apart, as <c>drawDynamicInfo</c> writes them.
+    /// </summary>
+    public void DrawInfoWindow(SpriteBatch batch, int x, int bottom, int width, IEnumerable<string> segments)
+    {
+        const int leftCap = 13;
+        const int rightCap = 13;
+        const int piece = 10;
+        var middle = Math.Max(piece, (width - leftCap - rightCap) / piece * piece);
+        var textWidth = leftCap + middle + rightCap - InfoTextLeft - InfoTextRight;
+        var lines = Maps.MapViewScreen.PackSegments(segments, textWidth, text => _whiteFont.Measure(text).Width);
+        var strips = Math.Max(1, (lines.Count + InfoLinesPerStrip - 1) / InfoLinesPerStrip);
+        for (var strip = 0; strip < strips; strip++)
+        {
+            var y = bottom - ((strips - strip) * Height);
+            _sprites.Draw(batch, 12, x, y, Color.White);
+            for (var dx = 0; dx < middle; dx += piece)
+            {
+                _sprites.Draw(batch, 13, x + leftCap + dx, y, Color.White);
+            }
+
+            _sprites.Draw(batch, 14, x + leftCap + middle, y, Color.White);
+            for (var i = 0; i < InfoLinesPerStrip && (strip * InfoLinesPerStrip) + i < lines.Count; i++)
+            {
+                _whiteFont.Draw(batch, lines[(strip * InfoLinesPerStrip) + i], new Vector2(x + InfoTextLeft, y + (10 * (i + 1))));
+            }
+        }
+    }
+
+    /// <summary>The info bar's text starts 20 pixels in (<c>drawDynamicInfo</c>).</summary>
+    private const int InfoTextLeft = 20;
+
+    /// <summary>Room kept at the right of the info bar's text.</summary>
+    private const int InfoTextRight = 12;
+
+    /// <summary>The info bar holds three lines.</summary>
+    private const int InfoLinesPerStrip = 3;
+
     /// <summary>The orange part of the progress bar: 98 pixels for the whole.</summary>
     public static int ProgressWidth(decimal progress) => (int)Math.Floor(98 * Math.Clamp(progress, 0m, 1m));
 
