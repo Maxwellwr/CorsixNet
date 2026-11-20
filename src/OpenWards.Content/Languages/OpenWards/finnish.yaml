@@ -737,7 +737,7 @@ strings:
       confirm_new_map: 'Aloitetaanko alusta tyhjällä kartalla? Tallentamattomat muutokset menetetään.'
       confirm_leave_editor: 'Poistutaanko karttaeditorista? Tallentamattomat muutokset menetetään.'
       cannot_load_map: 'Kartan lataus epäonnistui: %1%'
-      settings_saved: 'Asetukset tallennettu; näytön koko vaihtuu seuraavalla käynnistyskerralla'
+      settings_saved: 'Asetukset tallennettu'
       edit_room_hint: 'Muokkaa huonetta klikkaamalla sitä; oikea klikkaus tai Esc peruuttaa'
       place_staff_hint: 'Sijoita uusi työntekijä klikkaamalla sairaalaa; oikea klikkaus tai Esc peruuttaa'
       paused_place_staff: 'Peli on tauolla: jatka peliä sijoittaaksesi uuden työntekijän'

@@ -753,7 +753,7 @@ strings:
       confirm_new_map: 'Újrakezded üres térképpel? A nem mentett módosítások elvesznek.'
       confirm_leave_editor: 'Kilépsz a pályaszerkesztőből? A nem mentett módosítások elvesznek.'
       cannot_load_map: 'Nem sikerült betölteni a térképet: %1%'
-      settings_saved: 'Beállítások mentve; a képernyőméret a következő indításkor változik'
+      settings_saved: 'Beállítások mentve'
       edit_room_hint: 'Kattints egy szobára a szerkesztéséhez; jobb klikk vagy Esc: mégse'
       place_staff_hint: 'Kattints a kórházra az új alkalmazott elhelyezéséhez; jobb klikk vagy Esc: mégse'
       paused_place_staff: 'A játék szünetel: folytasd az új alkalmazott elhelyezéséhez'

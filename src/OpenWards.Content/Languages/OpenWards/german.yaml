@@ -600,7 +600,7 @@ strings:
       confirm_new_map: Mit einer leeren Karte neu anfangen? Nicht gespeicherte Änderungen gehen verloren.
       confirm_leave_editor: Den Karteneditor verlassen? Nicht gespeicherte Änderungen gehen verloren.
       cannot_load_map: 'Die Karte konnte nicht geladen werden: %1%'
-      settings_saved: Einstellungen gespeichert; die Bildschirmgröße ändert sich beim nächsten Start
+      settings_saved: Einstellungen gespeichert
       edit_room_hint: Klicken Sie auf einen Raum, um ihn zu ändern; Rechtsklick oder Esc bricht ab
       place_staff_hint: Klicken Sie ins Krankenhaus, um die neue Kraft abzusetzen; Rechtsklick oder Esc bricht ab
       paused_place_staff: 'Das Spiel ist pausiert: Pause aufheben, um die neue Kraft abzusetzen'

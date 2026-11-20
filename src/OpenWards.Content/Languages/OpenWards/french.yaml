@@ -533,7 +533,7 @@ strings:
       confirm_new_map: Recommencer avec une carte vierge ? Les changements non sauvegardés seront perdus.
       confirm_leave_editor: Quitter l'éditeur de cartes ? Les changements non sauvegardés seront perdus.
       cannot_load_map: 'Impossible de charger la carte : %1%'
-      settings_saved: Paramètres sauvegardés ; la taille de l'écran change au prochain lancement
+      settings_saved: Paramètres sauvegardés
       edit_room_hint: Cliquez sur une salle pour la modifier ; clic droit ou Échap pour annuler
       place_staff_hint: Cliquez dans l'hôpital pour placer la nouvelle recrue ; clic droit ou Échap pour annuler
       paused_place_staff: 'Le jeu est en pause : reprenez pour placer la nouvelle recrue'

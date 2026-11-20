@@ -33,9 +33,14 @@ internal enum SettingsDialogKind
 /// <param name="fonts">The fonts the language can be drawn with (the graphics dialog's font), or null.</param>
 /// <param name="jukebox">Opens the jukebox (the sound dialog's button), or null without music.</param>
 /// <param name="midiPorts">The system's MIDI outputs (the sound dialog's MIDI API and port), or null for none.</param>
-internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config, Action<GameConfig> apply, Action back, Func<string, LanguageFontChoices?>? fonts = null, Action? jukebox = null, Func<IReadOnlyList<string>>? midiPorts = null) : UiWindow
+/// <param name="windowSizes">
+/// The window sizes the graphics dialog offers, in real pixels (the monitor's modes), or null for
+/// <see cref="WindowSizes"/>.
+/// </param>
+/// <param name="density">The system's display scale: the settings keep the window's size in points, pixels divided by it.</param>
+internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config, Action<GameConfig> apply, Action back, Func<string, LanguageFontChoices?>? fonts = null, Action? jukebox = null, Func<IReadOnlyList<string>>? midiPorts = null, Func<IReadOnlyList<(int Width, int Height)>>? windowSizes = null, double density = 1) : UiWindow
 {
-    /// <summary>graphics_settings.lua's window sizes for a screen of ordinary size.</summary>
+    /// <summary>graphics_settings.lua's window sizes for a screen of ordinary size, for when the monitor reports none.</summary>
     public static readonly (int Width, int Height)[] WindowSizes =
     [
         (640, 480), (800, 600), (1024, 768), (1280, 960), (1600, 1200), (1920, 1440), (1280, 1024), (1280, 720), (1366, 768),
@@ -140,7 +145,9 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
         switch (kind)
         {
             case SettingsDialogKind.Graphics:
-                var size = string.Create(CultureInfo.InvariantCulture, $"{_config.Width}x{_config.Height}");
+                var match = OfferedSizes().FindIndex(offered => offered.Points == (_config.Width, _config.Height));
+                var pixels = match >= 0 ? OfferedSizes()[match].Pixels : Rendering.DisplayModes.ToPixels((_config.Width, _config.Height), density);
+                var size = string.Create(CultureInfo.InvariantCulture, $"{pixels.Width}x{pixels.Height}");
                 List<DialogSetting> graphics =
                 [
                     Switch(Label("fullscreen", "Fullscreen"), _config.Fullscreen, on => _config with { Fullscreen = on }, Tip("fullscreen")),
@@ -291,11 +298,31 @@ internal sealed class SettingsDialog(SettingsDialogKind kind, GameConfig config,
 
     private static string ScaleName(int scale) => scale.ToString(CultureInfo.InvariantCulture) + "x";
 
+    /// <summary>The window sizes offered, in pixels as shown and in points as kept.</summary>
+    private List<((int Width, int Height) Pixels, (int Width, int Height) Points)> OfferedSizes() =>
+        [.. (windowSizes?.Invoke() is { Count: > 0 } offered ? offered : WindowSizes).Select(size => (size, Rendering.DisplayModes.ToPoints(size, density)))];
+
+    /// <summary>
+    /// The next or previous window size: the offered sizes are in pixels and the settings keep points. A size not among
+    /// them (one typed into <c>config.yaml</c>) goes to the first larger one, or the smallest.
+    /// </summary>
     private GameConfig NextSize(int step)
     {
-        var index = Array.FindIndex(WindowSizes, size => size.Width == _config.Width && size.Height == _config.Height);
-        var next = index < 0 ? 0 : (index + step + WindowSizes.Length) % WindowSizes.Length;
-        return _config with { Width = WindowSizes[next].Width, Height = WindowSizes[next].Height };
+        var points = OfferedSizes().Select(offered => offered.Points).ToList();
+        var index = points.FindIndex(size => size.Width == _config.Width && size.Height == _config.Height);
+        int next;
+        if (index >= 0)
+        {
+            next = (index + step + points.Count) % points.Count;
+        }
+        else
+        {
+            var area = _config.Width * _config.Height;
+            next = points.FindIndex(size => size.Width * size.Height > area);
+            next = next < 0 ? 0 : next;
+        }
+
+        return _config with { Width = points[next].Width, Height = points[next].Height };
     }
 
     /// <summary>The font chosen for the language, or the choices' default when none is (as the options' font row).</summary>

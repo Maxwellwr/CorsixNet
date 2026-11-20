@@ -588,7 +588,7 @@ strings:
       confirm_new_map: '用空白地图重新开始？未保存的修改会丢失。'
       confirm_leave_editor: '离开地图编辑器？未保存的修改会丢失。'
       cannot_load_map: '无法载入地图：%1%'
-      settings_saved: '设置已保存；屏幕大小在下次启动时生效'
+      settings_saved: '设置已保存'
       edit_room_hint: '点击房间进行编辑；右键或 Esc 取消'
       place_staff_hint: '在医院里点击放置新员工；右键或 Esc 取消'
       paused_place_staff: '游戏已暂停：取消暂停才能放置新员工'

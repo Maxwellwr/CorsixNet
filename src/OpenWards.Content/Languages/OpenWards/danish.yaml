@@ -765,7 +765,7 @@ strings:
       confirm_new_map: 'Start forfra med et tomt kort? Ændringer, der ikke er gemt, går tabt.'
       confirm_leave_editor: 'Forlad korteditoren? Ændringer, der ikke er gemt, går tabt.'
       cannot_load_map: 'Kunne ikke indlæse kortet: %1%'
-      settings_saved: 'Indstillingerne er gemt; skærmstörrelsen skifter ved næste start'
+      settings_saved: 'Indstillingerne er gemt'
       edit_room_hint: 'Klik på et rum for at ændre det; höjreklik eller Esc annullerer'
       place_staff_hint: 'Klik på hospitalet for at placere den nye medarbejder; höjreklik eller Esc annullerer'
       paused_place_staff: 'Spillet er sat på pause: fortsæt det for at placere den nye medarbejder'

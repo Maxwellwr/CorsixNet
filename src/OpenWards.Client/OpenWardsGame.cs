@@ -19,8 +19,8 @@ internal sealed class OpenWardsGame : Game
     private Point _windowSize;
 
     /// <summary>The smallest window the settings may ask for (CorsixTH's 640 by 480).</summary>
-    private const int MinWidth = 640;
-    private const int MinHeight = 480;
+    internal const int MinWidth = 640;
+    internal const int MinHeight = 480;
 
     /// <param name="width">The window's width in the system's points: pixels at 100 % display scale, more above.</param>
     /// <param name="height">The window's height, likewise.</param>
@@ -77,6 +77,11 @@ internal sealed class OpenWardsGame : Game
 
         // Keep updating without focus: a network game must keep up with the server. A script's input counts as focused.
         _screen?.Update(gameTime, IsActive || script is not null);
+        if (_screen?.TakeWindowSizeRequest() is { } windowSize)
+        {
+            SetWindowSize(windowSize);
+        }
+
         if (_screen?.TakeFullscreenToggleRequest() == true)
         {
             SetFullscreen(!_graphics.IsFullScreen);
@@ -158,6 +163,27 @@ internal sealed class OpenWardsGame : Game
 
         _graphics.IsFullScreen = fullscreen;
         _graphics.ApplyChanges();
+    }
+
+    /// <summary>
+    /// The settings' window size, in the system's points: the window takes it at once, centred, frame and all, on the
+    /// desktop above the taskbar; in
+    /// fullscreen, which stays at the desktop's resolution, it is the size the window comes back to.
+    /// </summary>
+    private void SetWindowSize(Point points)
+    {
+        var density = ScreenCanvas.SystemDpiScale();
+        _windowSize = new Point((int)Math.Round(Math.Max(MinWidth, points.X) * density), (int)Math.Round(Math.Max(MinHeight, points.Y) * density));
+        if (_graphics.IsFullScreen)
+        {
+            return;
+        }
+
+        _graphics.PreferredBackBufferWidth = _windowSize.X;
+        _graphics.PreferredBackBufferHeight = _windowSize.Y;
+        _graphics.ApplyChanges();
+        var (work, frame) = DisplayModes.WorkArea();
+        Window.Position = DisplayModes.CentredPosition(_windowSize, work, frame);
     }
 
     /// <summary>Asks for a back buffer the size of the desktop, in real pixels.</summary>

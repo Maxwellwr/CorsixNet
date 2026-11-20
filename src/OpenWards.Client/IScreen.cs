@@ -36,4 +36,7 @@ internal interface IScreen : IDisposable
 
     /// <summary>Whether fullscreen was asked to be switched on or off since the last call (<c>UI:fullscreenHotkey</c>).</summary>
     bool TakeFullscreenToggleRequest() => false;
+
+    /// <summary>The window size the settings asked for since the last call, in the system's points, or null.</summary>
+    Point? TakeWindowSizeRequest() => null;
 }

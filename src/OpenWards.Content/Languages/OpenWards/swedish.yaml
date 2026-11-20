@@ -686,7 +686,7 @@ strings:
       confirm_new_map: 'Börja om med en tom karta? Ändringar som inte sparats går förlorade.'
       confirm_leave_editor: 'Lämna kartredigeraren? Ändringar som inte sparats går förlorade.'
       cannot_load_map: 'Kunde inte ladda kartan: %1%'
-      settings_saved: 'Inställningarna är sparade; skärmstorleken ändras vid nästa start'
+      settings_saved: 'Inställningarna är sparade'
       edit_room_hint: 'Klicka på ett rum för att ändra det; högerklick eller Esc avbryter'
       place_staff_hint: 'Klicka på sjukhuset för att placera den nyanställda; högerklick eller Esc avbryter'
       paused_place_staff: 'Spelet är pausat: fortsätt det för att placera den nyanställda'

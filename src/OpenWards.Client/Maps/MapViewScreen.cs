@@ -4023,6 +4023,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     private bool _fullscreenToggleRequested;
 
+    /// <summary>The window size the graphics settings changed to, for the game to apply (in points), or null.</summary>
+    private Point? _windowSizeRequest;
+
     /// <summary>The network chat's lines already seen: a new one opens the chat window.</summary>
     private int _chatSeen;
 
@@ -4067,6 +4070,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     {
         var requested = _fullscreenToggleRequested;
         _fullscreenToggleRequested = false;
+        return requested;
+    }
+
+    /// <inheritdoc/>
+    public Point? TakeWindowSizeRequest()
+    {
+        var requested = _windowSizeRequest;
+        _windowSizeRequest = null;
         return requested;
     }
 
@@ -4416,7 +4427,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
 
     /// <summary>UIOptions's buttons: a settings dialog, whose Back opens the options again.</summary>
     private void OpenSettingsDialog(SettingsDialogKind kind) =>
-        _windows.Open(new SettingsDialog(kind, _config, ApplyConfig, () => _windows.Open(NewOptionsWindow()), FontChoices, _music.HasMusic ? () => _windows.Open(new JukeboxWindow(_music.Playlist.Count)) : null, WinMmMidiOutput.Ports));
+        _windows.Open(new SettingsDialog(kind, _config, ApplyConfig, () => _windows.Open(NewOptionsWindow()), FontChoices, _music.HasMusic ? () => _windows.Open(new JukeboxWindow(_music.Playlist.Count)) : null, WinMmMidiOutput.Ports, DisplayModes.Available, ScreenCanvas.SystemDpiScale()));
 
     /// <summary>
     /// The system's fonts with every letter of the language's translation, for the options window's font choice, empty
@@ -4943,6 +4954,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             _fullscreenToggleRequested = true;
         }
 
+        if (config.Width != _config.Width || config.Height != _config.Height)
+        {
+            // The window size, too, takes effect at once (CorsixTH's setVideoMode), not after a restart.
+            _windowSizeRequest = new Point(config.Width, config.Height);
+        }
+
         _config = config;
         if (savesChanged)
         {
@@ -5002,7 +5019,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
-        ShowNotice(UiText.Get("openwards.status.settings_saved", "Settings saved; the screen size changes on the next start"));
+        ShowNotice(UiText.Get("openwards.status.settings_saved", "Settings saved"));
     }
 
     /// <summary>

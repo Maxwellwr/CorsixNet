@@ -665,7 +665,7 @@ strings:
       confirm_new_map: 'Begynne på nytt med et tomt kart? Endringer som ikke er lagret, går tapt.'
       confirm_leave_editor: 'Forlate kartredigereren? Endringer som ikke er lagret, går tapt.'
       cannot_load_map: 'Kunne ikke laste inn kartet: %1%'
-      settings_saved: 'Innstillingene er lagret; skjermstörrelsen endres ved neste oppstart'
+      settings_saved: 'Innstillingene er lagret'
       edit_room_hint: 'Klikk på et rom for å endre det; höyreklikk eller Esc avbryter'
       place_staff_hint: 'Klikk på sykehuset for å plassere den nyansatte; höyreklikk eller Esc avbryter'
       paused_place_staff: 'Spillet er satt på pause: fortsett det for å plassere den nyansatte'

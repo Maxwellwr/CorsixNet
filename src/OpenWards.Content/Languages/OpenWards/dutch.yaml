@@ -587,7 +587,7 @@ strings:
       confirm_new_map: 'Opnieuw beginnen met een lege kaart? Niet opgeslagen wijzigingen gaan verloren.'
       confirm_leave_editor: 'De kaarteditor verlaten? Niet opgeslagen wijzigingen gaan verloren.'
       cannot_load_map: 'Kaart laden mislukt: %1%'
-      settings_saved: 'Instellingen opgeslagen; de schermgrootte verandert bij de volgende start'
+      settings_saved: 'Instellingen opgeslagen'
       edit_room_hint: 'Klik op een kamer om hem te wijzigen; rechts klikken of Esc annuleert'
       place_staff_hint: 'Klik in het ziekenhuis om het nieuwe personeelslid neer te zetten; rechts klikken of Esc annuleert'
       paused_place_staff: 'Het spel staat op pauze: hef de pauze op om het nieuwe personeelslid neer te zetten'

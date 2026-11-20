@@ -660,7 +660,7 @@ strings:
       confirm_new_map: '空のマップでやり直しますか？保存していない変更は失われます。'
       confirm_leave_editor: 'マップエディターを終了しますか？保存していない変更は失われます。'
       cannot_load_map: 'マップを読み込めません：%1%'
-      settings_saved: '設定を保存しました。画面サイズは次回の起動から変わります'
+      settings_saved: '設定を保存しました'
       edit_room_hint: '部屋をクリックして編集。右クリックか Esc でキャンセル'
       place_staff_hint: '病院内をクリックして新しい職員を置きます。右クリックか Esc でキャンセル'
       paused_place_staff: 'ゲームは一時停止中です。新しい職員を置くには再開してください'

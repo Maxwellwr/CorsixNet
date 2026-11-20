@@ -519,7 +519,7 @@ strings:
       confirm_new_map: '¿Empezar de nuevo con un mapa vacío? Se perderán los cambios no guardados.'
       confirm_leave_editor: '¿Salir del editor de mapas? Se perderán los cambios no guardados.'
       cannot_load_map: 'No se pudo cargar el mapa: %1%'
-      settings_saved: 'Ajustes guardados; el tamaño de pantalla cambia al volver a iniciar'
+      settings_saved: 'Ajustes guardados'
       edit_room_hint: 'Haz clic en una sala para editarla; clic derecho o Esc cancela'
       place_staff_hint: 'Haz clic en el hospital para colocar al nuevo empleado; clic derecho o Esc cancela'
       paused_place_staff: 'El juego está en pausa: quítala para colocar al nuevo empleado'
