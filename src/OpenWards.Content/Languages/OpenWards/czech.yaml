@@ -516,7 +516,7 @@ strings:
       confirm_new_map: 'Začít znovu s prázdnou mapou? Neuložené změny se ztratí.'
       confirm_leave_editor: 'Opustit editor map? Neuložené změny se ztratí.'
       cannot_load_map: 'Mapu nelze nahrát: %1%'
-      settings_saved: 'Nastavení uloženo; velikost obrazovky se změní při příštím spuštění'
+      settings_saved: 'Nastavení uloženo'
       edit_room_hint: 'Klepnutím na místnost ji upravíte; pravé tlačítko nebo Esc ruší'
       place_staff_hint: 'Klepnutím do nemocnice umístíte nového zaměstnance; pravé tlačítko nebo Esc ruší'
       paused_place_staff: 'Hra je pozastavena: zrušte pauzu, chcete-li umístit nového zaměstnance'

@@ -1,3 +1,4 @@
+using Microsoft.Xna.Framework;
 using OpenWards.Client.Rendering;
 using OpenWards.Client.Ui.Windows;
 using OpenWards.Content.Settings;
@@ -49,5 +50,23 @@ public class DisplayModesTests
         dialog.Settings()[1].Change(1);
 
         Assert.Equal((1920, 1200), (dialog.Config.Width, dialog.Config.Height));
+    }
+
+    [Fact]
+    public void AtADisplayScaleSizesSmallerThanTheSmallestWindowInPixelsAreLeftOut()
+    {
+        var sizes = DisplayModes.WindowSizes([(640, 480), (800, 600), (1024, 768), (1920, 1200)], (2546, 1484), 1.5);
+
+        Assert.Equal([(1024, 768), (1920, 1200)], sizes);
+    }
+
+    [Fact]
+    public void AWindowIsCentredFrameAndAllAndItsTitleBarStaysOnTheScreen()
+    {
+        var work = new Rectangle(0, 0, 2560, 1536);
+        var frame = new Rectangle(-12, -46, 24, 58);
+
+        Assert.Equal(new Point(320, 185), DisplayModes.CentredPosition(new Point(1920, 1200), work, frame));
+        Assert.Equal(new Point(12, 46), DisplayModes.CentredPosition(new Point(2560, 1600), work, frame));
     }
 }

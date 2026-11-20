@@ -166,7 +166,8 @@ internal sealed class OpenWardsGame : Game
     }
 
     /// <summary>
-    /// The settings' window size, in the system's points: the window takes it at once, centred on the screen; in
+    /// The settings' window size, in the system's points: the window takes it at once, centred, frame and all, on the
+    /// desktop above the taskbar; in
     /// fullscreen, which stays at the desktop's resolution, it is the size the window comes back to.
     /// </summary>
     private void SetWindowSize(Point points)
@@ -181,8 +182,8 @@ internal sealed class OpenWardsGame : Game
         _graphics.PreferredBackBufferWidth = _windowSize.X;
         _graphics.PreferredBackBufferHeight = _windowSize.Y;
         _graphics.ApplyChanges();
-        var desktop = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-        Window.Position = new Point(Math.Max(0, (desktop.Width - _windowSize.X) / 2), Math.Max(0, (desktop.Height - _windowSize.Y) / 2));
+        var (work, frame) = DisplayModes.WorkArea();
+        Window.Position = DisplayModes.CentredPosition(_windowSize, work, frame);
     }
 
     /// <summary>Asks for a back buffer the size of the desktop, in real pixels.</summary>

@@ -5019,7 +5019,7 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             }
         }
 
-        ShowNotice(UiText.Get("openwards.status.settings_saved", "Settings saved; the screen size changes on the next start"));
+        ShowNotice(UiText.Get("openwards.status.settings_saved", "Settings saved"));
     }
 
     /// <summary>

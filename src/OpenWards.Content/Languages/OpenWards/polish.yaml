@@ -690,7 +690,7 @@ strings:
       confirm_new_map: 'Zacząć od nowa z pustą mapą? Niezapisane zmiany przepadną.'
       confirm_leave_editor: 'Wyjść z edytora map? Niezapisane zmiany przepadną.'
       cannot_load_map: 'Nie można wczytać mapy: %1%'
-      settings_saved: 'Ustawienia zapisane; rozmiar ekranu zmieni się przy następnym uruchomieniu'
+      settings_saved: 'Ustawienia zapisane'
       edit_room_hint: 'Kliknij pomieszczenie, aby je edytować; prawy przycisk lub Esc anuluje'
       place_staff_hint: 'Kliknij w szpitalu, aby postawić nowego pracownika; prawy przycisk lub Esc anuluje'
       paused_place_staff: 'Gra jest wstrzymana: wznów ją, aby postawić nowego pracownika'

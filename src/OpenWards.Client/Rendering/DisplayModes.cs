@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace OpenWards.Client.Rendering;
@@ -6,13 +8,16 @@ namespace OpenWards.Client.Rendering;
 /// The window sizes the graphics settings offer: the screen modes the monitor reports, as CorsixTH's own list is a fixed
 /// one for a screen of ordinary size (graphics_settings.lua) and offered sizes this screen cannot show.
 /// </summary>
-internal static class DisplayModes
+internal static partial class DisplayModes
 {
-    /// <summary>The monitor's modes, in real pixels, that fit on the desktop; the fallback list when it reports none.</summary>
+    /// <summary>
+    /// The monitor's modes, in real pixels, that a window can take: no larger than the desktop's free area less the
+    /// window's frame, nor smaller than the game's smallest window at the display scale. The fallback list when the
+    /// monitor reports none.
+    /// </summary>
     public static IReadOnlyList<(int Width, int Height)> Available()
     {
         var adapter = GraphicsAdapter.DefaultAdapter;
-        var desktop = adapter.CurrentDisplayMode;
         List<(int Width, int Height)> reported;
         try
         {
@@ -23,19 +28,84 @@ internal static class DisplayModes
             reported = [];
         }
 
-        return WindowSizes(reported, (desktop.Width, desktop.Height));
+        var (work, frame) = WorkArea();
+        return WindowSizes(reported, (work.Width - frame.Width, work.Height - frame.Height), ScreenCanvas.SystemDpiScale());
     }
 
     /// <summary>
-    /// The sizes from <paramref name="modes"/> no larger than <paramref name="desktop"/> and no smaller than the game's
-    /// smallest window, each once, smallest first; <paramref name="fallback"/> (likewise trimmed) when none are left.
+    /// The desktop's area free of the taskbar, in real pixels, and how much a window's frame and title bar add to its
+    /// inside (<see cref="Rectangle.X"/> and <see cref="Rectangle.Y"/> the frame's left and top, negative). Off Windows,
+    /// the whole desktop and no frame.
     /// </summary>
-    internal static List<(int Width, int Height)> WindowSizes(IEnumerable<(int Width, int Height)> modes, (int Width, int Height) desktop, IEnumerable<(int Width, int Height)>? fallback = null)
+    public static (Rectangle Work, Rectangle Frame) WorkArea()
     {
+        var desktop = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+        var whole = new Rectangle(0, 0, desktop.Width, desktop.Height);
+        if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 14393))
+        {
+            return (whole, Rectangle.Empty);
+        }
+
+        try
+        {
+            var area = default(Rect);
+            var work = SystemParametersInfoW(SpiGetWorkArea, 0, ref area, 0) && area.Right > area.Left && area.Bottom > area.Top
+                ? new Rectangle(area.Left, area.Top, area.Right - area.Left, area.Bottom - area.Top)
+                : whole;
+            var frame = default(Rect);
+            return AdjustWindowRectExForDpi(ref frame, OverlappedWindow, false, 0, (uint)Math.Round(ScreenCanvas.SystemDpiScale() * 96))
+                ? (work, new Rectangle(frame.Left, frame.Top, frame.Right - frame.Left, frame.Bottom - frame.Top))
+                : (work, Rectangle.Empty);
+        }
+        catch (Exception e) when (e is DllNotFoundException or EntryPointNotFoundException)
+        {
+            return (whole, Rectangle.Empty);
+        }
+    }
+
+    /// <summary>
+    /// Where a window's inside of <paramref name="client"/> pixels goes for the whole window, frame and all, to stand in
+    /// the middle of <paramref name="work"/>; its title bar is kept on the screen.
+    /// </summary>
+    internal static Point CentredPosition(Point client, Rectangle work, Rectangle frame)
+    {
+        var x = work.X + ((work.Width - client.X - frame.Width) / 2) - frame.X;
+        var y = work.Y + ((work.Height - client.Y - frame.Height) / 2) - frame.Y;
+        return new Point(Math.Max(work.X - frame.X, x), Math.Max(work.Y - frame.Y, y));
+    }
+
+    private const uint SpiGetWorkArea = 0x0030;
+    private const uint OverlappedWindow = 0x00CF0000;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Rect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SystemParametersInfoW(uint action, uint parameter, ref Rect value, uint flags);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool AdjustWindowRectExForDpi(ref Rect rect, uint style, [MarshalAs(UnmanagedType.Bool)] bool menu, uint extendedStyle, uint dpi);
+
+    /// <summary>
+    /// The sizes from <paramref name="modes"/> no larger than <paramref name="desktop"/> and no smaller than the game's
+    /// smallest window (in points, so in pixels times <paramref name="density"/>), each once, smallest first;
+    /// <paramref name="fallback"/> (likewise trimmed) when none are left.
+    /// </summary>
+    internal static List<(int Width, int Height)> WindowSizes(IEnumerable<(int Width, int Height)> modes, (int Width, int Height) desktop, double density = 1, IEnumerable<(int Width, int Height)>? fallback = null)
+    {
+        var smallest = ToPixels((OpenWardsGame.MinWidth, OpenWardsGame.MinHeight), density);
         List<(int Width, int Height)> Fit(IEnumerable<(int Width, int Height)> sizes) =>
         [
             .. sizes
-                .Where(size => size.Width >= OpenWardsGame.MinWidth && size.Height >= OpenWardsGame.MinHeight)
+                .Where(size => size.Width >= smallest.Width && size.Height >= smallest.Height)
                 .Where(size => desktop.Width <= 0 || desktop.Height <= 0 || (size.Width <= desktop.Width && size.Height <= desktop.Height))
                 .Distinct()
                 .OrderBy(size => size.Width * size.Height)

@@ -297,8 +297,7 @@ internal sealed record LanguageFontChoices(string Default, IReadOnlyList<(string
 /// The options window (CorsixTH's <c>dialogs/resizables/options.lua</c> with <c>customise.lua</c> and
 /// <c>sound_setting.lua</c>): sound effects and their volume, screen shake, edge scrolling, scroll speeds and the
 /// autosave frequency, and the language among the installed ones (CorsixTH's <c>options.lua</c> language list). Changes
-/// are kept in a draft until Apply, which saves <c>config.yaml</c> and uses them at once; the screen size takes effect on
-/// the next start. Every language gets a choice of font among the system's fonts that have its letters
+/// are kept in a draft until Apply, which saves <c>config.yaml</c> and uses them at once. Every language gets a choice of font among the system's fonts that have its letters
 /// (<c>unicode_fonts</c>): a language the game's bitmap font draws keeps that font by default ("Game font"), one drawn
 /// with a TrueType font leaves it to be found as before ("System"). The language and the font are
 /// tried out as soon as they are stepped to, as CorsixTH's language list changes the language on a click; closing the
