@@ -38,7 +38,7 @@ steps:
       overwrite_save: Il y a déjà une partie sauvegardée ici. Voulez-vous vraiment l'écraser ?
       delete_room: Voulez-vous vraiment détruire cette salle ?
       sack_staff: Voulez-vous vraiment licencier ce membre du personnel ?
-      needs_restart: Changer ce paramètre va nécessiter un redémarrage de CorsixTH. Tout progrès non sauvegardé sera perdu. Voulez-vous vraiment faire cela ?
+      needs_restart: Changer ce paramètre va nécessiter un redémarrage de OpenWards. Tout progrès non sauvegardé sera perdu. Voulez-vous vraiment faire cela ?
       abort_edit_room: Vous êtes actuellement en train de construire ou d'éditer une pièce. Si tous les objets requis sont placés, elle sera validée, mais sinon elle sera détruite. Continuer ?
       maximum_screen_size: La taille de l'écran que vous avez entrée est supérieure à 3000 x 2000. Des plus hautes résolutions sont possibles, mais il faudra un meilleur matériel afin de maintenir un taux de trame jouable. Voulez-vous vraiment continuer ?
       remove_destroyed_room: Souhaitez-vous supprimer la salle pour %d $ ?
@@ -146,7 +146,7 @@ steps:
         exit: Non, non, SVP, ne quittez pas !
         map_edit: Créer une carte personnalisée
         custom_campaign: Jouer une campagne créée par la communauté
-        quit: Vous êtes sur le point de quitter CorsixTH. Voulez-vous vraiment faire cela ?
+        quit: Vous êtes sur le point de quitter OpenWards. Voulez-vous vraiment faire cela ?
       load_game_window:
         load_game: Charger la partie %s
         load_game_number: Charger la partie %d
@@ -213,8 +213,8 @@ steps:
         back: Fermer la fenêtre
       customise_window:
         movies: Sélectionnez si les cinématiques doivent être joués.
-        play_intro: Passer la cinématique d'introduction lorsque vous démarrez le jeu. Le contrôle des cinématiques doit être activé si vous jouez la cinématique d'introduction à chaque fois que vous chargez CorsixTH
-        allow_user_actions_while_paused: Dans Theme Hospital, le joueur ne pouvait utiliser le menu supérieur que si le jeu était en pause. Il s'agit également du paramètre par défaut dans CorsixTH, mais activant cette option, il est possible de construire des salles ou prendre des objets lorsque le jeu est en pause
+        play_intro: Passer la cinématique d'introduction lorsque vous démarrez le jeu. Le contrôle des cinématiques doit être activé si vous jouez la cinématique d'introduction à chaque fois que vous chargez OpenWards
+        allow_user_actions_while_paused: Dans Theme Hospital, le joueur ne pouvait utiliser le menu supérieur que si le jeu était en pause. Il s'agit également du paramètre par défaut dans OpenWards, mais activant cette option, il est possible de construire des salles ou prendre des objets lorsque le jeu est en pause
         alien_dna_only_by_emergency: Comme il y a des animations appropriées, nous avons fait de sorte que les patients avec l'ADN extraterrestre montrent seulement comme des situations d'urgence. Désactivez cette option pour obtenir cas de l'ADN extraterrestre visites régulières
         disable_fractured_bones_females: En raison de la faible qualité de l'animation, il n'y a pas de patientes avec des fractures. Désactivez cette option pour recevoir des femmes avec des fractures.
         enable_avg_contents: Si vous voulez que le jeu se rappelle des articles supplémentaires que vous avez tendance à normalement magasiner pour une nouvelle salle, activer cette option
@@ -225,7 +225,7 @@ steps:
         back: Fermer ce menu et revenir au menu d'options
       folders_window:
         browse: Parcourir l'emplacement du dossier
-        data_location: Le répertoire d'origine de l'installation de Theme Hospital, qui est requis pour faire fonctionner CorsixTH
+        data_location: Le répertoire d'origine de l'installation de Theme Hospital, qui est requis pour faire fonctionner OpenWards
         font_location: "Emplacement d'un fichier de police qui est capable d'afficher des caractères Unicode requises par votre langue. Si aucun emplacement n'est spécifié vous ne serez pas en mesure de choisir des langues qui ont des caractères que le jeu original ne peut pas fournir. Exemple : Russe et Chinois"
         savegames_location: Par défaut, le répertoire de sauvegardes est à côté du fichier de configuration et sera utilisé pour stocker les sauvegardes. Si cela n'est pas approprié vous pouvez modifier ce répertoire.
         screenshots_location: Par défaut, les captures d'écran sont stockés dans un dossier avec le fichier de configuration. Si cela ne convient pas vous pouvez choisir votre propre dossier.
@@ -325,8 +325,8 @@ steps:
           delete_message: Cliquer pour supprimer tous les messages
         close: Fermer la fenêtre Récapitulatif du conseiller
       update_window:
-        download: Accédez à la page de téléchargement pour la toute dernière version de CorsixTH
-        ignore: Ignorer cette mise à jour pour l'instant. Vous serez averti à nouveau lorsque vous ouvrez CorsixTH de nouveau
+        download: Accédez à la page de téléchargement pour la toute dernière version de OpenWards
+        ignore: Ignorer cette mise à jour pour l'instant. Vous serez averti à nouveau lorsque vous ouvrez OpenWards de nouveau
       hotkey_window:
         button_accept: Accepter et enregistrer les assignations des touches de raccourci
         button_recallPosKeys: Définir les touches pour stocker et rappeler les positions de la caméra
@@ -832,8 +832,8 @@ steps:
       players_3: '  3 JOUEURS  '
       players_4: '  4 JOUEURS  '
     install:
-      title: '----------------------------- Installation de CorsixTH -----------------------------'
-      th_directory: CorsixTH nécessite une copie des données du jeu Theme Hospital originel (ou la démo) pour fonctionner. Veuillez utiliser le sélecteur ci-dessous pour indiquer le dossier d'installation de Theme Hospital.
+      title: '----------------------------- Installation de OpenWards -----------------------------'
+      th_directory: OpenWards nécessite une copie des données du jeu Theme Hospital originel (ou la démo) pour fonctionner. Veuillez utiliser le sélecteur ci-dessous pour indiquer le dossier d'installation de Theme Hospital.
       ok: OK
       exit: Quitter
       cancel: Annuler
@@ -1000,11 +1000,11 @@ steps:
       could_not_load_campaign: 'Échec du chargement de la campagne : %s'
       dialog_empty_queue: Désolé, un être humain vient d'avoir une file d'actions vide, ce qui signifie qu'il ne savait pas quoi faire ensuite. Veuillez consulter la fenêtre de commande pour des informations plus détaillées. Un dialogue avec l'individu fautif a été ouvert. Souhaitez-vous qu'il quitte l'hôpital ?
       compatibility_error:
-        new_in_old: Désolé, cette sauvegarde a été créée avec une version plus récente de CorsixTH et n'est pas compatible. Veuillez mettre à jour vers une version plus récente.
+        new_in_old: Désolé, cette sauvegarde a été créée avec une version plus récente de OpenWards et n'est pas compatible. Veuillez mettre à jour vers une version plus récente.
         full_in_demo: Désolé, vous ne pouvez pas ouvrir une sauvegarde de jeu complet avec les fichiers de démonstration chargés. Veuillez mettre à jour votre paramètre de dossier TH Data.
         demo_in_full: Désolé, vous ne pouvez pas ouvrir une sauvegarde de démonstration avec les fichiers de jeu complet chargés. Veuillez mettre à jour votre paramètre de dossier TH Data.
     information:
-      custom_game: Bienvenue dans CorsixTH. Amusez-vous bien avec cette carte personnalisée !
+      custom_game: Bienvenue dans OpenWards. Amusez-vous bien avec cette carte personnalisée !
       no_custom_game_in_demo: Désolé, mais dans la version démo vous ne pouvez jouer avec aucune des cartes personnalisées.
       cannot_restart: Malheureusement cette partie personnalisée a été sauvegardée avant que la fonctionnalité de redémarrage soit implémentée.
       very_old_save: Il y a eu beaucoup de mises à jour du jeu depuis que vous avez commencé ce niveau. Pour être sûr que tout fonctionne comme prévu, pensez à recommencer le niveau.
@@ -1027,7 +1027,7 @@ steps:
       - Avez-vous essayé d'entrer le numéro d'urgence Européen (112) dans le fax ? Vérifiez que vous avez du son !
       - Vous pouvez ajuster certains paramètres tels que la résolution et la langue dans la fenêtre d'options accessible à la fois depuis le menu principal et pendant le jeu.
       - Vous avez choisi une autre langue que l'anglais, mais des textes en anglais s'affichent un peu partout ? Aidez-nous à traduire les textes manquants dans votre langue !
-      - L'équipe de CorsixTH cherche du renfort ! Vous êtes intéressé pour coder, traduire ou créer des graphismes pour CorsixTH ? Contactez-nous sur notre serveur Discord, Sub-Reddit ou serveur Matrix. Les liens sont sur notre site internet (CorsixTH.com).
+      - L'équipe de OpenWards cherche du renfort ! Vous êtes intéressé pour coder, traduire ou créer des graphismes pour OpenWards ? Contactez-nous sur notre serveur Discord, Sub-Reddit ou serveur Matrix. Les liens sont sur notre site internet (CorsixTH.com).
       - "Si vous rencontrez un bug, n'hésitez pas à nous le signaler à cette adresse : th-issues.corsix.org"
       - Chaque niveau possède des objectifs qu'il vous faudra remplir pour pouvoir passer au suivant. Vérifiez la fenêtre de statuts pour voir votre progression dans les objectifs du niveau.
       - Si vous voulez éditer ou détruire une pièce, vous pouvez le faire avec le bouton d'édition situé sur la barre d'outils inférieure.
@@ -1142,10 +1142,10 @@ steps:
       player_count: COMPTE DE JOUEURS
     warnings:
       levelfile_variable_is_deprecated: "Remarque: Le niveau '%s' contient une définition de variable obsolète dans le fichier de niveau. '%LevelFile' a été renommé '%MapFile'. Veuillez aviser le créateur de la carte pour mettre à jour le niveau."
-      newersave: Avertissement, vous avez chargé une sauvegarde d'une version plus récente de CorsixTH. Il n'est pas recommandé de continuer car des plantages peuvent survenir. Jouez à vos propres risques.
+      newersave: Avertissement, vous avez chargé une sauvegarde d'une version plus récente de OpenWards. Il n'est pas recommandé de continuer car des plantages peuvent survenir. Jouez à vos propres risques.
     hotkeys_file_err:
       file_err_02: ", ou utilisez l'option de ligne de commande --hotkeys-file=nomdufichier pour spécifier un fichier inscriptible. Pour référence, l'erreur lors du chargement du fichier de raccourcis était : "
-      file_err_01: "Impossible de charger le fichier hotkeys.txt. Assurez-vous que CorsixTH a l'autorisation de lecture/écriture "
+      file_err_01: "Impossible de charger le fichier hotkeys.txt. Assurez-vous que OpenWards a l'autorisation de lecture/écriture "
     hotkey_window:
       button_accept: Accepter
       button_back: Retour

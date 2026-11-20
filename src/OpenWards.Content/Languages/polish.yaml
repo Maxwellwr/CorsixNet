@@ -87,7 +87,7 @@ steps:
       - Czy próbowałeś wpisać Europejski numer alarmowy (112) na faxie? Upewnij się, że masz włączony dźwięk!
       - Niektóre ustawienia gry, takie jak rozdzielczość oraz język, możesz dostosować w oknie opcji, dostępnym w głównym menu gry.
       - Wybrano język inny niż angielski jednak cały tekst jest wyświetlany po angielsku? Pomóż nam przetłumaczyć brakujące teksty na Twój język ojczysty!
-      - Ekipa CorsixTH poszukuje wzmocnień! Czy jesteś zainteresowany kodowaniem, tłumaczeniem lub tworzeniem grafiki dla CorsixTH? Skontaktuj się z nami na naszym forum, liście email lub kanale IRC (corsix-th na freenode).
+      - Ekipa OpenWards poszukuje wzmocnień! Czy jesteś zainteresowany kodowaniem, tłumaczeniem lub tworzeniem grafiki dla OpenWards? Skontaktuj się z nami na naszym forum, liście email lub kanale IRC (corsix-th na freenode).
       - 'Jeśli znajdziesz jakiś błąd, zgłoś go w naszym systemie: th-issues.corsix.org'
       - Na każdym poziomie należy spełnić pewne wymagania, zanim będzie można przejść do kolejnego. Sprawdź, w oknie statusu, aby zobaczyć postęp w realizacji celów poziou.
       - Jeśli chcesz edytować lub usunąć istniejące pomieszczenia, można to zrobić za pomocą przycisku edycji pomieszczenia znajdującego się w pasku narzędzi na dole.
@@ -540,7 +540,7 @@ steps:
       options_window:
         folder: Opcje folderów
         customise: Dodatkowe ustawienia modifikujące twoją rozgrywkę
-        data_location: Katalog z zainstalowaną oryginalną grą Theme Hospital, która wymagana jest do uruchomienia CorsixTH
+        data_location: Katalog z zainstalowaną oryginalną grą Theme Hospital, która wymagana jest do uruchomienia OpenWards
         font_location: 'Lokalizacja pliku z czcionką, która jest w stanie wyświetlić znaki wymagane przez twój język. Jeżeli nie będzie ona wybrana, wybór języka obsługującego inne znaki niż oryginalna gra nie będzie możliwy. Przykłady: Rosyjski i Chiński'
         language: Język, w którym wyświetlone zostaną teksty gry
         select_language: Wybierz język gry
@@ -560,7 +560,7 @@ steps:
         audio_toggle: Włącz/wyłącz
       folders_window:
         browse: Przeglądaj foldery
-        data_location: Folder z orginalną grą Theme Hospital, wymagany do uruchomienia CorsixTH
+        data_location: Folder z orginalną grą Theme Hospital, wymagany do uruchomienia OpenWards
         font_location: 'Ścieżka do pliku czcionki będącej w stanie wyświetlić znaki Unicode wymagane przez twój język. Bez podania czcionki nie będzie możliwe wybrania języka, który używa znaki niewspierane przez orginalną grę. Przykład: Rosujski, Chinski, Polski.'
         savegames_location: Domyślnie folder 'Saves', w którym umieszczane są stany gry, leży obok pliku konfiguracyjnego. Jeśli to Ci nie odpowiada możesz wybrać swój własny folder.
         screenshots_location: Domyślnie folder 'Screenshots', w którym umieszczane są zrzuty ekranu, leży obok pliku konfiguracyjnego. Jeśli to Ci nie odpowiada możesz wybrać swój własny folder.
@@ -577,8 +577,8 @@ steps:
         back: Zamknij to menu i wróć do ustawień
       customise_window:
         movies: Globalne zarządzanie filmami pozwoli Tobie na wyłączenie wszystkich filmików
-        play_intro: Włącz lub wyłącz intro. Filmiki muszą być globalnie włączone jeśli chcesz oglądać intro przy każdym uruchomieniu CorsixTH
-        allow_user_actions_while_paused: W grze Theme Hospital gracz mógł jedynie używać górnego menu podczas pauzy. Jest to również domyślne ustawianie CorsixTH, ale przez włączenie tej opcji wszystko jest dozwolone podczas pauzy
+        play_intro: Włącz lub wyłącz intro. Filmiki muszą być globalnie włączone jeśli chcesz oglądać intro przy każdym uruchomieniu OpenWards
+        allow_user_actions_while_paused: W grze Theme Hospital gracz mógł jedynie używać górnego menu podczas pauzy. Jest to również domyślne ustawianie OpenWards, ale przez włączenie tej opcji wszystko jest dozwolone podczas pauzy
         volume: Jeśli przycisk ściszania otwiera również 'Teczkę z lekami' , włącz tę opcję aby zmienić skrót do 'Teczki...' na Shift + C
         alien_dna_only_by_emergency: Z powodu braku dobrych animacji dokonaliśmy zmian aby pacjęci z DNA Obcego domyślnie przybywali tylko z nagłych wypadków. Jeśli chcesz aby pacjensi z DNA Obcego mogli odwiedzać twój szpital nie tylko po nagłym wypadku wyłącz tę opcję
         disable_fractured_bones_females: Z powodu kiepskich animacji domyślnie wyłączyliśmy damskie modele pacjętów ze Zgruchotanymi Koścmi. Aby zezwolić, żeby pacjentki ze Zgruchotanymi koścmi odwiedzały twój szpital, wyłącz tę opcję
@@ -1362,8 +1362,8 @@ steps:
       treatment: Leczenie
     install:
       exit: Wyjście
-      th_directory: CorsixTH potrzebuje plików z originalnej gry Theme Hospital (lub dema), do poprawnego działania. Proszę użyć poniższego pola, w celu zlokalizowania zainstalowanej gry Theme Hospital.
-      title: '--------------------------------- Ustawienia CorsixTH ---------------------------------'
+      th_directory: OpenWards potrzebuje plików z originalnej gry Theme Hospital (lub dema), do poprawnego działania. Proszę użyć poniższego pola, w celu zlokalizowania zainstalowanej gry Theme Hospital.
+      title: '--------------------------------- Ustawienia OpenWards ---------------------------------'
     place_objects_window:
       pick_up_object: Kliknij na obiekt, aby go podnieść lub wybierz inną opcję
       place_objects_in_corridor: Rozmieść obiekty na korytarzu
@@ -1736,7 +1736,7 @@ steps:
       very_old_save: Zaszło sporo zmian w grze od czasu, gdy rozpoczęty został ten poziom. Aby mieć pewność, że wszystko działa jak należy, zaleca się rozpoczęcie poziomu od nowa.
       no_custom_game_in_demo: Przepraszamy ale w wersji demonstracyjnej nie można grać na niestandardowych mapach.
       cannot_restart: Niestety ta dodatkowa mapa była zapisana zanim wprowadzona została możliwość ponownego rozpoczynania gry.
-      custom_game: Witaj w CorsixTH. Życzymy dużo zabawy z dodatkowymi mapami!
+      custom_game: Witaj w OpenWards. Życzymy dużo zabawy z dodatkowymi mapami!
       level_lost:
         1: Pech! Nie udało Ci się ukończyć poziomu. Powodzenia następnym razem!
         2: 'Powód dla którego przegrałeś:'
@@ -2464,7 +2464,7 @@ steps:
       restart_level: Czy na pewno chcesz rozpocząć poziom od początku?
       delete_room: Czy na pewno chcesz usunąć ten gabinet?
       quit: Wybrałeś wyjście z gry. Czy na pewno chcesz zakończyć grę?
-      needs_restart: Zmiana tego ustawienia wymaga ponownego uruchomienia CorsixTH. Wszystkie niezapisane postępy zostaną utracone. Czy na pewno chcesz kontynuować?
+      needs_restart: Zmiana tego ustawienia wymaga ponownego uruchomienia OpenWards. Wszystkie niezapisane postępy zostaną utracone. Czy na pewno chcesz kontynuować?
       overwrite_save: Masz tu już zapisaną grę. Czy na pewno chcesz ją nadpisać?
       sack_staff: Czy na pewno chcesz zwolnić tę osobę?
       replace_machine: Czy na pewno chcesz wymienić %s za %d PLN?

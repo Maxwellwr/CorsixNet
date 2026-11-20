@@ -4,7 +4,7 @@ namespace OpenWards.Client.Tests;
 
 public sealed class UpdateCheckTests
 {
-    private static string Release(string tag, string url = "https://github.com/Maxwellwr/CorsixNet/releases/tag/v1.3.0", bool prerelease = false) =>
+    private static string Release(string tag, string url = "https://github.com/Maxwellwr/OpenWards/releases/tag/v1.3.0", bool prerelease = false) =>
         "{\"tag_name\":\"" + tag + "\",\"html_url\":\"" + url + "\",\"prerelease\":" + (prerelease ? "true" : "false") + ",\"body\":\"Faster.\\r\\nFixes.\"}";
 
     [Theory]
@@ -25,7 +25,7 @@ public sealed class UpdateCheckTests
 
         Assert.NotNull(update);
         Assert.Equal(("1.2.0", "1.3.0"), (update.CurrentVersion, update.NewVersion));
-        Assert.Equal("https://github.com/Maxwellwr/CorsixNet/releases/tag/v1.3.0", update.DownloadUrl);
+        Assert.Equal("https://github.com/Maxwellwr/OpenWards/releases/tag/v1.3.0", update.DownloadUrl);
         Assert.Equal("Faster.\r\nFixes.", update.Description);
     }
 
@@ -51,7 +51,7 @@ public sealed class UpdateCheckTests
     {
         var host = new WindowTestHost();
         string? opened = null;
-        var update = new UpdateInfo("1.2.0", "1.3.0", "Faster.", "https://github.com/Maxwellwr/CorsixNet/releases/tag/v1.3.0");
+        var update = new UpdateInfo("1.2.0", "1.3.0", "Faster.", "https://github.com/Maxwellwr/OpenWards/releases/tag/v1.3.0");
         var window = new UpdateWindow(update, url => opened = url);
         host.Open(window);
 

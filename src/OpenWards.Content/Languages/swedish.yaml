@@ -76,7 +76,7 @@ steps:
         options: Fixa till dina inställningar
         map_edit: Starta kartredigeraren för att skapa din egen karta
         exit: Nej! Du vill väl inte sluta redan?
-        quit: Du håller på att avsluta CorsixTH. Är du säker på att du vill det?
+        quit: Du håller på att avsluta OpenWards. Är du säker på att du vill det?
       load_game_window:
         load_game: Ladda %s
         load_game_number: Ladda spel %d
@@ -117,15 +117,15 @@ steps:
         audio_toggle: Slå av eller på
       customise_window:
         movies: Välj om filmer ska spelas överhuvudtaget
-        play_intro: Skippa introfilmen när du startar spelet. Global filmkontroll måste vara påslagen om du spela introfilmen varje gång du laddar CorsixTH
-        allow_user_actions_while_paused: I Theme Hospital fick spelaren bara använda verktygsfältet längst upp när spelet var pausat. Så är det i CorsixTH också såvida du inte aktiverar funktionen att bygga även när spelet är pausat här
+        play_intro: Skippa introfilmen när du startar spelet. Global filmkontroll måste vara påslagen om du spela introfilmen varje gång du laddar OpenWards
+        allow_user_actions_while_paused: I Theme Hospital fick spelaren bara använda verktygsfältet längst upp när spelet var pausat. Så är det i OpenWards också såvida du inte aktiverar funktionen att bygga även när spelet är pausat här
         alien_dna_only_by_emergency: Eftersom det inte finns ordentliga animeringar har vi gjort så att patienter med utomjordiskt DNA endast dyker upp som akutfall. Stäng av det här för att kunna få utomjordiskt DNA-fall även som vanliga besök
         disable_fractured_bones_females: På grund av en dålig animering har vi stängt av kvinnliga patienter med frakturer (Krossad patient). Stäng av det här, så kommer det att dyka upp även kvinnor med den åkomman
         enable_avg_contents: Om du vill att spelet ska komma ihåg vilka extra föremål du normalt sett brukar handla till nya rum, slå på detta alternativ
         back: Stäng den här menyn och gå tillbaka till Alternativmenyn
       folders_window:
         browse: Bläddra efter mappsökväg
-        data_location: Mapp där originalspelet Theme Hospital finns. Krävs för att spela CorsixTH
+        data_location: Mapp där originalspelet Theme Hospital finns. Krävs för att spela OpenWards
         font_location: Sökväg till en typsnittsfil som kan visa Unicode-tecken som krävs för ditt språk. Om detta inte är specificerat kommer du inte att kunna välja sådana språk, till exempel ryska och kinesiska
         savegames_location: Som standard läggs sparade spel i en mapp som ligger bredvid konfigurationsfilen. Om det inte fungerar kan du välja en egen här
         screenshots_location: Skärmbilder sparas som standard i en mapp bredvid konfigurationsfilen. Här kan du välja en annan mapp istället
@@ -188,8 +188,8 @@ steps:
         assigned: Denna ruta är markerad om någon har fått uppgiften tilldelad till sig.
         close: Stäng anropsklarerardialogen
       update_window:
-        download: gå till nedladdningssidan där du hittar den absolut senaste versionen av CorsixTH
-        ignore: Skippa updateringen just nu. Du kommer att få en ny notis nästa gång du öppnar CorsixTH
+        download: gå till nedladdningssidan där du hittar den absolut senaste versionen av OpenWards
+        ignore: Skippa updateringen just nu. Du kommer att få en ny notis nästa gång du öppnar OpenWards
     adviser:
       staff_place_advice:
         only_psychiatrists: Läkare utan psykiatrisk examen kan inte arbeta inom psykiatrin.
@@ -363,8 +363,8 @@ steps:
       campaign_completed: Otroligt! Du lyckades med alla nivåer. Nu är det bara att mysa och njuta av att fylla forum överallt på nätet om dina bedrifter. Lycka till!
       campaign_level_missing: 'Ledsen, men det verkar som att nästa nivå på den här kampanjen saknas. (Namn: %s)'
     install:
-      title: '--------------------------------- CorsixTH Setup ---------------------------------'
-      th_directory: CorsixTH behöver en kopia av filerna från det ursprungliga spelet (eller dess demo) för att kunna köras. Använd väljaren nedan för att lokalisera mappen där Theme Hospital installerats.
+      title: '--------------------------------- OpenWards Setup ---------------------------------'
+      th_directory: OpenWards behöver en kopia av filerna från det ursprungliga spelet (eller dess demo) för att kunna köras. Använd väljaren nedan för att lokalisera mappen där Theme Hospital installerats.
       ok: OK
       exit: Avsluta
       cancel: Avbryt
@@ -464,7 +464,7 @@ steps:
     warnings:
       levelfile_variable_is_deprecated: "Notera: Nivån '%s' innehåller en föråldrad variabeldefinition i nivåfilen.'%LevelFile' har bytt namn till '%MapFile'. Meddela nivåskaparen att uppdatera nivån."
     information:
-      custom_game: Välkommen till CorsixTH. Ha nu riktigt kul med den här specialnivån!
+      custom_game: Välkommen till OpenWards. Ha nu riktigt kul med den här specialnivån!
       no_custom_game_in_demo: Ledsen, men det går inte att spela enskilda nivåer med demofilerna.
       cannot_restart: Tyvärr sparades detta spel innan funktionen att starta om hade implementerats.
       very_old_save: Det har hänt en hel del med spelet sedan du startade den här nivån. För att vara säker på att allt fungerar som det är tänkt kan det vara bra att överväga att starta om nivån.
@@ -487,7 +487,7 @@ steps:
       - Har du testat att slå numret till SOS Alarm på faxen? Se till att ljudet är påslaget...
       - Det går att göra vissa inställningar som till exempel upplösning och språk i alternativmenyn som finns både i huvudmenyn och inuti spelet.
       - Hittar du en massa text på engelska i spelet? Hjälp oss översätta färdigt till Svenska!
-      - Teamet bakom CorsixTH söker förstärkning! Vill du koda, översätta eller skapa grafik till spelet? Kontakta oss i forumet, på mejllistan eller i IRC-kanalen (corsix-th at freenode).
+      - Teamet bakom OpenWards söker förstärkning! Vill du koda, översätta eller skapa grafik till spelet? Kontakta oss i forumet, på mejllistan eller i IRC-kanalen (corsix-th at freenode).
       - Om du hittar en bugg, rapportera den gärna i vår bugghanterare på adressen th-issues.corsix.org.
       - Varje nivå har vissa krav som ska uppfyllas innan du kan gå vidare till nästa. Kolla statusfönstret för att se hur nära målen du är.
       - Om du vill ändra eller ta bort ett existerande rum kan du göra det med hjälp av ändra rum-knappen i panelen längst ner (saxen).

@@ -73,7 +73,8 @@ static int Languages(string input, string output)
     {
         foreach (var (label, originals) in new (string, Func<int, StringTable?>)[] { ("with LANG files", n => SyntheticStrings(n)), ("without", _ => null) })
         {
-            var expected = lua.Load(language.EnglishName, originals).Strings;
+            // The YAML names OpenWards where the Lua names CorsixTH as the game (GameName.Rebrand).
+            var expected = lua.Load(language.EnglishName, originals).Strings.ToDictionary(entry => entry.Key, entry => GameName.Rebrand(entry.Value, language.EnglishName));
             var actual = yaml.Load(language.EnglishName, originals).Strings;
             var differences = expected.Keys.Union(actual.Keys)
                 .Where(key => !string.Equals(expected.GetValueOrDefault(key), actual.GetValueOrDefault(key), StringComparison.Ordinal))
@@ -182,7 +183,7 @@ internal static class YamlWriter
                         i++;
                     }
 
-                    steps.Add(One("strings", tree.ToYaml()));
+                    steps.Add(One("strings", tree.ToYaml(file.Names.ElementAtOrDefault(1))));
                     break;
             }
         }
@@ -271,23 +272,25 @@ internal static class YamlWriter
             return false;
         }
 
-        public YamlNode ToYaml()
+        public YamlNode ToYaml(string? language)
         {
             // Items 1, 2, 3... in order are a list, as CorsixTH writes { "a", "b" }.
             if (_entries.Count > 0 && _entries.Select((entry, i) => entry.Key == (i + 1).ToString(CultureInfo.InvariantCulture)).All(ok => ok))
             {
-                return new YamlSequenceNode(_entries.Select(entry => Node(entry.Value)));
+                return new YamlSequenceNode(_entries.Select(entry => Node(entry.Value, language)));
             }
 
             var mapping = new YamlMappingNode();
             foreach (var (key, value) in _entries)
             {
-                mapping.Add(key, Node(value));
+                mapping.Add(key, Node(value, language));
             }
 
             return mapping;
         }
 
-        private static YamlNode Node(object value) => value is Tree tree ? tree.ToYaml() : new YamlScalarNode((string)value);
+        // CorsixTH's strings name OpenWards where they name CorsixTH as the game.
+        private static YamlNode Node(object value, string? language) =>
+            value is Tree tree ? tree.ToYaml(language) : new YamlScalarNode(GameName.Rebrand((string)value, language));
     }
 }

@@ -73,8 +73,8 @@ steps:
       custom_level_completed: Ez igen! Minden kitűzött célt elértél ezen az egyedi pályán!
       return_to_main_menu: Szeretnél visszaugrani a főmenübe, vagy inkább játszol tovább?
     install:
-      title: '--------------------------------- CorsixTH Beállítások ---------------------------------'
-      th_directory: CorsixTH-nak a futáshoz szüksége van az eredeti (teljes vagy demó) játék adatfájljaira. Kérlek az alábbi választómenü segítségével keresd ki a Theme Hospital telepítőfájljait tartalmazó könyvtárat.
+      title: '--------------------------------- OpenWards Beállítások ---------------------------------'
+      th_directory: OpenWardsnak a futáshoz szüksége van az eredeti (teljes vagy demó) játék adatfájljaira. Kérlek az alábbi választómenü segítségével keresd ki a Theme Hospital telepítőfájljait tartalmazó könyvtárat.
       exit: Kilépés
       ok: OK
       cancel: Mégse
@@ -520,8 +520,8 @@ steps:
         audio_button: Minden hang ki/be kapcsolása
         audio_toggle: Ki vagy bekapcsol
       update_window:
-        download: Látogasd meg a letöltőoldalt, hogy megszerezhesd a CorsixTH legfrissebb verzióját
-        ignore: A frissítés kihagyása. Újra értesítést fogsz kapni róla, amikor legközelebb elindítod a CorsixTH-t
+        download: Látogasd meg a letöltőoldalt, hogy megszerezhesd az OpenWards legfrissebb verzióját
+        ignore: A frissítés kihagyása. Újra értesítést fogsz kapni róla, amikor legközelebb elindítod az OpenWardsot
       folders_window:
         browse_font: 'Válassz másik betűtípusfile-t ( jelenlegi hely: %1% )'
         screenshots_location: Alaphelyzetben a kilopott képek a konfigurációs file-ok könyvtárába kerülnek. Amennyiben máshova szeretnéd menteni őket csak tallózd ki a számodra megfelelő célkönyvtárat.
@@ -538,7 +538,7 @@ steps:
         not_specified: Még nem adtál meg könyvtár elérési utat!
         browse_saves: 'Válassz másik könyvtárat az elmentett játékállásaidnak ( jelenlegi hely: %1% )'
         default: Alapértelmezett elérési út
-        data_location: Az eredeti Theme Hospital telepítési helye (szükséges a CorsixTH futtatásához)
+        data_location: Az eredeti Theme Hospital telepítési helye (szükséges az OpenWards futtatásához)
       customise_window:
         alien_dna_only_by_emergency: Mivel nincsenek megfelelő animációink az idegen DNA-val rendelkező páciensek megjelenítésére, ezért ők csak vészhelyzetek esetén jelennek meg a kórházadban. Ha szeretnéd, hogy ne csak ilyen esetekben jöjjenek, akkor ezt kapcsold ki
         enable_avg_contents: Ha szeretnéd, hogy a játék megjegyezze milyen extra tárgyakkal szoktad a szobákat általában berendezni, akkor kapcsold be ezt
@@ -546,7 +546,7 @@ steps:
         movies: Ezzel le tudod tiltani az összes átvezető videót
         disable_fractured_bones_females: Mivel csak félkész animációink van a törött csontú női páciensek megjelenítésére, ezért ők nem jelennek meg a kórházadban. Ha mégis szeretnéd, hogy érkezzenek ilyen betegek is, akkor ezt kapcsold ki
         play_intro: A bevezető videó (intro) ki/be kapcsolása - az átvezető videóknak engedélyezve kell lenniük, ha szeretnéd ezt bekapcsolni
-        allow_user_actions_while_paused: Az eredeti Theme Hospitalban a játékos csak a felső menüt használhatta ha a játék szüneteltetve volt. Ez az alapbeállítás a CorsixTH-ban is, de ha ezt bekapcsolod, akkor szüneteltetés alatt is elérsz minden menüt
+        allow_user_actions_while_paused: Az eredeti Theme Hospitalban a játékos csak a felső menüt használhatta ha a játék szüneteltetve volt. Ez az alapbeállítás az OpenWardsban is, de ha ezt bekapcsolod, akkor szüneteltetés alatt is elérsz minden menüt
     menu_options:
       lock_windows: '  Ablak rögzítése  '
       edge_scrolling: '  Görgetés széleknél  '
@@ -746,7 +746,7 @@ steps:
       alien_dna_only_by_emergency: 'MEGJEGYZÉS: nincsenek megfelelő animációink az idegen DNA-val rendelkező páciensek helyes megjelenítésére (például: leülés, ajtón kopogás, stb.), ezért amikor ezeket a cselekvéseket végzik olyankor átváltoznak normális kinézetűre, majd annak végeztével vissza. Az idegen DNA-val rendelkező páciensek csak akkor jelennek meg, ha a pálya file-jában ezt beállítottad'
       load_quick_save: 'Hiba történt: a gyorsmentés betöltése sikertelen volt, mivel nem állt rendelkezésre betölthető állás. Nincs ok az aggodalomra,  ugyanis most létrehoztunk neked egyet!'
     confirmation:
-      needs_restart: Ezen beállítás megváltoztatása megköveteli CorsixTH újraindulását. Minden nem mentett állás el fog veszni. Biztos vagy benne hogy ezt szeretnéd?
+      needs_restart: Ezen beállítás megváltoztatása megköveteli OpenWards újraindulását. Minden nem mentett állás el fog veszni. Biztos vagy benne hogy ezt szeretnéd?
       abort_edit_room: Éppen építesz vagy szerkesztesz egy szobát. Ha minden szükséges tárgyat elhelyezel, a szoba kész lesz, ellenkező esetben azonban törlődik. Folytatod?
       quit: 'Tényleg ki szeretnél lépni a játékból? '
       return_to_blueprint: Biztosan vissza szeretnél lépni tervrajz módba?
@@ -758,7 +758,7 @@ steps:
       maximum_screen_size: Az általad beállított képernyőfelbontás magasabb mint 3000 X 2000. Van lehetőség ilyen felbontások beállítására, viszont ezekhez erősebb hardver szükségeltetik az akadozásmentes futtatáshoz. Biztosan folytatod?
       music_warning: Mielőtt kiválaszthatnád az mp3-akat amelyek játék közben fognak szólni szükséged lesz az smpeg.dll nevű (vagy azzal egyenértékű) file-ra, különben nem lesz zene. Folytatod?
     information:
-      custom_game: Üdvözöllek a CorsixTH-ban. Jó szórakozást ehhez az egyedi pályához!
+      custom_game: Üdvözöllek az OpenWardsban. Jó szórakozást ehhez az egyedi pályához!
       cannot_restart: Sajnos ez az egyedi pálya az újrakezdés funkció implementálása előtt lett mentve.
       level_lost:
         1: A fenébe! Elbuktál a pályán. Több szerencsét legközelebb!
@@ -777,7 +777,7 @@ steps:
       - Próbáltad már beütni a faxba az európai segélyhívó számot (112)? Legyenek bekapcsolva a hangszóróid!
       - A képernyőfelbontást, a nyelvet és más jellegzetességeket a beállítások alatt tudod meghatározni, mely elérhető a főmenüben és a játék közben is.
       - Nem angol nyelvet választottál ki és angol szöveget látsz mindenfelé? Segíts nekünk lefordítani a hiányzó szövegeket a saját nyelvedre!
-      - A CorsixTH csapatnak erősítésre van szüksége! Szeretnél programozni, fordítani vagy grafikákat készíteni a CorsixTH-nak? Értesíts minket a Fórumban, a levelező listánkon vagy az IRC csatornánkon(corsix-th at freenode).
+      - Az OpenWards csapatnak erősítésre van szüksége! Szeretnél programozni, fordítani vagy grafikákat készíteni az OpenWardsnak? Értesíts minket a Fórumban, a levelező listánkon vagy az IRC csatornánkon(corsix-th at freenode).
       - 'Ha találsz valamilyen hibát, kérünk téged, jelezd azt a hibanyomkövetőnknél, a: th-issues.corsix.org címen!'
       - Minden szint teljesítéséhez különböző követelményeknek kell megfelelned, hogy a következő szintre léphess. Ellenőrizd az állapotjelző ablakot, hogy hogy állsz.
       - Ha szerkeszteni vagy törölni szeretnél egy szobát, azt az alsó eszközsoron található szerkesztő gombbal tudod megtenni.
