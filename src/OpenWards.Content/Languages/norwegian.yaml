@@ -69,9 +69,9 @@ steps:
       custom_level_completed: Bra gjort! Du har fullfört alle utfordringene på dette brukerdefinerte brettet.!
       return_to_main_menu: Vil du gå tilbake til hovedmenyen eller fortsette å spille?
     install:
-      title: '--------------------------------- CorsixTH Setup ---------------------------------'
+      title: '--------------------------------- OpenWards Setup ---------------------------------'
       exit: Avslutt
-      th_directory: CorsixTH trenger en kopi av datafilene fra et ekte Theme Hospital spill (eller demo) for å kjöre. Vennligst velg plasseringen til originalspillet nedenfor.
+      th_directory: OpenWards trenger en kopi av datafilene fra et ekte Theme Hospital spill (eller demo) for å kjöre. Vennligst velg plasseringen til originalspillet nedenfor.
       ok: Ok
       cancel: Avbryt
     object:
@@ -157,7 +157,7 @@ steps:
         screenshots_location: Skjermdumper er normalt lagret i en mappe sammen med konfigurasjonsfila. Om du önsker kan du plassere den et annet sted.
         browse_music: 'Se etter en annen lokasjon for musikk ( nåværende beliggenhet: %1% ) '
         music_location: Velg en lokasjon for mp3-musikk. Mappen må være laget på forhånd.
-        data_location: Banen til den originale Theme Hospital-installasjonen, som du trenger for å spille CorsixTH
+        data_location: Banen til den originale Theme Hospital-installasjonen, som du trenger for å spille OpenWards
         browse_data: 'Se etter en annen lokasjon for Theme Hospital-installasjonen ( nåværende beliggenhet: %1%)'
         savegames_location: Normalt er de lagrede spillene lagret i en mappe sammen med konfigurasjonsfila. Om du önsker kan du plassere den et annet sted.
         back: Lukk denne menyen og gå tilbake
@@ -170,8 +170,8 @@ steps:
         default: Standard lokasjon
         no_font_specified: Ingen font-fil er valgt enda!
       update_window:
-        download: Gå til nedlastingssiden for den seneste versjonen av CorsixTH
-        ignore: Ignorer oppdateringen denne gangen. Du vil få en ny beskjed neste gang du starter CorsixTH
+        download: Gå til nedlastingssiden for den seneste versjonen av OpenWards
+        ignore: Ignorer oppdateringen denne gangen. Du vil få en ny beskjed neste gang du starter OpenWards
       menu_list_window:
         back: Lukk dette vinduet
         name: Klikk her for å sortere listen etter navn
@@ -210,7 +210,7 @@ steps:
           toggle_infected: Slå av eller på ikoner for smittsomme pasienter for den aktive, oppdagede epidemien
       customise_window:
         movies: Slår av alle videoer i spillet
-        allow_user_actions_while_paused: ' I Theme Hospital ville spilleren kun få lov til å bruke toppmenyen om spillet var satt til pause. Dette er standard i CorsixTH også, men ved å slå denne på, så er alle bevegelser lov'
+        allow_user_actions_while_paused: ' I Theme Hospital ville spilleren kun få lov til å bruke toppmenyen om spillet var satt til pause. Dette er standard i OpenWards også, men ved å slå denne på, så er alle bevegelser lov'
         back: Gå tilbake
         play_intro: Slå av eller på introfilmen. Den andre filminnstillingen må også være på for å spille av introfilmen hver ganger du starter spillet
         disable_fractured_bones_females: På grunn av mangelfulle animasjoner har vi stilt standardoppsettet til å slå av kvinnelige benbrudd. For å tillate dette, slå denne av
@@ -815,7 +815,7 @@ steps:
       could_not_load_campaign: 'Lasting av brettet feilet: %s'
       could_not_find_first_campaign_level: 'Kunne ikke finne det förste brettet i denne karrieren: %s'
     confirmation:
-      needs_restart: Å forandre denne innstillingen krever en omstart av CorsixTH. Spill som ikke er lagret vil gå tapt. Er du sikker på at du vil endre innstillingen?
+      needs_restart: Å forandre denne innstillingen krever en omstart av OpenWards. Spill som ikke er lagret vil gå tapt. Er du sikker på at du vil endre innstillingen?
       abort_edit_room: Du holder på å bygge eller endre et rom. Om alle obligatoriske gjenstander er plassert ut, ferdigstilles rommet. Om ikke, slettes rommet. Fortsette?
       quit: Du har valgt å avslutte. Er du sikker på at du vil forlate spillet?
       return_to_blueprint: Er du sikker på at du vil returnere til Blåkopi-modus?
@@ -827,7 +827,7 @@ steps:
       maximum_screen_size: Opplösningen du har valgt er större enn 3000 x 2000.  Större opplösninger er mulig, men det krever bedre maskinvare om det ikke skal hakke.  Önsker du å fortsette?
       music_warning: För du får brukt mp3-er som spillmusikk, så må du ha smpeg.dll eller tilsvarende for operativsystemet ditt. Eller vil du ikke få musikk i spillet. Önsker du å fortsette?
     information:
-      custom_game: Velkommen til CorsixTH. Kos deg med dette egenutviklede kartet!
+      custom_game: Velkommen til OpenWards. Kos deg med dette egenutviklede kartet!
       no_custom_game_in_demo: Unnskyld, men i demoversjonen kan du ikke spille egenutviklede kart.
       cannot_restart: Dette spillet ble dessverre lagret för restartfunksjonen ble implementert.
       very_old_save: Det har vært mange oppdateringer siden du startet på dette nivået. For å være sikker på at alle funksjoner virker riktig, vennligst vurder å starte nivået på nytt.
@@ -858,7 +858,7 @@ steps:
       - Du kan avbryte diagnose-prosessen ganske tidlig og gjette på riktig behandling, dersom du allerede har truffet på tilfeller av sykdommen. Vær oppmerksom på at dette öker sjangsen for feilbehandling. Du vil vel ikke avlive pasientene dine, vel?
       - Nödtilfeller kan gjöre deg rik, så sant du har kapasitet til å behandle pasientene i tide.
       - Har du valgt norsk språk, men ser likevel engelsk tekst rundt omkring i spillet? Hjelp oss å oversette resten av spillet til norsk!
-      - CorsixTH-teamet er ute etter forsterkninger! Er du interessert i å programmere, oversette, eller kanskje lage grafikk til CorsixTH? Kontakt oss gjennom Forum, Nyhetsbrev eller IRC (corsix-th på freenode).
+      - OpenWards-teamet er ute etter forsterkninger! Er du interessert i å programmere, oversette, eller kanskje lage grafikk til OpenWards? Kontakt oss gjennom Forum, Nyhetsbrev eller IRC (corsix-th på freenode).
       - 'Om du finner feil eller mangler, vær snill å rapportere det gjennom vår feilmeldingstjeneste: th-issues.corsix.org'
       previous: Forrige tips
       next: Neste tips

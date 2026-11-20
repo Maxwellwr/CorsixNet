@@ -292,7 +292,7 @@ steps:
         insurance_owed: '%s欠款的金額'
       main_menu:
         network: 開始網路遊戲
-        quit: 你將退出 CorsixTH。確定？
+        quit: 你將退出 OpenWards。確定？
         continue: 從最近的存檔繼續玩
         load_menu:
           load_slot: 讀取進度
@@ -494,8 +494,8 @@ steps:
         audio_toggle: 切換開關
       customise_window:
         movies: 全域性 CG 控制，這將允許您禁用所有 CG
-        play_intro: 關閉或開啟啟動 CG，如果您希望每次啟動 CorsixTH 時都播放啟動 CG，則必須開啟全域性 CG
-        allow_user_actions_while_paused: 在杏林也瘋狂中，只有在遊戲暫停的情況下，才允許玩家使用頂部選單，這也是 CorsixTH 的預設設定。但是將此選項開啟，遊戲暫停時可以進行所有操作
+        play_intro: 關閉或開啟啟動 CG，如果您希望每次啟動 OpenWards 時都播放啟動 CG，則必須開啟全域性 CG
+        allow_user_actions_while_paused: 在杏林也瘋狂中，只有在遊戲暫停的情況下，才允許玩家使用頂部選單，這也是 OpenWards 的預設設定。但是將此選項開啟，遊戲暫停時可以進行所有操作
         volume: 如果減小音量按鈕同時打開了治療手冊，請將開啟治療手冊的熱鍵更改為 Shift + C
         alien_dna_only_by_emergency: 因為缺少合適的動畫，預設外星人 DNA 病人只會來自緊急事件。要允許緊急事件外出現外星人 DNA 病人，請關閉此選項
         disable_fractured_bones_females: 由於動畫效果不佳，預設不會有女性骨折患者。要允許女性骨折患者就診，請關閉此功能
@@ -504,7 +504,7 @@ steps:
         back: 關閉此選單，並返回設定選單
       folders_window:
         browse: 瀏覽資料夾位置
-        data_location: 原版杏林也瘋狂安裝的目錄，CorsixTH 執行所必需
+        data_location: 原版杏林也瘋狂安裝的目錄，OpenWards 執行所必需
         font_location: 選擇可以顯示您的語言所需 Unicode 字型的位置。如果沒有指定，您將不能使用原遊戲提供字型之外的語言，例如中文和俄語。（你一定已經選了，要不怎麼可以看到這句話呢？）
         savegames_location: 預設情況下，遊戲存檔儲存在配置檔案旁邊的資料夾中。如果不合適，可以選擇自己的目錄，只需瀏覽到要使用的目錄即可。
         screenshots_location: 預設情況下，螢幕快照儲存在配置檔案旁邊的資料夾中。如果不合適，可以選擇自己的目錄，只需瀏覽到要使用的目錄即可。
@@ -577,8 +577,8 @@ steps:
         assigned: 這個框代表是否有人被分配給此任務。
         close: 關閉籤派視窗
       update_window:
-        download: 前往下載頁面下載最新版 CorsixTH
-        ignore: 忽略這次更新。您將在下次啟動 CorsixTH 時再次收到通知
+        download: 前往下載頁面下載最新版 OpenWards
+        ignore: 忽略這次更新。您將在下次啟動 OpenWards 時再次收到通知
     menu_charts:
       briefing: '    任務簡報'
       casebook: '  (%1%) 治療手冊'
@@ -2309,7 +2309,7 @@ steps:
       overwrite_save: 該位置已儲存遊戲進度。您是否確定要將其覆蓋？
       sack_staff: 您是否確定要解僱該員工？
       replace_machine: 您是否確定將%s汰換，需花費$%d？
-      needs_restart: 這項設定的改動需要重新啟動 CorsixTH。尚未儲存的進度將會丟失。確定要這麼做嗎？
+      needs_restart: 這項設定的改動需要重新啟動 OpenWards。尚未儲存的進度將會丟失。確定要這麼做嗎？
       abort_edit_room: 您正在修建或者修改一間房間。如果所有必需的物品都被放置了就沒有問題，否則所做的修改將被刪除。繼續嗎？
       maximum_screen_size: 您輸入的螢幕尺寸大於 3000x2000。可以使用更大的解析度，但需要更好的硬體才能保持可播放的幀速率。繼續嗎？
       remove_destroyed_room: 你希望付費 $%d 清除這個房間嗎？
@@ -2655,8 +2655,8 @@ steps:
       players_3: '  3 玩家  '
       players_4: '  4 玩家  '
     install:
-      title: '-------------------------------- CorsixTH  遊戲設定 -------------------------------'
-      th_directory: CorsixTH 需要原版杏林也瘋狂（或演示版）的資料檔案才能執行。請指定原版杏林也瘋狂遊戲的安裝資料夾。
+      title: '-------------------------------- OpenWards  遊戲設定 -------------------------------'
+      th_directory: OpenWards 需要原版杏林也瘋狂（或演示版）的資料檔案才能執行。請指定原版杏林也瘋狂遊戲的安裝資料夾。
       ok: 確定
       exit: 退出
       cancel: 取消
@@ -2891,12 +2891,12 @@ steps:
       compatibility_error:
         demo_in_full: 抱歉，這是演示版的遊戲存檔，無法在完整版中開啟。請更新原版杏林也瘋狂目錄內容。
         full_in_demo: 抱歉，這是完整版的遊戲存檔，無法在演示版中開啟。請更新原版杏林也瘋狂目錄內容。
-        new_in_old: 抱歉，此遊戲存檔需要較新版本的 CorsixTH 才能開啟。
+        new_in_old: 抱歉，此遊戲存檔需要較新版本的 OpenWards 才能開啟。
     warnings:
       levelfile_variable_is_deprecated: 注意：關卡'%s'在關卡檔案中包含棄用的變數定義。'%LevelFile'已重新命名為'%MapFile'。請建議地圖建立者更新關卡。
-      newersave: 警告：此遊戲存檔是由較新版本 CorsixTH 建立的。不建議繼續進行遊戲，否則可能會出現錯誤。一般來說，僅作測試用途。
+      newersave: 警告：此遊戲存檔是由較新版本 OpenWards 建立的。不建議繼續進行遊戲，否則可能會出現錯誤。一般來說，僅作測試用途。
     information:
-      custom_game: 歡迎來到 CorsixTH。盡情享受自訂地圖吧！
+      custom_game: 歡迎來到 OpenWards。盡情享受自訂地圖吧！
       no_custom_game_in_demo: 抱歉，在演示版本中，您無法玩任何自訂地圖。
       cannot_restart: 不幸的是這個自訂地圖是在 重新開始 功能開發之前建立的。
       very_old_save: 從您開始玩此關以來，遊戲已有許多更新。為確保所有功能均按預期工作，請考慮重新啟動它。
@@ -2919,7 +2919,7 @@ steps:
       - 有沒有試過在傳真機上撥112？這是歐洲的急救電話。記得將音量調到最大！
       - 在主選單和遊戲選單裡面，找到選項視窗，在那裡可以調整解析度和語言。
       - 你選擇了中文，但是你還是可能會在遊戲中不停地看到英文。把他們翻譯了吧，我們需要你的幫助！
-      - CorsixTH 小組正在壯大！如果你對程式設計、翻譯、創作杏林也瘋狂需要的圖片等等任何方面感興趣，可以到 CorsixTH 網站找到開發、社群等資訊。
+      - OpenWards 小組正在壯大！如果你對程式設計、翻譯、創作杏林也瘋狂需要的圖片等等任何方面感興趣，可以到 OpenWards 網站找到開發、社群等資訊。
       - '如果你碰到了 bug，請提交給我們: th-issues.corsix.org'
       - 每一關都需要滿足特定的條件才能過關。你可以通過狀態視窗看到你的進度。
       - 如果你需要編輯或者刪除一間房間，螢幕下方找到工具欄，然後點編輯房間按鈕。
@@ -3000,7 +3000,7 @@ steps:
         heliport_4: 直升機場 4
         paste: Paste area
     hotkeys_file_err:
-      file_err_01: 無法載入 hotkeys.txt 檔案。請確保 CorsixTH 具有讀/寫許可權
+      file_err_01: 無法載入 hotkeys.txt 檔案。請確保 OpenWards 具有讀/寫許可權
       file_err_02: ，或使用 --hotkeys-file=filename 命令列選項指定一個可寫檔案。作為參考，載入熱鍵檔案的錯誤是：
     level_progress:
       hospital_value_enough: 保持醫院價值在%d以上，並解決好其他問題，就能完成任務了。

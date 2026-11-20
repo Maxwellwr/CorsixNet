@@ -18,7 +18,7 @@ internal sealed record UpdateInfo(string CurrentVersion, string NewVersion, stri
 internal static partial class UpdateCheck
 {
     /// <summary>The newest release of the project (GitHub's API).</summary>
-    public const string LatestReleaseUrl = "https://api.github.com/repos/Maxwellwr/CorsixNet/releases/latest";
+    public const string LatestReleaseUrl = "https://api.github.com/repos/Maxwellwr/OpenWards/releases/latest";
 
     /// <summary>
     /// Whether the project publishes releases on GitHub yet. Until the first one, GitHub answers 404 to every launch's

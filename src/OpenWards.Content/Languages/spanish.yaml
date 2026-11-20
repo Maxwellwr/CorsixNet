@@ -165,7 +165,7 @@ steps:
         options: Ajustar la configuración.
         map_edit: Crear un mapa personalizado.
         exit: ¡No, no, por favor, no te vayas!
-        quit: Estás a punto de salir de CorsixTH.   ¿Seguro que quieres continuar?
+        quit: Estás a punto de salir de OpenWards.   ¿Seguro que quieres continuar?
       watch:
         epidemic: 'Epidemia: tiempo que queda para encubrir la epidemia. Cuando este tiempo expire O un paciente contagioso abandone tu hospital, un Inspector de Sanidad puede visitarte. El botón activa o desactiva el modo vacuna. Pulsa en un paciente para que lo vacune una Enfermera.'
         hospital_opening: 'Tiempo de construcción: es el tiempo que queda para que tu hospital sea declarado abierto. Si pulsas el botón verde abrirás el hospital inmediatamente.'
@@ -268,8 +268,8 @@ steps:
         back: Cierra la ventana
       customise_window:
         movies: Control global de videos, permite desactivar todos los videos.
-        play_intro: Activa o desactiva el video de introducción. Necesitas activar el control global de videos si quieres ver la introducción cada vez que inicies CorsixTH.
-        allow_user_actions_while_paused: En Theme Hospital el jugador solo podía utilizar el menú superior si la partida estaba en pausa. CorsixTH funciona así de forma predeterminada, pero al activar esta opción se puede realizar cualquier acción mientras el juego esté en pausa.
+        play_intro: Activa o desactiva el video de introducción. Necesitas activar el control global de videos si quieres ver la introducción cada vez que inicies OpenWards.
+        allow_user_actions_while_paused: En Theme Hospital el jugador solo podía utilizar el menú superior si la partida estaba en pausa. OpenWards funciona así de forma predeterminada, pero al activar esta opción se puede realizar cualquier acción mientras el juego esté en pausa.
         alien_dna_only_by_emergency: Debido a la falta de animaciones decentes disponibles, hemos hecho que los pacientes con ADN alienígena solo aparezcan en una emergencia. Para permitir que los pacientes con ADN alienígena puedan visitar tu hospital, desactiva esta opción.
         disable_fractured_bones_females: Debido a una animación deficiente, hemos hecho que no existan pacientes con Fracturas óseas femeninas. Para permitir que las pacientes con Fracturas óseas visiten tu hospital, desactiva esta opción.
         enable_avg_contents: Activa esta opción si quieres que el juego recuerde los objetos adicionales que sueles añadir cuando construyes habitaciones.
@@ -278,7 +278,7 @@ steps:
         back: Cerrar este menú y volver al menú de opciones.
       folders_window:
         browse: Buscar la ubicación de la carpeta
-        data_location: La carpeta con la instalación del Theme Hospital original, necesario para ejecutar CorsixTH.
+        data_location: La carpeta con la instalación del Theme Hospital original, necesario para ejecutar OpenWards.
         font_location: La ubicación de una fuente de letra capaz de mostrar caracteres Unicode necesarios para tu idioma. Si no se indica, no podrás seleccionar idiomas que tengan más caracteres de los que puede dar el juego original, por ejemplo, ruso y chino.
         savegames_location: La carpeta de partidas guardadas se ubica de forma predeterminada junto al archivo de configuración y se utilizará para almacenar las partidas guardadas. Si no te gusta, puedes seleccionar otra buscando la carpeta que quieres usar.
         screenshots_location: Las capturas de pantalla se guardan de forma predeterminada en una carpeta junto al archivo de configuración. Si no te gusta, puedes seleccionar otra buscando la carpeta que quieres usar.
@@ -392,8 +392,8 @@ steps:
           delete_message: Haz clic para eliminar todos los mensajes
         close: Cerrar el diálogo de historial del consejero
       update_window:
-        download: Ir a la página de descargas para obtener la última versión de CorsixTH.
-        ignore: Ignorar esta actualización por el momento. Volverás a ser notificado la próxima vez que ejecutes CorsixTH.
+        download: Ir a la página de descargas para obtener la última versión de OpenWards.
+        ignore: Ignorar esta actualización por el momento. Volverás a ser notificado la próxima vez que ejecutes OpenWards.
     fax:
       emergency:
         cure_not_possible_build: Necesitas construir un %s
@@ -424,7 +424,7 @@ steps:
       restart_level: ¿Seguro que quieres reiniciar el nivel?
       quit: '¿Seguro que quieres salir del juego?                       '
       return_to_blueprint: ¿Seguro que quieres sustituir el(la) %s por $%d?
-      needs_restart: Para cambiar este ajuste debes reiniciar CorsixTH. Se perderá todo el progreso que no hayas guardado. ¿Seguro que quieres continuar?
+      needs_restart: Para cambiar este ajuste debes reiniciar OpenWards. Se perderá todo el progreso que no hayas guardado. ¿Seguro que quieres continuar?
       abort_edit_room: Ahora mismo estás construyendo o editando una habitación. Si has colocado todos los objetos necesarios será terminada, de lo contrario se borrará. ¿Quieres continuar?
       maximum_screen_size: El tamaño de pantalla que has introducido es mayor que 3000x2000.  Es posible utilizar una resolución más grande, pero necesitarás un ordenador potente para que la velocidad de fotogramas sea aceptable. ¿Seguro que quieres continuar?
       music_warning: 'Nota: Necesitas el archivo smpeg.dll o el equivalente para tu sistema operativo, de lo contrario no tendrás música en el juego. ¿Quieres continuar?'
@@ -904,8 +904,8 @@ steps:
       players_3: '  3 JUGADORES  '
       players_4: '  4 JUGADORES  '
     install:
-      title: '--------------------------------- Configuración de CorsixTH ---------------------------------'
-      th_directory: CorsixTH necesita una copia de los archivos de datos del Theme Hospital original (o de la demo) para poder funcionar. Utiliza el selector de debajo para localizar la carpeta de instalación de Theme Hospital.
+      title: '--------------------------------- Configuración de OpenWards ---------------------------------'
+      th_directory: OpenWards necesita una copia de los archivos de datos del Theme Hospital original (o de la demo) para poder funcionar. Utiliza el selector de debajo para localizar la carpeta de instalación de Theme Hospital.
       ok: Aceptar
       exit: Salir
       cancel: Cancelar
@@ -1185,11 +1185,11 @@ steps:
       save_to_tmp: 'El archivo en %s no pudo ser utilizado. El juego ha sido guardado en %s. Error: %s'
       dialog_empty_queue: Lo siento, un humanoide tenía una cola de acciones vacía, lo que significa que no sabía que hacer. Por favor consulta la ventana de comandos para obtener información más detallada. Se ha abierto un dialogo con el humanoide que causó el problema. ¿Te gustaría que abandone el hospital?
       compatibility_error:
-        new_in_old: Lo siento, esta partida guardada fue creada con una version más nueva de CorsixTH y no es compatible. Por favor actualiza a una versión más reciente.
+        new_in_old: Lo siento, esta partida guardada fue creada con una version más nueva de OpenWards y no es compatible. Por favor actualiza a una versión más reciente.
         demo_in_full: Lo siento, no puedes abrir una partida guardada de la demo cuando los archivos del juego completo se encuentran cargados. Por favor actualiza la configuracion referente a tu carpeta de datos de Theme Hospital.
         full_in_demo: Lo siento, no puedes abrir una partida guardada del juego completo cuando los archivos de la demo se encuentran cargados. Por favor actualiza la configuracion referente a tu carpeta de datos de Theme Hospital.
       music: Hay problemas al intentar reproducir uno o más archivos en tu directorio de música. Los archivos problemáticos serán deshabilitados en el reproductor. Verifica la consola para obtener mas información.
-      missing_corsixth_file: 'Advertencia: No se pudo encontrar el archivo %s, intenta reinstalar CorsixTH.'
+      missing_corsixth_file: 'Advertencia: No se pudo encontrar el archivo %s, intenta reinstalar OpenWards.'
       missing_th_data_file: 'Advertencia: No se pudo encontrar el archivo %s, faltan datos de Theme Hospital.'
       missing_level_file: 'Error: No se pudo encontrar el archivo de nivel seleccionado.'
       overlay:
@@ -1199,9 +1199,9 @@ steps:
       cannot_restart_missing_files: Lo siento, pero este nivel no se puede reiniciar debido a archivos faltantes %s o %s.
     warnings:
       levelfile_variable_is_deprecated: "Aviso: El nivel %s contiene una definición de variable obsoleta en el archivo del nivel.'%LevelFile' ha sido renombrado como '%MapFile'. Avisa al creador del mapa para que actualice el nivel."
-      newersave: Advertencia, has cargado una partida guardada de una versión más reciente de CorsixTH. No se recomienda continuar, ya que el juego podría cerrarse. Juega bajo tu propio riesgo.
+      newersave: Advertencia, has cargado una partida guardada de una versión más reciente de OpenWards. No se recomienda continuar, ya que el juego podría cerrarse. Juega bajo tu propio riesgo.
     information:
-      custom_game: Bienvenido a CorsixTH. ¡Diviértete con este mapa personalizado!
+      custom_game: Bienvenido a OpenWards. ¡Diviértete con este mapa personalizado!
       no_custom_game_in_demo: La versión demo no permite jugar a mapas personalizados.
       cannot_restart: Esta partida personalizada se guardó antes de que se implementara la característica de reiniciar.
       very_old_save: Han habido muchas actualizaciones en el juego desde que comenzaste este nivel. Para asegurarte de que todas las funciones operen como se espera, considera reiniciarlo.
@@ -1226,7 +1226,7 @@ steps:
       - ¿Has probado a meter el número de emergencias (112) en el fax? ¡Asegúrate de tener el sonido activado!
       - Puedes ajustar algunos parámetros como la resolución y el idioma del juego en la ventana de opciones, que se encuentra tanto en el menú principal como dentro del juego.
       - ¿Has seleccionado el castellano, pero sigues viendo textos en inglés en algún lugar? ¡Avísanos de qué líneas de texto están en inglés para que podamos traducirlas!
-      - ¡El equipo de CorsixTH busca refuerzos! ¿Te interesa programar, traducir o crear gráficos para CorsixTH? Contáctanos en nuestro foro, lista de correo o canal IRC (corsix-th en freenode).
+      - ¡El equipo de OpenWards busca refuerzos! ¿Te interesa programar, traducir o crear gráficos para OpenWards? Contáctanos en nuestro foro, lista de correo o canal IRC (corsix-th en freenode).
       - 'Si encuentras un fallo, puedes enviarnos un informe en nuestro registro de fallos: th-issues.corsix.org'
       - Cada nivel tiene unos requisitos concretos que debes conseguir antes de poder avanzar al siguiente nivel. Mira en la ventana de estado para ver como llevas los objetivos del nivel.
       - Si quieres editar o quitar una habitación ya existente, puedes hacerlo con el botón Editar habitación, en la barra de herramientas inferior.
@@ -1328,7 +1328,7 @@ steps:
       checks:
         spawn_points_and_path: "Advertencia: Los pacientes no pueden llegar al hospital. Se necesitan casillas de 'carretera' o casillas grises de 'exterior' desde el borde del mapa hasta la entrada del hospital."
     hotkeys_file_err:
-      file_err_01: "No se pudo cargar el archivo 'hotkeys.txt'. Por favor asegúrate de que CorsixTH tiene permisos para leer/escribir "
+      file_err_01: "No se pudo cargar el archivo 'hotkeys.txt'. Por favor asegúrate de que OpenWards tiene permisos para leer/escribir "
       file_err_02: ', o usa la opcion de línea de comandos --hotkeys-file=filename para especificar un archivo que pueda ser escrito. Para referencia, el error al cargar el archivo de teclas de acceso rápido fue: '
     subtitles:
       alien001: ¡Alerta roja! ¡Ataque alienígena!

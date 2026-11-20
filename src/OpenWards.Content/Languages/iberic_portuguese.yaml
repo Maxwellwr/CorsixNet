@@ -79,8 +79,8 @@ steps:
         language: Escolhe %s como a tua linguagem.
         back: Fecha a janela de opçoes.
       update_window:
-        download: Vá para a página de transferências para a última versão de CorsixTH
-        ignore: Ignorar esta actualização agora. Será notificado de novo na próxima vez que inicializar CorsixTH
+        download: Vá para a página de transferências para a última versão de OpenWards
+        ignore: Ignorar esta actualização agora. Será notificado de novo na próxima vez que inicializar OpenWards
       folders_window:
         browse_font: 'Procurar outro tipo de letra (localização actual: %1% )'
         screenshots_location: Por defeito, as capturas de ecrã são armazenadas numa pasta junto do ficheiro de configuração. Caso isto não seja apropriado, pode escolher a sua própria, simplesmente indique qual a pasta que deseja utilizar.
@@ -98,15 +98,15 @@ steps:
         not_specified: Nenhuma pasta especificada!
         browse_saves: 'Escolha outra localização para a pasta dos jogos gravados (Localização actual: %1%) '
         default: Localização por defeito
-        data_location: O directório da instalação do Theme Hospital original, que é necessário para correr o CorsixTH
+        data_location: O directório da instalação do Theme Hospital original, que é necessário para correr o OpenWards
       customise_window:
         alien_dna_only_by_emergency: Devido à falta de animações apropriadas, colocamos por defeito que pacientes com ADN Extraterrestre só possam surgir numa emergência. Para permitir que estes pacientes possam visitar o hospital de outra forma, desligue esta opção.
         enable_avg_contents: Se quer que o jogo lhe lembre que objectos adicionais costuma adicionar quando cria uma sala, ligue esta opção.
         back: Fechar este menu e voltar às definições.
         movies: Controle geral de vídeos, isto irá permitir desligar todos os vídeos
         disable_fractured_bones_females: Devido a uma má animação colocamos por defeito que não existem pacientes femininas com Ossos Partidos. De forma a permitir que pacientes femininas com Ossos Partidos visitem o hospital, desligue esta opção.
-        play_intro: Ligar ou desligar o vídeo de introdução, o controle geral de vídeos tem que estar ligado se quer ver a introdução cada vez que começa o CorsixTH
-        allow_user_actions_while_paused: No Theme Hospital o jogador apenas podia utilizar o menu de topo se o jogo estivesse pausado. Esta é também a opção por defeito no CorsixTH, mas ao activar esta opção, tudo é permitido com o jogo pausado.
+        play_intro: Ligar ou desligar o vídeo de introdução, o controle geral de vídeos tem que estar ligado se quer ver a introdução cada vez que começa o OpenWards
+        allow_user_actions_while_paused: No Theme Hospital o jogador apenas podia utilizar o menu de topo se o jogo estivesse pausado. Esta é também a opção por defeito no OpenWards, mas ao activar esta opção, tudo é permitido com o jogo pausado.
       objects:
         litter: 'Lixo: Deitado fora por um paciente porque não encontrou um caixote do lixo onde o colocar.'
       main_menu:
@@ -260,8 +260,8 @@ steps:
       ok: OK
       cancel: Cancelar
       exit: Sair
-      th_directory: CorsixTH precisa dos ficheiros de dados da instalação original de Theme Hospital(ou demo) para funcionar. Localize a sua instalação atráves da caixa em baixo.
-      title: '--------------------------------- Instalação CorsixTH  ---------------------------------'
+      th_directory: OpenWards precisa dos ficheiros de dados da instalação original de Theme Hospital(ou demo) para funcionar. Localize a sua instalação atráves da caixa em baixo.
+      title: '--------------------------------- Instalação OpenWards  ---------------------------------'
     object:
       litter: Lixo
       desk: Secretária
@@ -395,7 +395,7 @@ steps:
       - Podes abortar o processo de diagnóstico para um paciente e tentar adivinhar a cura caso já tenhas descoberto a doença. Cuidado que este processo pode aumentar o risco de uma cura errada levando à morte do paciente.
       - Emergencias sao uma boa forma de ganhar algum dinheiro extra,garante que o teu hospital tem condiçoes para as completar.
       - Seleccionaste outra linguagem além do Ingles, mas ves Ingles em todo o lado? Ajuda-nos a traduzir esse texto!
-      - A equipa do CorsixTH está à procura de reforços! Estás interessado em programar, traduzir ou criar arte gráfica para o CorsixTH? Contacta-nos no fórum, IRC (corsix-th no freenode) ou via Mailing List.
+      - A equipa do OpenWards está à procura de reforços! Estás interessado em programar, traduzir ou criar arte gráfica para o OpenWards? Contacta-nos no fórum, IRC (corsix-th no freenode) ou via Mailing List.
       - 'Se encontrares um bug, diz-nos em: th-issues.corsix.org'
       - Tens que cumprir certos requisitos para poder avançar de nível. Consulta a tua janela de status para veres o progresso em relaçao aos objectivos do nível.
       - Se quiseres alterar ou remover alguma sala existente,utiliza o botao editar na barra de ferramentas em baixo no teu ecra.
@@ -447,7 +447,7 @@ steps:
         balance: A tua conta bancària ficou abaixo de %d.
         percentage_killed: Mataste mais do que %d por cento dos pacientes.
       cannot_restart: Infelizmente este jogo customizado foi gravado antes da implementação da função de reinício.
-      custom_game: Bem-vindo ao CorsixTH. Diverte-te neste mapa customizado!
+      custom_game: Bem-vindo ao OpenWards. Diverte-te neste mapa customizado!
     new_game_window:
       hard: Consultor (Difícil)
       cancel: Cancelar

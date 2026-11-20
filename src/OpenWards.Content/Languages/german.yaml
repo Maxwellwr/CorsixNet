@@ -210,7 +210,7 @@ steps:
         options: Diverse Einstellungen verändern
         map_edit: Eine eigene Karte erstellen
         exit: Bitte lassen Sie mich nicht allein!
-        quit: Sie sind im Begriff, CorsixTH zu verlassen. Sind Sie sich sicher, dass Sie das tun wollen?
+        quit: Sie sind im Begriff, OpenWards zu verlassen. Sind Sie sich sicher, dass Sie das tun wollen?
       load_game_window:
         load_game: Spiel %s laden
         load_game_number: Spiel %d laden
@@ -254,7 +254,7 @@ steps:
       customise_window:
         movies: 'Globale Filmsteuerung: Hiermit können Sie sämtliche Filme abschalten'
         play_intro: Den Introfilm abschalten. Das Intro wird nur gespielt, wenn Sie nicht auch gleichzeitig alle Filme abgeschaltet haben.
-        allow_user_actions_while_paused: In Theme Hospital würde es dem Spieler während der Pause nur gestattet sein, das obere Menü zu benutzen. Dies ist in CorsixTH ebenfalls die Standardeinstellung, aber wenn Sie dies einschalten, ist alles in der Pause erlaubt.
+        allow_user_actions_while_paused: In Theme Hospital würde es dem Spieler während der Pause nur gestattet sein, das obere Menü zu benutzen. Dies ist in OpenWards ebenfalls die Standardeinstellung, aber wenn Sie dies einschalten, ist alles in der Pause erlaubt.
         volume: Wenn die Leiser-Taste auch das Fallbuch öffnet, dann schalten Sie dies ein, um die Schnellzugriffstaste für das Fallbuch auf Umschalt + C zu wechseln.
         alien_dna_only_by_emergency: Aufgrund des Fehlens einer anständigen Animation haben wir standardmäßig Patienten mit außerirdischer DNA deaktiviert, damit sie nur zu einem Notfall kommen. Um Patienten mit außerirdischer DNA es zu erlauben, Ihr Krankenhaus nicht nur bei Notfällen zu besuchen, schalten Sie dies ab.
         disable_fractured_bones_females: Aufgrund einer armseligen Animation haben wir uns entschieden, dass es standardmäßig keine weiblichen Patienten mit gebrochenen Knochen gibt. Wenn weibliche Patienten mit gebrochenen Knochen Ihr Krankenhaus besuchen sollen, dann schalten Sie dies ab.
@@ -263,7 +263,7 @@ steps:
         back: Dieses Menü schließen und zum Einstellungsmenü zurückkehren
       folders_window:
         browse: Nach einem Verzeichnis durchsuchen
-        data_location: Das Verzeichnis der original Theme-Hospital-Installation, die benötigt wird, um CorsixTH zu spielen
+        data_location: Das Verzeichnis der original Theme-Hospital-Installation, die benötigt wird, um OpenWards zu spielen
         font_location: 'Pfad einer Schrift-Datei, die Unicode-Zeichen Ihrer Sprache unterstützt. Wenn diese Einstellung nicht vorgenommen wird, können Sie keine Sprachen auswählen, die mehr Zeichen benötigen, als das Originalspiel unterstützt. Beispiel: Russisch und Chinesisch.'
         savegames_location: Standardmäßig wird das Spielstandsverzeichnis im selben Verzeichnis wie die Konfigurationsdatei gespeichert und es wird benutzt, um die Spielstände darin abzuspeichern. Sollte das nicht erwünscht sein, können Sie sich ihr eigenes Verzeichnis aussuchen, wählen Sie einfach das Verzeichnis, das Sie verwenden möchten
         screenshots_location: Standardmäßig wird das Screenshotverzeichnis im selben Verzeichnis wie die Konfigurationsdatei gespeichert. Sollte das nicht erwünscht sein, können Sie sich ihr eigenes Verzeichnis aussuchen, wählen Sie einfach das Verzeichnis, das Sie verwenden möchten
@@ -355,8 +355,8 @@ steps:
         assigned: Diese Box ist markiert, wenn jemand der Aufgabe zugewiesen ist.
         close: Das Aufruf-Verteiler-Fenster schließen
       update_window:
-        download: Zur Downloadseite für die allerneueste Version von CorsixTH gehen
-        ignore: Dieses Update im Moment ignorieren. Sie werden erneut benachrichtigt, wenn Sie CorsixTH das nächste Mal starten.
+        download: Zur Downloadseite für die allerneueste Version von OpenWards gehen
+        ignore: Dieses Update im Moment ignorieren. Sie werden erneut benachrichtigt, wenn Sie OpenWards das nächste Mal starten.
     staff_title:
       researcher: Forscher
     bank_manager:
@@ -371,7 +371,7 @@ steps:
       rathole: Rattenloch
     confirmation:
       restart_level: Sind Sie sicher, dass Sie das aktuelle Level von vorne beginnen möchten?
-      needs_restart: Um diese Änderung, vorzunehmen muss CorsixTH neu gestartet werden. Nicht gespeicherter Fortschritt geht verloren. Sicher, dass Sie fortfahren wollen?
+      needs_restart: Um diese Änderung, vorzunehmen muss OpenWards neu gestartet werden. Nicht gespeicherter Fortschritt geht verloren. Sicher, dass Sie fortfahren wollen?
       abort_edit_room: Sie bauen oder ändern gerade einen Raum. Wenn alle benötigten Objekte platziert sind, wird der Raum fertiggestellt, ansonsten wird er gelöscht. Fortfahren?
       maximum_screen_size: Die von Ihnen gewählte Bildschirmauflösung ist größer als 3000×2000. Größere Auflösungen sind möglich, aber erfordern eine bessere Hardware, um eine akzeptable Bildwiederholrate zu gewährleisten. Sind Sie sich sicher, dass Sie fortfahren möchten?
       remove_destroyed_room: Möchten Sie den Raum für $%d entfernen?
@@ -482,8 +482,8 @@ steps:
       campaign_completed: Unglaublich! Sie haben alle Level abgeschlossen. Nun können Sie sich entspannen und genießen Foren mit Berichten ihrer Heldentaten zu fluten. Viel Glück!
       campaign_level_missing: 'Entschuldigung, aber das nächste Level dieser Kampagne scheint zu fehlen. (Name: %s)'
     install:
-      title: '----------------------------- CorsixTH-Konfiguration -----------------------------'
-      th_directory: CorsixTH benötigt einige Dateien des Originalspiels Theme Hospital (oder der Demo davon), um zu funktionieren. Bitte das Installationsverzeichnis von Theme Hospital auswählen.
+      title: '----------------------------- OpenWards-Konfiguration -----------------------------'
+      th_directory: OpenWards benötigt einige Dateien des Originalspiels Theme Hospital (oder der Demo davon), um zu funktionieren. Bitte das Installationsverzeichnis von Theme Hospital auswählen.
       ok: OK
       exit: Beenden
       cancel: Abbrechen
@@ -716,14 +716,14 @@ steps:
       save_to_tmp: 'Die Datei %s konnte nicht verwendet werden. Das Spiel wurde als %s gespeichert. Fehler: %s'
       dialog_empty_queue: Entschuldigung, eine Person hat keine weiteren Aktionen geplant und weiß nicht weiter. Weitere Details hierzu können der Konsole entnommen werden. Soll die Person das Krankenhaus verlassen?
       compatibility_error:
-        new_in_old: Entschuldigung, dieser Spielstand wurde mit einer neueren Version von CorsixTH erstellt und ist inkompatibel. Bitte wechseln Sie zu einer aktuelleren Version.
+        new_in_old: Entschuldigung, dieser Spielstand wurde mit einer neueren Version von OpenWards erstellt und ist inkompatibel. Bitte wechseln Sie zu einer aktuelleren Version.
         demo_in_full: Entschuldigung, ein Spielstand der Demo kann nicht mit den Spieldaten der Vollversion geladen werden. Bitte passen Sie ihre TH-Daten-Einstellung an.
         full_in_demo: Entschuldigung, ein Spielstand der Vollversion kann nicht mit den Spieldaten der Demo geladen werden. Bitte passen Sie ihre TH-Daten-Einstellung an.
     warnings:
       levelfile_variable_is_deprecated: "Hinweise: Das Level '%s' enthält eine veraltete Variablendefinition.'%LevelFile' wurde in '%MapFile' umbenannt. Bitte informieren Sie den Autor, dass er das Level aktualisieren sollte."
-      newersave: 'Warnung: Sie haben einen Spielstand von einer neueren Version von CorsixTH geladen. Es ist nicht empfehlenswert fortzufahren, da es zu Abstürzen kommen kann. Weiterspielen auf eigenes Risiko.'
+      newersave: 'Warnung: Sie haben einen Spielstand von einer neueren Version von OpenWards geladen. Es ist nicht empfehlenswert fortzufahren, da es zu Abstürzen kommen kann. Weiterspielen auf eigenes Risiko.'
     information:
-      custom_game: Willkommen zu CorsixTH. Viel Spaß mit diesem eigenen Level!
+      custom_game: Willkommen zu OpenWards. Viel Spaß mit diesem eigenen Level!
       no_custom_game_in_demo: Tut uns Leid, aber in der Demo-Version sind keine eigenen Level spielbar.
       cannot_restart: Leider wurde dieses eigene Level vor Implementierung des Neustart-Features gespeichert.
       very_old_save: Seit dieses Level gestartet wurde, wurden einige Änderungen am Spiel durchgeführt. Sie sollten ein neues Spiel starten, damit alle Änderungen wirksam werden.
@@ -746,7 +746,7 @@ steps:
       - Haben Sie schon versucht, die europäische Notruf-Nummer (112) in das Faxgerät einzugeben? Schalten Sie vorher den Sound an!
       - Im Optionsmenü hier im Hauptmenü oder im laufenden Spiel können Einstellungen wie die Auflösung oder die Sprache geändert werden.
       - Haben Sie eine andere Sprache als Englisch ausgewählt, aber es erscheinen englische Texte? Helfen Sie uns, die Übersetzung zu vervollständigen, indem Sie fehlende Texte in Ihre Sprache übersetzten!
-      - Das CorsixTH-Team sucht Verstärkung! Haben Sie Interesse, beim Programmieren, Übersetzen oder der Grafikerstellung zu helfen? Kontaktieren Sie uns in unserem Forum, der Mailing-Liste oder unserem IRC-Kanal (#Corsix-TH auf Freenode).
+      - Das OpenWards-Team sucht Verstärkung! Haben Sie Interesse, beim Programmieren, Übersetzen oder der Grafikerstellung zu helfen? Kontaktieren Sie uns in unserem Forum, der Mailing-Liste oder unserem IRC-Kanal (#Corsix-TH auf Freenode).
       - 'Wenn Sie einen Bug finden, bitte melden Sie ihn in unserem Bug-Tracker: th-issues.corsix.org'
       - In jedem Level müssen bestimmte Voraussetzungen erfüllt werden, bevor man zum Nächsten wechseln kann. Im Status-Fenster können Sie Ihren Fortschritt bezüglich der Levelziele sehen.
       - Um existierende Räume zu bearbeiten oder gar zu löschen, kann man den Raum-Bearbeiten-Knopf in der unteren Werkzeugleiste verwenden.
@@ -829,7 +829,7 @@ steps:
         heliport_4: Heliport 4
         paste: Bereich einfügen
     hotkeys_file_err:
-      file_err_01: 'Konnte hotkeys.txt nicht laden. Bitte stellen Sie sicher, dass CorsixTH Lese-/Schreibrechte hat '
+      file_err_01: 'Konnte hotkeys.txt nicht laden. Bitte stellen Sie sicher, dass OpenWards Lese-/Schreibrechte hat '
       file_err_02: ', oder verwenden Sie die --hotkeys-file=filename Kommandozeilenoption um eine schreibbare Datei anzugeben. Für Referenzzwecke, der Fehler beim laden der Tastenlürzel-Datei war: '
     transactions:
       remove_room: 'Bauen: Entferne zerstörten Raum'

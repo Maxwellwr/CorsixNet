@@ -159,7 +159,7 @@ steps:
         options: Tweak various settings
         map_edit: Create a custom map
         exit: No, no, please don't leave!
-        quit: You are about to quit from CorsixTH. Are you sure this is what you want to do?
+        quit: You are about to quit from OpenWards. Are you sure this is what you want to do?
       load_game_window:
         load_game: Load game %s
         load_game_number: Load game %d
@@ -238,8 +238,8 @@ steps:
         back: Close the window
       customise_window:
         movies: Global movie control. This will allow you to enable or disable all movies
-        play_intro: Turn the intro movie on and off. Global movies must be on if you want the intro movie to play each time you launch CorsixTH
-        allow_user_actions_while_paused: In the original Theme Hospital, the player could only use the top menu while the game was paused. This is the default behaviour in CorsixTH, but turning this option on will allow you to build rooms and pick up objects while the game is paused
+        play_intro: Turn the intro movie on and off. Global movies must be on if you want the intro movie to play each time you launch OpenWards
+        allow_user_actions_while_paused: In the original Theme Hospital, the player could only use the top menu while the game was paused. This is the default behaviour in OpenWards, but turning this option on will allow you to build rooms and pick up objects while the game is paused
         alien_dna_only_by_emergency: Due to incomplete animations, patients with Alien DNA will only appear via Emergencies by default. To allow patients with Alien DNA to visit your hospital normally, set this option to Regular Patients
         disable_fractured_bones_females: Due to poor animation, female patients with Fractured Bones will not appear by default. To allow female patients with Fractured Bones to visit your hospital, set this option to Male and Female
         enable_avg_contents: If you would like the game to remember which extra objects you usually add while building rooms, turn this option on
@@ -249,7 +249,7 @@ steps:
         back: Close this menu and go back to the Settings Menu
       folders_window:
         browse: Browse for folder location
-        data_location: The directory or ISO file of the original Theme Hospital installation, which is required to run CorsixTH
+        data_location: The directory or ISO file of the original Theme Hospital installation, which is required to run OpenWards
         font_location: 'Location of a font file that is capable of displaying Unicode characters required by your language. If this is not specified you will not be able to choose languages that need more characters than the original game can supply. Example: Russian and Chinese'
         savegames_location: By default, the Saves directory is alongside the config file and will be used for storing saved games in. Alternatively, you can choose your own by browsing to the directory that you want to use.
         screenshots_location: By default, the Screenshots are stored in a folder alongside the config file. Alternatively, you can choose your own by browsing to the directory that you want to use.
@@ -365,8 +365,8 @@ steps:
           delete_message: Click to delete all messages
         close: Close the adviser history dialog
       update_window:
-        download: Go to the download page for the very latest version of CorsixTH
-        ignore: Ignore this update for now. You will be notified again when you next open CorsixTH
+        download: Go to the download page for the very latest version of OpenWards
+        ignore: Ignore this update for now. You will be notified again when you next open OpenWards
     fax:
       emergency:
         cure_not_possible_build: You will need to build a %s
@@ -386,7 +386,7 @@ steps:
           - A very well run hospital. Watch out for the recession though! Right... you don't have to worry about that.
     confirmation:
       restart_level: Are you sure you want to restart the level?
-      needs_restart: Changing this setting requires CorsixTH to restart. Any unsaved progress will be lost. Are you sure you want to do this?
+      needs_restart: Changing this setting requires OpenWards to restart. Any unsaved progress will be lost. Are you sure you want to do this?
       abort_edit_room: You are currently building or editing a room. If all required objects are placed it will be finished, but otherwise it will be deleted. Continue?
       maximum_screen_size: The window size you have entered is greater than 3000 x 2000. Larger window sizes are possible but will require better hardware in order to maintain a playable frame rate. Are you sure you want to continue?
       remove_destroyed_room: Would you like to remove the room for $%d?
@@ -564,8 +564,8 @@ steps:
     progress_report:
       free_build: FREE BUILD
     install:
-      title: '--------------------------------- CorsixTH Setup ---------------------------------'
-      th_directory: CorsixTH needs a copy of the data files from the original Theme Hospital game (or demo) in order to run. Please use the below selector to locate the Theme Hospital install directory.
+      title: '--------------------------------- OpenWards Setup ---------------------------------'
+      th_directory: OpenWards needs a copy of the data files from the original Theme Hospital game (or demo) in order to run. Please use the below selector to locate the Theme Hospital install directory.
       ok: OK
       exit: Exit
       cancel: Cancel
@@ -865,13 +865,13 @@ steps:
       save_to_tmp: 'Attempt to write to %s failed. File was written instead to temporary location %s because of the error: %s'
       dialog_empty_queue: Sorry, a humanoid just had an empty action queue, which means that they didn't know what to do next. Please consult the command window for more detailed information. A dialog with the offending humanoid has been opened. Would you like them to leave the hospital?
       compatibility_error:
-        new_in_old: Sorry, this save was created with a newer version of CorsixTH and is not compatible. Please update to a more recent version.
+        new_in_old: Sorry, this save was created with a newer version of OpenWards and is not compatible. Please update to a more recent version.
         demo_in_full: Sorry, you can't open a demo savegame with the full game files loaded. Please update your TH Data folder setting.
         full_in_demo: Sorry, you can't open a full game save with the demo files loaded. Please update your TH Data folder setting.
       music: There are playback issues with one or more files in your music directory. Problematic files will be disabled in the jukebox. See the console window for more information.
       custom_music_bad_path: Custom Music directory chosen is not a valid directory. Please check the directory and try again.// %s
       custom_music_no_tracks: Custom Music directory chosen contains no playable music files. Please check the directory and try again.// %s
-      missing_corsixth_file: 'Warning: Could not find file %s, try reinstalling CorsixTH.'
+      missing_corsixth_file: 'Warning: Could not find file %s, try reinstalling OpenWards.'
       missing_th_data_file: 'Warning: Could not find file %s, the Theme Hospital data is incomplete.'
       missing_level_file: 'Error: Could not find the chosen level file.'
       overlay:
@@ -881,9 +881,9 @@ steps:
       cannot_restart_missing_files: Sorry, but this level cannot be restarted because of missing files %s or %s.
     warnings:
       levelfile_variable_is_deprecated: "Notice: The level '%s' contains a deprecated variable definition in the level file.'%LevelFile' has been renamed to '%MapFile'. Please advise the map creator to update the level."
-      newersave: Warning, you have loaded a save from a newer version of CorsixTH. It is not recommended to continue as crashes may occur. Play at your own risk.
+      newersave: Warning, you have loaded a save from a newer version of OpenWards. It is not recommended to continue as crashes may occur. Play at your own risk.
     information:
-      custom_game: Welcome to CorsixTH. Have fun with this custom map!
+      custom_game: Welcome to OpenWards. Have fun with this custom map!
       no_custom_game_in_demo: Sorry, but in the demo version you can't play any custom maps.
       cannot_restart: Unfortunately this custom game was saved before the restart feature was implemented.
       level_lost:
@@ -909,7 +909,7 @@ steps:
       - Did you try to enter the European emergency number (112) into the fax machine? Make sure your sound is on!
       - You can adjust some settings such as the window size and language in the options window found both in the main menu and ingame.
       - You selected a language other than English, but there's English text all over the place? Help us by translating missing texts into your language!
-      - The CorsixTH team is looking for reinforcements! Are you interested in coding, translating or creating graphics for CorsixTH? Contact us at our Discord Server, Sub-Reddit or Matrix Server. Links are on our website (CorsixTH.com).
+      - The OpenWards team is looking for reinforcements! Are you interested in coding, translating or creating graphics for OpenWards? Contact us at our Discord Server, Sub-Reddit or Matrix Server. Links are on our website (CorsixTH.com).
       - 'If you find a bug, please report it at our bugtracker: th-issues.corsix.org'
       - Each level has certain requirements to fulfill before you can move on to the next one. Check the status window to see your progression towards the level goals.
       - If you want to edit or remove an existing room, you can do so with the edit room button found in the bottom toolbar.
@@ -1002,7 +1002,7 @@ steps:
       checks:
         spawn_points_and_path: "Warning: Patients cannot reach the hospital. They need 'road' tiles or 'outside' grey tiles at the edge of the map and a path of these tiles to the hospital entrance."
     hotkeys_file_err:
-      file_err_01: 'Unable to load hotkeys.txt file. Please ensure that CorsixTH has permission to read/write '
+      file_err_01: 'Unable to load hotkeys.txt file. Please ensure that OpenWards has permission to read/write '
       file_err_02: ', or use the --hotkeys-file=filename command line option to specify a writable file. For reference, the error loading the hotkeys file was: '
     transactions:
       remove_room: 'Build: Remove destroyed room'

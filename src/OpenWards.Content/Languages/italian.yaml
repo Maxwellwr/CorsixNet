@@ -174,8 +174,8 @@ steps:
         jukebox: Apri il Jukebox per controllare la musica
       customise_window:
         movies: Controllo filmati globale, questo ti permette di disattivare tutti i filmati
-        play_intro: Disattiva o attiva la riproduzione del filmato introduttivo. I filmati globali devono essere attivati se vuoi che il filmato introduttivo venga riprodotto ogni volta che avvii CorsixTH
-        allow_user_actions_while_paused: In Theme Hospital al giocatore è consentito utilizzare il menu in alto solo se il gioco è in pausa. Questa è l'impostazione predefinita anche in CorsixTH, ma attivandola tutto è consentito mentre il gioco è in pausa
+        play_intro: Disattiva o attiva la riproduzione del filmato introduttivo. I filmati globali devono essere attivati se vuoi che il filmato introduttivo venga riprodotto ogni volta che avvii OpenWards
+        allow_user_actions_while_paused: In Theme Hospital al giocatore è consentito utilizzare il menu in alto solo se il gioco è in pausa. Questa è l'impostazione predefinita anche in OpenWards, ma attivandola tutto è consentito mentre il gioco è in pausa
         volume: Se il pulsante per abbassare il volume ti fa aprire anche il Registro Cure, attiva questa opzione per impostare Shift + C come scorciatoia per il Registro Cure
         alien_dna_only_by_emergency: A causa dell'assenza delle giuste animazioni abbiamo fatto sì che i pazienti con DNA Alieno possano arrivare solo con un'emergenza. Per permettere ai pazienti con DNA Alieno di visitare il tuo ospedale anche al di fuori delle emergenze disattiva questa opzione
         disable_fractured_bones_females: A causa della scarsa qualità di alcune animazioni abbiamo fatto sì che non ci siano pazienti donne con Ossa Rotte. Per far sì che donne con Ossa Rotte visitino il tuo ospedale, disattiva questa opzione
@@ -184,7 +184,7 @@ steps:
         remove_destroyed_rooms: Se desideri poter rimuovere le stanze distrutte a pagamento, attiva questa opzione
       folders_window:
         browse: Sfoglia le cartelle
-        data_location: La cartella dell'installazione originale di Theme Hospital, che è richiesto per eseguire CorsixTH
+        data_location: La cartella dell'installazione originale di Theme Hospital, che è richiesto per eseguire OpenWards
         font_location: 'Posizione di un font che è in grado di mostrare i caratteri Unicode richiesti dalla tua lingua. Se non specificata, non potrai scegliere lingue che hanno bisogno di più caratteri rispetto a quelli di cui dispone il gioco originale. Esempio: Russo e Cinese'
         savegames_location: Per impostazione predefinita, la cartella dei salvataggi si trova accanto al file di configurazione e verrà utilizzata per archiviare i giochi salvati. In alternativa, puoi usarne un'altra selezionando quella che desideri utilizzare.
         screenshots_location: Per impostazione predefinita, la cartella dei salvataggi si trova accanto al file di configurazione. In alternativa, puoi usarne un'altra selezionando quella che desideri utilizzare.
@@ -265,8 +265,8 @@ steps:
         assigned: Questo box è segnato se qualcuno è assegnato al compito corrispondente.
         close: Chiude la finestra del gestore chiamate
       update_window:
-        download: Vai alla pagina di download per trovare l'ultima versione di CorsixTH
-        ignore: Ignora l'aggiornamento per ora. Questa notifica apparirà di nuovo al prossimo avvio di CorsixTH
+        download: Vai alla pagina di download per trovare l'ultima versione di OpenWards
+        ignore: Ignora l'aggiornamento per ora. Questa notifica apparirà di nuovo al prossimo avvio di OpenWards
       hotkey_window:
         button_accept: Accetta e salva i tasti scorciatoia
         button_cancel: Cancella l'assegnazione e torna al menu opzioni
@@ -378,8 +378,8 @@ steps:
       campaign_completed: Incredibile! Sei riuscito a completare tutti i livelli. Ora puoi rilassarti e divertirti a riempire i forum su internet con i tuoi fantastici risultati. Buona fortuna!
       campaign_level_missing: 'Mi dispiace, ma sembra che il livello successivo di questa campagna non sia presente. (Nome: %s)'
     install:
-      title: '----------------------------- Installazione CorsixTH -----------------------------'
-      th_directory: CorsixTH ha bisogno di una copia dei file dati di Theme Hospital (o della demo) per essere eseguito. Per favore indica la posizione della cartella HOSP nell'installazione di Theme Hospital.
+      title: '----------------------------- Installazione OpenWards -----------------------------'
+      th_directory: OpenWards ha bisogno di una copia dei file dati di Theme Hospital (o della demo) per essere eseguito. Per favore indica la posizione della cartella HOSP nell'installazione di Theme Hospital.
       ok: Ok
       exit: Esci
       cancel: Annulla
@@ -395,7 +395,7 @@ steps:
       epidemics_off: Le epidemie sono disabilitate
       earthquakes_off: I terremoti sono disabilitati
     hotkeys_file_err:
-      file_err_01: 'Impossibile caricare il file hotkeys.txt. Assicurati che CorsixTH abbia permessi in lettura/scrittura '
+      file_err_01: 'Impossibile caricare il file hotkeys.txt. Assicurati che OpenWards abbia permessi in lettura/scrittura '
       file_err_02: ", oppure usa l'opzione --hotkeys-file=filename in riga di comando per specificare un file con tali permessi. Per riferimento, l'errore durante il caricamento era: "
     main_menu:
       new_game: Nuova partita
@@ -631,22 +631,22 @@ steps:
       save_to_tmp: 'Il file al percorso %s non può essere usato. Il gioco è stato salvato qui %s. Errore: %s'
       load_level_prefix: 'Errore durante il caricamento del livello: '
       compatibility_error:
-        new_in_old: Mi dispiace, ma questo salvataggio è stato creato con una versione più recente di CorsixTH e non è compatibile. Per favore, aggiorna a una versione più recente.
+        new_in_old: Mi dispiace, ma questo salvataggio è stato creato con una versione più recente di OpenWards e non è compatibile. Per favore, aggiorna a una versione più recente.
         full_in_demo: Mi dispicae, non puoi aprire un salvataggio completo del gioco con i file demo caricati. Aggiorna il percorso della cartella Dati di TH.
         demo_in_full: Spiacenti, non puoi aprire un salvataggio demo con i file di gioco completi caricati. Aggiorna il percorso della cartella Dati di TH.
       dialog_empty_queue: Mi dispiace, un umanoide aveva una coda di azioni vuota, il che significa che non sapeva cosa doveva fare. Consultare la finestra di comando per informazioni più dettagliate. È stato aperto un dialogo con l'umanoide incriminato. Vorresti che lasciasse l'ospedale?
     warnings:
       levelfile_variable_is_deprecated: "Attenzione: Il livello %s contiene una definizione di variabile deprecata nel file di livello.'%LevelFile' è stato rinominato in '%MapFile'. Per favore richiedi al creatore della mappa di aggiornare il livello."
-      newersave: Attenzione, hai caricato un salvataggio da una versione più recente di CorsixTH. Non è consigliabile continuare poiché potrebbero verificarsi arresti anomali. Gioca a tuo rischio.
+      newersave: Attenzione, hai caricato un salvataggio da una versione più recente di OpenWards. Non è consigliabile continuare poiché potrebbero verificarsi arresti anomali. Gioca a tuo rischio.
     confirmation:
-      needs_restart: Cambiare questa impostazione richiede che CorsixTH sia riavviato. Ogni progresso non salvato sarà perduto. Sei sicuro di volerlo fare?
+      needs_restart: Cambiare questa impostazione richiede che OpenWards sia riavviato. Ogni progresso non salvato sarà perduto. Sei sicuro di volerlo fare?
       abort_edit_room: Stai attualmente costruendo o modificando una stanza. Se tutti gli oggetti richiesti sono stati posizionati sarà completata, altrimenti sarà cancellata. Continuare?
       maximum_screen_size: La risoluzione che hai inserito è superiore a 3000x2000. Risoluzioni maggiori sono supportate, ma richiederanno un hardware migliore per mantenere un livello di frame rate giocabile. Sei sicuro di voler continuare?
       music_warning: 'Nota: è necessario avere la libreria smpeg.dll o equivalente nel tuo sistema operativo, altrimenti non sentirai alcuna musica nel gioco. Vuoi continuare?'
       restart_level: Sei sicuro di voler riavviare il livello?
       remove_destroyed_room: Vuoi rimuovere la stanza per $X?
     information:
-      custom_game: Benvenuto in CorsixTH. Divertiti con questa mappa personalizzata!
+      custom_game: Benvenuto in OpenWards. Divertiti con questa mappa personalizzata!
       no_custom_game_in_demo: Spiacente, ma nella versione demo non puoi giocare mappe personalizzate.
       cannot_restart: Sfortunatamente questa mappa personalizzata è stata salvata prima che venisse implementata la funzione per riavviare.
       very_old_save: Il gioco è stato molto aggiornato da quando hai avviato questo livello. Per assicurarti che tutto funzioni a dovere, considera l'idea di riavviarlo.
@@ -669,7 +669,7 @@ steps:
       - Hai provato a digitare il numero di emergenza europea (112) nel fax? Assicurati di avere l'audio attivato!
       - Il menu d'opzioni non è ancora implementato, ma puoi regolare le impostazioni modificando il file config.txt nella directory di gioco.
       - Hai selezionato la tua lingua, ma è tutto in Inglese? Aiutaci a tradurre il gioco!
-      - Il team di CorsixTH sta cercando rinforzi!  Ti piacerebbe programmare, tradurre o creare nuovi elementi grafici per CorsixTH? Contattaci nei forum, tramite mail o sul canale IRC (corsix-th su freenode).
+      - Il team di OpenWards sta cercando rinforzi!  Ti piacerebbe programmare, tradurre o creare nuovi elementi grafici per OpenWards? Contattaci nei forum, tramite mail o sul canale IRC (corsix-th su freenode).
       - 'Hai trovato un bug? Vuoi segnalare un errore di qualsiasi genere? Invia una segnalazione al nostro bug tracker: th-issues.corsix.org'
       - Ogni livello ha degli obiettivi da raggiungere prima di poter passare al successivo. Controlla la finestra di riepilogo per vedere a che punto sei.
       - Se vuoi modificare o rimuovere una stanza esistente, puoi farlo con il tasto modifica stanza nella barra degli strumenti in basso.

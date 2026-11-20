@@ -79,8 +79,8 @@ steps:
       custom_level_completed: Godt arbejde! Du har opfyldt alle mål på denne speicalbane!
       return_to_main_menu: Vil du gå tilbage til hovedmenuen eller fortsætte med at spille?
     install:
-      title: '--------------------------------- CorsixTH Installation ---------------------------------'
-      th_directory: CorsixTH kræver en original installation af Theme Hospital for at fungere. Angiv placeringen af spillet her.
+      title: '--------------------------------- OpenWards Installation ---------------------------------'
+      th_directory: OpenWards kræver en original installation af Theme Hospital for at fungere. Angiv placeringen af spillet her.
       exit: Afslut
     object:
       litter: Skrald
@@ -655,12 +655,12 @@ steps:
       maximum_screen_size: Indtast en oplösning på maksimalt 3000x2000.
       unavailable_screen_size: Skærmoplösningen du valgte er ikke tilgængelig i fuldskærmsvisning.
     confirmation:
-      needs_restart: Hvis du vil benytte disse indstillinger, så kræver det en genstart af CorsixTH. Spil, som ikke er gemt, vil gå tabt. Er du sikker på, at du vil bruge disse indstillinger?
+      needs_restart: Hvis du vil benytte disse indstillinger, så kræver det en genstart af OpenWards. Spil, som ikke er gemt, vil gå tabt. Er du sikker på, at du vil bruge disse indstillinger?
       abort_edit_room: Du er ved at opbygge eller ændre et lokale. Hvis alle obligatoriske genstande er placeret, kan du gemme lokalet. Hvis ikke, skal du slette rummet. Fortsætte?
       restart: Er du sikker på at du vil pröve på ny?
       restart_level: Er du sikker på at du vil begynde forfra?
     information:
-      custom_game: Velkommen til CorsixTH. Hav det sjovt med denne specialbane!
+      custom_game: Velkommen til OpenWards. Hav det sjovt med denne specialbane!
       cannot_restart: Beklageligvis er denne specialbane lavet för genstartfuntionen blev implanteret.
       level_lost:
         1: Öv! Du gennemförte ikke banen. Bedre held næste gang!
@@ -679,7 +679,7 @@ steps:
       - Har du prövet at indtaste det europæriske alarmnummer (1-1-2) på faxmaskinen? Husk at have lyd slået til!
       - Du kan ændre nogle indstillinger, såsom skærmoplösning og sprog, i indstillingsvinduet som findes både i hovedmenuen og inde i spillet.
       - Du har valgt et andet sprog end engelsk, men der er alligevel engelsk over det hele? Hjælp os med at oversætte teksten til dit sprog.
-      - Holdet bag CorsixTH er altid på udkig efter forskærkninger! Er du interesseret i kodning, oversættelse eller at lave grafik til CorsixTH? Så kontakt os på vores forum, mailingliste eller IRC kanalen (corsix-th på freenode).
+      - Holdet bag OpenWards er altid på udkig efter forskærkninger! Er du interesseret i kodning, oversættelse eller at lave grafik til OpenWards? Så kontakt os på vores forum, mailingliste eller IRC kanalen (corsix-th på freenode).
       - 'Hvis du finder en fejl kan du rapportere den til os på vores bugtracker: th-issues.corsix.org'
       - På hver bane er der forskellige betingelser, som skal være opfyldt för du kan gå videre til den næste bane. Hold öje med statusvinduet for at se, hvor tæt du på at opfylde banens mål.
       - Hvis du vil ændre eller fjerne eksisterende lokaler, kan du göre det ved at trykke på rediger lokale knappen som findes i væktöjslinjen i bunden af skærmen.
@@ -1995,8 +1995,8 @@ steps:
         folder: Mappeindstillinger
         customise: Flere indstillinger som du kan ændre for at tilpasse din spiloplevelse.
       update_window:
-        download: Gå til downloadsiden for den nyeste version af CorsixTH
-        ignore: Ignorer denne opdatering for nu. Du vil blive påmindet igen næste gang du åbner CorsixTH
+        download: Gå til downloadsiden for den nyeste version af OpenWards
+        ignore: Ignorer denne opdatering for nu. Du vil blive påmindet igen næste gang du åbner OpenWards
       folders_window:
         browse_font: 'Led efter en anden skrifttype fil ( nuværende placering: %1% )'
         screenshots_location: Normalt er skærmbilleder gemt i samme mappe som konfigurationsfilen. Hvis du gerne vil have skærmbilleder gemt et andet sted, skal du blot navigere til den pågældende mappe.
@@ -2009,7 +2009,7 @@ steps:
         not_specified: Du har ikke valgt en mappeplacering endnu!
         browse_saves: 'Find en anden mappe til din gemte spil ( nuværende placering %1% ) '
         default: Standard lokation
-        data_location: Placeringen af den originale Theme Hospital installation som kræves for at køre CorsixTH
+        data_location: Placeringen af den originale Theme Hospital installation som kræves for at køre OpenWards
       customise_window:
         back: Luk denne menu og gå tilbage til indstillinger
         movies: Global film kontrol, dette vil tillade dig at deaktivere alle film

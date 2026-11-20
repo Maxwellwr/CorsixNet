@@ -1304,7 +1304,7 @@ steps:
         load_game: 载入存档
         continue: 从最近的存档继续玩
         network: 开始网络游戏
-        quit: 你将退出 CorsixTH。确定？
+        quit: 你将退出 OpenWards。确定？
         load_menu:
           load_slot: 读取进度
           empty_slot: 空
@@ -1640,8 +1640,8 @@ steps:
         audio_toggle: 切换开关
       customise_window:
         movies: 全局 CG 控制，这将允许您禁用所有 CG
-        play_intro: 关闭或打开启动 CG，如果您希望每次启动 CorsixTH 时都播放启动 CG，则必须打开全局 CG
-        allow_user_actions_while_paused: 在主题医院中，只有在游戏暂停的情况下，才允许玩家使用顶部菜单，这也是 CorsixTH 的默认设置。但是将此选项打开，游戏暂停时可以进行所有操作
+        play_intro: 关闭或打开启动 CG，如果您希望每次启动 OpenWards 时都播放启动 CG，则必须打开全局 CG
+        allow_user_actions_while_paused: 在主题医院中，只有在游戏暂停的情况下，才允许玩家使用顶部菜单，这也是 OpenWards 的默认设置。但是将此选项打开，游戏暂停时可以进行所有操作
         alien_dna_only_by_emergency: 因为缺少合适的动画，默认外星人 DNA 病人只会来自紧急事件。要允许紧急事件外出现外星人 DNA 病人，请关闭此选项
         disable_fractured_bones_females: 由于动画效果不佳，默认不会有女性骨折患者。要允许女性骨折患者就诊，请关闭此功能
         enable_avg_contents: 如果您想让游戏记住在建造房间时通常会添加哪些其他对象，请启用此选项。
@@ -1649,7 +1649,7 @@ steps:
         back: 关闭此菜单，并返回设置菜单
       folders_window:
         browse: 浏览文件夹位置
-        data_location: 原版主题医院安装的目录，CorsixTH 运行所必需
+        data_location: 原版主题医院安装的目录，OpenWards 运行所必需
         font_location: 选择可以显示您的语言所需 Unicode 字体的位置。如果没有指定，您将不能使用原游戏提供字体之外的语言，例如中文和俄语。（你一定已经选了，要不怎么可以看到这句话呢？）
         savegames_location: 默认情况下，游戏存档存储在配置文件旁边的文件夹中。如果不合适，可以选择自己的目录，只需浏览到要使用的目录即可。
         screenshots_location: 默认情况下，屏幕快照存储在配置文件旁边的文件夹中。如果不合适，可以选择自己的目录，只需浏览到要使用的目录即可。
@@ -1712,8 +1712,8 @@ steps:
         assigned: 这个框代表是否有人被分配给此任务。
         close: 关闭签派窗口
       update_window:
-        download: 前往下载页面下载最新版 CorsixTH
-        ignore: 忽略这次更新。您将在下次启动 CorsixTH 时再次收到通知
+        download: 前往下载页面下载最新版 OpenWards
+        ignore: 忽略这次更新。您将在下次启动 OpenWards 时再次收到通知
     confirmation:
       quit: 您已经选择了退出。您是否确定真的要退出游戏？
       return_to_blueprint: 您是否确定返回蓝图模式？
@@ -1724,7 +1724,7 @@ steps:
       restart_level: 您是否希望重新开始这个任务？
       remove_destroyed_room: 你希望支付 $%d 拆除这个房间吗？
       replace_machine_extra_info: 新机器的强度为 %d (现在 %d).
-      needs_restart: 这项设置的改动需要重新启动 CorsixTH。尚未保存的进度将会丢失。确定要这么做吗？
+      needs_restart: 这项设置的改动需要重新启动 OpenWards。尚未保存的进度将会丢失。确定要这么做吗？
       abort_edit_room: 您正在修建或者修改一间房间。如果所有必需的物品都被放置了就没有问题，否则所做的修改将被删除。继续吗？
       maximum_screen_size: 您输入的屏幕尺寸大于 3000x2000。可以使用更大的分辨率，但需要更好的硬件才能保持可播放的帧速率。继续吗？
     bank_manager:
@@ -2693,8 +2693,8 @@ steps:
         norest_on_cheat: 哇喔！似乎咖啡因使你的员工十分兴奋，永远不用休息。
         norest_off_cheat: 呼～精神亢奋剂的效力过去了，员工现在恢复正常作息
     install:
-      title: '-------------------------------- CorsixTH  游戏设置 -------------------------------'
-      th_directory: CorsixTH 需要原版主题医院（或演示版）的数据文件才能运行。请指定原版主题医院游戏的安装文件夹。
+      title: '-------------------------------- OpenWards  游戏设置 -------------------------------'
+      th_directory: OpenWards 需要原版主题医院（或演示版）的数据文件才能运行。请指定原版主题医院游戏的安装文件夹。
       ok: 确定
       exit: 退出
       cancel: 取消
@@ -2931,12 +2931,12 @@ steps:
       compatibility_error:
         demo_in_full: 抱歉，这是演示版的游戏存档，无法在完整版中打开。请更新原版主题医院目录内容。
         full_in_demo: 抱歉，这是完整版的游戏存档，无法在演示版中打开。请更新原版主题医院目录内容。
-        new_in_old: 抱歉，此游戏存档需要较新版本的 CorsixTH 才能打开。
+        new_in_old: 抱歉，此游戏存档需要较新版本的 OpenWards 才能打开。
     warnings:
       levelfile_variable_is_deprecated: 注意：关卡'%s'在关卡文件中包含弃用的变量定义。'%LevelFile'已重命名为'%MapFile'。请建议地图创建者更新关卡。
-      newersave: 警告：此游戏存档是由较新版本 CorsixTH 创建的。不建议继续进行游戏，否则可能会出现错误。一般来说，仅作测试用途。
+      newersave: 警告：此游戏存档是由较新版本 OpenWards 创建的。不建议继续进行游戏，否则可能会出现错误。一般来说，仅作测试用途。
     information:
-      custom_game: 欢迎来到 CorsixTH。尽情享受自定义地图吧！
+      custom_game: 欢迎来到 OpenWards。尽情享受自定义地图吧！
       no_custom_game_in_demo: 抱歉，在演示版本中，您无法玩任何自定义地图。
       cannot_restart: 不幸的是这个自定义地图是在 重新开始 功能开发之前创建的。
       very_old_save: 从您开始玩此关以来，游戏已有许多更新。为确保所有功能均按预期工作，请考虑重新启动它。
@@ -2959,7 +2959,7 @@ steps:
       - 有没有试过在传真机上拨112？这是欧洲的急救电话。记得将音量调到最大！
       - 在主菜单和游戏菜单里面，找到选项窗口，在那里可以调整分辨率和语言。
       - 你选择了中文，但是你还是可能会在游戏中不停地看到英文。把他们翻译了吧，我们需要你的帮助！
-      - CorsixTH 小组正在壮大！如果你对编程、翻译、创作主题医院需要的图片等等任何方面感兴趣，可以到 CorsixTH 网站找到开发、社群等信息。
+      - OpenWards 小组正在壮大！如果你对编程、翻译、创作主题医院需要的图片等等任何方面感兴趣，可以到 OpenWards 网站找到开发、社群等信息。
       - '如果你碰到了 bug，请提交给我们: th-issues.corsix.org'
       - 每一关都需要满足特定的条件才能过关。你可以通过状态窗口看到你的进度。
       - 如果你需要编辑或者删除一间房间，屏幕下方找到工具栏，然后点编辑房间按钮。
@@ -3040,7 +3040,7 @@ steps:
         heliport_4: 直升机场 4
         paste: Paste area
     hotkeys_file_err:
-      file_err_01: 无法加载 hotkeys.txt 文件。请确保 CorsixTH 具有读/写权限
+      file_err_01: 无法加载 hotkeys.txt 文件。请确保 OpenWards 具有读/写权限
       file_err_02: ，或使用 --hotkeys-file=filename 命令行选项指定一个可写文件。作为参考，加载快捷键文件的错误是：
     level_progress:
       hospital_value_enough: 保持医院价值在%d以上，并解决好其他问题，就能完成任务了。

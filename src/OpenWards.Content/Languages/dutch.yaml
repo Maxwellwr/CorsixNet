@@ -125,7 +125,7 @@ steps:
         7: 'Verzamelt bierviltjes. '
         8: 'Houdt van stage-diving. '
         9: 'Houdt van ruftsurfen. '
-        10: 'Programmeert voor CorsixTH. '
+        10: 'Programmeert voor OpenWards. '
         11: 'Stookt whisky. '
         12: 'Een goede klusser. '
         13: 'Houdt van artistieke Franse films. '
@@ -170,7 +170,7 @@ steps:
       - 'Sluw, geniepig en tegendraads. '
       - 'Verwaand en zelfingenomen. '
     information:
-      custom_game: Welkom bij CorsixTH. Veel plezier in dit ziekenhuis!
+      custom_game: Welkom bij OpenWards. Veel plezier in dit ziekenhuis!
       cannot_restart: Dit level is opgeslagen voordat de herstart-functie was geïmplementeerd.
       very_old_save: Er zijn veel updates geweest sinds je met dit level bent begonnen. Om zeker te zijn dat alles werkt zoals het hoort, kun je dit level beter opnieuw beginnen.
       no_custom_game_in_demo: Sorry, maar in de demo versie kan je niet als uitzendkracht werken.
@@ -225,7 +225,7 @@ steps:
       - Heb je al geprobeerd het alarmnummer (112) te bellen op de faxmachine? Zet wel je geluid eerst aan!
       - Je kunt instellingen zoals de schermresolutie en de taal in het instellingen menu wijzigen. Het instellingen menu is in het spel en in het hoofdmenu te vinden.
       - De Nederlandse vertaling is up to date. Zie je toch nog Engelse woorden, of heb je een schrijf- of taalfout ontdekt? Meldt het alsjeblieft op het forum (www.corsixth.com).
-      - Het CorsixTH team zoekt versterking! Zou je willen coden, vertalen of graphics willen maken? Neem dan contact met ons op via ons forum (www.corsixth.com) of ons IRC kanaal (corsix-th op Freenode).
+      - Het OpenWards team zoekt versterking! Zou je willen coden, vertalen of graphics willen maken? Neem dan contact met ons op via ons forum (www.corsixth.com) of ons IRC kanaal (corsix-th op Freenode).
       - 'Als je een bug vindt zouden we het op prijs stellen als je deze meldt via onze bugtracker: th-issues.corsix.org'
       - Bij elk level moet je aan bepaalde eisen voldoen voordat je door kunt gaan naar het volgende level. Controleer het statusscherm om te zien hoe ver of dicht je bij je doel bent.
       - Als je een bestaande kamer wil aanpassen of verwijderen, kun je dat doen met de aanpassen-knop op de werkbalk.
@@ -1125,22 +1125,22 @@ steps:
         research_progress: 'Voortgang tot de volgende ontdekking in deze categorie: %1%/%2%'
         no_research: Naar deze categorie wordt momenteel geen onderzoek gedaan
       customise_window:
-        play_intro: Zet de intro video aan of uit. Zet deze instelling aan om de intro video te tonen als CorsixTH wordt gestart.
+        play_intro: Zet de intro video aan of uit. Zet deze instelling aan om de intro video te tonen als OpenWards wordt gestart.
         disable_fractured_bones_females: Omdat de animatie niet mooi is, zijn vrouwelijke patiëntien met gebroken botten standaard uitgeschakeld. Om vrouwelijke patiënten met gebroken botten in je ziekenhuis te ontvangen zet je deze instelling uit.
         movies: Met algemene video instellingen zet je alle video's aan of uit.
         alien_dna_only_by_emergency: Vanwege de sleche animatie bezoeken patiënten met alien-DNA je ziekenhuis alleen bij een noodgeval. Om patiënten met alien-DNA ook buiten noodgevallen je ziekenhuis te laten bezoeken zet je deze instelling uit.
-        allow_user_actions_while_paused: In Theme Hospital was het niet mogelijk de menubalk te gebruiken als het spel was gepauzeerd. De standaard instelling in CorsixTH is het zelfde, maar met deze instelling aan is dit tijdens pauze wel toegestaan.
+        allow_user_actions_while_paused: In Theme Hospital was het niet mogelijk de menubalk te gebruiken als het spel was gepauzeerd. De standaard instelling in OpenWards is het zelfde, maar met deze instelling aan is dit tijdens pauze wel toegestaan.
         enable_avg_contents: Als het spel moet onthouden wat je gemiddeld genomen aan meubilair in een kamer bouwt, zet deze instelling aan.
         back: Sluit dit menu af en ga terug naar het instellingen menu.
         remove_destroyed_rooms: Schakel deze optie in als u vernielde kamers tegen betaling wilt kunnen verwijderen
       update_window:
-        download: Ga naar de download pagina voor de nieuwste versie van CorsixTH
-        ignore: Negeer deze update. Je wordt opnieuw herinnerd als je CorsixTH de volgende keer start.
+        download: Ga naar de download pagina voor de nieuwste versie van OpenWards
+        ignore: Negeer deze update. Je wordt opnieuw herinnerd als je OpenWards de volgende keer start.
       folders_window:
         browse_font: 'Zoek naar een ander lettertype ( huidige locatie: %1% ) '
         screenshots_location: Standaard worden screenshots opgeslagen bij het configuratie bestand. Als dit niet gewenst is, kies dan hier een andere locatie.
         browse_music: 'Zoek naar een andere locatie voor je muziek bestand ( huidige locatie: %1% ) '
-        data_location: De map waar de originele Theme Hospital installatie in staat. Deze is nodig om CorsixTH te laten werken.
+        data_location: De map waar de originele Theme Hospital installatie in staat. Deze is nodig om OpenWards te laten werken.
         browse_data: 'Zoek naar een andere locatie van je Theme Hospital installatie ( huidige lacatie: %1% )'
         savegames_location: Standaard worden opgeslagen spellen in de saves map bij het configuratie bestand opgeslagen. Als dit niet gewenst is, kies dan hier een andere locatie.
         back: Sluit dit menu af en ga terug naar het instellingen menu.
@@ -1847,8 +1847,8 @@ steps:
       campaign_level_completed: Goed gedaan! Je hebt het level gehaald. Maar het is nog niet voorbij!// Wil je een baan bij %s Hospital?
       campaign_level_missing: 'Sorry, maar het volgende level van deze campagne lijkt te ontbreken. (Naam: %s)'
     install:
-      title: '--------------------------------- CorsixTH Setup ---------------------------------'
-      th_directory: CorsixTH heeft de databestanden van de originele Theme Hospital (of de demo) nodig om te kunnen draaien. Geef hieronder aan waar Theme Hospital staat geïnstalleerd.
+      title: '--------------------------------- OpenWards Setup ---------------------------------'
+      th_directory: OpenWards heeft de databestanden van de originele Theme Hospital (of de demo) nodig om te kunnen draaien. Geef hieronder aan waar Theme Hospital staat geïnstalleerd.
       exit: Afsluiten
       ok: OK
       cancel: Annuleren
@@ -1886,7 +1886,7 @@ steps:
       compatibility_error:
         demo_in_full: Sorry, je kunt geen demo-savegame openen terwijl de volledige gamebestanden zijn geladen. Werk je TH Data-mapinstelling bij.
         full_in_demo: Sorry, je kunt geen savegame van de volledige game openen terwijl de demobestanden zijn geladen. Werk je TH Data-mapinstelling bij.
-        new_in_old: Sorry, dit opslagbestand is aangemaakt met een nieuwere versie van CorsixTH en is niet compatibel. Update naar een recentere versie.
+        new_in_old: Sorry, dit opslagbestand is aangemaakt met een nieuwere versie van OpenWards en is niet compatibel. Update naar een recentere versie.
       could_not_find_first_campaign_level: 'Kon het eerste level van deze campagne niet vinden: %s'
       could_not_load_campaign: 'Kan de campagne niet laden: %s'
       load_level_prefix: 'Fout bij het laden van level: '
@@ -2135,7 +2135,7 @@ steps:
     confirmation:
       quit: 'Weet je zeker dat je het spel wilt verlaten?                '
       return_to_blueprint: 'Weet je zeker dat je terug wil gaan naar de blauwdrukmodus?                   '
-      needs_restart: 'Om deze instellingen toe te passen, moet CorsixTH opnieuw opstarten. Niet opgeslagen vooruitgang zal hierdoor verloren gaan. Weet je zeker dat je dit wil doen?                     '
+      needs_restart: 'Om deze instellingen toe te passen, moet OpenWards opnieuw opstarten. Niet opgeslagen vooruitgang zal hierdoor verloren gaan. Weet je zeker dat je dit wil doen?                     '
       overwrite_save: 'Er is hier al een spel opgeslagen. Weet je zeker dat je het bestaande spel wilt overschrijven?                   '
       delete_room: 'Weet je zeker dat je deze kamer wilt verwijderen?                  '
       sack_staff: 'Weet je zeker dat je dit personeelslid wilt ontslaan?                  '
@@ -2915,11 +2915,11 @@ steps:
         spawn_points_and_path: "Waarschuwing: Patiënten kunnen het ziekenhuis niet bereiken. Ze hebben 'weg'-tegels of 'buiten'-grijze tegels nodig aan de rand van de map en een pad van deze tegels naar de ingang van het ziekenhuis."
     warnings:
       levelfile_variable_is_deprecated: "Let op: Het level '%s' bevat een verouderde variabele definitie in het levelbestand. '%LevelFile' is hernoemd naar '%MapFile'. Geef de maker van dit scenario advies om het level bij te werken."
-      newersave: Waarschuwing, je hebt een spel geladen die in een nieuwere versie van CorsixTH is opgeslagen. Het wordt afgeraden om door te gaan, omdat er crashes kunnen optreden. Speel op eigen risico.
+      newersave: Waarschuwing, je hebt een spel geladen die in een nieuwere versie van OpenWards is opgeslagen. Het wordt afgeraden om door te gaan, omdat er crashes kunnen optreden. Speel op eigen risico.
     disease_discovered_patient_choice:
       need_to_employ: Schakel een %s in die deze situatie kan behandelen.
     hotkeys_file_err:
-      file_err_01: 'Kan hotkeys.txt-bestand niet laden. Zorg ervoor dat CorsixTH lees-/schrijfrechten heeft '
+      file_err_01: 'Kan hotkeys.txt-bestand niet laden. Zorg ervoor dat OpenWards lees-/schrijfrechten heeft '
       file_err_02: ', of gebruik de opdrachtregeloptie --hotkeys-file=bestandsnaam om een beschrijfbaar bestand op te geven. Ter referentie, de fout bij het laden van het hotkeys-bestand was: '
     level_progress:
       cured_enough_patients: Je hebt genoeg patiënten genezen, maar je moet je ziekenhuis beter op orde krijgen om het level te winnen.

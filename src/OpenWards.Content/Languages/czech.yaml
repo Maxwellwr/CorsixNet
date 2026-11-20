@@ -49,7 +49,7 @@ steps:
       mcga_lo_res: '  MCGA NÍZKÉ ROZ  '
       high_res: '  VYSOKÉ ROZ  '
     hotkeys_file_err:
-      file_err_01: 'Nepovedlo se načíst soubor hotkeys.txt. Ověřte prosím, že CorsixTH má právo číst/zapisovat soubor '
+      file_err_01: 'Nepovedlo se načíst soubor hotkeys.txt. Ověřte prosím, že OpenWards má právo číst/zapisovat soubor '
       file_err_02: ', nebo použijte v příkazovém řádku parametr --hotkeys-file=filename se jménem souboru. Popis chyby: '
     rooms_long:
       dna_fixer: Genex 2000
@@ -269,7 +269,7 @@ steps:
       music_warning: Před zvolením hudby ve formátu mp3 se ujistěte, že máte dostupný soubor smpeg.dll (nebo podobný pro vás operační systém), jinak ve hře nebudete mít žádnou hudbu. Opravdu chcete pokračovat?
       abort_edit_room: Právě stavíte nebo upravujete místnost. Pokud jsou všechny povinné objekty umístěny, bude dokončena, ale jinak bude smazána. Pokračovat?
       quit: Opravdu chcete odejít ze hry?
-      needs_restart: Změna tohoto nastavení vyžaduje restart CorsixTH. Jakýkoli neuložený postup bude ztracen. Opravdu to chcete udělat?
+      needs_restart: Změna tohoto nastavení vyžaduje restart OpenWards. Jakýkoli neuložený postup bude ztracen. Opravdu to chcete udělat?
       delete_room: Opravdu chcete tuto místnost smazat?
       sack_staff: Opravdu chcete tohoto zaměstnance propustit?
       restart_level: Opravdu chcete tuto úroveň restartovat?
@@ -1003,7 +1003,7 @@ steps:
           delete_message: Klikněte pro smazání všech zpráv
           message: Historie hlášení
       folders_window:
-        data_location: Adresář instalace původní hry Theme Hospital, jenž je vyžadován pro spuštění CorsixTH
+        data_location: Adresář instalace původní hry Theme Hospital, jenž je vyžadován pro spuštění OpenWards
         no_font_specified: Umístění písma zatím nezadáno!
         browse_data: 'Procházet pro jiné umístění instalace Theme Hospital. (současné umístění: %1%)'
         browse_font: 'Procházet pro výběr jiného souboru s písmem (současné umístění: %1%)'
@@ -1026,8 +1026,8 @@ steps:
         back: Zavřít tuto nabídku a přejít zpět do Nastavení
         movies: Globální zapnutí videí, pokud je VYPNUTO, nebude se přehrávat žádné video ze hry.
         disable_fractured_bones_females: Kvůli špatné animaci jsou standardně zakázány pacientky se Zlomenými Kostmi. Pro povolení pacientek s touto diagnózou ve vaší nemocnici musíte toto vypnout.
-        play_intro: Zapne nebo vypne úvodní video. Pokud chcete, aby se video přehrálo při spuštění CorsixTH, je třeba mít zapnutá videa.
-        allow_user_actions_while_paused: V Theme Hospital může hráč při pozastavení hry použít pouze horní lištu. To samé platí v CorsixTH, ale pomocí této volby můžete při pozastavení hry povolit cokoliv.
+        play_intro: Zapne nebo vypne úvodní video. Pokud chcete, aby se video přehrálo při spuštění OpenWards, je třeba mít zapnutá videa.
+        allow_user_actions_while_paused: V Theme Hospital může hráč při pozastavení hry použít pouze horní lištu. To samé platí v OpenWards, ale pomocí této volby můžete při pozastavení hry povolit cokoliv.
         remove_destroyed_rooms: Pokud chcete povolit možnost odstranit zničené místnosti (za poplatek), zapněte tuto možnost.
         enable_announcer_subtitles: Pokud chcete zobrazovat historii hlášení ve hře, povolte tuto možnost.
         enable_screen_shake: Zemětřesení ve hře třesou obrazovkou hry. Pokud chcete třes vypnout, vypněte tuto možnost.
@@ -1083,8 +1083,8 @@ steps:
         zoom_speed: Nastavte rychlost přibližování v rozmezí 10 (nejpomalejší) až 1000 (nejrychlejší). Výchozí hodnota je 80.
         cancel_zoomspeed: Neměnit rychlost přibližování
       update_window:
-        download: Stáhnout nejnovější verzi CorsixTH.
-        ignore: Zatím neaktualizovat. Při příštím spuštění CorsixTH vám toto upozornění vyskočí znovu.
+        download: Stáhnout nejnovější verzi OpenWards.
+        ignore: Zatím neaktualizovat. Při příštím spuštění OpenWards vám toto upozornění vyskočí znovu.
       information:
         close: Zavřít informační dialogové okno
       menu_list_window:
@@ -2530,7 +2530,7 @@ steps:
       - Zkusili jste zadat evropské číslo tísňového volání (112) do faxu? Nezapomeňte si zapnout zvuk!
       - Jistá nastavení, jako např. rozlišení obrazovky a jazyk, můžete upravit v okně nastavení, které naleznete jak v hlavním menu, tak i ve hře.
       - Vybrali jste jiný jazyk než angličtina, ale přesto je všude anglický text? Pomozte nám přeložit chybějící texty do vašeho jazyka!
-      - Tým CorsixTH hledá posily! Zajímá vás programování, překládání, nebo vytváření grafiky pro CorsixTH? Kontaktuje nás na našem Discordu, případně se podívejte na naše stránky.
+      - Tým OpenWards hledá posily! Zajímá vás programování, překládání, nebo vytváření grafiky pro OpenWards? Kontaktuje nás na našem Discordu, případně se podívejte na naše stránky.
       - 'Pokud naleznete chybu, ohlaste ji prosím na našem GitHubu: github.com/CorsixTH/CorsixTH/issues'
       - Každá úroveň má jisté požadavky, které musíte splnit předtím, než můžete pokračovat do další. Podívejte se na Postup v úrovni, abyste viděli, co vám k výhře ještě chybí.
       - Pokud chcete upravit nebo odstranit existující místnost, můžete tak učinit pomocí tlačítka Upravit místnosti/položky, které naleznete dole na panelu nástrojů.
@@ -2542,7 +2542,7 @@ steps:
       - Pohotovost může být dobrým zdrojem peněz navíc, za předpokladu, že máte dostatečné kapacity na včasné zvládnutí pacientů pohotovosti.
       - Věděli jste, že můžete Údržbářům nastavit parcely, kde mají pracovat? Stačí v jejich profilu kliknout na text „Všude“ a postupně se proklikat k parcele, kde má Údržbář pracovat.
     information:
-      custom_game: Vítejte v CorsixTH. Užijte si tuto vytvořenou mapu!
+      custom_game: Vítejte v OpenWards. Užijte si tuto vytvořenou mapu!
       cannot_restart: Bohužel, tato hra byla uložena dříve, než byla zavedena funkce restart.
       no_custom_game_in_demo: Je nám líto, ale ve zkušební verzi nemůžete hrát žádné vytvořené mapy (chybějící grafiky, zvuky atd.).
       very_old_save: Tuto hru jste hráli ve starší verzi a několik věcí se změnilo. Měli byste zvážit restartování úrovně, aby vše fungovalo tak, jak má.
@@ -2572,7 +2572,7 @@ steps:
       save_to_tmp: 'Soubor %s nemohl být použit, hra byla proto uložena do %s, důvodem je: %s'
       dialog_empty_queue: Postava aktuálně nemá nic na práci ve své řadě úloh, a tak neví, co má dělat dále. Zkontrolujte příkazové okno pro více informací. Jednáme s tímto potížistou. Chcete ho z nemocnice vyhodit?
       compatibility_error:
-        new_in_old: Pozor! Tato hra byla uložena v novější verzi CorsixTH a není s nainstalovanou verzí kompatibilní. Pro hraní aktualizujte na novější verzi CorsixTH.
+        new_in_old: Pozor! Tato hra byla uložena v novější verzi OpenWards a není s nainstalovanou verzí kompatibilní. Pro hraní aktualizujte na novější verzi OpenWards.
         demo_in_full: Nelze otevřít hru z demo verze, když máte nastavené soubory z plné verze hry Theme Hospital. Můžete však vybrat adresář obsahující demo verzi v Nastavení > Umístění složek > Data TH.
         full_in_demo: Nelze otevřít hru z plné verze, když máte nastavené soubory z demo verze hry Theme Hospital. Můžete však vybrat adresář obsahující plnou verzi v Nastavení > Umístění složek > Data TH.
       cannot_restart_missing_files: Tato úroveň nemůže být restartována, protože chybí soubory %s nebo %s.
@@ -2580,16 +2580,16 @@ steps:
       missing_level_file: 'CHYBA: Nepovedlo se najít soubor vybrané úrovně.'
       music: Při přehrávání některých souborů hudby došlo k potížím. Tyto soubory se v Jukeboxu zakázány. Pro více informací se podívejte do konzole hry.
       load_level_prefix: 'CHYBA při načítání úrovně: '
-      missing_corsixth_file: 'Varování: Nepovedlo se najít soubor %s, zkuste přeinstalovat CorsixTH.'
+      missing_corsixth_file: 'Varování: Nepovedlo se najít soubor %s, zkuste přeinstalovat OpenWards.'
       load_map_prefix: 'CHYBA při načítání mapy: '
       overlay:
         incorrect_difficulty: 'Obtížnost musí být nastavená na lehkou (easy), střední (full) nebo těžkou (hard). Nyní je nastavena na '
         missing_setting: Nebyla nastavena obtížnost ani číslo úrovně v této vlastní úrovni.
         incorrect_level_number: 'Číslo úrovně musí být 1-12. Nyní je nastaveno na '
       recoverable: Nastala CHYBA. Jedná se o obecnou chybu - pro detaily zkontrolujte konzoli hry. Chcete zkusit pokračovat ve hře?
-      fatal_can_reset: Nastala KRITICKÁ CHYBA. Hra nemůže pokračovat. Zmáčkněte klávesu 'X' pro restartování programu. Poslední automatické uložení bylo nejspíše Autosave%d.// Budeme rádi, když tuto chybu nahlásíte vývojářům CorsixTH. Ke krátkému popisu chyby přiložte i tento log soubor://
-      fatal_can_debug: Nastala KRITICKÁ CHYBA. Hra nemůže pokračovat. Poslední automatické uložení bylo nejspíše Autosave%d.// Pokud jste vývojář a chcete ladit program, zmáčkněte 'X' pro zavření tohoto okna. Budeme rádi, když tuto chybu nahlásíte vývojářům CorsixTH. Ke krátkému popisu chyby přiložte i tento log soubor://
-      fatal_cant_reset: Nastala KRITICKÁ CHYBA. Hra nemůže pokračovat. Prosím, ukončete program, poté jej můžete spustit znovu. Poslední automatické uložení bylo nejspíše Autosave%d.// Budeme rádi, když tuto chybu nahlásíte vývojářům CorsixTH. Ke krátkému popisu chyby přiložte i tento log soubor://
+      fatal_can_reset: Nastala KRITICKÁ CHYBA. Hra nemůže pokračovat. Zmáčkněte klávesu 'X' pro restartování programu. Poslední automatické uložení bylo nejspíše Autosave%d.// Budeme rádi, když tuto chybu nahlásíte vývojářům OpenWards. Ke krátkému popisu chyby přiložte i tento log soubor://
+      fatal_can_debug: Nastala KRITICKÁ CHYBA. Hra nemůže pokračovat. Poslední automatické uložení bylo nejspíše Autosave%d.// Pokud jste vývojář a chcete ladit program, zmáčkněte 'X' pro zavření tohoto okna. Budeme rádi, když tuto chybu nahlásíte vývojářům OpenWards. Ke krátkému popisu chyby přiložte i tento log soubor://
+      fatal_cant_reset: Nastala KRITICKÁ CHYBA. Hra nemůže pokračovat. Prosím, ukončete program, poté jej můžete spustit znovu. Poslední automatické uložení bylo nejspíše Autosave%d.// Budeme rádi, když tuto chybu nahlásíte vývojářům OpenWards. Ke krátkému popisu chyby přiložte i tento log soubor://
     menu:
       charts: '  PŘEHLEDY  '
       options: '  NASTAVENÍ  '
@@ -3043,8 +3043,8 @@ steps:
 
         Rozchoďte to tu umístěním Recepce, vybudováním Kanceláře Praktického Lékaře a najmutím Recepční a Doktora. Pak počkejte, až se objeví příležitost k zisku. Je dobrý nápad postavit Psychiatrii a najmout Doktora s Psychiatrickou kvalifikací. Lékárna a Sestra jsou také často nutné k léčbě vašich pacientů. Dejte si pozor na případy podivné nemoci Nafouknutá Hlava - Hustírna jim pomůže. Musíte vyléčit alespoň 10 lidí a zajistit, že vaše reputace nespadne pod 200.
     install:
-      th_directory: CorsixTH potřebuje kopii datových souborů z původní hry Theme Hospital (nebo alespoň z demoverze), aby mohla běžet. Prosím, použijte okno níže k nalezení instalačního adresáře Theme Hospital.
-      title: '-------------------------------- Nastavení CorsixTH --------------------------------'
+      th_directory: OpenWards potřebuje kopii datových souborů z původní hry Theme Hospital (nebo alespoň z demoverze), aby mohla běžet. Prosím, použijte okno níže k nalezení instalačního adresáře Theme Hospital.
+      title: '-------------------------------- Nastavení OpenWards --------------------------------'
       exit: Odejít
       ok: OK
       cancel: Zrušit
@@ -3265,7 +3265,7 @@ steps:
       ingame_panel_adviserHistory: Historie hlášení
       ingame_sellPickedUpItem: Prodat předmět
     update_window:
-      caption: Vyšla nová verze CorsixTH!
+      caption: Vyšla nová verze OpenWards!
       new_version: 'Nová verze:'
       current_version: 'Nainstalovaná verze:'
       download: Chci novou verzi
@@ -3299,7 +3299,7 @@ steps:
       duplicates_warning: '%d kampaní se stejnými jmény bylo skryto (nesmějí mít stejná jména).'
     warnings:
       levelfile_variable_is_deprecated: "Upozornění: Úroveň '%s' obsahuje starý formát definice nastavení. Proměnná '%LevelFile' byla změněna na '%MapFile'. Prosím, kontaktujte autora této úrovně."
-      newersave: Pozor! Snažíte se spustit hru z novější verze CorsixTH. Nedoporučujeme pokračovat z důvodu možné nestability hry. Na vlastní riziko.
+      newersave: Pozor! Snažíte se spustit hru z novější verze OpenWards. Nedoporučujeme pokračovat z důvodu možné nestability hry. Na vlastní riziko.
     map_editor_window:
       pages:
         paste: Vložit oblast
