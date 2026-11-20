@@ -5884,9 +5884,11 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             return;
         }
 
-        var box = new Rectangle(0, 0, _text.Measure(line).Width + 16, _text.LineHeight + 8);
+        // Below the original menu bar while it shows, so that the bar does not cover the line.
+        var top = _menuBar.IsVisible ? OriginalMenuBar.Height : 0;
+        var box = new Rectangle(0, top, _text.Measure(line).Width + 16, _text.LineHeight + 8);
         batch.Draw(_pixel, box, building ? BuildModeColor : Color.Black * 0.75f);
-        _text.Draw(batch, line, new Vector2(8, 4));
+        _text.Draw(batch, line, new Vector2(8, top + 4));
     }
 
     private string TileLine()
