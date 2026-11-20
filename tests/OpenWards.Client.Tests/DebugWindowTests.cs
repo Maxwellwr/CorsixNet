@@ -18,7 +18,7 @@ public sealed class DebugWindowTests
     {
         var lines = MapViewScreen.PackSegments(["x", "one two three"], 9, text => text.Length);
 
-        Assert.Equal(["x   one", "two three"], lines);
+        Assert.Equal(["x", "one two", "three"], lines);
     }
 
     [Fact]
