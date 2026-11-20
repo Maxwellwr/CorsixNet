@@ -612,6 +612,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             keys = default;
         }
 
+        // UI:fullscreenHotkey is global: it works in the main menu and over any window, not only on the map.
+        if (HotkeyInput.Pressed(_hotkeys["global_fullscreen_toggle"], keys, Pressed))
+        {
+            ToggleFullscreen();
+        }
+
         if (Pressed(Keys.Escape))
         {
             if (_hiring is not null)
@@ -3447,11 +3453,6 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             RequestScreenshot();
         }
 
-        if (HotkeyInput.Pressed(_hotkeys["global_fullscreen_toggle"], keys, pressed))
-        {
-            ToggleFullscreen();
-        }
-
         // UIBottomPanel's openSave and restart (CorsixTH's Shift+L load and Shift+Q quit are still this game's repay
         // and guess cure stand-in keys).
         if (HotkeyInput.Pressed(_hotkeys["ingame_saveMenu"], keys, pressed))
@@ -4936,6 +4937,12 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         var midiChanged = config.MidiApi != _config.MidiApi || config.MidiPort != _config.MidiPort || config.Soundfont != _config.Soundfont;
         var playlistChanged = config.PlayOwnMusic != _config.PlayOwnMusic || config.AudioMusic != _config.AudioMusic;
         var savesChanged = !string.Equals(config.Savegames, _config.Savegames, StringComparison.Ordinal);
+        if (config.Fullscreen != _config.Fullscreen)
+        {
+            // The graphics settings' fullscreen switch takes effect at once, as Alt+Enter does.
+            _fullscreenToggleRequested = true;
+        }
+
         _config = config;
         if (savesChanged)
         {

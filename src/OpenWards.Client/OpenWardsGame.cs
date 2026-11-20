@@ -15,6 +15,9 @@ internal sealed class OpenWardsGame : Game
     private IScreen? _screen;
     private readonly MouseGrabPolicy _grab = new();
 
+    /// <summary>The window's size in pixels when it is not fullscreen.</summary>
+    private Point _windowSize;
+
     /// <summary>The smallest window the settings may ask for (CorsixTH's 640 by 480).</summary>
     private const int MinWidth = 640;
     private const int MinHeight = 480;
@@ -29,12 +32,22 @@ internal sealed class OpenWardsGame : Game
         // window smoothly; the window keeps the size it had on the screen, and ScreenCanvas scales the picture by whole
         // pixels instead.
         var density = ScreenCanvas.SystemDpiScale();
+        _windowSize = new Point((int)Math.Round(Math.Max(MinWidth, width) * density), (int)Math.Round(Math.Max(MinHeight, height) * density));
         _graphics = new GraphicsDeviceManager(this)
         {
-            PreferredBackBufferWidth = (int)Math.Round(Math.Max(MinWidth, width) * density),
-            PreferredBackBufferHeight = (int)Math.Round(Math.Max(MinHeight, height) * density),
-            IsFullScreen = fullscreen,
+            PreferredBackBufferWidth = _windowSize.X,
+            PreferredBackBufferHeight = _windowSize.Y,
+
+            // Fullscreen is a borderless window over the whole screen at the desktop's own resolution, as current games
+            // and CorsixTH's SDL_WINDOW_FULLSCREEN_DESKTOP do: switching the monitor to the window's size instead
+            // (1920 by 1200 on a 2560 by 1600 screen at 150 %) left the picture off the screen or black.
+            HardwareModeSwitch = false,
         };
+        if (fullscreen)
+        {
+            UseDesktopSize();
+            _graphics.IsFullScreen = true;
+        }
         IsMouseVisible = true;
         Window.AllowUserResizing = true;
         Window.Title = title;
@@ -66,7 +79,7 @@ internal sealed class OpenWardsGame : Game
         _screen?.Update(gameTime, IsActive || script is not null);
         if (_screen?.TakeFullscreenToggleRequest() == true)
         {
-            _graphics.ToggleFullScreen();
+            SetFullscreen(!_graphics.IsFullScreen);
         }
 
         IsMouseVisible = _screen?.DrawsCursor != true;
@@ -116,6 +129,43 @@ internal sealed class OpenWardsGame : Game
         }
 
         base.Draw(gameTime);
+    }
+
+    /// <summary>Goes fullscreen at the desktop's resolution, or back to the window's last size.</summary>
+    private void SetFullscreen(bool fullscreen)
+    {
+        if (fullscreen == _graphics.IsFullScreen)
+        {
+            return;
+        }
+
+        if (fullscreen)
+        {
+            // The window's size now, which may have been dragged, for coming back to.
+            var client = Window.ClientBounds;
+            if (client.Width >= MinWidth && client.Height >= MinHeight)
+            {
+                _windowSize = new Point(client.Width, client.Height);
+            }
+
+            UseDesktopSize();
+        }
+        else
+        {
+            _graphics.PreferredBackBufferWidth = _windowSize.X;
+            _graphics.PreferredBackBufferHeight = _windowSize.Y;
+        }
+
+        _graphics.IsFullScreen = fullscreen;
+        _graphics.ApplyChanges();
+    }
+
+    /// <summary>Asks for a back buffer the size of the desktop, in real pixels.</summary>
+    private void UseDesktopSize()
+    {
+        var mode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+        _graphics.PreferredBackBufferWidth = mode.Width;
+        _graphics.PreferredBackBufferHeight = mode.Height;
     }
 
     /// <summary>Saves what has just been drawn to the back buffer as a PNG file.</summary>
