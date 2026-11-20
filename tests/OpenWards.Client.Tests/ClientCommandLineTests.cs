@@ -44,6 +44,7 @@ public sealed class ClientCommandLineTests
             "--zoom", "2.5",
             "--overlay", "parcels",
             "--demo",
+            "--debug-status",
             "--speed", "maxspeed",
             "--upscale", "4",
             "--continue",
@@ -59,6 +60,7 @@ public sealed class ClientCommandLineTests
         Assert.Equal(2.5f, options.Zoom);
         Assert.Equal(MapOverlay.Parcels, options.Overlay);
         Assert.True(options.Demo);
+        Assert.True(options.DebugStatus);
         Assert.Equal(GameSpeed.MaxSpeed, options.Speed);
         Assert.Equal(4, options.Upscale);
         Assert.True(options.ContinueGame);

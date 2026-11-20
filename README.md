@@ -67,14 +67,14 @@ Esc steps back. In the furniture step it takes the room down again and returns t
 
 Rooms cost money, at the prices of the level's files: you need the whole cost in the bank to
 start one. The furniture is paid for when it comes to the cursor and the room when you confirm
-it; taking an unfinished room down sells the furniture back. The balance is in the top line; the date and the game speed are in the box on its right.
+it; taking an unfinished room down sells the furniture back. The balance, the date and the game speed are in the bottom panel.
 
 Options: `--level LEVEL.L5` starts on a given level, and `--map path/to/file.map` shows
 a map file, such as a CorsixTH custom level. `--zoom 0.5` and `--overlay Parcels` set the
 initial view. `--upscale 2` (or 4) starts with smoothed sprites. `--capture shot.png` saves
 the map view to a PNG after a few seconds and quits, which works even when the screen is locked. `--script checks.txt` plays the mouse and keyboard
 from a text file and saves screenshots of the whole window (see `Input/InputScript.cs`). `--demo` builds and furnishes a GP's office near the start and adds twenty patients, half of them outside,
-wandering into and around the hospital.
+wandering into and around the hospital. `--debug-status` shows the developer's status bar above the map: balance, people, overlay, zoom, the tile under the cursor and the keys.
 
 Alt+Shift+S quick saves a local game and Alt+Shift+L loads the quick save. The game also saves
 itself as each month's last day begins, in `Autosaves`. Saves go to `%AppData%/OpenWards/Saves`

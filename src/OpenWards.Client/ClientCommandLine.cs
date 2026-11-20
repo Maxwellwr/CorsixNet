@@ -26,6 +26,7 @@ internal sealed record ClientOptions
     public float Zoom { get; init; } = 1f;
     public MapOverlay Overlay { get; init; } = MapOverlay.None;
     public bool Demo { get; init; }
+    public bool DebugStatus { get; init; }
     public int Upscale { get; init; } = 1;
     public GameSpeed Speed { get; init; } = GameSpeed.Normal;
     public Difficulty Difficulty { get; init; } = Difficulty.Medium;
@@ -124,6 +125,11 @@ internal static class ClientCommandLine
     private static readonly Option<bool> DemoOption = new("--demo")
     {
         Description = "Build and furnish a GP's office and a pharmacy and add twenty patients wandering around",
+    };
+
+    private static readonly Option<bool> DebugStatusOption = new("--debug-status")
+    {
+        Description = "Show the developer's status bar above the map: money, people, overlay, zoom, the tile under the cursor and the keys",
     };
 
     private static readonly Option<GameSpeed> SpeedOption = new("--speed")
@@ -258,6 +264,7 @@ internal static class ClientCommandLine
         ZoomOption,
         OverlayOption,
         DemoOption,
+        DebugStatusOption,
         SpeedOption,
         UpscaleOption,
         LoadOption,
@@ -319,6 +326,7 @@ internal static class ClientCommandLine
             Zoom = result.GetValue(ZoomOption),
             Overlay = result.GetValue(OverlayOption),
             Demo = result.GetValue(DemoOption),
+            DebugStatus = result.GetValue(DebugStatusOption),
             Upscale = result.GetValue(UpscaleOption),
             Speed = result.GetValue(SpeedOption),
             Difficulty = result.GetValue(DifficultyOption),

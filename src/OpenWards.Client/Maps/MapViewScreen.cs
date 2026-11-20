@@ -193,6 +193,9 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
     private int _levelIndex;
 
     private string? _error;
+
+    /// <summary>--debug-status: show the status bar with the debug lines above the map.</summary>
+    private readonly bool _debugStatus;
     private MapOverlay _overlay;
     private RenderTarget2D? _target;
     private KeyboardState _previousKeys;
@@ -392,8 +395,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         GameConfig? config = null,
         string? configPath = null,
         bool mainMenu = false,
-        bool mapEditor = false)
+        bool mapEditor = false,
+        bool debugStatus = false)
     {
+        _debugStatus = debugStatus;
         _config = config ?? new GameConfig();
         _saves = new SaveGameStore(SavesDirectory(_config));
         _adviser.IsEnabled = !_config.AdviserDisabled;
@@ -974,7 +979,10 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
         var viewport = _device.Viewport;
         var building = _buildTool.IsActive || _furnishTool.IsActive;
-        batch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, StatusHeight), building ? BuildModeColor : Color.Black);
+        if (ShowsStatusBar)
+        {
+            batch.Draw(_pixel, new Rectangle(0, 0, viewport.Width, StatusHeight), building ? BuildModeColor : Color.Black);
+        }
         if (building)
         {
             // A frame round the map, so that building can be told apart at a glance.
@@ -984,9 +992,23 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             batch.Draw(_pixel, new Rectangle(0, viewport.Height - BuildFrameWidth, viewport.Width, BuildFrameWidth), BuildModeColor);
         }
 
-        _text.Draw(batch, StatusLine(), new Vector2(8, 4));
-        _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
-        DrawDatePanel(batch, viewport);
+        if (ShowsStatusBar)
+        {
+            _text.Draw(batch, StatusLine(), new Vector2(8, 4));
+            _text.Draw(batch, _error ?? TileLine(), new Vector2(8, 4 + _text.LineHeight + 2));
+            DrawDatePanel(batch, viewport);
+        }
+        else
+        {
+            DrawBriefLine(batch, building);
+            if (_bottomPanel is null)
+            {
+                // Without the original bottom panel nothing else shows the date and speed.
+                DrawDatePanel(batch, viewport);
+            }
+        }
+
+        _windows.Origin = new Point(8, StatusHeight + 8);
         DrawRoomList(batch);
 
         // UI:setMenuBackground and UI:draw: the main menu stands on CorsixTH's picture, not on the game.
@@ -1187,8 +1209,14 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
         return (Camera.TileCenter(tile.X, tile.Y) - topLeft.ToVector2()) * _camera.Zoom;
     }
 
-    /// <summary>The status bar's height: two lines of text, taller with a TrueType font.</summary>
-    private int StatusHeight => Math.Max(36, (2 * _text.LineHeight) + 10);
+    /// <summary>
+    /// The status bar's height: two lines of text, taller with a TrueType font. The bar is a developer's aid, shown
+    /// only with --debug-status and in the map editor; otherwise the map starts at the top of the screen.
+    /// </summary>
+    private int StatusHeight => ShowsStatusBar ? Math.Max(36, (2 * _text.LineHeight) + 10) : 0;
+
+    /// <summary>Whether the black status bar with the debug lines is shown (--debug-status, or the map editor).</summary>
+    private bool ShowsStatusBar => _debugStatus || _editorTool is not null;
 
     private Point ViewSize => new(_device.Viewport.Width, Math.Max(1, _device.Viewport.Height - StatusHeight));
 
@@ -5840,6 +5868,25 @@ internal sealed class MapViewScreen : IScreen, IWindowHost
             Tutorial.Lit,
             [.. FaxWindow.Pending(simulation, _session.Player, ((IWindowHost)this).IsWinLetterPending), .. RaiseRequests().Select(staff => string.Create(CultureInfo.InvariantCulture, $"strike:{staff.Id}"))]);
         _bottomPanel.Draw(batch, viewport, state, mouse, InputScript.Mouse());
+    }
+
+    /// <summary>
+    /// Without the status bar, what still has to be read at the top left: an error, the build tool's line, or a notice
+    /// such as "Quick saved", each on a dark strip as wide as its text.
+    /// </summary>
+    private void DrawBriefLine(SpriteBatch batch, bool building)
+    {
+        var line = _error
+            ?? (building ? TileLine() : null)
+            ?? (_notice is not null && Environment.TickCount64 < _noticeUntil ? _notice : null);
+        if (line is null)
+        {
+            return;
+        }
+
+        var box = new Rectangle(0, 0, _text.Measure(line).Width + 16, _text.LineHeight + 8);
+        batch.Draw(_pixel, box, building ? BuildModeColor : Color.Black * 0.75f);
+        _text.Draw(batch, line, new Vector2(8, 4));
     }
 
     private string TileLine()
